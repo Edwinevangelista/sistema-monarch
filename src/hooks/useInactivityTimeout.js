@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,7 +7,7 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
 
-  const resetTimeout = () => {
+  const resetTimeout = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -19,12 +19,11 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
         navigate('/login');
       }
     }, timeoutMinutes * 60 * 1000);
-  };
+  }, [user, signOut, navigate, timeoutMinutes]);
 
   useEffect(() => {
     if (!user) return;
 
-    // Eventos que resetean el timeout
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
     events.forEach(event => {
@@ -41,5 +40,5 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
         document.removeEventListener(event, resetTimeout);
       });
     };
-  }, [user]);
+  }, [user, resetTimeout]);
 }
