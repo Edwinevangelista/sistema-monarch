@@ -29,7 +29,7 @@ const DashboardCompleto = () => {
   const { gastosFijos, addGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion } = useSuscripciones()
   const { deudas, addDeuda } = useDeudas()
-  const { pagos, addPago } = usePagosTarjeta()
+  const { addPago } = usePagosTarjeta()
 
   // Cálculos
   const totalIngresos = ingresos.reduce((sum, i) => sum + (i.monto || 0), 0)
