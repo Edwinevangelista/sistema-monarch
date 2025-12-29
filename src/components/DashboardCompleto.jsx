@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import AsistenteFinanciero from "./AsistenteFinanciero";
 import LogoutButton from "./LogoutButton";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
@@ -207,6 +208,15 @@ const DashboardCompleto = () => {
 
         {/* Notificaciones */}
         <Notificaciones alertas={alertas} />
+
+        {/* Asistente Financiero IA */}
+        <AsistenteFinanciero 
+          ingresos={ingresos}
+          gastosFijos={gastosFijos}
+          gastosVariables={gastos}
+          suscripciones={suscripciones}
+          deudas={deudas}
+        />
 
         {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
