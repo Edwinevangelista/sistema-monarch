@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Brain, TrendingUp, AlertTriangle, CheckCircle, Loader } from 'lucide-react';
 
 export default function AsistenteFinanciero({ 
@@ -12,12 +12,11 @@ export default function AsistenteFinanciero({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const analizarFinanzas = async () => {
+  const analizarFinanzas = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Preparar datos para el análisis
       const datosFinancieros = {
         ingresos,
         gastosFijos,
@@ -44,14 +43,13 @@ export default function AsistenteFinanciero({
     } finally {
       setLoading(false);
     }
-  };
+  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas]);
 
   useEffect(() => {
-    // Analizar automáticamente cuando hay datos
     if (ingresos.length > 0 || gastosFijos.length > 0 || gastosVariables.length > 0) {
       analizarFinanzas();
     }
-  }, [ingresos.length, gastosFijos.length, gastosVariables.length]);
+  }, [ingresos.length, gastosFijos.length, gastosVariables.length, analizarFinanzas]);
 
   const getPrioridadColor = (prioridad) => {
     switch (prioridad) {
@@ -73,7 +71,6 @@ export default function AsistenteFinanciero({
 
   return (
     <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-6 shadow-2xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <Brain className="w-8 h-8 text-purple-300" />
@@ -105,7 +102,6 @@ export default function AsistenteFinanciero({
         </button>
       </div>
 
-      {/* Loading State */}
       {loading && !analisis && (
         <div className="text-center py-8">
           <Loader className="w-12 h-12 animate-spin text-purple-300 mx-auto mb-4" />
@@ -113,17 +109,14 @@ export default function AsistenteFinanciero({
         </div>
       )}
 
-      {/* Error State */}
       {error && (
         <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
           Error: {error}
         </div>
       )}
 
-      {/* Análisis */}
       {analisis && !loading && (
         <div className="space-y-4">
-          {/* Resumen General */}
           {analisis.resumen && (
             <div className="bg-white/10 backdrop-blur rounded-xl p-4">
               <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
@@ -136,7 +129,6 @@ export default function AsistenteFinanciero({
             </div>
           )}
 
-          {/* Recomendaciones */}
           {analisis.recomendaciones && analisis.recomendaciones.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-white font-semibold flex items-center gap-2">
@@ -171,7 +163,6 @@ export default function AsistenteFinanciero({
             </div>
           )}
 
-          {/* Alertas */}
           {analisis.alertas && analisis.alertas.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-white font-semibold flex items-center gap-2">
@@ -189,14 +180,12 @@ export default function AsistenteFinanciero({
             </div>
           )}
 
-          {/* Fecha del análisis */}
           <p className="text-purple-300 text-xs text-right">
             Última actualización: {new Date().toLocaleString('es-ES')}
           </p>
         </div>
       )}
 
-      {/* Estado vacío */}
       {!analisis && !loading && !error && (
         <div className="text-center py-8">
           <Brain className="w-16 h-16 text-purple-300 mx-auto mb-4 opacity-50" />
