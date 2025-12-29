@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,9 +14,28 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const response = await fetch('https://ocr-backend-i9qy.onrender.com/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (data.error || data.message) {
+        throw new Error(data.error?.message || data.message || 'Error al iniciar sesión');
+      }
+      
+      if (!data.access_token) {
+        throw new Error('Credenciales inválidas');
+      }
+
+      // Guardar en localStorage
+      localStorage.setItem('supabase_token', data.access_token);
+      localStorage.setItem('supabase_user', JSON.stringify(data.user));
+
       navigate('/');
+      window.location.reload();
     } catch (error) {
       setError(error.message);
     } finally {
@@ -70,9 +88,6 @@ export default function Login() {
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300 block">
-            ¿Olvidaste tu contraseña?
-          </Link>
           <p className="text-gray-400">
             ¿No tienes cuenta?{' '}
             <Link to="/signup" className="text-blue-400 hover:text-blue-300">

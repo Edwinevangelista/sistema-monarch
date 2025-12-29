@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -15,35 +14,20 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      console.log('Intentando registrar:', email);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-        }
+      const response = await fetch('https://ocr-backend-i9qy.onrender.com/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
 
-      console.log('Resultado:', { data, error });
+      const data = await response.json();
 
-      if (error) throw error;
+      if (data.error) throw new Error(data.error.message || 'Error al crear cuenta');
 
-      // Si no requiere confirmación, ir al dashboard
-      if (data?.user && !data?.user?.identities?.length) {
-        alert('Email ya registrado. Intenta iniciar sesión.');
-        navigate('/login');
-      } else if (data?.session) {
-        // Login automático si no requiere confirmación
-        navigate('/');
-      } else {
-        // Requiere confirmación por email
-        alert('¡Cuenta creada! Revisa tu email para confirmar (o prueba hacer login directamente si está desactivada la confirmación).');
-        navigate('/login');
-      }
+      alert('¡Cuenta creada! Ahora inicia sesión.');
+      navigate('/login');
     } catch (error) {
-      console.error('Error completo:', error);
-      setError(error.message || 'Error al crear cuenta');
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -69,7 +53,6 @@ export default function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-gray-700 text-white px-4 py-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="tu@email.com"
               required
             />
           </div>
@@ -81,7 +64,6 @@ export default function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-gray-700 text-white px-4 py-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••"
               minLength={6}
               required
             />
