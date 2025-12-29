@@ -61,7 +61,7 @@ const LectorEstadoCuenta = ({ onClose }) => {
           const base64 = reader.result
 
           // Llamar a la API serverless
-          const response = await fetch('https://sistema-monarch-ocr.onrender.com/scan', {
+          const response = await fetch('https://ocr-backend-i9qy.onrender.com/scan', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
