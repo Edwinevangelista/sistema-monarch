@@ -1,53 +1,42 @@
-import Anthropic from '@anthropic-ai/sdk'
-import pdf from 'pdf-parse'
+const Anthropic = require('@anthropic-ai/sdk').default;
 
-// Inicializar cliente de Anthropic
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
-})
+});
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-}
-
-export default async function handler(req, res) {
-  // Configurar CORS
-  res.setHeader('Access-Control-Allow-Credentials', true)
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  )
+module.exports = async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
+    res.status(200).end();
+    return;
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { file, fileType } = req.body
+    const { file, fileType } = req.body;
 
     if (!file) {
-      return res.status(400).json({ error: 'No file provided' })
+      return res.status(400).json({ error: 'No file provided' });
     }
 
-    let base64Data = file
-    let mediaType = 'image/jpeg'
+    let base64Data = file;
+    let mediaType = 'image/jpeg';
 
     // Procesar según el tipo de archivo
     if (fileType === 'application/pdf') {
+      const pdfParse = require('pdf-parse');
+      
       // Extraer texto del PDF
-      const pdfBuffer = Buffer.from(file.split(',')[1], 'base64')
-      const data = await pdf(pdfBuffer)
+      const pdfBuffer = Buffer.from(file.split(',')[1] || file, 'base64');
+      const data = await pdfParse(pdfBuffer);
       
       // Enviar el texto extraído a Claude
       const message = await anthropic.messages.create({
@@ -64,7 +53,7 @@ Devuelve SOLO un JSON válido (sin markdown, sin comentarios) con este formato E
 {
   "transacciones": [
     {
-      "fecha": "2024-01-15",
+      "fecha": "2025-10-15",
       "descripcion": "WALMART SUPERCENTER",
       "monto": -45.67,
       "categoria": "Supermercado",
@@ -86,29 +75,28 @@ REGLAS IMPORTANTES:
 - NO incluyas pagos de tarjeta (payments) ni balances
 - SOLO transacciones reales de compras/gastos/depósitos`
         }]
-      })
+      });
 
-      const responseText = message.content[0].text
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      const responseText = message.content[0].text;
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
-        throw new Error('No se pudo parsear la respuesta de Claude')
+        throw new Error('No se pudo parsear la respuesta de Claude');
       }
 
-      const result = JSON.parse(jsonMatch[0])
-      return res.status(200).json(result)
+      const result = JSON.parse(jsonMatch[0]);
+      return res.status(200).json(result);
 
     } else {
       // Procesar imagen (JPEG, PNG, WEBP)
       if (file.includes('base64,')) {
-        base64Data = file.split(',')[1]
+        base64Data = file.split(',')[1];
       }
 
-      // Detectar tipo de imagen
       if (file.startsWith('data:image/png')) {
-        mediaType = 'image/png'
+        mediaType = 'image/png';
       } else if (file.startsWith('data:image/webp')) {
-        mediaType = 'image/webp'
+        mediaType = 'image/webp';
       }
 
       const message = await anthropic.messages.create({
@@ -133,7 +121,7 @@ Devuelve SOLO un JSON válido (sin markdown, sin comentarios) con este formato E
 {
   "transacciones": [
     {
-      "fecha": "2024-01-15",
+      "fecha": "2025-10-15",
       "descripcion": "WALMART SUPERCENTER",
       "monto": -45.67,
       "categoria": "Supermercado",
@@ -148,7 +136,7 @@ Devuelve SOLO un JSON válido (sin markdown, sin comentarios) con este formato E
 }
 
 REGLAS IMPORTANTES:
-- fecha: formato YYYY-MM-DD (si no está el año, usa 2024)
+- fecha: formato YYYY-MM-DD (si no está el año, usa 2025)
 - monto: número negativo para gastos, positivo para ingresos/depósitos
 - categoria: una de estas: Supermercado, Gasolina, Restaurante, Entretenimiento, Salud, Transporte, Servicios, Otros
 - tipo: "gasto" o "ingreso"
@@ -158,24 +146,24 @@ REGLAS IMPORTANTES:
             }
           ]
         }]
-      })
+      });
 
-      const responseText = message.content[0].text
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      const responseText = message.content[0].text;
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
-        throw new Error('No se pudo parsear la respuesta de Claude')
+        throw new Error('No se pudo parsear la respuesta de Claude');
       }
 
-      const result = JSON.parse(jsonMatch[0])
-      return res.status(200).json(result)
+      const result = JSON.parse(jsonMatch[0]);
+      return res.status(200).json(result);
     }
 
   } catch (error) {
-    console.error('Error processing statement:', error)
+    console.error('Error processing statement:', error);
     return res.status(500).json({ 
       error: 'Error processing statement',
       details: error.message 
-    })
+    });
   }
-}
+};
