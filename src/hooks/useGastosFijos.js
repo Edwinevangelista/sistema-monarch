@@ -1,0 +1,59 @@
+import { useState, useEffect } from 'react'
+import { supabase, getCurrentUserId } from '../lib/supabase'
+
+export const useGastosFijos = () => {
+  const [gastosFijos, setGastosFijos] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchGastosFijos = async () => {
+    setLoading(true)
+    const userId = await getCurrentUserId()
+    
+    const { data, error } = await supabase
+      .from('gastos_fijos')
+      .select('*')
+      .eq('user_id', userId)
+      .order('dia_venc', { ascending: true })
+    
+    if (!error) setGastosFijos(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchGastosFijos()
+  }, [])
+
+  const addGastoFijo = async (nuevoGasto) => {
+    const userId = await getCurrentUserId()
+    
+    const { data, error } = await supabase
+      .from('gastos_fijos')
+      .insert([{ 
+        ...nuevoGasto,
+        user_id: userId 
+      }])
+      .select()
+    
+    if (!error && data) {
+      setGastosFijos([...gastosFijos, ...data])
+      return { success: true, data }
+    }
+    return { success: false, error }
+  }
+
+  const updateEstado = async (id, nuevoEstado) => {
+    const { data, error } = await supabase
+      .from('gastos_fijos')
+      .update({ estado: nuevoEstado })
+      .eq('id', id)
+      .select()
+    
+    if (!error && data) {
+      setGastosFijos(gastosFijos.map(g => g.id === id ? data[0] : g))
+      return { success: true }
+    }
+    return { success: false, error }
+  }
+
+  return { gastosFijos, loading, addGastoFijo, updateEstado, refresh: fetchGastosFijos }
+}

@@ -1,0 +1,276 @@
+import React, { useState } from 'react'
+import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
+import { useIngresos } from '../hooks/useIngresos'
+import { useGastosVariables } from '../hooks/useGastosVariables'
+import { useGastosFijos } from '../hooks/useGastosFijos'
+import { useSuscripciones } from '../hooks/useSuscripciones'
+import { useDeudas } from '../hooks/useDeudas'
+import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
+
+import KPICard from './KPICard'
+import ModalIngreso from './ModalIngreso'
+import ModalGastoVariable from './ModalGastoVariable'
+import ModalGastoFijo from './ModalGastoFijo'
+import ModalSuscripcion from './ModalSuscripcion'
+import ModalPagoTarjeta from './ModalPagoTarjeta'
+import ModalAgregarDeuda from './ModalAgregarDeuda'
+import LectorEstadoCuenta from './LectorEstadoCuenta'
+import Notificaciones from './Notificaciones'
+import GraficaDona from './GraficaDona'
+import GraficaBarras from './GraficaBarras'
+import ListaDeudas from './ListaDeudas'
+import ListaSuscripciones from './ListaSuscripciones'
+
+const DashboardCompleto = () => {
+  const [showModal, setShowModal] = useState(null)
+  
+  const { ingresos, addIngreso } = useIngresos()
+  const { gastos, addGasto } = useGastosVariables()
+  const { gastosFijos, addGastoFijo } = useGastosFijos()
+  const { suscripciones, addSuscripcion } = useSuscripciones()
+  const { deudas, addDeuda } = useDeudas()
+  const { pagos, addPago } = usePagosTarjeta()
+
+  // Cálculos
+  const totalIngresos = ingresos.reduce((sum, i) => sum + (i.monto || 0), 0)
+  const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + (g.monto || 0), 0)
+  const totalGastosVariables = gastos.reduce((sum, g) => sum + (g.monto || 0), 0)
+  const totalSuscripciones = suscripciones
+    .filter(s => s.estado === 'Activo')
+    .reduce((sum, s) => {
+      if (s.ciclo === 'Anual') return sum + (s.costo / 12)
+      if (s.ciclo === 'Semanal') return sum + (s.costo * 4.33)
+      return sum + s.costo
+    }, 0)
+  
+  const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones
+  const saldoMes = totalIngresos - totalGastos
+  const tasaAhorro = totalIngresos > 0 ? (saldoMes / totalIngresos) : 0
+
+  // Gastos por categoría para gráfica
+  const gastosPorCategoria = {}
+  ;[...gastosFijos, ...gastos, ...suscripciones.filter(s => s.estado === 'Activo')].forEach(item => {
+    const cat = item.categoria || '📦 Otros'
+    const monto = item.monto || item.costo || 0
+    gastosPorCategoria[cat] = (gastosPorCategoria[cat] || 0) + monto
+  })
+
+  const dataGraficaDona = Object.entries(gastosPorCategoria)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8)
+
+  // Datos para gráfica de barras (últimas 4 semanas simuladas)
+  const dataGraficaBarras = [
+    { name: 'Sem 1', ingresos: totalIngresos * 0.2, gastos: totalGastos * 0.22 },
+    { name: 'Sem 2', ingresos: totalIngresos * 0.25, gastos: totalGastos * 0.28 },
+    { name: 'Sem 3', ingresos: totalIngresos * 0.3, gastos: totalGastos * 0.25 },
+    { name: 'Sem 4', ingresos: totalIngresos * 0.25, gastos: totalGastos * 0.25 },
+  ]
+
+  // Alertas
+  const obtenerAlertas = () => {
+    const hoy = new Date()
+    const alertas = []
+
+    gastosFijos.forEach(gf => {
+      if (gf.estado === 'Pagado' || !gf.dia_venc) return
+      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+      const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 0) {
+        alertas.push({ 
+          tipo: 'critical', 
+          mensaje: `VENCIDO: ${gf.nombre}`,
+          monto: gf.monto
+        })
+      } else if (diff <= 5) {
+        alertas.push({ 
+          tipo: 'warning', 
+          mensaje: `${gf.nombre} vence en ${diff} días`,
+          monto: gf.monto
+        })
+      }
+    })
+
+    suscripciones.forEach(sub => {
+      if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
+      const proxPago = new Date(sub.proximo_pago)
+      const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 3 && diff >= 0) {
+        alertas.push({ 
+          tipo: 'info', 
+          mensaje: `${sub.servicio} renueva en ${diff} días`,
+          monto: sub.costo
+        })
+      }
+    })
+
+    deudas.forEach(d => {
+      if (!d.vence) return
+      const vence = new Date(d.vence)
+      const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 5 && diff >= 0) {
+        alertas.push({ 
+          tipo: 'warning', 
+          mensaje: `${d.cuenta} vence en ${diff} días`,
+          monto: d.pago_minimo
+        })
+      }
+    })
+
+    return alertas
+  }
+
+  const alertas = obtenerAlertas()
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
+          <h1 className="text-3xl font-bold text-white text-center flex items-center justify-center gap-3">
+            <Wallet className="w-8 h-8" />
+            💰 SISTEMA MONARCH
+          </h1>
+          <p className="text-center text-blue-100 mt-2 text-sm">
+            Control total de tus finanzas personales
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard icon="💵" label="INGRESOS" value={totalIngresos} color="#10B981" />
+          <KPICard icon="💸" label="GASTOS" value={totalGastos} color="#EF4444" />
+          <KPICard icon="💰" label="SALDO" value={saldoMes} color="#06B6D4" />
+          <KPICard icon="📊" label="AHORRO" value={tasaAhorro} color="#F59E0B" formatAsCurrency={false} />
+        </div>
+
+        {/* Botones de Acción */}
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button
+            onClick={() => setShowModal('ingreso')}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-lg transition-colors"
+          >
+            <Plus className="w-5 h-5" /> Ingreso
+          </button>
+          <button
+            onClick={() => setShowModal('gastoVariable')}
+            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 shadow-lg transition-colors"
+          >
+            <Plus className="w-5 h-5" /> Gasto
+          </button>
+          <button
+            onClick={() => setShowModal('gastoFijo')}
+            className="flex items-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 shadow-lg transition-colors"
+          >
+            <FileText className="w-5 h-5" /> Gasto Fijo
+          </button>
+          <button
+            onClick={() => setShowModal('suscripcion')}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 shadow-lg transition-colors"
+          >
+            <Repeat className="w-5 h-5" /> Suscripción
+          </button>
+          <button
+            onClick={() => setShowModal('pagoTarjeta')}
+            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 shadow-lg transition-colors"
+          >
+            <CreditCard className="w-5 h-5" /> Pago Tarjeta
+          </button>
+          <button
+            onClick={() => setShowModal('agregarDeuda')}
+            className="flex items-center gap-2 px-6 py-3 bg-red-700 text-white rounded-xl font-semibold hover:bg-red-800 shadow-lg transition-colors"
+          >
+            <Plus className="w-5 h-5" /> Tarjeta/Deuda
+          </button>
+          <button
+            onClick={() => setShowModal('lectorEstado')}
+            className="flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white rounded-xl font-semibold hover:bg-cyan-700 shadow-lg transition-colors"
+          >
+            <Upload className="w-5 h-5" /> Escanear Estado
+          </button>
+        </div>
+
+        {/* Notificaciones */}
+        <Notificaciones alertas={alertas} />
+
+        {/* Gráficas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <GraficaDona data={dataGraficaDona} title="📊 Gastos por Categoría" />
+          <GraficaBarras data={dataGraficaBarras} title="📈 Tendencia Semanal" />
+        </div>
+
+        {/* Deudas y Suscripciones */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ListaDeudas deudas={deudas} />
+          <ListaSuscripciones suscripciones={suscripciones} />
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-gray-400 text-sm italic py-4">
+          💡 Sistema Monarch - Tus finanzas bajo control total
+        </div>
+      </div>
+
+      {/* Modales */}
+      {showModal === 'ingreso' && (
+        <ModalIngreso onClose={() => setShowModal(null)} onSave={addIngreso} />
+      )}
+      {showModal === 'gastoVariable' && (
+        <ModalGastoVariable onClose={() => setShowModal(null)} onSave={addGasto} />
+      )}
+      {showModal === 'gastoFijo' && (
+        <ModalGastoFijo onClose={() => setShowModal(null)} onSave={addGastoFijo} />
+      )}
+      {showModal === 'suscripcion' && (
+        <ModalSuscripcion onClose={() => setShowModal(null)} onSave={addSuscripcion} />
+      )}
+      {showModal === 'pagoTarjeta' && (
+        <ModalPagoTarjeta 
+          onClose={() => setShowModal(null)} 
+          onSave={addPago}
+          deudas={deudas}
+        />
+      )}
+      {showModal === 'agregarDeuda' && (
+        <ModalAgregarDeuda 
+          onClose={() => setShowModal(null)} 
+          onSave={addDeuda}
+        />
+      )}
+      {showModal === 'lectorEstado' && (
+        <LectorEstadoCuenta
+          onClose={() => setShowModal(null)}
+          onTransaccionesExtraidas={(transacciones) => {
+            transacciones.forEach(trans => {
+              if (trans.tipo === 'ingreso') {
+                addIngreso({
+                  fecha: trans.fecha,
+                  fuente: trans.descripcion,
+                  descripcion: 'Extraído de estado de cuenta',
+                  monto: trans.monto
+                })
+              } else {
+                addGasto({
+                  fecha: trans.fecha,
+                  categoria: trans.categoria,
+                  descripcion: trans.descripcion,
+                  monto: trans.monto,
+                  metodo: 'Tarjeta'
+                })
+              }
+            })
+            alert(`✅ ${transacciones.length} transacciones agregadas exitosamente!`)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+export default DashboardCompleto
