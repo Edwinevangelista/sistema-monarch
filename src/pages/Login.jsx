@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
@@ -7,6 +7,14 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    const token = localStorage.getItem('supabase_token');
+    if (token) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -30,7 +38,6 @@ export default function Login() {
         throw new Error('Credenciales inválidas');
       }
 
-      // Guardar en localStorage
       localStorage.setItem('supabase_token', data.access_token);
       localStorage.setItem('supabase_user', JSON.stringify(data.user));
 

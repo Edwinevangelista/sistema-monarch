@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import LogoutButton from "./LogoutButton";
+import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
@@ -24,6 +25,7 @@ import ListaSuscripciones from './ListaSuscripciones'
 
 const DashboardCompleto = () => {
   const [showModal, setShowModal] = useState(null)
+  useInactivityTimeout(15); // 15 minutos de inactividad
   
   const { ingresos, addIngreso } = useIngresos()
   const { gastos, addGasto } = useGastosVariables()
