@@ -1,6 +1,4 @@
-// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
@@ -9,22 +7,31 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
+    // Cargar usuario desde localStorage
+    const storedUser = localStorage.getItem('supabase_user');
+    const storedToken = localStorage.getItem('supabase_token');
+    
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Error loading user:', e);
+        localStorage.removeItem('supabase_user');
+        localStorage.removeItem('supabase_token');
       }
-    );
-
-    return () => listener.subscription.unsubscribe();
+    }
+    
+    setLoading(false);
   }, []);
 
+  const signOut = () => {
+    localStorage.removeItem('supabase_user');
+    localStorage.removeItem('supabase_token');
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
