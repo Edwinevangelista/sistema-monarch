@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login() {
@@ -48,8 +49,7 @@ export default function Login() {
       
       cacheKeys.forEach(key => localStorage.removeItem(key));
 
-      // ⚡ OPTIMIZACIÓN: Navegar sin reload (mucho más rápido)
-      navigate('/', { replace: true });
+     
       
     } catch (error) {
       setError(error.message);

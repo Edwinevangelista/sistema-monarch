@@ -10,47 +10,113 @@ export default function AsistenteFinanciero({
 }) {
   const [analisis, setAnalisis] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const analizarFinanzas = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // ===============================
+  // 🔢 CÁLCULOS BASE
+  // ===============================
+  const totalIngresos = ingresos.reduce((s, i) => s + Number(i.monto || 0), 0);
+  const totalGastosFijos = gastosFijos.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const totalGastosVariables = gastosVariables.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const totalSuscripciones = suscripciones
+    .filter(s => s.estado === 'Activo')
+    .reduce((s, g) => s + Number(g.monto || 0), 0);
 
-    try {
-      const datosFinancieros = {
-        ingresos,
-        gastosFijos,
-        gastosVariables,
-        suscripciones: suscripciones.filter(s => s.estado === 'Activo'),
-        deudas,
-        fecha: new Date().toISOString()
-      };
+  const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones;
+  const saldo = totalIngresos - totalGastos;
+  const tasaAhorro = totalIngresos > 0 ? saldo / totalIngresos : 0;
 
-      const response = await fetch('https://ocr-backend-i9qy.onrender.com/analizar-finanzas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datosFinancieros)
-      });
+  // ===============================
+  // 🧠 ANÁLISIS LOCAL
+  // ===============================
+  const generarAnalisisLocal = useCallback(() => {
+    const recomendaciones = [];
+    const alertas = [];
 
-      const data = await response.json();
+    let resumen = '';
 
-      if (data.error) throw new Error(data.error);
-
-      setAnalisis(data);
-    } catch (error) {
-      console.error('Error analizando finanzas:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
+    if (totalIngresos === 0) {
+      resumen = 'No se han registrado ingresos en este período.';
+    } else if (saldo < 0) {
+      resumen = 'Estás gastando más de lo que ingresas este mes.';
+      alertas.push('Tu saldo es negativo. Revisa tus gastos urgentemente.');
+    } else {
+      resumen = 'Tus finanzas están bajo control este mes.';
     }
-  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas]);
+
+    if (tasaAhorro < 0.1 && totalIngresos > 0) {
+      recomendaciones.push({
+        prioridad: 'alta',
+        titulo: 'Aumentar tasa de ahorro',
+        descripcion: 'Tu ahorro es menor al 10% de tus ingresos. Considera reducir gastos variables.',
+        monto: Math.abs(saldo),
+      });
+    }
+
+    if (totalGastosFijos > totalIngresos * 0.6) {
+      recomendaciones.push({
+        prioridad: 'media',
+        titulo: 'Gastos fijos elevados',
+        descripcion: 'Tus gastos fijos superan el 60% de tus ingresos.',
+        monto: totalGastosFijos,
+      });
+    }
+
+    if (suscripciones.filter(s => s.estado === 'Activo').length > 5) {
+      recomendaciones.push({
+        prioridad: 'baja',
+        titulo: 'Muchas suscripciones activas',
+        descripcion: 'Tienes varias suscripciones activas. Evalúa cancelar las que no uses.',
+      });
+    }
+
+    if (deudas.length > 0) {
+      recomendaciones.push({
+        prioridad: 'urgente',
+        titulo: 'Deudas activas',
+        descripcion: 'Tienes deudas registradas. Prioriza pagarlas para reducir intereses.',
+      });
+    }
+
+    return {
+      resumen,
+      recomendaciones,
+      alertas,
+    };
+  }, [
+    totalIngresos,
+    totalGastosFijos,
+    totalGastosVariables,
+    totalSuscripciones,
+    saldo,
+    tasaAhorro,
+    suscripciones,
+    deudas,
+  ]);
+
+  // ===============================
+  // 🚀 EJECUTAR ANÁLISIS
+  // ===============================
+  const analizarFinanzas = useCallback(() => {
+    setLoading(true);
+    setTimeout(() => {
+      setAnalisis(generarAnalisisLocal());
+      setLoading(false);
+    }, 600); // delay corto para UX
+  }, [generarAnalisisLocal]);
 
   useEffect(() => {
-    if (ingresos.length > 0 || gastosFijos.length > 0 || gastosVariables.length > 0) {
+    if (
+      ingresos.length > 0 ||
+      gastosFijos.length > 0 ||
+      gastosVariables.length > 0
+    ) {
       analizarFinanzas();
     }
   }, [ingresos.length, gastosFijos.length, gastosVariables.length, analizarFinanzas]);
 
+  // ===============================
+  // 🎨 UI HELPERS
+  // ===============================
   const getPrioridadColor = (prioridad) => {
     switch (prioridad) {
       case 'urgente': return 'bg-red-500';
@@ -69,6 +135,9 @@ export default function AsistenteFinanciero({
     }
   };
 
+  // ===============================
+  // 🖥️ RENDER
+  // ===============================
   return (
     <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-6 shadow-2xl">
       <div className="flex items-center justify-between mb-4">
@@ -76,13 +145,14 @@ export default function AsistenteFinanciero({
           <Brain className="w-8 h-8 text-purple-300" />
           <div>
             <h2 className="text-2xl font-bold text-white">
-              🤖 Asistente Financiero IA
+              🤖 Asistente Financiero
             </h2>
             <p className="text-purple-200 text-sm">
-              Análisis inteligente de tus finanzas
+              Análisis inteligente local (sin IA)
             </p>
           </div>
         </div>
+
         <button
           onClick={analizarFinanzas}
           disabled={loading}
@@ -102,79 +172,46 @@ export default function AsistenteFinanciero({
         </button>
       </div>
 
-      {loading && !analisis && (
+      {loading && (
         <div className="text-center py-8">
           <Loader className="w-12 h-12 animate-spin text-purple-300 mx-auto mb-4" />
-          <p className="text-purple-200">Analizando tus finanzas con IA...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
-          Error: {error}
+          <p className="text-purple-200">Analizando tus finanzas...</p>
         </div>
       )}
 
       {analisis && !loading && (
         <div className="space-y-4">
-          {analisis.resumen && (
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Resumen del Mes
-              </h3>
-              <p className="text-purple-100 text-sm leading-relaxed">
-                {analisis.resumen}
-              </p>
-            </div>
-          )}
+          <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Resumen del Mes
+            </h3>
+            <p className="text-purple-100 text-sm">{analisis.resumen}</p>
+          </div>
 
-          {analisis.recomendaciones && analisis.recomendaciones.length > 0 && (
+          {analisis.recomendaciones.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                💡 Recomendaciones Personalizadas
-              </h3>
-              {analisis.recomendaciones.map((rec, index) => (
-                <div
-                  key={index}
-                  className="bg-white/10 backdrop-blur rounded-xl p-4 border-l-4"
-                  style={{ borderColor: getPrioridadColor(rec.prioridad).replace('bg-', '#') }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`${getPrioridadColor(rec.prioridad)} p-2 rounded-lg`}>
-                      {getPrioridadIcon(rec.prioridad)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-white font-semibold mb-1">
-                        {rec.titulo}
-                      </h4>
-                      <p className="text-purple-100 text-sm mb-2">
-                        {rec.descripcion}
-                      </p>
-                      {rec.monto && (
-                        <span className="inline-block bg-white/20 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                          ${rec.monto.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
+              <h3 className="text-white font-semibold">💡 Recomendaciones</h3>
+              {analisis.recomendaciones.map((rec, i) => (
+                <div key={i} className="bg-white/10 rounded-xl p-4 flex gap-3">
+                  <div className={`${getPrioridadColor(rec.prioridad)} p-2 rounded-lg`}>
+                    {getPrioridadIcon(rec.prioridad)}
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold">{rec.titulo}</h4>
+                    <p className="text-purple-100 text-sm">{rec.descripcion}</p>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {analisis.alertas && analisis.alertas.length > 0 && (
+          {analisis.alertas.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-white font-semibold flex items-center gap-2">
-                ⚠️ Alertas Importantes
-              </h3>
-              {analisis.alertas.map((alerta, index) => (
-                <div
-                  key={index}
-                  className="bg-red-500/20 border border-red-500 text-red-100 px-4 py-3 rounded-lg flex items-start gap-2"
-                >
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">{alerta}</span>
+              <h3 className="text-white font-semibold">⚠️ Alertas</h3>
+              {analisis.alertas.map((a, i) => (
+                <div key={i} className="bg-red-500/20 border border-red-500 text-red-100 px-4 py-3 rounded-lg">
+                  {a}
                 </div>
               ))}
             </div>
@@ -186,12 +223,9 @@ export default function AsistenteFinanciero({
         </div>
       )}
 
-      {!analisis && !loading && !error && (
-        <div className="text-center py-8">
-          <Brain className="w-16 h-16 text-purple-300 mx-auto mb-4 opacity-50" />
-          <p className="text-purple-200">
-            Agrega algunos ingresos o gastos para que pueda analizar tus finanzas
-          </p>
+      {!analisis && !loading && (
+        <div className="text-center py-8 text-purple-200">
+          Agrega ingresos o gastos para iniciar el análisis.
         </div>
       )}
     </div>
