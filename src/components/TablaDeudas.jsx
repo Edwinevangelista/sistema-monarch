@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit2, Trash2, TrendingDown } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import ModalAgregarDeuda from './ModalAgregarDeuda';
 import ModalConfirmacion from './ModalConfirmacion';
 
