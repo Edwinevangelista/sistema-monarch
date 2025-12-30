@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import ModalGastoVariable from './ModalGastoVariable';
 import ModalConfirmacion from './ModalConfirmacion';
+import CardGasto from './CardGasto';
 
 export default function TablaGastos({ gastos, updateGasto, deleteGasto }) {
   const [editando, setEditando] = useState(null);
@@ -31,7 +32,20 @@ export default function TablaGastos({ gastos, updateGasto, deleteGasto }) {
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Vista Mobile - Cards */}
+      <div className="block md:hidden space-y-3">
+        {gastos.map((gasto) => (
+          <CardGasto
+            key={gasto.id}
+            gasto={gasto}
+            onEditar={() => setEditando(gasto)}
+            onEliminar={() => setEliminando(gasto)}
+          />
+        ))}
+      </div>
+
+      {/* Vista Desktop - Tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
