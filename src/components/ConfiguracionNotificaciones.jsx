@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bell, BellOff, Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 
 export default function ConfiguracionNotificaciones() {
