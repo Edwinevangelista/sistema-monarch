@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import AsistenteFinanciero from "./AsistenteFinanciero";
+import GestionRegistros from "./GestionRegistros";
 import LogoutButton from "./LogoutButton";
+import GestionRegistros from "./GestionRegistros";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
@@ -217,6 +219,9 @@ const DashboardCompleto = () => {
           suscripciones={suscripciones}
           deudas={deudas}
         />
+
+        {/* Gestión de Registros */}
+        <GestionRegistros />
 
         {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

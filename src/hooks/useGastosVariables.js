@@ -28,14 +28,25 @@ export const useGastosVariables = () => {
     
     const { data, error } = await supabase
       .from('gastos_variables')
-      .insert([{ 
-        ...nuevoGasto,
-        user_id: userId 
-      }])
+      .insert([{ ...nuevoGasto, user_id: userId }])
       .select()
     
     if (!error && data) {
       setGastos([...data, ...gastos])
+      return { success: true, data }
+    }
+    return { success: false, error }
+  }
+
+  const updateGasto = async (id, datosActualizados) => {
+    const { data, error } = await supabase
+      .from('gastos_variables')
+      .update(datosActualizados)
+      .eq('id', id)
+      .select()
+    
+    if (!error && data) {
+      setGastos(gastos.map(g => g.id === id ? data[0] : g))
       return { success: true, data }
     }
     return { success: false, error }
@@ -54,5 +65,5 @@ export const useGastosVariables = () => {
     return { success: false, error }
   }
 
-  return { gastos, loading, addGasto, deleteGasto, refresh: fetchGastos }
+  return { gastos, loading, addGasto, updateGasto, deleteGasto, refresh: fetchGastos }
 }

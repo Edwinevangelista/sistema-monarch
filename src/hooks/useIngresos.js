@@ -28,14 +28,25 @@ export const useIngresos = () => {
     
     const { data, error } = await supabase
       .from('ingresos')
-      .insert([{ 
-        ...nuevoIngreso,
-        user_id: userId 
-      }])
+      .insert([{ ...nuevoIngreso, user_id: userId }])
       .select()
     
     if (!error && data) {
       setIngresos([...data, ...ingresos])
+      return { success: true, data }
+    }
+    return { success: false, error }
+  }
+
+  const updateIngreso = async (id, datosActualizados) => {
+    const { data, error } = await supabase
+      .from('ingresos')
+      .update(datosActualizados)
+      .eq('id', id)
+      .select()
+    
+    if (!error && data) {
+      setIngresos(ingresos.map(i => i.id === id ? data[0] : i))
       return { success: true, data }
     }
     return { success: false, error }
@@ -54,5 +65,5 @@ export const useIngresos = () => {
     return { success: false, error }
   }
 
-  return { ingresos, loading, addIngreso, deleteIngreso, refresh: fetchIngresos }
+  return { ingresos, loading, addIngreso, updateIngreso, deleteIngreso, refresh: fetchIngresos }
 }

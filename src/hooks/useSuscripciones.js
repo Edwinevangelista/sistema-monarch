@@ -13,7 +13,7 @@ export const useSuscripciones = () => {
       .from('suscripciones')
       .select('*')
       .eq('user_id', userId)
-      .order('proximo_pago', { ascending: true })
+      .order('servicio', { ascending: true })
     
     if (!error) setSuscripciones(data || [])
     setLoading(false)
@@ -28,10 +28,7 @@ export const useSuscripciones = () => {
     
     const { data, error } = await supabase
       .from('suscripciones')
-      .insert([{ 
-        ...nuevaSub,
-        user_id: userId 
-      }])
+      .insert([{ ...nuevaSub, user_id: userId }])
       .select()
     
     if (!error && data) {
@@ -41,5 +38,39 @@ export const useSuscripciones = () => {
     return { success: false, error }
   }
 
-  return { suscripciones, loading, addSuscripcion, refresh: fetchSuscripciones }
+  const updateSuscripcion = async (id, datosActualizados) => {
+    const { data, error } = await supabase
+      .from('suscripciones')
+      .update(datosActualizados)
+      .eq('id', id)
+      .select()
+    
+    if (!error && data) {
+      setSuscripciones(suscripciones.map(s => s.id === id ? data[0] : s))
+      return { success: true, data }
+    }
+    return { success: false, error }
+  }
+
+  const deleteSuscripcion = async (id) => {
+    const { error } = await supabase
+      .from('suscripciones')
+      .delete()
+      .eq('id', id)
+    
+    if (!error) {
+      setSuscripciones(suscripciones.filter(s => s.id !== id))
+      return { success: true }
+    }
+    return { success: false, error }
+  }
+
+  return { 
+    suscripciones, 
+    loading, 
+    addSuscripcion, 
+    updateSuscripcion,
+    deleteSuscripcion,
+    refresh: fetchSuscripciones 
+  }
 }

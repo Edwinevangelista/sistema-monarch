@@ -28,10 +28,7 @@ export const useGastosFijos = () => {
     
     const { data, error } = await supabase
       .from('gastos_fijos')
-      .insert([{ 
-        ...nuevoGasto,
-        user_id: userId 
-      }])
+      .insert([{ ...nuevoGasto, user_id: userId }])
       .select()
     
     if (!error && data) {
@@ -41,19 +38,44 @@ export const useGastosFijos = () => {
     return { success: false, error }
   }
 
-  const updateEstado = async (id, nuevoEstado) => {
+  const updateGastoFijo = async (id, datosActualizados) => {
     const { data, error } = await supabase
       .from('gastos_fijos')
-      .update({ estado: nuevoEstado })
+      .update(datosActualizados)
       .eq('id', id)
       .select()
     
     if (!error && data) {
       setGastosFijos(gastosFijos.map(g => g.id === id ? data[0] : g))
+      return { success: true, data }
+    }
+    return { success: false, error }
+  }
+
+  const updateEstado = async (id, nuevoEstado) => {
+    return updateGastoFijo(id, { estado: nuevoEstado })
+  }
+
+  const deleteGastoFijo = async (id) => {
+    const { error } = await supabase
+      .from('gastos_fijos')
+      .delete()
+      .eq('id', id)
+    
+    if (!error) {
+      setGastosFijos(gastosFijos.filter(g => g.id !== id))
       return { success: true }
     }
     return { success: false, error }
   }
 
-  return { gastosFijos, loading, addGastoFijo, updateEstado, refresh: fetchGastosFijos }
+  return { 
+    gastosFijos, 
+    loading, 
+    addGastoFijo, 
+    updateGastoFijo,
+    updateEstado, 
+    deleteGastoFijo,
+    refresh: fetchGastosFijos 
+  }
 }
