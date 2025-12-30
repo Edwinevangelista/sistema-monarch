@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import ModalGastoFijo from './ModalGastoFijo';
 import ModalConfirmacion from './ModalConfirmacion';
+import CardGastoFijo from './CardGastoFijo';
 
 export default function TablaGastosFijos({ gastosFijos, updateGastoFijo, updateEstado, deleteGastoFijo }) {
   const [editando, setEditando] = useState(null);
@@ -76,7 +77,21 @@ export default function TablaGastosFijos({ gastosFijos, updateGastoFijo, updateE
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Vista Mobile - Cards */}
+      <div className="block md:hidden space-y-3">
+        {gastosFijos.map((gf) => (
+          <CardGastoFijo
+            key={gf.id}
+            gasto={gf}
+            onMarcarPagado={() => handleCambiarEstado(gf.id, gf.estado)}
+            onEditar={() => setEditando(gf)}
+            onEliminar={() => setEliminando(gf)}
+          />
+        ))}
+      </div>
+
+      {/* Vista Desktop - Tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
@@ -93,18 +108,14 @@ export default function TablaGastosFijos({ gastosFijos, updateGastoFijo, updateE
               return (
                 <tr key={gf.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                   <td className="py-3 px-4 text-white font-medium">{gf.nombre}</td>
-                  <td className="py-3 px-4 text-center text-gray-300">
-                    {gf.dia_venc}
-                  </td>
+                  <td className="py-3 px-4 text-center text-gray-300">{gf.dia_venc}</td>
                   <td className="py-3 px-4 text-right text-yellow-400 font-bold">
                     ${gf.monto.toFixed(2)}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-center gap-2">
                       <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${estadoInfo.bgColor}`}>
-                        <span className={estadoInfo.color}>
-                          {estadoInfo.icon}
-                        </span>
+                        <span className={estadoInfo.color}>{estadoInfo.icon}</span>
                         <span className={`text-sm font-semibold ${estadoInfo.color}`}>
                           {estadoInfo.texto}
                         </span>
