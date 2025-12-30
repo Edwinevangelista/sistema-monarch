@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import LogoutButton from "./LogoutButton";
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
