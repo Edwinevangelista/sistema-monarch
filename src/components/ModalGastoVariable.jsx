@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ShoppingCart, X } from 'lucide-react'
 import { CATEGORIAS, METODOS_PAGO } from '../constants/categorias'
 
-const ModalGastoVariable = ({ onClose, onSave }) => {
+const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     categoria: CATEGORIAS[0],
@@ -10,6 +10,19 @@ const ModalGastoVariable = ({ onClose, onSave }) => {
     monto: '',
     metodo: METODOS_PAGO[0]
   })
+
+  // Pre-cargar datos si estamos editando
+  useEffect(() => {
+    if (gastoInicial) {
+      setFormData({
+        fecha: gastoInicial.fecha || new Date().toISOString().split('T')[0],
+        categoria: gastoInicial.categoria || CATEGORIAS[0],
+        descripcion: gastoInicial.descripcion || '',
+        monto: gastoInicial.monto?.toString() || '',
+        metodo: gastoInicial.metodo || METODOS_PAGO[0]
+      })
+    }
+  }, [gastoInicial])
 
   const handleSubmit = async () => {
     if (!formData.monto) {
@@ -35,7 +48,7 @@ const ModalGastoVariable = ({ onClose, onSave }) => {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold text-white flex items-center gap-2">
             <ShoppingCart className="w-7 h-7 text-red-400" />
-            Nuevo Gasto Variable
+            {gastoInicial ? 'Editar Gasto' : 'Nuevo Gasto Variable'}
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="w-6 h-6" />
@@ -44,74 +57,77 @@ const ModalGastoVariable = ({ onClose, onSave }) => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Categoría</label>
-            <select
-              value={formData.categoria}
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-            >
-              {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Descripción</label>
-            <input
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-              placeholder="Detalles del gasto"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">Monto *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.monto}
-                onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">Método</label>
-              <select
-                value={formData.metodo}
-                onChange={(e) => setFormData({ ...formData, metodo: e.target.value })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-              >
-                {METODOS_PAGO.map(metodo => <option key={metodo} value={metodo}>{metodo}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">Fecha</label>
+            <label className="block text-gray-300 mb-2">Fecha</label>
             <input
               type="date"
               value={formData.fecha}
               onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Categoría</label>
+            <select
+              value={formData.categoria}
+              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              {CATEGORIAS.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Descripción</label>
+            <input
+              type="text"
+              placeholder="Ej: Supermercado, Gasolina"
+              value={formData.descripcion}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Monto *</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.monto}
+              onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2">Método de Pago</label>
+            <select
+              value={formData.metodo}
+              onChange={(e) => setFormData({ ...formData, metodo: e.target.value })}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              {METODOS_PAGO.map(metodo => (
+                <option key={metodo} value={metodo}>{metodo}</option>
+              ))}
+            </select>
           </div>
         </div>
 
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+            className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+            className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors"
           >
-            Guardar
+            {gastoInicial ? 'Actualizar' : 'Guardar'}
           </button>
         </div>
       </div>

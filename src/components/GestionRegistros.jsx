@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useIngresos } from '../hooks/useIngresos';
+import { useGastosVariables } from '../hooks/useGastosVariables';
 import TablaIngresos from './TablaIngresos';
+import TablaGastos from './TablaGastos';
 
 export default function GestionRegistros() {
   const [tabActiva, setTabActiva] = useState('ingresos');
   const { ingresos, updateIngreso, deleteIngreso } = useIngresos();
+  const { gastos, updateGasto, deleteGasto } = useGastosVariables();
 
   return (
     <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl">
@@ -24,6 +27,16 @@ export default function GestionRegistros() {
         >
           💰 Ingresos ({ingresos.length})
         </button>
+        <button
+          onClick={() => setTabActiva('gastos')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            tabActiva === 'gastos'
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          💸 Gastos ({gastos.length})
+        </button>
       </div>
 
       {/* Contenido */}
@@ -33,6 +46,14 @@ export default function GestionRegistros() {
             ingresos={ingresos}
             updateIngreso={updateIngreso}
             deleteIngreso={deleteIngreso}
+          />
+        )}
+
+        {tabActiva === 'gastos' && (
+          <TablaGastos
+            gastos={gastos}
+            updateGasto={updateGasto}
+            deleteGasto={deleteGasto}
           />
         )}
       </div>
