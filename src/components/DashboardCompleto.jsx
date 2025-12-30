@@ -3,6 +3,7 @@ import AsistenteFinanciero from "./AsistenteFinanciero";
 import GestionRegistros from "./GestionRegistros";
 import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
 import InfoMes from "./InfoMes";
+import LogoutButton from "./LogoutButton";
 import MenuFlotante from "./MenuFlotante";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
