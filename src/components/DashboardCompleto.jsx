@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import AsistenteFinanciero from "./AsistenteFinanciero";
 import GestionRegistros from "./GestionRegistros";
+import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
 import LogoutButton from "./LogoutButton";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
@@ -221,6 +222,9 @@ const DashboardCompleto = () => {
 
         {/* Gestión de Registros */}
         <GestionRegistros />
+
+        {/* Configuración de Notificaciones */}
+        <ConfiguracionNotificaciones />
 
         {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
