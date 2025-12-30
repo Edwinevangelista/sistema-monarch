@@ -1,4 +1,4 @@
-import { CreditCard, Edit2, Trash2, TrendingDown } from 'lucide-react';
+import { CreditCard, Edit2, Trash2 } from 'lucide-react';
 
 export default function CardDeuda({ deuda, onEditar, onEliminar }) {
   const getPorcentajePagado = () => {
