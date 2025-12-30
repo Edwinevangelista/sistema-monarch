@@ -5,6 +5,8 @@ import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
 import InfoMes from "./InfoMes";
 import LogoutButton from "./LogoutButton";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
+import MenuFlotante from "./MenuFlotante";
+import MenuFlotante from "./MenuFlotante";
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
@@ -146,7 +148,6 @@ const DashboardCompleto = () => {
       </h1>
       <div className="flex-1 flex justify-end">
         <LogoutButton />
-        <InfoMes />
       </div>
     </div>
     <p className="text-center text-blue-100 mt-2 text-sm">
@@ -302,6 +303,9 @@ const DashboardCompleto = () => {
         />
       )}
     </div>
+
+      {/* Menú Flotante */}
+      <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
   )
 }
 
