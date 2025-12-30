@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import AsistenteFinanciero from "./AsistenteFinanciero";
 import GestionRegistros from "./GestionRegistros";
 import LogoutButton from "./LogoutButton";
-import GestionRegistros from "./GestionRegistros";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
