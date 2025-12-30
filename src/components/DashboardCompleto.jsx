@@ -105,6 +105,7 @@ const DashboardCompleto = () => {
       if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
       const proxPago = new Date(sub.proximo_pago)
       const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
+
       
       if (diff <= 3 && diff >= 0) {
         alertas.push({ 
@@ -137,28 +138,28 @@ const DashboardCompleto = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
       {/* Header */}
-    <div className="max-w-7xl mx-auto mb-6">
-  <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex-1"></div>
-      <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-        <Wallet className="w-8 h-8" />
-        💰 SISTEMA MONARCH
-      </h1>
-      <div className="flex-1 flex justify-end">
-        <LogoutButton />
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex-1"></div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Wallet className="w-8 h-8" />
+              💰 SISTEMA MONARCH
+            </h1>
+            <div className="flex-1 flex justify-end">
+              <LogoutButton />
+            </div>
+          </div>
+          <p className="text-center text-blue-100 mt-2 text-sm">
+            Control total de tus finanzas personales
+          </p>
+        </div>
       </div>
-    </div>
-    <p className="text-center text-blue-100 mt-2 text-sm">
-      Control total de tus finanzas personales
-    </p>
-  </div>
-</div>
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* KPIs */}
-      {/* Info del Mes */}
-      <InfoMes />
+        {/* Info del Mes */}
+        <InfoMes />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard icon="💵" label="INGRESOS" value={totalIngresos} color="#10B981" />
@@ -301,11 +302,14 @@ const DashboardCompleto = () => {
           }}
         />
       )}
+
+      {/* Menú Flotante */}
+      <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
     </div>
   )
 }
 
-      {/* Menú Flotante */}
-      <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
-
 export default DashboardCompleto
+
+
+
