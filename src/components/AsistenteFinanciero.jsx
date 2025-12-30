@@ -26,12 +26,11 @@ export default function AsistenteFinanciero({
   const tasaAhorro = totalIngresos > 0 ? saldo / totalIngresos : 0;
 
   // ===============================
-  // 🧠 ANÁLISIS LOCAL
+  // 🧠 ANÁLISIS LOCAL (SIN IA)
   // ===============================
   const generarAnalisisLocal = useCallback(() => {
     const recomendaciones = [];
     const alertas = [];
-
     let resumen = '';
 
     if (totalIngresos === 0) {
@@ -48,7 +47,6 @@ export default function AsistenteFinanciero({
         prioridad: 'alta',
         titulo: 'Aumentar tasa de ahorro',
         descripcion: 'Tu ahorro es menor al 10% de tus ingresos. Considera reducir gastos variables.',
-        monto: Math.abs(saldo),
       });
     }
 
@@ -57,7 +55,6 @@ export default function AsistenteFinanciero({
         prioridad: 'media',
         titulo: 'Gastos fijos elevados',
         descripcion: 'Tus gastos fijos superan el 60% de tus ingresos.',
-        monto: totalGastosFijos,
       });
     }
 
@@ -65,7 +62,7 @@ export default function AsistenteFinanciero({
       recomendaciones.push({
         prioridad: 'baja',
         titulo: 'Muchas suscripciones activas',
-        descripcion: 'Tienes varias suscripciones activas. Evalúa cancelar las que no uses.',
+        descripcion: 'Evalúa cancelar las que no uses.',
       });
     }
 
@@ -73,24 +70,18 @@ export default function AsistenteFinanciero({
       recomendaciones.push({
         prioridad: 'urgente',
         titulo: 'Deudas activas',
-        descripcion: 'Tienes deudas registradas. Prioriza pagarlas para reducir intereses.',
+        descripcion: 'Prioriza el pago de deudas para reducir intereses.',
       });
     }
 
-    return {
-      resumen,
-      recomendaciones,
-      alertas,
-    };
+    return { resumen, recomendaciones, alertas };
   }, [
     totalIngresos,
     totalGastosFijos,
-    totalGastosVariables,
-    totalSuscripciones,
     saldo,
     tasaAhorro,
     suscripciones,
-    deudas,
+    deudas
   ]);
 
   // ===============================
@@ -101,15 +92,11 @@ export default function AsistenteFinanciero({
     setTimeout(() => {
       setAnalisis(generarAnalisisLocal());
       setLoading(false);
-    }, 600); // delay corto para UX
+    }, 500);
   }, [generarAnalisisLocal]);
 
   useEffect(() => {
-    if (
-      ingresos.length > 0 ||
-      gastosFijos.length > 0 ||
-      gastosVariables.length > 0
-    ) {
+    if (ingresos.length || gastosFijos.length || gastosVariables.length) {
       analizarFinanzas();
     }
   }, [ingresos.length, gastosFijos.length, gastosVariables.length, analizarFinanzas]);
@@ -117,23 +104,16 @@ export default function AsistenteFinanciero({
   // ===============================
   // 🎨 UI HELPERS
   // ===============================
-  const getPrioridadColor = (prioridad) => {
-    switch (prioridad) {
-      case 'urgente': return 'bg-red-500';
-      case 'alta': return 'bg-orange-500';
-      case 'media': return 'bg-yellow-500';
-      case 'baja': return 'bg-green-500';
-      default: return 'bg-blue-500';
-    }
-  };
+  const getPrioridadColor = (p) =>
+    p === 'urgente' ? 'bg-red-500'
+    : p === 'alta' ? 'bg-orange-500'
+    : p === 'media' ? 'bg-yellow-500'
+    : 'bg-green-500';
 
-  const getPrioridadIcon = (prioridad) => {
-    switch (prioridad) {
-      case 'urgente': return <AlertTriangle className="w-5 h-5" />;
-      case 'alta': return <TrendingUp className="w-5 h-5" />;
-      default: return <CheckCircle className="w-5 h-5" />;
-    }
-  };
+  const getPrioridadIcon = (p) =>
+    p === 'urgente' ? <AlertTriangle className="w-5 h-5" />
+    : p === 'alta' ? <TrendingUp className="w-5 h-5" />
+    : <CheckCircle className="w-5 h-5" />;
 
   // ===============================
   // 🖥️ RENDER
@@ -144,12 +124,8 @@ export default function AsistenteFinanciero({
         <div className="flex items-center gap-3">
           <Brain className="w-8 h-8 text-purple-300" />
           <div>
-            <h2 className="text-2xl font-bold text-white">
-              🤖 Asistente Financiero
-            </h2>
-            <p className="text-purple-200 text-sm">
-              Análisis inteligente local (sin IA)
-            </p>
+            <h2 className="text-2xl font-bold text-white">🤖 Asistente Financiero</h2>
+            <p className="text-purple-200 text-sm">Análisis local (sin IA)</p>
           </div>
         </div>
 
@@ -158,48 +134,36 @@ export default function AsistenteFinanciero({
           disabled={loading}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 flex items-center gap-2"
         >
-          {loading ? (
-            <>
-              <Loader className="w-4 h-4 animate-spin" />
-              Analizando...
-            </>
-          ) : (
-            <>
-              <Brain className="w-4 h-4" />
-              Actualizar
-            </>
-          )}
+          {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+          {loading ? 'Analizando...' : 'Actualizar'}
         </button>
       </div>
 
       {loading && (
-        <div className="text-center py-8">
-          <Loader className="w-12 h-12 animate-spin text-purple-300 mx-auto mb-4" />
-          <p className="text-purple-200">Analizando tus finanzas...</p>
+        <div className="text-center py-8 text-purple-200">
+          <Loader className="w-10 h-10 animate-spin mx-auto mb-2" />
+          Analizando tus finanzas...
         </div>
       )}
 
       {analisis && !loading && (
         <div className="space-y-4">
-          <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-            <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Resumen del Mes
-            </h3>
+          <div className="bg-white/10 rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-1">Resumen del Mes</h3>
             <p className="text-purple-100 text-sm">{analisis.resumen}</p>
           </div>
 
           {analisis.recomendaciones.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-white font-semibold">💡 Recomendaciones</h3>
-              {analisis.recomendaciones.map((rec, i) => (
+              {analisis.recomendaciones.map((r, i) => (
                 <div key={i} className="bg-white/10 rounded-xl p-4 flex gap-3">
-                  <div className={`${getPrioridadColor(rec.prioridad)} p-2 rounded-lg`}>
-                    {getPrioridadIcon(rec.prioridad)}
+                  <div className={`${getPrioridadColor(r.prioridad)} p-2 rounded-lg`}>
+                    {getPrioridadIcon(r.prioridad)}
                   </div>
                   <div>
-                    <h4 className="text-white font-semibold">{rec.titulo}</h4>
-                    <p className="text-purple-100 text-sm">{rec.descripcion}</p>
+                    <h4 className="text-white font-semibold">{r.titulo}</h4>
+                    <p className="text-purple-100 text-sm">{r.descripcion}</p>
                   </div>
                 </div>
               ))}
@@ -210,16 +174,12 @@ export default function AsistenteFinanciero({
             <div className="space-y-2">
               <h3 className="text-white font-semibold">⚠️ Alertas</h3>
               {analisis.alertas.map((a, i) => (
-                <div key={i} className="bg-red-500/20 border border-red-500 text-red-100 px-4 py-3 rounded-lg">
+                <div key={i} className="bg-red-500/20 border border-red-500 text-red-100 px-4 py-2 rounded-lg">
                   {a}
                 </div>
               ))}
             </div>
           )}
-
-          <p className="text-purple-300 text-xs text-right">
-            Última actualización: {new Date().toLocaleString('es-ES')}
-          </p>
         </div>
       )}
 
