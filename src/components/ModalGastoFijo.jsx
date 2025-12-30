@@ -10,10 +10,10 @@ const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
     monto: '',
     auto_pago: 'No',
     estado: 'Pendiente',
+    recurrente: true, // Por defecto activado
     notas: ''
   })
 
-  // Pre-cargar datos si estamos editando
   useEffect(() => {
     if (gastoInicial) {
       setFormData({
@@ -23,6 +23,7 @@ const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
         monto: gastoInicial.monto?.toString() || '',
         auto_pago: gastoInicial.auto_pago || 'No',
         estado: gastoInicial.estado || 'Pendiente',
+        recurrente: gastoInicial.recurrente !== undefined ? gastoInicial.recurrente : true,
         notas: gastoInicial.notas || ''
       })
     }
@@ -108,6 +109,24 @@ const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
               onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
               className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
+          </div>
+
+          {/* NUEVO: Checkbox de Recurrente */}
+          <div className="bg-yellow-500/10 border-2 border-yellow-500/30 rounded-xl p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.recurrente}
+                onChange={(e) => setFormData({ ...formData, recurrente: e.target.checked })}
+                className="w-5 h-5 rounded border-yellow-500 text-yellow-500 focus:ring-yellow-500"
+              />
+              <div>
+                <div className="text-white font-semibold">🔄 Gasto Recurrente Mensual</div>
+                <div className="text-sm text-gray-400">
+                  Se creará automáticamente cada mes con estado "Pendiente"
+                </div>
+              </div>
+            </label>
           </div>
 
           <div>

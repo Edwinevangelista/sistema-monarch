@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import AsistenteFinanciero from "./AsistenteFinanciero";
 import GestionRegistros from "./GestionRegistros";
 import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
+import InfoMes from "./InfoMes";
 import LogoutButton from "./LogoutButton";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
@@ -145,6 +146,7 @@ const DashboardCompleto = () => {
       </h1>
       <div className="flex-1 flex justify-end">
         <LogoutButton />
+        <InfoMes />
       </div>
     </div>
     <p className="text-center text-blue-100 mt-2 text-sm">
@@ -155,6 +157,9 @@ const DashboardCompleto = () => {
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* KPIs */}
+      {/* Info del Mes */}
+      <InfoMes />
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard icon="💵" label="INGRESOS" value={totalIngresos} color="#10B981" />
           <KPICard icon="💸" label="GASTOS" value={totalGastos} color="#EF4444" />
