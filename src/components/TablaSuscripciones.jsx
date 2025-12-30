@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import ModalSuscripcion from './ModalSuscripcion';
 import ModalConfirmacion from './ModalConfirmacion';
+import CardSuscripcion from './CardSuscripcion';
 
 export default function TablaSuscripciones({ suscripciones, updateSuscripcion, deleteSuscripcion }) {
   const [editando, setEditando] = useState(null);
@@ -37,7 +38,20 @@ export default function TablaSuscripciones({ suscripciones, updateSuscripcion, d
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Vista Mobile - Cards */}
+      <div className="block md:hidden space-y-3">
+        {suscripciones.map((sub) => (
+          <CardSuscripcion
+            key={sub.id}
+            suscripcion={sub}
+            onEditar={() => setEditando(sub)}
+            onEliminar={() => setEliminando(sub)}
+          />
+        ))}
+      </div>
+
+      {/* Vista Desktop - Tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">

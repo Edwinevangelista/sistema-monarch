@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import ModalAgregarDeuda from './ModalAgregarDeuda';
 import ModalConfirmacion from './ModalConfirmacion';
+import CardDeuda from './CardDeuda';
 
 export default function TablaDeudas({ deudas, updateDeuda, deleteDeuda }) {
   const [editando, setEditando] = useState(null);
@@ -36,7 +37,20 @@ export default function TablaDeudas({ deudas, updateDeuda, deleteDeuda }) {
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Vista Mobile - Cards */}
+      <div className="block md:hidden space-y-3">
+        {deudas.map((deuda) => (
+          <CardDeuda
+            key={deuda.id}
+            deuda={deuda}
+            onEditar={() => setEditando(deuda)}
+            onEliminar={() => setEliminando(deuda)}
+          />
+        ))}
+      </div>
+
+      {/* Vista Desktop - Tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">

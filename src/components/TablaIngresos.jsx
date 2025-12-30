@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Edit2, Trash2 } from 'lucide-react';
 import ModalIngreso from './ModalIngreso';
 import ModalConfirmacion from './ModalConfirmacion';
+import CardIngreso from './CardIngreso';
 
 export default function TablaIngresos({ ingresos, updateIngreso, deleteIngreso }) {
   const [editando, setEditando] = useState(null);
@@ -31,7 +32,20 @@ export default function TablaIngresos({ ingresos, updateIngreso, deleteIngreso }
 
   return (
     <>
-      <div className="overflow-x-auto">
+      {/* Vista Mobile - Cards */}
+      <div className="block md:hidden space-y-3">
+        {ingresos.map((ingreso) => (
+          <CardIngreso
+            key={ingreso.id}
+            ingreso={ingreso}
+            onEditar={() => setEditando(ingreso)}
+            onEliminar={() => setEliminando(ingreso)}
+          />
+        ))}
+      </div>
+
+      {/* Vista Desktop - Tabla */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-700">
@@ -77,7 +91,6 @@ export default function TablaIngresos({ ingresos, updateIngreso, deleteIngreso }
         </table>
       </div>
 
-      {/* Modal de Edición */}
       {editando && (
         <ModalIngreso
           onClose={() => setEditando(null)}
@@ -86,7 +99,6 @@ export default function TablaIngresos({ ingresos, updateIngreso, deleteIngreso }
         />
       )}
 
-      {/* Modal de Confirmación */}
       <ModalConfirmacion
         isOpen={!!eliminando}
         onClose={() => setEliminando(null)}
