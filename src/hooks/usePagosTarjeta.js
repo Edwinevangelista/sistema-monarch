@@ -1,45 +1,21 @@
-import { useState, useEffect } from 'react'
-import { supabase, getCurrentUserId } from '../lib/supabase'
+import { useSupabaseData } from './useSupabaseData'
 
-export const usePagosTarjeta = () => {
-  const [pagos, setPagos] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchPagos = async () => {
-    setLoading(true)
-    const userId = await getCurrentUserId()
-    
-    const { data, error } = await supabase
-      .from('pagos_tarjetas')
-      .select('*')
-      .eq('user_id', userId)
-      .order('fecha', { ascending: false })
-    
-    if (!error) setPagos(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchPagos()
-  }, [])
-
-  const addPago = async (nuevoPago) => {
-    const userId = await getCurrentUserId()
-    
-    const { data, error } = await supabase
-      .from('pagos_tarjetas')
-      .insert([{ 
-        ...nuevoPago,
-        user_id: userId 
-      }])
-      .select()
-    
-    if (!error && data) {
-      setPagos([...data, ...pagos])
-      return { success: true, data }
+export const usePagosTarjeta = (lazyLoad = false) => {
+  const { data, loading, addRecord, refresh, initialize } = useSupabaseData(
+    'pagos_tarjetas',  // ⚠️ CON 'S' AL FINAL
+    {
+      lazyLoad,
+      orderBy: 'fecha',
+      ascending: false,
+      select: '*'  // ✅
     }
-    return { success: false, error }
-  }
+  )
 
-  return { pagos, loading, addPago, refresh: fetchPagos }
+  return {
+    pagos: data,
+    loading,
+    addPago: addRecord,
+    refresh,
+    initialize
+  }
 }

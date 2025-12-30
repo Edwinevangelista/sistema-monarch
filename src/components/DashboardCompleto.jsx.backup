@@ -1,4 +1,11 @@
 import React, { useState } from 'react'
+import AsistenteFinanciero from "./AsistenteFinanciero";
+import GestionRegistros from "./GestionRegistros";
+import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
+import InfoMes from "./InfoMes";
+import LogoutButton from "./LogoutButton";
+import MenuFlotante from "./MenuFlotante";
+import ModalDetallesCategorias from "./ModalDetallesCategorias";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
@@ -21,19 +28,11 @@ import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
 import ListaDeudas from './ListaDeudas'
 import ListaSuscripciones from './ListaSuscripciones'
-import AsistenteFinanciero from "./AsistenteFinanciero";
-import GestionRegistros from "./GestionRegistros";
-import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
-import InfoMes from "./InfoMes";
-import LogoutButton from "./LogoutButton";
-import MenuFlotante from "./MenuFlotante";
-import ModalDetallesCategorias from "./ModalDetallesCategorias";
 
 const DashboardCompleto = () => {
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
-  useInactivityTimeout(15);
-  
+  useInactivityTimeout(15); // 15 minutos de inactividad
   
   const { ingresos, addIngreso } = useIngresos()
   const { gastos, addGasto } = useGastosVariables()
@@ -308,19 +307,21 @@ const DashboardCompleto = () => {
         />
       )}
 
-     {showDetallesCategorias && (
-  <ModalDetallesCategorias
-    gastosPorCategoria={gastosPorCategoria}
-    gastosFijos={gastosFijos}
-    gastosVariables={gastos}
-    suscripciones={suscripciones}
-    onClose={() => setShowDetallesCategorias(false)}
-  />
-)}
+      {/* Modal Detalles de Categorías */}
+      {showDetallesCategorias && (
+        <ModalDetallesCategorias
+          gastosPorCategoria={gastosPorCategoria}
+          gastosFijos={gastosFijos}
+          gastosVariables={gastos}
+          suscripciones={suscripciones}
+          onClose={() => setShowDetallesCategorias(false)}
+        />
+      )}
 
       {/* Menú Flotante */}
       <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
     </div>
   )
 }
+
 export default DashboardCompleto

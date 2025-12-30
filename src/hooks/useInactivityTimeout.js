@@ -1,9 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function useInactivityTimeout(timeoutMinutes = 15) {
-  const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const timeoutRef = useRef(null);
 
@@ -13,20 +11,32 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
     }
 
     timeoutRef.current = setTimeout(() => {
-      if (user) {
-        signOut();
-        alert('Sesión cerrada por inactividad');
-        navigate('/login');
+      const token = localStorage.getItem("supabase_token");
+
+      if (token) {
+        // Cerrar sesión por inactividad
+        localStorage.removeItem("supabase_token");
+        localStorage.removeItem("supabase_user");
+
+        Object.keys(localStorage).forEach((key) => {
+          if (key.endsWith("_cache")) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        alert("Sesión cerrada por inactividad");
+        navigate("/login", { replace: true });
       }
     }, timeoutMinutes * 60 * 1000);
-  }, [user, signOut, navigate, timeoutMinutes]);
+  }, [navigate, timeoutMinutes]);
 
   useEffect(() => {
-    if (!user) return;
+    const token = localStorage.getItem("supabase_token");
+    if (!token) return;
 
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    const events = ["mousedown", "keydown", "scroll", "touchstart", "click"];
 
-    events.forEach(event => {
+    events.forEach((event) => {
       document.addEventListener(event, resetTimeout);
     });
 
@@ -36,9 +46,9 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      events.forEach(event => {
+      events.forEach((event) => {
         document.removeEventListener(event, resetTimeout);
       });
     };
-  }, [user, resetTimeout]);
+  }, [resetTimeout]);
 }

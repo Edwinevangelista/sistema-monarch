@@ -1,81 +1,23 @@
-import { useState, useEffect } from 'react'
-import { supabase, getCurrentUserId } from '../lib/supabase'
+import { useSupabaseData } from './useSupabaseData'
 
-export const useGastosFijos = () => {
-  const [gastosFijos, setGastosFijos] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const fetchGastosFijos = async () => {
-    setLoading(true)
-    const userId = await getCurrentUserId()
-    
-    const { data, error } = await supabase
-      .from('gastos_fijos')
-      .select('*')
-      .eq('user_id', userId)
-      .order('dia_venc', { ascending: true })
-    
-    if (!error) setGastosFijos(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchGastosFijos()
-  }, [])
-
-  const addGastoFijo = async (nuevoGasto) => {
-    const userId = await getCurrentUserId()
-    
-    const { data, error } = await supabase
-      .from('gastos_fijos')
-      .insert([{ ...nuevoGasto, user_id: userId }])
-      .select()
-    
-    if (!error && data) {
-      setGastosFijos([...gastosFijos, ...data])
-      return { success: true, data }
+export const useGastosFijos = (lazyLoad = false) => {
+  const { data, loading, addRecord, updateRecord, deleteRecord, refresh, initialize } = useSupabaseData(
+    'gastos_fijos',
+    {
+      lazyLoad,
+      orderBy: 'created_at',
+      ascending: false,
+      select: '*'  // ✅
     }
-    return { success: false, error }
-  }
+  )
 
-  const updateGastoFijo = async (id, datosActualizados) => {
-    const { data, error } = await supabase
-      .from('gastos_fijos')
-      .update(datosActualizados)
-      .eq('id', id)
-      .select()
-    
-    if (!error && data) {
-      setGastosFijos(gastosFijos.map(g => g.id === id ? data[0] : g))
-      return { success: true, data }
-    }
-    return { success: false, error }
-  }
-
-  const updateEstado = async (id, nuevoEstado) => {
-    return updateGastoFijo(id, { estado: nuevoEstado })
-  }
-
-  const deleteGastoFijo = async (id) => {
-    const { error } = await supabase
-      .from('gastos_fijos')
-      .delete()
-      .eq('id', id)
-    
-    if (!error) {
-      setGastosFijos(gastosFijos.filter(g => g.id !== id))
-      return { success: true }
-    }
-    return { success: false, error }
-  }
-
-  return { 
-    gastosFijos, 
-    loading, 
-    addGastoFijo, 
-    updateGastoFijo,
-    updateEstado, 
-    deleteGastoFijo,
-    refresh: fetchGastosFijos 
+  return {
+    gastosFijos: data,
+    loading,
+    addGastoFijo: addRecord,
+    updateGastoFijo: updateRecord,
+    deleteGastoFijo: deleteRecord,
+    refresh,
+    initialize
   }
 }
