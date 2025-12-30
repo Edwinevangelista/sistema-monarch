@@ -1,11 +1,5 @@
 import React, { useState } from 'react'
-import AsistenteFinanciero from "./AsistenteFinanciero";
-import GestionRegistros from "./GestionRegistros";
-import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
-import InfoMes from "./InfoMes";
 import LogoutButton from "./LogoutButton";
-import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
-import MenuFlotante from "./MenuFlotante";
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
@@ -30,7 +24,6 @@ import ListaSuscripciones from './ListaSuscripciones'
 
 const DashboardCompleto = () => {
   const [showModal, setShowModal] = useState(null)
-  useInactivityTimeout(15); // 15 minutos de inactividad
   
   const { ingresos, addIngreso } = useIngresos()
   const { gastos, addGasto } = useGastosVariables()
@@ -137,29 +130,20 @@ const DashboardCompleto = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
       {/* Header */}
-    <div className="max-w-7xl mx-auto mb-6">
-  <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex-1"></div>
-      <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-        <Wallet className="w-8 h-8" />
-        💰 SISTEMA MONARCH
-      </h1>
-      <div className="flex-1 flex justify-end">
-        <LogoutButton />
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
+          <h1 className="text-3xl font-bold text-white text-center flex items-center justify-center gap-3">
+            <Wallet className="w-8 h-8" />
+            💰 SISTEMA MONARCH
+          </h1>
+          <p className="text-center text-blue-100 mt-2 text-sm">
+            Control total de tus finanzas personales
+          </p>
+        </div>
       </div>
-    </div>
-    <p className="text-center text-blue-100 mt-2 text-sm">
-      Control total de tus finanzas personales
-    </p>
-  </div>
-</div>
 
       <div className="max-w-7xl mx-auto space-y-6">
         {/* KPIs */}
-      {/* Info del Mes */}
-      <InfoMes />
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard icon="💵" label="INGRESOS" value={totalIngresos} color="#10B981" />
           <KPICard icon="💸" label="GASTOS" value={totalGastos} color="#EF4444" />
@@ -215,21 +199,6 @@ const DashboardCompleto = () => {
 
         {/* Notificaciones */}
         <Notificaciones alertas={alertas} />
-
-        {/* Asistente Financiero IA */}
-        <AsistenteFinanciero 
-          ingresos={ingresos}
-          gastosFijos={gastosFijos}
-          gastosVariables={gastos}
-          suscripciones={suscripciones}
-          deudas={deudas}
-        />
-
-        {/* Gestión de Registros */}
-        <GestionRegistros />
-
-        {/* Configuración de Notificaciones */}
-        <ConfiguracionNotificaciones />
 
         {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -302,9 +271,6 @@ const DashboardCompleto = () => {
         />
       )}
     </div>
-
-      {/* Menú Flotante */}
-      <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
   )
 }
 
