@@ -6,7 +6,6 @@ import InfoMes from "./InfoMes";
 import LogoutButton from "./LogoutButton";
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
 import MenuFlotante from "./MenuFlotante";
-import MenuFlotante from "./MenuFlotante";
 import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
