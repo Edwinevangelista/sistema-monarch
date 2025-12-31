@@ -27,15 +27,19 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
       return
     }
 
-    const resultado = await onSave({
-      ...formData,
-      monto: parseFloat(formData.monto)
-    })
+    try {
+      // Ejecutamos la función de guardar que viene del padre (addIngreso)
+      await onSave({
+        ...formData,
+        monto: parseFloat(formData.monto)
+      })
 
-    if (resultado.success) {
+      // CORRECCIÓN: Ya no intentamos leer 'resultado.success'.
+      // Asumimos que si no hubo error en el try/catch, fue exitoso.
       onClose()
-    } else {
-      alert('Error al guardar: ' + (resultado.error?.message || 'Error desconocido'))
+    } catch (error) {
+      console.error("Error guardando:", error)
+      alert('Error al guardar el ingreso. Intenta nuevamente.')
     }
   }
 

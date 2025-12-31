@@ -138,27 +138,31 @@ export const useSupabaseData = (
   }, [tableName, data, saveToCache])
 
   // Update record
-  const updateRecord = useCallback(async (id, updates) => {
-    try {
-      const { data: updatedData, error: updateError } = await supabase
-        .from(tableName)
-        .update(updates)
-        .eq('id', id)
-        .select()
-      
-      if (updateError) throw updateError
-      
-      if (updatedData) {
-        const newData = data.map(item => item.id === id ? updatedData[0] : item)
-        setData(newData)
-        saveToCache(newData)
-        return { success: true, data: updatedData }
-      }
-    } catch (err) {
-      console.error(`Error updating ${tableName}:`, err)
-      return { success: false, error: err }
-    }
-  }, [tableName, data, saveToCache])
+const updateRecord = useCallback(async (id, updates) => {
+  try {
+    const { data: updatedData, error } = await supabase
+      .from(tableName)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newData = data.map(item =>
+      item.id === id ? updatedData : item
+    );
+
+    setData(newData);
+    saveToCache(newData);
+
+    return { success: true, data: updatedData };
+  } catch (err) {
+    console.error(`Error updating ${tableName}:`, err);
+    return { success: false, error: err };
+  }
+}, [tableName, data, saveToCache]);
+
 
   // Delete record
   const deleteRecord = useCallback(async (id) => {

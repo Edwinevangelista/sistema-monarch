@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
-import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
-import { Wallet, Plus, CreditCard, FileText, Repeat, Upload } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Wallet, Plus, CreditCard, Repeat, Upload, Bell, Sun, Moon, Coffee } from 'lucide-react'
+
+// --- HOOKS ---
+import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
 import { useIngresos } from '../hooks/useIngresos'
 import { useGastosVariables } from '../hooks/useGastosVariables'
 import { useGastosFijos } from '../hooks/useGastosFijos'
@@ -8,10 +10,10 @@ import { useSuscripciones } from '../hooks/useSuscripciones'
 import { useDeudas } from '../hooks/useDeudas'
 import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 
+// --- COMPONENTES UI ---
 import KPICard from './KPICard'
 import ModalIngreso from './ModalIngreso'
-import ModalGastoVariable from './ModalGastoVariable'
-import ModalGastoFijo from './ModalGastoFijo'
+import ModalGastos from './ModalGastos'
 import ModalSuscripcion from './ModalSuscripcion'
 import ModalPagoTarjeta from './ModalPagoTarjeta'
 import ModalAgregarDeuda from './ModalAgregarDeuda'
@@ -21,26 +23,80 @@ import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
 import ListaDeudas from './ListaDeudas'
 import ListaSuscripciones from './ListaSuscripciones'
-import AsistenteFinanciero from "./AsistenteFinanciero";
-import GestionRegistros from "./GestionRegistros";
-import ConfiguracionNotificaciones from "./ConfiguracionNotificaciones";
-import InfoMes from "./InfoMes";
-import LogoutButton from "./LogoutButton";
-import MenuFlotante from "./MenuFlotante";
-import ModalDetallesCategorias from "./ModalDetallesCategorias";
+import AsistenteFinanciero from './AsistenteFinanciero'
+import GestionRegistros from './GestionRegistros'
+import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
+import InfoMes from './InfoMes'
+import LogoutButton from './LogoutButton'
+import MenuFlotante from './MenuFlotante'
+import ModalDetallesCategorias from './ModalDetallesCategorias'
+import MenuInferior from './MenuInferior'
 
 const DashboardCompleto = () => {
+  // Estado del Usuario (Simulado)
+  const [usuario, setUsuario] = useState({ 
+    email: 'usuario@ejemplo.com', 
+    nombre: '' 
+  })
+  
+  // Estados de Modales
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
-  useInactivityTimeout(15);
   
-  
+  // Estados para Edición
+  const [ingresoEditando, setIngresoEditando] = useState(null)
+  const [gastoEditando, setGastoEditando] = useState(null)
+  const [gastoFijoEditando, setGastoFijoEditando] = useState(null)
+  const [suscripcionEditando, setSuscripcionEditando] = useState(null)
+  const [deudaEditando, setDeudaEditando] = useState(null)
+
+  useInactivityTimeout(15)
+
+  // Hooks de datos
   const { ingresos, addIngreso } = useIngresos()
   const { gastos, addGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion } = useSuscripciones()
   const { deudas, addDeuda } = useDeudas()
   const { addPago } = usePagosTarjeta()
+
+  // Extraer nombre del email
+  useEffect(() => {
+    if (usuario.email) {
+      const nombre = usuario.email.split('@')[0]
+      setUsuario(prev => ({ ...prev, nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1) }))
+    }
+  }, [usuario.email])
+
+  // Saludo y Motivación
+  const obtenerSaludo = () => {
+    const hora = new Date().getHours()
+    let textoHora = ''
+    let icono = null
+    
+    if (hora >= 5 && hora < 12) {
+      textoHora = 'Buenos días'
+      icono = <Sun className="w-6 h-6 text-yellow-400" />
+    } else if (hora >= 12 && hora < 19) {
+      textoHora = 'Buenas tardes'
+      icono = <Coffee className="w-6 h-6 text-orange-400" />
+    } else {
+      textoHora = 'Buenas noches'
+      icono = <Moon className="w-6 h-6 text-indigo-400" />
+    }
+
+    const frases = [
+      "¡Cada centavo cuenta para tu libertad financiera!",
+      "Estás construyendo un futuro sólido, ¡sigue así!",
+      "El control de hoy es la tranquilidad del mañana.",
+      "¡Tu esfuerzo tiene recompensa, no te detengas ahora!"
+    ]
+    const fraseMotivacional = frases[Math.floor(Math.random() * frases.length)]
+
+    return { textoHora, icono, fraseMotivacional }
+  }
+
+  const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
 
   // Cálculos
   const totalIngresos = ingresos.reduce((sum, i) => sum + (i.monto || 0), 0)
@@ -56,9 +112,8 @@ const DashboardCompleto = () => {
   
   const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones
   const saldoMes = totalIngresos - totalGastos
-  const tasaAhorro = totalIngresos > 0 ? (saldoMes / totalIngresos) : 0
+  const tasaAhorro = totalIngresos > 0 ? ((saldoMes / totalIngresos) * 100).toFixed(1) : 0
 
-  // Gastos por categoría para gráfica
   const gastosPorCategoria = {}
   ;[...gastosFijos, ...gastos, ...suscripciones.filter(s => s.estado === 'Activo')].forEach(item => {
     const cat = item.categoria || '📦 Otros'
@@ -71,7 +126,6 @@ const DashboardCompleto = () => {
     .sort((a, b) => b.value - a.value)
     .slice(0, 8)
 
-  // Datos para gráfica de barras (últimas 4 semanas simuladas)
   const dataGraficaBarras = [
     { name: 'Sem 1', ingresos: totalIngresos * 0.2, gastos: totalGastos * 0.22 },
     { name: 'Sem 2', ingresos: totalIngresos * 0.25, gastos: totalGastos * 0.28 },
@@ -79,7 +133,6 @@ const DashboardCompleto = () => {
     { name: 'Sem 4', ingresos: totalIngresos * 0.25, gastos: totalGastos * 0.25 },
   ]
 
-  // Alertas
   const obtenerAlertas = () => {
     const hoy = new Date()
     const alertas = []
@@ -89,47 +142,22 @@ const DashboardCompleto = () => {
       const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
       const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
       
-      if (diff <= 0) {
-        alertas.push({ 
-          tipo: 'critical', 
-          mensaje: `VENCIDO: ${gf.nombre}`,
-          monto: gf.monto
-        })
-      } else if (diff <= 5) {
-        alertas.push({ 
-          tipo: 'warning', 
-          mensaje: `${gf.nombre} vence en ${diff} días`,
-          monto: gf.monto
-        })
-      }
+      if (diff <= 0) alertas.push({ tipo: 'critical', mensaje: `VENCIDO: ${gf.nombre}`, monto: gf.monto })
+      else if (diff <= 5) alertas.push({ tipo: 'warning', mensaje: `${gf.nombre} vence en ${diff} días`, monto: gf.monto })
     })
 
     suscripciones.forEach(sub => {
       if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
       const proxPago = new Date(sub.proximo_pago)
       const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 3 && diff >= 0) {
-        alertas.push({ 
-          tipo: 'info', 
-          mensaje: `${sub.servicio} renueva en ${diff} días`,
-          monto: sub.costo
-        })
-      }
+      if (diff <= 3 && diff >= 0) alertas.push({ tipo: 'info', mensaje: `${sub.servicio} renueva en ${diff} días`, monto: sub.costo })
     })
 
     deudas.forEach(d => {
       if (!d.vence) return
       const vence = new Date(d.vence)
       const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5 && diff >= 0) {
-        alertas.push({ 
-          tipo: 'warning', 
-          mensaje: `${d.cuenta} vence en ${diff} días`,
-          monto: d.pago_minimo
-        })
-      }
+      if (diff <= 5 && diff >= 0) alertas.push({ tipo: 'warning', mensaje: `${d.cuenta} vence en ${diff} días`, monto: d.pago_minimo })
     })
 
     return alertas
@@ -137,89 +165,125 @@ const DashboardCompleto = () => {
 
   const alertas = obtenerAlertas()
 
+  // Handlers
+  const handleGuardarIngreso = async (data) => {
+    try {
+      await addIngreso(data)
+      setShowModal(null)
+      setIngresoEditando(null)
+    } catch (e) {
+      console.error('Error al guardar ingreso:', e)
+    }
+  }
+
+  const handleGuardarGasto = async (data) => {
+    try {
+      await addGasto(data)
+      setShowModal(null)
+      setGastoEditando(null)
+    } catch (e) {
+      console.error('Error al guardar gasto:', e)
+    }
+  }
+
+  const handleGuardarGastoFijo = async (data) => {
+    try {
+      await addGastoFijo(data)
+      setShowModal(null)
+      setGastoFijoEditando(null)
+    } catch (e) {
+      console.error('Error al guardar gasto fijo:', e)
+    }
+  }
+  
+  const handleGuardarSuscripcion = async (data) => {
+    try {
+      await addSuscripcion(data)
+      setShowModal(null)
+      setSuscripcionEditando(null)
+    } catch (e) {
+      console.error('Error al guardar suscripción:', e)
+    }
+  }
+
+  const handleGuardarDeuda = async (data) => {
+    try {
+      await addDeuda(data)
+      setShowModal(null)
+      setDeudaEditando(null)
+    } catch (e) {
+      console.error('Error al guardar deuda:', e)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-blue-600 rounded-2xl p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex-1"></div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <Wallet className="w-8 h-8" />
-              💰 SISTEMA MONARCH
-            </h1>
-            <div className="flex-1 flex justify-end">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4">
+      {/* HEADER */}
+      <div className="max-w-7xl mx-auto mb-6 px-4 pt-4">
+        <div className="bg-blue-600/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-blue-400/20">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Wallet className="w-10 h-10 text-white" />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">
+                  {textoHora}, {usuario.nombre}
+                </h1>
+                <div className="flex items-center gap-2 text-blue-100 mt-1 text-sm md:text-base">
+                  {icono}
+                  <span className="italic">{fraseMotivacional}</span>
+                </div>
+              </div>
+            </div>
+            <div className="hidden md:block">
               <LogoutButton />
             </div>
           </div>
-          <p className="text-center text-blue-100 mt-2 text-sm">
-            Control total de tus finanzas personales
-          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* KPIs */}
-        {/* Info del Mes */}
-        <InfoMes />
+      <div className="max-w-7xl mx-auto px-4 space-y-6">
+        <div className="hidden md:block">
+          <InfoMes />
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <KPICard icon="💵" label="INGRESOS" value={totalIngresos} color="#10B981" />
           <KPICard icon="💸" label="GASTOS" value={totalGastos} color="#EF4444" />
           <KPICard icon="💰" label="SALDO" value={saldoMes} color="#06B6D4" />
-          <KPICard icon="📊" label="AHORRO" value={tasaAhorro} color="#F59E0B" formatAsCurrency={false} />
+          <KPICard icon="📊" label="AHORRO" value={tasaAhorro} color="#F59E0B" formatAsCurrency={false} suffix="%" />
         </div>
 
-        {/* Botones de Acción */}
-        <div className="flex flex-wrap gap-3 justify-center">
-          <button
-            onClick={() => setShowModal('ingreso')}
-            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" /> Ingreso
+        <div className="hidden md:flex flex-wrap gap-3 justify-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+          <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+            <Plus className="w-4 h-4" /> Ingreso
           </button>
-          <button
-            onClick={() => setShowModal('gastoVariable')}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 shadow-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" /> Gasto
+          <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+            <Plus className="w-4 h-4" /> Gasto
           </button>
-          <button
-            onClick={() => setShowModal('gastoFijo')}
-            className="flex items-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 shadow-lg transition-colors"
-          >
-            <FileText className="w-5 h-5" /> Gasto Fijo
+          <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+            <Repeat className="w-4 h-4" /> Suscripción
           </button>
-          <button
-            onClick={() => setShowModal('suscripcion')}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 shadow-lg transition-colors"
-          >
-            <Repeat className="w-5 h-5" /> Suscripción
+          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
+            <CreditCard className="w-4 h-4" /> Tarjetas
           </button>
-          <button
-            onClick={() => setShowModal('pagoTarjeta')}
-            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 shadow-lg transition-colors"
-          >
-            <CreditCard className="w-5 h-5" /> Pago Tarjeta
-          </button>
-          <button
-            onClick={() => setShowModal('agregarDeuda')}
-            className="flex items-center gap-2 px-6 py-3 bg-red-700 text-white rounded-xl font-semibold hover:bg-red-800 shadow-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" /> Tarjeta/Deuda
-          </button>
-          <button
-            onClick={() => setShowModal('lectorEstado')}
-            className="flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white rounded-xl font-semibold hover:bg-cyan-700 shadow-lg transition-colors"
-          >
-            <Upload className="w-5 h-5" /> Escanear Estado
+          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm">
+            <Upload className="w-4 h-4" /> Escanear
           </button>
         </div>
 
-        {/* Notificaciones */}
-        <Notificaciones alertas={alertas} />
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Bell className="w-5 h-5 text-yellow-400" /> Alertas y Notificaciones
+            </h3>
+            <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded-full border border-yellow-500/30">
+              {alertas.length} Activas
+            </span>
+          </div>
+          <Notificaciones alertas={alertas} />
+        </div>
 
-        {/* Asistente Financiero IA */}
+        {/* Asistente Financiero - Ahora visible en mobile */}
         <AsistenteFinanciero 
           ingresos={ingresos}
           gastosFijos={gastosFijos}
@@ -228,13 +292,6 @@ const DashboardCompleto = () => {
           deudas={deudas}
         />
 
-        {/* Gestión de Registros */}
-        <GestionRegistros />
-
-        {/* Configuración de Notificaciones */}
-        <ConfiguracionNotificaciones />
-
-        {/* Gráficas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <GraficaDona 
             data={dataGraficaDona} 
@@ -243,31 +300,95 @@ const DashboardCompleto = () => {
           <GraficaBarras data={dataGraficaBarras} title="📈 Tendencia Semanal" />
         </div>
 
-        {/* Deudas y Suscripciones */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ListaDeudas deudas={deudas} />
-          <ListaSuscripciones suscripciones={suscripciones} />
+          <ListaDeudas 
+            deudas={deudas} 
+            onEditar={(deuda) => {
+              setDeudaEditando(deuda)
+              setShowModal('tarjetas')
+            }}
+          />
+          <ListaSuscripciones 
+            suscripciones={suscripciones} 
+            onEditar={(sub) => {
+              setSuscripcionEditando(sub)
+              setShowModal('suscripcion')
+            }}
+          />
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-gray-400 text-sm italic py-4">
-          💡 Sistema Monarch - Tus finanzas bajo control total
+        <div className="hidden md:block space-y-6">
+          <GestionRegistros />
+          <ConfiguracionNotificaciones />
+        </div>
+
+        <div className="text-center text-gray-500 text-xs py-4 pb-20 md:pb-4">
+          💡 Sistema Monarch v2.0 - Optimizado Móvil
         </div>
       </div>
 
       {/* Modales */}
       {showModal === 'ingreso' && (
-        <ModalIngreso onClose={() => setShowModal(null)} onSave={addIngreso} />
+        <ModalIngreso
+          onClose={() => { setShowModal(null); setIngresoEditando(null) }}
+          onSave={handleGuardarIngreso}
+          ingresoInicial={ingresoEditando}
+        />
       )}
-      {showModal === 'gastoVariable' && (
-        <ModalGastoVariable onClose={() => setShowModal(null)} onSave={addGasto} />
+
+      {showModal === 'gastos' && (
+        <ModalGastos
+          onClose={() => {
+            setShowModal(null)
+            setGastoEditando(null)
+            setGastoFijoEditando(null)
+          }}
+          onSaveVariable={handleGuardarGasto}
+          onSaveFijo={handleGuardarGastoFijo}
+          gastoInicial={gastoEditando || gastoFijoEditando}
+        />
       )}
-      {showModal === 'gastoFijo' && (
-        <ModalGastoFijo onClose={() => setShowModal(null)} onSave={addGastoFijo} />
-      )}
+      
       {showModal === 'suscripcion' && (
-        <ModalSuscripcion onClose={() => setShowModal(null)} onSave={addSuscripcion} />
+        <ModalSuscripcion 
+          onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} 
+          onSave={handleGuardarSuscripcion}
+          suscripcionInicial={suscripcionEditando}
+        />
       )}
+      
+      {showModal === 'tarjetas' && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-white mb-4">Gestión de Tarjetas</h2>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setShowModal('agregarDeuda')
+                }}
+                className="w-full p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors"
+              >
+                📝 Registrar Tarjeta/Deuda
+              </button>
+              <button
+                onClick={() => {
+                  setShowModal('pagoTarjeta')
+                }}
+                className="w-full p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
+              >
+                💳 Pagar Tarjeta
+              </button>
+              <button
+                onClick={() => setShowModal(null)}
+                className="w-full p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal === 'pagoTarjeta' && (
         <ModalPagoTarjeta 
           onClose={() => setShowModal(null)} 
@@ -275,12 +396,15 @@ const DashboardCompleto = () => {
           deudas={deudas}
         />
       )}
+      
       {showModal === 'agregarDeuda' && (
         <ModalAgregarDeuda 
-          onClose={() => setShowModal(null)} 
-          onSave={addDeuda}
+          onClose={() => { setShowModal(null); setDeudaEditando(null) }} 
+          onSave={handleGuardarDeuda}
+          deudaInicial={deudaEditando}
         />
       )}
+      
       {showModal === 'lectorEstado' && (
         <LectorEstadoCuenta
           onClose={() => setShowModal(null)}
@@ -308,19 +432,55 @@ const DashboardCompleto = () => {
         />
       )}
 
-     {showDetallesCategorias && (
-  <ModalDetallesCategorias
-    gastosPorCategoria={gastosPorCategoria}
-    gastosFijos={gastosFijos}
-    gastosVariables={gastos}
-    suscripciones={suscripciones}
-    onClose={() => setShowDetallesCategorias(false)}
-  />
-)}
+      {showModal === 'configuracion' && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Configuración</h2>
+              <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-white text-2xl">✕</button>
+            </div>
+            <ConfiguracionNotificaciones />
+          </div>
+        </div>
+      )}
+      
+      {showModal === 'notificaciones' && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-white">Todas las Alertas</h2>
+              <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-white text-2xl">✕</button>
+            </div>
+            <Notificaciones alertas={alertas} />
+          </div>
+        </div>
+      )}
 
-      {/* Menú Flotante */}
-      <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
+      {showDetallesCategorias && (
+        <ModalDetallesCategorias
+          gastosPorCategoria={gastosPorCategoria}
+          gastosFijos={gastosFijos}
+          gastosVariables={gastos}
+          suscripciones={suscripciones}
+          onClose={() => setShowDetallesCategorias(false)}
+        />
+      )}
+
+      <div className="hidden md:block">
+        <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
+      </div>
+
+      <MenuInferior 
+        onOpenModal={setShowModal} 
+        alertasCount={alertas.length} 
+        nombreUsuario={usuario.nombre}
+        onLogout={() => {
+          localStorage.clear()
+          window.location.href = '/login'
+        }}
+      />
     </div>
   )
 }
+
 export default DashboardCompleto
