@@ -1,0 +1,14 @@
+{
+  "extends": [
+    "react-app",
+    "react-app/jest"
+  ],
+  "overrides": [
+    {
+      "files": ["src/lib/brain/brain.autogoals.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ]
+}
