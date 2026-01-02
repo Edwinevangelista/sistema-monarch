@@ -23,8 +23,7 @@ import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
 import ListaDeudas from './ListaDeudas'
 import ListaSuscripciones from './ListaSuscripciones'
-import AsistenteFinanciero from './AsistenteFinanciero'
-import GestionRegistros from './GestionRegistros'
+import AsistenteFinancieroV2 from '../components/AsistenteFinancieroV2'
 import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
 import InfoMes from './InfoMes'
 import LogoutButton from './LogoutButton'
@@ -283,8 +282,7 @@ const DashboardCompleto = () => {
           <Notificaciones alertas={alertas} />
         </div>
 
-        {/* Asistente Financiero - Ahora visible en mobile */}
-        <AsistenteFinanciero 
+        <AsistenteFinancieroV2
           ingresos={ingresos}
           gastosFijos={gastosFijos}
           gastosVariables={gastos}
@@ -318,7 +316,8 @@ const DashboardCompleto = () => {
         </div>
 
         <div className="hidden md:block space-y-6">
-          <GestionRegistros />
+          {/* GestionRegistros comentado temporalmente hasta que se cree el componente */}
+          {/* <GestionRegistros /> */}
           <ConfiguracionNotificaciones />
         </div>
 

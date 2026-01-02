@@ -1,12 +1,14 @@
 // src/lib/intelligenceEngine.js
-// 🧠 Motor local inteligente con memoria por usuario
-// ✅ Mantiene compatibilidad con UI actual
-// ✅ Expone DECISIONES reales (nuevo)
-// ✅ Listo para siguiente fase: Plan + Actions
+// 🧠 Motor local inteligente V2 - AUTO-INTELIGENTE
+// ✅ Metas calculadas automáticamente
+// ✅ Progreso detectado por datos reales
+// ✅ Sin checkboxes manuales
+// ✅ Insights accionables
 
-import { generateDecisions } from "./brain/brain.decisions";
+import { generateAutoGoal } from "./brain/brain.autogoals";
+import { buildFinancialReport } from "./brain/brain.report";
 
-const VERSION = 1;
+const VERSION = 2; // Incrementamos versión
 
 // ---------- helpers ----------
 const n = (v) => {
@@ -15,18 +17,17 @@ const n = (v) => {
 };
 
 const safeJSON = (s, fallback) => {
-  try { return JSON.parse(s); } catch { return fallback; }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return fallback;
+  }
 };
 
 const nowISO = () => new Date().toISOString();
 
 const monthKey = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-const money = (v) =>
-  `$${n(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-
-const pct = (v) => `${(n(v) * 100).toFixed(0)}%`;
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
@@ -47,27 +48,25 @@ function defaultProfile(userId) {
     createdAt: nowISO(),
     updatedAt: nowISO(),
 
-    goal: "control",
+    // preferencias
+    goal: "general",
     tone: "neutral",
 
+    // disciplina
     discipline: 50,
     streaks: {
       positiveMonths: 0,
       negativeMonths: 0,
-      improvedMonths: 0,
     },
 
+    // histórico mensual
     monthly: {},
 
-    patterns: {
-      topCategories: {},
-      overspendCategories: {},
-      subscriptionsCount: { count: 0, lastAt: null },
-      debtSeen: { count: 0, lastAt: null },
-    },
+    // datos persistidos para metas
+    emergencyFund: 0, // Fondo de emergencia actual
+    debtPayments: {}, // Pagos realizados a deudas
 
-    recommendations: {},
-
+    // señales
     lastSignals: {
       lastMonthKey: null,
       lastSaldo: null,
@@ -88,11 +87,18 @@ export function loadProfile() {
   }
 
   const p = safeJSON(stored, defaultProfile(userId));
-  if (!p.version || p.version !== VERSION) {
-    const fresh = { ...defaultProfile(userId), ...p, version: VERSION, userId };
+
+  // Migración de versión antigua
+  if (!p.version || p.version < VERSION) {
+    const fresh = { ...defaultProfile(userId), ...p, version: VERSION };
+    // Asegurar que existan los nuevos campos
+    if (!fresh.emergencyFund) fresh.emergencyFund = 0;
+    if (!fresh.debtPayments) fresh.debtPayments = {};
     localStorage.setItem(key, JSON.stringify(fresh));
     return fresh;
   }
+
+  if (!p.goal) p.goal = "general";
   return p;
 }
 
@@ -115,32 +121,13 @@ export function computeKpis({
   const totalIngresos = ingresos.reduce((s, i) => s + n(i.monto), 0);
   const totalGF = gastosFijos.reduce((s, g) => s + n(g.monto), 0);
   const totalGV = gastosVariables.reduce((s, g) => s + n(g.monto), 0);
-  const totalSubs = (suscripciones || [])
+  const totalSubs = suscripciones
     .filter((s) => s.estado === "Activo")
     .reduce((s, x) => s + n(x.monto || x.costo), 0);
 
   const totalGastos = totalGF + totalGV + totalSubs;
   const saldo = totalIngresos - totalGastos;
   const tasaAhorro = totalIngresos > 0 ? saldo / totalIngresos : 0;
-
-  const catMap = {};
-  const pushCat = (cat, amount) => {
-    const k = cat || "📦 Otros";
-    catMap[k] = (catMap[k] || 0) + n(amount);
-  };
-
-  gastosFijos.forEach((g) => pushCat(g.categoria, g.monto));
-  gastosVariables.forEach((g) => pushCat(g.categoria, g.monto));
-  (suscripciones || [])
-    .filter((s) => s.estado === "Activo")
-    .forEach((s) =>
-      pushCat(s.categoria || "🔁 Suscripciones", s.monto || s.costo)
-    );
-
-  const topCats = Object.entries(catMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6);
 
   return {
     totalIngresos,
@@ -150,13 +137,11 @@ export function computeKpis({
     totalGastosFijos: totalGF,
     totalGastosVariables: totalGV,
     totalSuscripciones: totalSubs,
-    topCats,
     deudasCount: deudas.length,
-    subsCount: suscripciones.filter((s) => s.estado === "Activo").length,
   };
 }
 
-// ---------- aprendizaje ----------
+// ---------- aprendizaje mensual ----------
 function updateMonthly(profile, kpis) {
   const mk = monthKey();
   profile.monthly[mk] = {
@@ -164,27 +149,19 @@ function updateMonthly(profile, kpis) {
     gastos: kpis.totalGastos,
     saldo: kpis.saldo,
     tasaAhorro: kpis.tasaAhorro,
-    topCats: kpis.topCats,
+    suscripciones: kpis.totalSuscripciones,
     updatedAt: nowISO(),
   };
+
   profile.lastSignals.lastMonthKey = mk;
 }
 
 function detectImprovement(profile, kpis) {
   const { lastSaldo, lastTasaAhorro } = profile.lastSignals;
+
   let improved = false;
-
   if (lastSaldo !== null && kpis.saldo > lastSaldo) improved = true;
-  if (lastTasaAhorro !== null && kpis.tasaAhorro > lastTasaAhorro)
-    improved = true;
-
-  if (kpis.saldo >= 0) {
-    profile.streaks.positiveMonths += 1;
-    profile.streaks.negativeMonths = 0;
-  } else {
-    profile.streaks.negativeMonths += 1;
-    profile.streaks.positiveMonths = 0;
-  }
+  if (lastTasaAhorro !== null && kpis.tasaAhorro > lastTasaAhorro) improved = true;
 
   profile.discipline = clamp(
     profile.discipline + (improved ? 4 : -2),
@@ -201,7 +178,7 @@ function detectImprovement(profile, kpis) {
   else profile.tone = "estricto";
 }
 
-// ---------- motor principal ----------
+// ---------- MOTOR PRINCIPAL V2 (AUTO-INTELIGENTE) ----------
 export function runIntelligence(input) {
   const profile = loadProfile();
   const kpis = computeKpis(input);
@@ -209,17 +186,49 @@ export function runIntelligence(input) {
   updateMonthly(profile, kpis);
   detectImprovement(profile, kpis);
 
-  // 🔥 NUEVO: decisiones reales
-  const decisions = generateDecisions(profile, kpis);
+  // 📊 REPORTE GENERAL (SIEMPRE)
+  const report = buildFinancialReport(profile, kpis);
+
+  const goal = profile.goal || "general";
+  let autoGoal = null;
+
+  // 🎯 META AUTO-INTELIGENTE (si no es general)
+  if (goal !== "general") {
+    autoGoal = generateAutoGoal(goal, kpis, profile);
+  }
 
   const output = {
     profile: saveProfile(profile),
     kpis,
-    decisions, // 👈 esto es el nuevo cerebro real
+    report,      // ✅ diagnóstico siempre
+    autoGoal,    // ✅ meta calculada automáticamente (null si es general)
     updatedAt: nowISO(),
   };
 
   return output;
+}
+
+// ---------- API pública para actualizar datos persistidos ----------
+export function updateEmergencyFund(amount) {
+  const profile = loadProfile();
+  profile.emergencyFund = Math.max(0, n(amount));
+  return saveProfile(profile);
+}
+
+export function recordDebtPayment(debtId, amount) {
+  const profile = loadProfile();
+  if (!profile.debtPayments) profile.debtPayments = {};
+  
+  if (!profile.debtPayments[debtId]) {
+    profile.debtPayments[debtId] = [];
+  }
+  
+  profile.debtPayments[debtId].push({
+    amount: n(amount),
+    date: nowISO(),
+  });
+  
+  return saveProfile(profile);
 }
 
 export function setGoal(goalKey) {
