@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
-import {
-  Home,
-  ShoppingCart,
-  CreditCard,
-  Repeat,
-  MoreHorizontal,
-  X,
-  Settings,
-  Upload,
-  Bell,
-  LogOut,
-  User
-} from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
+import { Upload } from "lucide-react";
+
 
 const MenuInferior = ({ onOpenModal, alertasCount, nombreUsuario, onLogout }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
