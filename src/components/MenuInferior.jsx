@@ -13,8 +13,7 @@ import {
   Upload
 } from 'lucide-react';
 
-// eslint-disable-next-line no-unused-vars
-import { Upload } from "lucide-react";
+
 
 
 const MenuInferior = ({ onOpenModal, alertasCount, nombreUsuario, onLogout }) => {
