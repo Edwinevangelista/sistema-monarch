@@ -30,11 +30,12 @@ import LogoutButton from './LogoutButton'
 import MenuFlotante from './MenuFlotante'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
 import MenuInferior from './MenuInferior'
-import ModalUsuario from "./ModalUsuario";
+import ModalUsuario from "./ModalUsuario"
 
 // --- NUEVOS COMPONENTES ---
 import DebtPlannerModal from './DebtPlannerModal'
 import SavingsPlannerModal from './SavingsPlannerModal'
+import SpendingControlModal from './SpendingControlModal'
 
 const DashboardCompleto = () => {
   // Estado del Usuario (Simulado)
@@ -42,24 +43,26 @@ const DashboardCompleto = () => {
     email: 'usuario@ejemplo.com', 
     nombre: '' 
   })
- const [preferenciasUsuario, setPreferenciasUsuario] = useState(() => {
-  const guardadas = localStorage.getItem("preferenciasUsuario");
-  return guardadas
-    ? JSON.parse(guardadas)
-    : {
-        moneda: "USD",
-        inicioMes: 1,
-        objetivo: "Reducir deudas",
-        riesgo: "Conservador",
-        iaActiva: true,
-      };
-});
+  
+  const [preferenciasUsuario, setPreferenciasUsuario] = useState(() => {
+    const guardadas = localStorage.getItem("preferenciasUsuario");
+    return guardadas
+      ? JSON.parse(guardadas)
+      : {
+          moneda: "USD",
+          inicioMes: 1,
+          objetivo: "Reducir deudas",
+          riesgo: "Conservador",
+          iaActiva: true,
+        };
+  });
 
   // Estados de Modales
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
+  const [showSpendingControl, setShowSpendingControl] = useState(false)
 
   // Estados para Edición
   const [ingresoEditando, setIngresoEditando] = useState(null)
@@ -75,10 +78,10 @@ const DashboardCompleto = () => {
   const { gastos, addGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion } = useSuscripciones()
-const { deudas, addDeuda, updateDeuda, refresh: refreshDeudas } = useDeudas()
-const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
+  const { deudas, addDeuda, updateDeuda, refresh: refreshDeudas } = useDeudas()
+  const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
 
-// 🔹 UTIL: ¿Pagada este mes?
+  // 🔹 UTIL: ¿Pagada este mes?
   const deudaPagadaEsteMes = (deudaId) => {
     const hoy = new Date()
     return pagos?.some(p => {
@@ -91,7 +94,6 @@ const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
     })
   }
 
-
   // Extraer nombre del email
   useEffect(() => {
     if (usuario.email) {
@@ -99,12 +101,13 @@ const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
       setUsuario(prev => ({ ...prev, nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1) }))
     }
   }, [usuario.email])
-useEffect(() => {
-  localStorage.setItem(
-    "preferenciasUsuario",
-    JSON.stringify(preferenciasUsuario)
-  );
-}, [preferenciasUsuario]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "preferenciasUsuario",
+      JSON.stringify(preferenciasUsuario)
+    );
+  }, [preferenciasUsuario]);
 
   // Saludo y Motivación
   const obtenerSaludo = () => {
@@ -198,7 +201,6 @@ useEffect(() => {
       if (diff <= 5 && diff >= 0) alertas.push({ tipo: 'warning', mensaje: `${d.cuenta} vence en ${diff} días`, monto: d.pago_minimo })
     })
 
-
     return alertas
   }
 
@@ -257,66 +259,62 @@ useEffect(() => {
     }
   }
 
- const handleGuardarDeuda = async (data) => {
-  try {
-    if (data.id) {
-      await updateDeuda(data.id, data)
-    } else {
-      await addDeuda(data)
+  const handleGuardarDeuda = async (data) => {
+    try {
+      if (data.id) {
+        await updateDeuda(data.id, data)
+      } else {
+        await addDeuda(data)
+      }
+      setShowModal(null)
+      setDeudaEditando(null)
+    } catch (e) {
+      console.error("Error guardando deuda:", e)
     }
-    setShowModal(null)
-    setDeudaEditando(null)
-  } catch (e) {
-    console.error("Error guardando deuda:", e)
   }
-}
 
-// ===============================
-// 💳 HANDLER: REGISTRAR PAGO TARJETA
-const handleRegistrarPagoTarjeta = async (pago) => {
-  try {
-    const deuda = deudas.find(d => d.id === pago.deuda_id)
-    if (!deuda) throw new Error('Deuda no encontrada')
+  const handleRegistrarPagoTarjeta = async (pago) => {
+    try {
+      const deuda = deudas.find(d => d.id === pago.deuda_id)
+      if (!deuda) throw new Error('Deuda no encontrada')
 
-    const principal = Number(pago.a_principal || 0)
-    const intereses = Number(pago.intereses || 0)
-    const total = Number(pago.monto_total || 0)
+      const principal = Number(pago.a_principal || 0)
+      const intereses = Number(pago.intereses || 0)
+      const total = Number(pago.monto_total || 0)
 
-    // 🔴 VALIDACIÓN CRÍTICA
-    if (principal + intereses !== total) {
-      alert('El monto total debe ser igual a Principal + Intereses')
-      return
-    }
+      if (principal + intereses !== total) {
+        alert('El monto total debe ser igual a Principal + Intereses')
+        return
+      }
 
-    await addPago({
-      user_id: deuda.user_id,
-      deuda_id: deuda.id,
-      fecha: pago.fecha,
-      tarjeta: deuda.cuenta,
-      monto: total,
-      principal,
-      interes: intereses,
-      metodo: pago.metodo || null,
-      notas: pago.notas || null,
-    })
-
-    // 🟢 SOLO el principal baja la deuda
-    if (principal > 0) {
-      await updateDeuda(deuda.id, {
-        saldo: Math.max(0, deuda.saldo - principal),
-        ultimo_pago: pago.fecha,
+      await addPago({
+        user_id: deuda.user_id,
+        deuda_id: deuda.id,
+        fecha: pago.fecha,
+        tarjeta: deuda.cuenta,
+        monto: total,
+        principal,
+        interes: intereses,
+        metodo: pago.metodo || null,
+        notas: pago.notas || null,
       })
+
+      if (principal > 0) {
+        await updateDeuda(deuda.id, {
+          saldo: Math.max(0, deuda.saldo - principal),
+          ultimo_pago: pago.fecha,
+        })
+      }
+
+      await refreshPagos()
+      await refreshDeudas()
+      setShowModal(null)
+
+    } catch (err) {
+      console.error(err)
+      alert('Error registrando el pago')
     }
-
-    await refreshPagos()
-    await refreshDeudas()
-    setShowModal(null)
-
-  } catch (err) {
-    console.error(err)
-    alert('Error registrando el pago')
   }
-}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4">
@@ -393,6 +391,7 @@ const handleRegistrarPagoTarjeta = async (pago) => {
           deudas={deudas}
           onOpenDebtPlanner={() => setShowDebtPlanner(true)}
           onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
+          onOpenSpendingControl={() => setShowSpendingControl(true)}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -404,15 +403,14 @@ const handleRegistrarPagoTarjeta = async (pago) => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
- <ListaDeudas
-  deudas={deudas}
-  deudaPagadaEsteMes={deudaPagadaEsteMes}
-  onEditar={(deuda) => {
-    setDeudaEditando(deuda)
-    setShowModal('agregarDeuda')
-  }}
-/>
-
+          <ListaDeudas
+            deudas={deudas}
+            deudaPagadaEsteMes={deudaPagadaEsteMes}
+            onEditar={(deuda) => {
+              setDeudaEditando(deuda)
+              setShowModal('agregarDeuda')
+            }}
+          />
 
           <ListaSuscripciones 
             suscripciones={suscripciones} 
@@ -424,8 +422,6 @@ const handleRegistrarPagoTarjeta = async (pago) => {
         </div>
 
         <div className="hidden md:block space-y-6">
-          {/* GestionRegistros comentado temporalmente hasta que se cree el componente */}
-          {/* <GestionRegistros /> */}
           <ConfiguracionNotificaciones />
         </div>
 
@@ -455,19 +451,19 @@ const handleRegistrarPagoTarjeta = async (pago) => {
           gastoInicial={gastoEditando || gastoFijoEditando}
         />
       )}
-{showModal === 'usuario' && (
-  <ModalUsuario
-    usuario={usuario}
-    preferencias={preferenciasUsuario}
-    onChangePreferencias={setPreferenciasUsuario}
-    onClose={() => setShowModal(null)}
-    onLogout={() => {
-      localStorage.clear();
-      window.location.href = "/login";
-    }}
-  />
-)}
 
+      {showModal === 'usuario' && (
+        <ModalUsuario
+          usuario={usuario}
+          preferencias={preferenciasUsuario}
+          onChangePreferencias={setPreferenciasUsuario}
+          onClose={() => setShowModal(null)}
+          onLogout={() => {
+            localStorage.clear();
+            window.location.href = "/login";
+          }}
+        />
+      )}
 
       {showModal === 'suscripcion' && (
         <ModalSuscripcion 
@@ -483,17 +479,13 @@ const handleRegistrarPagoTarjeta = async (pago) => {
             <h2 className="text-2xl font-bold text-white mb-4">Gestión de Tarjetas</h2>
             <div className="space-y-3">
               <button
-                onClick={() => {
-                  setShowModal('agregarDeuda')
-                }}
+                onClick={() => setShowModal('agregarDeuda')}
                 className="w-full p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors"
               >
                 📝 Registrar Tarjeta/Deuda
               </button>
               <button
-                onClick={() => {
-                  setShowModal('pagoTarjeta')
-                }}
+                onClick={() => setShowModal('pagoTarjeta')}
                 className="w-full p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
               >
                 💳 Pagar Tarjeta
@@ -509,13 +501,13 @@ const handleRegistrarPagoTarjeta = async (pago) => {
         </div>
       )}
 
-     {showModal === 'pagoTarjeta' && (
-  <ModalPagoTarjeta 
-    onClose={() => setShowModal(null)} 
-    onSave={handleRegistrarPagoTarjeta}
-    deudas={deudas}
-  />
-)}
+      {showModal === 'pagoTarjeta' && (
+        <ModalPagoTarjeta 
+          onClose={() => setShowModal(null)} 
+          onSave={handleRegistrarPagoTarjeta}
+          deudas={deudas}
+        />
+      )}
       
       {showModal === 'agregarDeuda' && (
         <ModalAgregarDeuda 
@@ -585,6 +577,7 @@ const handleRegistrarPagoTarjeta = async (pago) => {
           onClose={() => setShowDetallesCategorias(false)}
         />
       )}
+
       {/* NUEVOS MODALES */}
       {showDebtPlanner && (
         <DebtPlannerModal
@@ -601,6 +594,15 @@ const handleRegistrarPagoTarjeta = async (pago) => {
         />
       )}
 
+      {showSpendingControl && (
+        <SpendingControlModal
+          gastosFijos={gastosFijos}
+          gastosVariables={gastos}
+          suscripciones={suscripciones}
+          kpis={kpis}
+          onClose={() => setShowSpendingControl(false)}
+        />
+      )}
 
       <div className="hidden md:block">
         <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
