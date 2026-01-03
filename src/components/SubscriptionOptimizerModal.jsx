@@ -1,11 +1,10 @@
 // src/components/SubscriptionOptimizerModal.jsx
 
-import { useState } from 'react';
+// CORRECCIÓN: Eliminada la importación de 'useState' ya que no se usa ningún estado en este componente.
 import { X, AlertTriangle, TrendingDown, CheckCircle2, Zap } from 'lucide-react';
 
 export default function SubscriptionOptimizerModal({ suscripciones = [], kpis = {}, onClose }) {
-  // CORRECCIÓN: Eliminada la línea 'const [view, setView] = useState('analysis');' porque no se usa.
-
+  
   // Filtrar suscripciones activas
   const activeSubs = suscripciones.filter(s => s.estado === 'Activo');
 
