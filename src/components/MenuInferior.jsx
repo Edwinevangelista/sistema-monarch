@@ -1,4 +1,18 @@
 import React, { useState } from 'react';
+import {
+  Home,
+  ShoppingCart,
+  CreditCard,
+  Repeat,
+  MoreHorizontal,
+  X,
+  Settings,
+  Bell,
+  LogOut,
+  User,
+  Upload
+} from 'lucide-react';
+
 // eslint-disable-next-line no-unused-vars
 import { Upload } from "lucide-react";
 
