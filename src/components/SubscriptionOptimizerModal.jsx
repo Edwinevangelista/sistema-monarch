@@ -1,11 +1,10 @@
 // src/components/SubscriptionOptimizerModal.jsx
 
 import { useState } from 'react';
-// CORRECCIÓN: Eliminados DollarSign y Calendar (no usados)
 import { X, AlertTriangle, TrendingDown, CheckCircle2, Zap } from 'lucide-react';
 
 export default function SubscriptionOptimizerModal({ suscripciones = [], kpis = {}, onClose }) {
-  const [view, setView] = useState('analysis');
+  // CORRECCIÓN: Eliminada la línea 'const [view, setView] = useState('analysis');' porque no se usa.
 
   // Filtrar suscripciones activas
   const activeSubs = suscripciones.filter(s => s.estado === 'Activo');
@@ -20,7 +19,7 @@ export default function SubscriptionOptimizerModal({ suscripciones = [], kpis = 
 
   const totalIngresos = Number(kpis.totalIngresos) || 0;
   
-  // CORRECCIÓN: Evitar división por cero
+  // Evitar división por cero
   const porcentajeIngresos = totalIngresos > 0 ? (totalMensual / totalIngresos) * 100 : 0;
 
   // Detectar duplicados (mismo tipo de servicio)
