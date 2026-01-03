@@ -30,6 +30,11 @@ import LogoutButton from './LogoutButton'
 import MenuFlotante from './MenuFlotante'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
 import MenuInferior from './MenuInferior'
+import ModalUsuario from "./ModalUsuario";
+
+// --- NUEVOS COMPONENTES ---
+import DebtPlannerModal from './DebtPlannerModal'
+import SavingsPlannerModal from './SavingsPlannerModal'
 
 const DashboardCompleto = () => {
   // Estado del Usuario (Simulado)
@@ -37,11 +42,25 @@ const DashboardCompleto = () => {
     email: 'usuario@ejemplo.com', 
     nombre: '' 
   })
-  
+ const [preferenciasUsuario, setPreferenciasUsuario] = useState(() => {
+  const guardadas = localStorage.getItem("preferenciasUsuario");
+  return guardadas
+    ? JSON.parse(guardadas)
+    : {
+        moneda: "USD",
+        inicioMes: 1,
+        objetivo: "Reducir deudas",
+        riesgo: "Conservador",
+        iaActiva: true,
+      };
+});
+
   // Estados de Modales
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
-  
+  const [showDebtPlanner, setShowDebtPlanner] = useState(false)
+  const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
+
   // Estados para Edición
   const [ingresoEditando, setIngresoEditando] = useState(null)
   const [gastoEditando, setGastoEditando] = useState(null)
@@ -56,8 +75,22 @@ const DashboardCompleto = () => {
   const { gastos, addGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion } = useSuscripciones()
-  const { deudas, addDeuda } = useDeudas()
-  const { addPago } = usePagosTarjeta()
+const { deudas, addDeuda, updateDeuda, refresh: refreshDeudas } = useDeudas()
+const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
+
+// 🔹 UTIL: ¿Pagada este mes?
+  const deudaPagadaEsteMes = (deudaId) => {
+    const hoy = new Date()
+    return pagos?.some(p => {
+      const f = new Date(p.fecha)
+      return (
+        p.deuda_id === deudaId &&
+        f.getMonth() === hoy.getMonth() &&
+        f.getFullYear() === hoy.getFullYear()
+      )
+    })
+  }
+
 
   // Extraer nombre del email
   useEffect(() => {
@@ -66,6 +99,12 @@ const DashboardCompleto = () => {
       setUsuario(prev => ({ ...prev, nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1) }))
     }
   }, [usuario.email])
+useEffect(() => {
+  localStorage.setItem(
+    "preferenciasUsuario",
+    JSON.stringify(preferenciasUsuario)
+  );
+}, [preferenciasUsuario]);
 
   // Saludo y Motivación
   const obtenerSaludo = () => {
@@ -159,10 +198,23 @@ const DashboardCompleto = () => {
       if (diff <= 5 && diff >= 0) alertas.push({ tipo: 'warning', mensaje: `${d.cuenta} vence en ${diff} días`, monto: d.pago_minimo })
     })
 
+
     return alertas
   }
 
   const alertas = obtenerAlertas()
+
+  // KPIs para los planificadores
+  const kpis = {
+    totalIngresos,
+    totalGastos,
+    totalGastosFijos,
+    totalGastosVariables,
+    totalSuscripciones,
+    saldo: saldoMes,
+    tasaAhorro: parseFloat(tasaAhorro) / 100,
+    totalDeudas: deudas.reduce((sum, d) => sum + (d.balance || 0), 0)
+  }
 
   // Handlers
   const handleGuardarIngreso = async (data) => {
@@ -205,15 +257,66 @@ const DashboardCompleto = () => {
     }
   }
 
-  const handleGuardarDeuda = async (data) => {
-    try {
+ const handleGuardarDeuda = async (data) => {
+  try {
+    if (data.id) {
+      await updateDeuda(data.id, data)
+    } else {
       await addDeuda(data)
-      setShowModal(null)
-      setDeudaEditando(null)
-    } catch (e) {
-      console.error('Error al guardar deuda:', e)
     }
+    setShowModal(null)
+    setDeudaEditando(null)
+  } catch (e) {
+    console.error("Error guardando deuda:", e)
   }
+}
+
+// ===============================
+// 💳 HANDLER: REGISTRAR PAGO TARJETA
+const handleRegistrarPagoTarjeta = async (pago) => {
+  try {
+    const deuda = deudas.find(d => d.id === pago.deuda_id)
+    if (!deuda) throw new Error('Deuda no encontrada')
+
+    const principal = Number(pago.a_principal || 0)
+    const intereses = Number(pago.intereses || 0)
+    const total = Number(pago.monto_total || 0)
+
+    // 🔴 VALIDACIÓN CRÍTICA
+    if (principal + intereses !== total) {
+      alert('El monto total debe ser igual a Principal + Intereses')
+      return
+    }
+
+    await addPago({
+      user_id: deuda.user_id,
+      deuda_id: deuda.id,
+      fecha: pago.fecha,
+      tarjeta: deuda.cuenta,
+      monto: total,
+      principal,
+      interes: intereses,
+      metodo: pago.metodo || null,
+      notas: pago.notas || null,
+    })
+
+    // 🟢 SOLO el principal baja la deuda
+    if (principal > 0) {
+      await updateDeuda(deuda.id, {
+        saldo: Math.max(0, deuda.saldo - principal),
+        ultimo_pago: pago.fecha,
+      })
+    }
+
+    await refreshPagos()
+    await refreshDeudas()
+    setShowModal(null)
+
+  } catch (err) {
+    console.error(err)
+    alert('Error registrando el pago')
+  }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4">
@@ -288,6 +391,8 @@ const DashboardCompleto = () => {
           gastosVariables={gastos}
           suscripciones={suscripciones}
           deudas={deudas}
+          onOpenDebtPlanner={() => setShowDebtPlanner(true)}
+          onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -299,13 +404,16 @@ const DashboardCompleto = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ListaDeudas 
-            deudas={deudas} 
-            onEditar={(deuda) => {
-              setDeudaEditando(deuda)
-              setShowModal('tarjetas')
-            }}
-          />
+ <ListaDeudas
+  deudas={deudas}
+  deudaPagadaEsteMes={deudaPagadaEsteMes}
+  onEditar={(deuda) => {
+    setDeudaEditando(deuda)
+    setShowModal('agregarDeuda')
+  }}
+/>
+
+
           <ListaSuscripciones 
             suscripciones={suscripciones} 
             onEditar={(sub) => {
@@ -322,7 +430,7 @@ const DashboardCompleto = () => {
         </div>
 
         <div className="text-center text-gray-500 text-xs py-4 pb-20 md:pb-4">
-          💡 Sistema Monarch v2.0 - Optimizado Móvil
+          💡 Sistema Monarch v2.0 - Con IA Adaptativa
         </div>
       </div>
 
@@ -347,7 +455,20 @@ const DashboardCompleto = () => {
           gastoInicial={gastoEditando || gastoFijoEditando}
         />
       )}
-      
+{showModal === 'usuario' && (
+  <ModalUsuario
+    usuario={usuario}
+    preferencias={preferenciasUsuario}
+    onChangePreferencias={setPreferenciasUsuario}
+    onClose={() => setShowModal(null)}
+    onLogout={() => {
+      localStorage.clear();
+      window.location.href = "/login";
+    }}
+  />
+)}
+
+
       {showModal === 'suscripcion' && (
         <ModalSuscripcion 
           onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} 
@@ -388,13 +509,13 @@ const DashboardCompleto = () => {
         </div>
       )}
 
-      {showModal === 'pagoTarjeta' && (
-        <ModalPagoTarjeta 
-          onClose={() => setShowModal(null)} 
-          onSave={addPago}
-          deudas={deudas}
-        />
-      )}
+     {showModal === 'pagoTarjeta' && (
+  <ModalPagoTarjeta 
+    onClose={() => setShowModal(null)} 
+    onSave={handleRegistrarPagoTarjeta}
+    deudas={deudas}
+  />
+)}
       
       {showModal === 'agregarDeuda' && (
         <ModalAgregarDeuda 
@@ -464,6 +585,22 @@ const DashboardCompleto = () => {
           onClose={() => setShowDetallesCategorias(false)}
         />
       )}
+      {/* NUEVOS MODALES */}
+      {showDebtPlanner && (
+        <DebtPlannerModal
+          deudas={deudas}
+          kpis={kpis}
+          onClose={() => setShowDebtPlanner(false)}
+        />
+      )}
+
+      {showSavingsPlanner && (
+        <SavingsPlannerModal
+          kpis={kpis}
+          onClose={() => setShowSavingsPlanner(false)}
+        />
+      )}
+
 
       <div className="hidden md:block">
         <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />

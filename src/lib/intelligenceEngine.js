@@ -1,238 +1,308 @@
 // src/lib/intelligenceEngine.js
-// 🧠 Motor local inteligente V2 - AUTO-INTELIGENTE
-// ✅ Metas calculadas automáticamente
-// ✅ Progreso detectado por datos reales
-// ✅ Sin checkboxes manuales
-// ✅ Insights accionables
+// 🧠 Motor de Inteligencia Principal - Integra todos los módulos del cerebro
 
-import { generateAutoGoal } from "./brain/brain.autogoals";
-import { buildFinancialReport } from "./brain/brain.report";
+import { generateDiagnosticReport } from './brain/brain.diagnostico';
+import { generateAutoGoal } from './brain/brain.autogoals';
+import { 
+  recordInteraction, 
+  getRelevantContext, 
+  generateMemorySummary,
+  recordPromise,
+  getPendingPromises,
+  getOverduePromises
+} from './brain/brain.memory';
+import { 
+  detectBehaviorPatterns, 
+  predictNextMonth,
+  recommendNextAction 
+} from './brain/brain.patterns';
+import { 
+  adaptPersonality, 
+  shouldEscalateTone,
+  shouldDeescalateTone,
+  updateProfilePersonality 
+} from './brain/brain.adaptive';
 
-const VERSION = 2; // Incrementamos versión
+const PROFILE_KEY = 'monarch_profile';
 
-// ---------- helpers ----------
-const n = (v) => {
-  const x = Number(v);
-  return Number.isFinite(x) ? x : 0;
-};
-
-const safeJSON = (s, fallback) => {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return fallback;
-  }
-};
-
-const nowISO = () => new Date().toISOString();
-
-const monthKey = (date = new Date()) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-
-// ---------- user / profile ----------
-function getUserId() {
-  const u = safeJSON(localStorage.getItem("supabase_user"), null);
-  return u?.id || "guest";
-}
-
-function profileKey(userId) {
-  return `monarch_profile_v${VERSION}_${userId}`;
-}
-
-function defaultProfile(userId) {
-  return {
-    version: VERSION,
-    userId,
-    createdAt: nowISO(),
-    updatedAt: nowISO(),
-
-    // preferencias
-    goal: "general",
-    tone: "neutral",
-
-    // disciplina
-    discipline: 50,
-    streaks: {
-      positiveMonths: 0,
-      negativeMonths: 0,
-    },
-
-    // histórico mensual
-    monthly: {},
-
-    // datos persistidos para metas
-    emergencyFund: 0, // Fondo de emergencia actual
-    debtPayments: {}, // Pagos realizados a deudas
-
-    // señales
-    lastSignals: {
-      lastMonthKey: null,
-      lastSaldo: null,
-      lastTasaAhorro: null,
-    },
-  };
-}
+// ========== PERFIL DEL USUARIO ==========
 
 export function loadProfile() {
-  const userId = getUserId();
-  const key = profileKey(userId);
-  const stored = localStorage.getItem(key);
-
-  if (!stored) {
-    const p = defaultProfile(userId);
-    localStorage.setItem(key, JSON.stringify(p));
-    return p;
+  try {
+    const stored = localStorage.getItem(PROFILE_KEY);
+    if (!stored) return initializeProfile();
+    return JSON.parse(stored);
+  } catch (error) {
+    console.error('Error loading profile:', error);
+    return initializeProfile();
   }
-
-  const p = safeJSON(stored, defaultProfile(userId));
-
-  // Migración de versión antigua
-  if (!p.version || p.version < VERSION) {
-    const fresh = { ...defaultProfile(userId), ...p, version: VERSION };
-    // Asegurar que existan los nuevos campos
-    if (!fresh.emergencyFund) fresh.emergencyFund = 0;
-    if (!fresh.debtPayments) fresh.debtPayments = {};
-    localStorage.setItem(key, JSON.stringify(fresh));
-    return fresh;
-  }
-
-  if (!p.goal) p.goal = "general";
-  return p;
 }
 
 export function saveProfile(profile) {
-  const userId = getUserId();
-  const key = profileKey(userId);
-  const p = { ...profile, updatedAt: nowISO(), userId };
-  localStorage.setItem(key, JSON.stringify(p));
-  return p;
-}
-
-// ---------- KPIs ----------
-export function computeKpis({
-  ingresos = [],
-  gastosFijos = [],
-  gastosVariables = [],
-  suscripciones = [],
-  deudas = [],
-}) {
-  const totalIngresos = ingresos.reduce((s, i) => s + n(i.monto), 0);
-  const totalGF = gastosFijos.reduce((s, g) => s + n(g.monto), 0);
-  const totalGV = gastosVariables.reduce((s, g) => s + n(g.monto), 0);
-  const totalSubs = suscripciones
-    .filter((s) => s.estado === "Activo")
-    .reduce((s, x) => s + n(x.monto || x.costo), 0);
-
-  const totalGastos = totalGF + totalGV + totalSubs;
-  const saldo = totalIngresos - totalGastos;
-  const tasaAhorro = totalIngresos > 0 ? saldo / totalIngresos : 0;
-
-  return {
-    totalIngresos,
-    totalGastos,
-    saldo,
-    tasaAhorro,
-    totalGastosFijos: totalGF,
-    totalGastosVariables: totalGV,
-    totalSuscripciones: totalSubs,
-    deudasCount: deudas.length,
-  };
-}
-
-// ---------- aprendizaje mensual ----------
-function updateMonthly(profile, kpis) {
-  const mk = monthKey();
-  profile.monthly[mk] = {
-    ingresos: kpis.totalIngresos,
-    gastos: kpis.totalGastos,
-    saldo: kpis.saldo,
-    tasaAhorro: kpis.tasaAhorro,
-    suscripciones: kpis.totalSuscripciones,
-    updatedAt: nowISO(),
-  };
-
-  profile.lastSignals.lastMonthKey = mk;
-}
-
-function detectImprovement(profile, kpis) {
-  const { lastSaldo, lastTasaAhorro } = profile.lastSignals;
-
-  let improved = false;
-  if (lastSaldo !== null && kpis.saldo > lastSaldo) improved = true;
-  if (lastTasaAhorro !== null && kpis.tasaAhorro > lastTasaAhorro) improved = true;
-
-  profile.discipline = clamp(
-    profile.discipline + (improved ? 4 : -2),
-    0,
-    100
-  );
-
-  profile.lastSignals.lastSaldo = kpis.saldo;
-  profile.lastSignals.lastTasaAhorro = kpis.tasaAhorro;
-
-  if (profile.discipline >= 75) profile.tone = "suave";
-  else if (profile.discipline >= 50) profile.tone = "neutral";
-  else if (profile.discipline >= 30) profile.tone = "directo";
-  else profile.tone = "estricto";
-}
-
-// ---------- MOTOR PRINCIPAL V2 (AUTO-INTELIGENTE) ----------
-export function runIntelligence(input) {
-  const profile = loadProfile();
-  const kpis = computeKpis(input);
-
-  updateMonthly(profile, kpis);
-  detectImprovement(profile, kpis);
-
-  // 📊 REPORTE GENERAL (SIEMPRE)
-  const report = buildFinancialReport(profile, kpis);
-
-  const goal = profile.goal || "general";
-  let autoGoal = null;
-
-  // 🎯 META AUTO-INTELIGENTE (si no es general)
-  if (goal !== "general") {
-    autoGoal = generateAutoGoal(goal, kpis, profile);
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    console.error('Error saving profile:', error);
   }
+}
 
-  const output = {
-    profile: saveProfile(profile),
-    kpis,
-    report,      // ✅ diagnóstico siempre
-    autoGoal,    // ✅ meta calculada automáticamente (null si es general)
-    updatedAt: nowISO(),
+function initializeProfile() {
+  return {
+    goal: 'general',
+    tone: 'amigable',
+    intensity: 5,
+    style: 'balanced',
+    discipline: 50,
+    monthly: {},
+    created: new Date().toISOString(),
+    lastUpdated: new Date().toISOString()
   };
+}
 
+export function setGoal(goal) {
+  const profile = loadProfile();
+  profile.goal = goal;
+  profile.lastUpdated = new Date().toISOString();
+  saveProfile(profile);
+}
+
+// ========== MOTOR PRINCIPAL ==========
+
+export function runIntelligence(data) {
+  console.log('🧠 Intelligence Engine: Starting analysis...');
+  
+  const { ingresos, gastosFijos, gastosVariables, suscripciones, deudas } = data;
+  
+  // 1. CALCULAR KPIs
+  const kpis = calculateKPIs(data);
+  console.log('📊 KPIs calculated:', kpis);
+  
+  // 2. CARGAR PERFIL Y MEMORIA
+  let profile = loadProfile();
+  const memoryContext = getRelevantContext(profile.goal, kpis);
+  const memorySummary = generateMemorySummary();
+  console.log('🧠 Memory loaded:', memorySummary);
+  
+  // 3. ACTUALIZAR HISTÓRICO MENSUAL
+  profile = updateMonthlyHistory(profile, kpis);
+  
+  // 4. DETECTAR PATRONES DE COMPORTAMIENTO
+  const patternsAnalysis = detectBehaviorPatterns(profile);
+  console.log('🔍 Patterns detected:', patternsAnalysis.summary);
+  
+  // 5. PREDECIR PRÓXIMO MES
+  const prediction = predictNextMonth(profile);
+  console.log('🔮 Next month prediction:', prediction);
+  
+  // 6. ADAPTAR PERSONALIDAD
+  const personality = adaptPersonality(profile, kpis, patternsAnalysis.patterns);
+  console.log('🎭 Personality adapted:', personality.tone, 'intensity:', personality.intensity);
+  
+  // 7. VERIFICAR SI NECESITA ESCALAR O DES-ESCALAR TONO
+  const escalation = shouldEscalateTone(profile, personality.tone);
+  const deescalation = shouldDeescalateTone(profile, personality.tone);
+  
+  if (escalation.shouldEscalate) {
+    console.log('⚠️ Escalating tone:', escalation.reason);
+    personality.tone = escalation.newTone;
+    personality.intensity = Math.min(10, personality.intensity + 2);
+  } else if (deescalation.shouldDeescalate) {
+    console.log('✅ De-escalating tone:', deescalation.reason);
+    personality.tone = deescalation.newTone;
+    personality.intensity = Math.max(1, personality.intensity - 2);
+  }
+  
+  // 8. ACTUALIZAR PERFIL CON NUEVA PERSONALIDAD
+  profile = updateProfilePersonality(profile, personality);
+  profile.discipline = memorySummary.discipline === 'high' ? 80 : 
+                       memorySummary.discipline === 'medium' ? 50 : 30;
+  
+  // 9. GENERAR REPORTE DIAGNÓSTICO
+  const report = generateDiagnosticReport(kpis, profile);
+  console.log('📋 Diagnostic report generated');
+  
+  // 10. GENERAR META AUTOMÁTICA
+  const autoGoal = generateAutoGoal(profile.goal, kpis, profile);
+  console.log('🎯 Auto-goal generated:', autoGoal?.type);
+  
+  // 11. GENERAR RECOMENDACIÓN PRIORIZADA
+  const nextAction = recommendNextAction(patternsAnalysis.patterns);
+  
+  // 12. CONSTRUIR OUTPUT COMPLETO
+  const output = {
+    kpis,
+    profile,
+    report: enhanceReportWithPersonality(report, personality, memoryContext),
+    autoGoal,
+    patterns: patternsAnalysis,
+    prediction,
+    personality,
+    memory: {
+      summary: memorySummary,
+      pendingPromises: getPendingPromises().length,
+      overduePromises: getOverduePromises().length,
+      context: memoryContext
+    },
+    nextAction,
+    timestamp: new Date().toISOString()
+  };
+  
+  // 13. GUARDAR PERFIL ACTUALIZADO
+  saveProfile(profile);
+  
+  // 14. REGISTRAR INTERACCIÓN EN MEMORIA
+  recordInteraction(
+    'report',
+    'Solicitar análisis financiero',
+    `Generado reporte: ${report.headline}`,
+    {
+      goal: profile.goal,
+      saldo: kpis.saldo,
+      tone: personality.tone
+    }
+  );
+  
+  console.log('✅ Intelligence Engine: Analysis complete');
   return output;
 }
 
-// ---------- API pública para actualizar datos persistidos ----------
-export function updateEmergencyFund(amount) {
-  const profile = loadProfile();
-  profile.emergencyFund = Math.max(0, n(amount));
-  return saveProfile(profile);
+// ========== CÁLCULO DE KPIs ==========
+
+function calculateKPIs(data) {
+  const { ingresos, gastosFijos, gastosVariables, suscripciones, deudas } = data;
+
+  const totalIngresos = ingresos.reduce((sum, i) => sum + (i.monto || 0), 0);
+  const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + (g.monto || 0), 0);
+  const totalGastosVariables = gastosVariables.reduce((sum, g) => sum + (g.monto || 0), 0);
+  const totalSuscripciones = suscripciones
+    .filter(s => s.estado === 'Activo')
+    .reduce((sum, s) => {
+      if (s.ciclo === 'Anual') return sum + (s.costo / 12);
+      if (s.ciclo === 'Semanal') return sum + (s.costo * 4.33);
+      return sum + (s.costo || 0);
+    }, 0);
+
+  const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones;
+  const saldo = totalIngresos - totalGastos;
+  const tasaAhorro = totalIngresos > 0 ? saldo / totalIngresos : 0;
+
+  const totalDeudas = deudas.reduce((sum, d) => sum + (d.balance || 0), 0);
+  const deudasCount = deudas.length;
+
+  return {
+    totalIngresos: Math.round(totalIngresos * 100) / 100,
+    totalGastos: Math.round(totalGastos * 100) / 100,
+    totalGastosFijos: Math.round(totalGastosFijos * 100) / 100,
+    totalGastosVariables: Math.round(totalGastosVariables * 100) / 100,
+    totalSuscripciones: Math.round(totalSuscripciones * 100) / 100,
+    saldo: Math.round(saldo * 100) / 100,
+    tasaAhorro: Math.round(tasaAhorro * 10000) / 10000,
+    totalDeudas: Math.round(totalDeudas * 100) / 100,
+    deudasCount,
+    gastosFijosRatio: totalIngresos > 0 ? totalGastosFijos / totalIngresos : 0,
+    gastosVariablesRatio: totalIngresos > 0 ? totalGastosVariables / totalIngresos : 0
+  };
 }
 
-export function recordDebtPayment(debtId, amount) {
-  const profile = loadProfile();
-  if (!profile.debtPayments) profile.debtPayments = {};
+// ========== HISTÓRICO MENSUAL ==========
+
+function updateMonthlyHistory(profile, kpis) {
+  const currentMonth = new Date().toISOString().slice(0, 7);
   
-  if (!profile.debtPayments[debtId]) {
-    profile.debtPayments[debtId] = [];
+  if (!profile.monthly) {
+    profile.monthly = {};
+  }
+
+  profile.monthly[currentMonth] = {
+    ingresos: kpis.totalIngresos,
+    gastos: kpis.totalGastos,
+    gastosFijos: kpis.totalGastosFijos,
+    gastosVariables: kpis.totalGastosVariables,
+    suscripciones: kpis.totalSuscripciones,
+    saldo: kpis.saldo,
+    tasaAhorro: kpis.tasaAhorro,
+    totalDeudas: kpis.totalDeudas,
+    timestamp: new Date().toISOString()
+  };
+
+  const months = Object.keys(profile.monthly).sort().reverse();
+  if (months.length > 12) {
+    months.slice(12).forEach(month => delete profile.monthly[month]);
+  }
+
+  return profile;
+}
+
+// ========== MEJORAR REPORTE CON PERSONALIDAD ==========
+
+function enhanceReportWithPersonality(report, personality, memoryContext) {
+  report.greeting = personality.messages.greeting;
+  report.situationMessage = personality.messages.situation;
+  report.motivation = personality.messages.motivation;
+  report.callToAction = personality.messages.callToAction;
+  
+  if (memoryContext.pendingPromises.length > 0) {
+    report.pendingPromises = memoryContext.pendingPromises.map(p => ({
+      promise: p.promise,
+      dueDate: p.dueDate,
+      overdue: new Date(p.dueDate) < new Date()
+    }));
   }
   
-  profile.debtPayments[debtId].push({
-    amount: n(amount),
-    date: nowISO(),
-  });
+  if (memoryContext.overduePromises.length > 0) {
+    report.overduePromises = memoryContext.overduePromises.map(p => ({
+      promise: p.promise,
+      dueDate: p.dueDate
+    }));
+  }
   
-  return saveProfile(profile);
+  if (memoryContext.insights.length > 0) {
+    report.newInsights = memoryContext.insights.slice(0, 3);
+  }
+  
+  return report;
 }
 
-export function setGoal(goalKey) {
+// ========== UTILIDADES PÚBLICAS ==========
+
+export function userMakesPromise(promiseText, dueDate) {
+  const promise = recordPromise(promiseText, dueDate);
+  console.log('📝 Promise recorded:', promise);
+  return promise;
+}
+
+export function getExecutiveSummary() {
   const profile = loadProfile();
-  profile.goal = goalKey;
-  return saveProfile(profile);
+  const memorySummary = generateMemorySummary();
+  
+  return {
+    currentGoal: profile.goal,
+    tone: profile.tone,
+    discipline: profile.discipline,
+    totalInteractions: memorySummary.totalInteractions,
+    pendingPromises: memorySummary.pendingPromises,
+    overduePromises: memorySummary.overduePromises,
+    lastUpdated: profile.lastUpdated
+  };
+}
+
+export function recalibratePersonality() {
+  const profile = loadProfile();
+  const kpis = { saldo: 0, tasaAhorro: 0 };
+  const patterns = [];
+  
+  const personality = adaptPersonality(profile, kpis, patterns);
+  const updated = updateProfilePersonality(profile, personality);
+  saveProfile(updated);
+  
+  console.log('🔄 Personality recalibrated:', personality);
+  return personality;
+}
+
+export function getBrainState() {
+  return {
+    profile: loadProfile(),
+    memory: generateMemorySummary(),
+    timestamp: new Date().toISOString()
+  };
 }

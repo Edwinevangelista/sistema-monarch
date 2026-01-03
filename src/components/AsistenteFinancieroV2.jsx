@@ -1,5 +1,5 @@
 // src/components/AsistenteFinancieroV2.jsx
-// 🎨 Versión Mobile-First Mejorada: Asesor Hero -> Contenido
+// 🎨 Versión Mobile-First Mejorada con Modales de Planificación
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { 
@@ -9,6 +9,7 @@ import {
 
 import { runIntelligence, setGoal, loadProfile } from "../lib/intelligenceEngine";
 import MetaModal from "./MetaModal";
+import SubscriptionOptimizerModal from "./SubscriptionOptimizerModal";
 
 const METAS = [
   { 
@@ -35,14 +36,7 @@ const METAS = [
     color: "from-green-500 to-emerald-500",
     descripcion: "Aumenta tu tasa de ahorro"
   },
-  { 
-    key: "fondo_emergencia", 
-    label: "Fondo de Emergencia", 
-    icon: "🛡️",
-    emoji: "🛡️",
-    color: "from-blue-500 to-cyan-500",
-    descripcion: "Construye tu colchón financiero"
-  },
+ 
   { 
     key: "pagar_deudas", 
     label: "Pagar Deudas", 
@@ -70,10 +64,13 @@ export default function AsistenteFinancieroV2({
   gastosVariables = [],
   suscripciones = [],
   deudas = [],
+  onOpenDebtPlanner,
+  onOpenSavingsPlanner,
 }) {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState(null);
   const [showMetaModal, setShowMetaModal] = useState(false);
+const [showSubsOptimizer, setShowSubsOptimizer] = useState(false);
 
   const profile = useMemo(() => {
     try {
@@ -127,6 +124,14 @@ export default function AsistenteFinancieroV2({
     if (setGoal) setGoal(g);
     setShowMetaModal(false);
     analizar();
+    
+    // Lógica corregida: Abrir modales al seleccionar metas específicas
+    if (g === 'pagar_deudas' && onOpenDebtPlanner) {
+      setTimeout(() => onOpenDebtPlanner(), 300);
+    }
+    if (g === 'ahorrar_mas' && onOpenSavingsPlanner) {
+      setTimeout(() => onOpenSavingsPlanner(), 300);
+    }
   };
 
   const currentMeta = METAS.find(m => m.key === goal) || METAS[0];
@@ -138,7 +143,7 @@ export default function AsistenteFinancieroV2({
     const { saldo } = output.kpis || { saldo: 0 };
     
     if (saldo < 0) {
-      if (tone === "estricto") {
+      if (tone === "estricto" || tone === "muy_directo") {
         return "Tenemos que hablar en serio. Estás gastando más de lo que ganas. 🚨";
       } else if (tone === "directo") {
         return "Ojo, hay un déficit este mes. Vamos a solucionarlo juntos. 💪";
@@ -164,7 +169,17 @@ export default function AsistenteFinancieroV2({
       </div>
     );
   }
-
+// 🔍 DEBUG COMPONENTES
+  console.log("DEBUG COMPONENTES:", {
+    ReporteGeneralMobile,
+    MetaAutomaticaMobile,
+    ExpandableCard,
+    ControlGastosMobile,
+    AhorrarMasMobile,
+    FondoEmergenciaMobile,
+    RecortarSubsMobile,
+    InsightCard,
+  });
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-4 flex items-center justify-center">
@@ -180,9 +195,8 @@ export default function AsistenteFinancieroV2({
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-4 pb-24">
       
-      {/* SECCIÓN 1: EL ASESOR (Hero Section) - Primera cosa que se ve */}
+      {/* SECCIÓN 1: EL ASESOR (Hero Section) */}
       <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 mb-6 shadow-2xl relative overflow-hidden">
-        {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
         
         <div className="flex flex-col items-center text-center relative z-10">
@@ -196,7 +210,7 @@ export default function AsistenteFinancieroV2({
         </div>
       </div>
 
-      {/* SECCIÓN 2: META ACTUAL - Contexto rápido */}
+      {/* SECCIÓN 2: META ACTUAL */}
       <div className="mb-6">
         <button
           onClick={() => setShowMetaModal(true)}
@@ -219,7 +233,7 @@ export default function AsistenteFinancieroV2({
         </button>
       </div>
 
-      {/* SECCIÓN 3: KPIs (Alertas Visuales) - Despues del asesor */}
+      {/* SECCIÓN 3: KPIs */}
       {output?.kpis && (
         <div className="mb-6">
           <h3 className="text-white/60 text-sm font-bold uppercase mb-3 px-1">Resumen Rápido</h3>
@@ -256,18 +270,32 @@ export default function AsistenteFinancieroV2({
         </div>
       )}
 
-      {/* SECCIÓN 4: CONTENIDO DETALLADO (Problemas/Alertas/Soluciones) */}
+      {/* SECCIÓN 4: CONTENIDO DETALLADO */}
       <div>
         {goal === "general" ? (
           output?.report && output?.kpis && output?.profile ? (
-            <ReporteGeneralMobile report={output.report} kpis={output.kpis} profile={output.profile} />
+            <ReporteGeneralMobile 
+              report={output.report} 
+              kpis={output.kpis} 
+              profile={output.profile}
+              onOpenDebtPlanner={onOpenDebtPlanner}
+              onOpenSavingsPlanner={onOpenSavingsPlanner}
+              deudas={deudas}
+            />
           ) : null
         ) : (
-          output?.autoGoal && <MetaAutomaticaMobile autoGoal={output.autoGoal} onChangeMeta={() => setShowMetaModal(true)} />
+          output?.autoGoal && (
+            <MetaAutomaticaMobile 
+              autoGoal={output.autoGoal} 
+              onChangeMeta={() => setShowMetaModal(true)}
+              onOpenDebtPlanner={onOpenDebtPlanner}
+              onOpenSavingsPlanner={onOpenSavingsPlanner}
+            />
+          )
         )}
       </div>
 
-      {/* Botón flotante para re-analizar si se desea */}
+      {/* Botón flotante para re-analizar */}
       <button
         onClick={analizar}
         disabled={loading}
@@ -275,7 +303,6 @@ export default function AsistenteFinancieroV2({
       >
         <Brain className={`w-6 h-6 ${loading ? 'animate-pulse' : ''}`} />
       </button>
-
       {/* Modal de selección de meta */}
       {showMetaModal && (
         <MetaModal
@@ -285,6 +312,16 @@ export default function AsistenteFinancieroV2({
           onClose={() => setShowMetaModal(false)}
         />
       )}
+
+      {/* Modal de optimización de suscripciones */}
+      {showSubsOptimizer && (
+        <SubscriptionOptimizerModal
+          suscripciones={suscripciones}
+          kpis={output?.kpis}
+             onClose={() => setShowSubsOptimizer(false)}
+        />
+      )}
+
     </div>
   );
 }
@@ -303,10 +340,14 @@ function KPICard({ label, value, icon, color, textColor = "text-white" }) {
   );
 }
 
-function ReporteGeneralMobile({ report, kpis, profile }) {
+function ReporteGeneralMobile({ report, kpis, profile, onOpenDebtPlanner, onOpenSavingsPlanner, deudas }) {
   const [expandedSection, setExpandedSection] = useState(null);
 
   if (!report) return null;
+
+  // Detectar si hay problemas de deudas o necesidad de ahorro
+  const hasDebtProblems = deudas && deudas.length > 0;
+  const needsSavings = kpis.tasaAhorro < 0.10 || kpis.saldo < 0;
 
   return (
     <div className="space-y-4">
@@ -324,7 +365,58 @@ function ReporteGeneralMobile({ report, kpis, profile }) {
         </div>
       </div>
 
-      {/* Problemas - Primera Alerta Importante */}
+      {/* Tarjetas de Acción Inteligentes */}
+      {(hasDebtProblems || needsSavings) && (
+        <div className="space-y-3">
+          {hasDebtProblems && onOpenDebtPlanner && (
+            <button
+              onClick={onOpenDebtPlanner}
+              className="w-full bg-gradient-to-br from-pink-600/20 to-rose-600/20 border border-pink-500/30 rounded-2xl p-5 hover:scale-[1.02] transition-transform active:scale-[0.99] text-left"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-pink-600/30 rounded-lg">
+                  <span className="text-2xl">💳</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-lg">Plan de Pago de Deudas</h3>
+                  <p className="text-pink-200 text-sm">Tienes {deudas.length} {deudas.length === 1 ? 'deuda' : 'deudas'} • Elimínalas estratégicamente</p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-pink-300" />
+              </div>
+              <div className="space-y-1 text-sm text-pink-100 pl-12">
+                <p>✓ Selecciona qué deudas pagar primero</p>
+                <p>✓ 3 estrategias comprobadas</p>
+                <p>✓ Timeline con milestones</p>
+              </div>
+            </button>
+          )}
+
+          {needsSavings && onOpenSavingsPlanner && (
+            <button
+              onClick={onOpenSavingsPlanner}
+              className="w-full bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-2xl p-5 hover:scale-[1.02] transition-transform active:scale-[0.99] text-left"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-emerald-600/30 rounded-lg">
+                  <span className="text-2xl">💰</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-lg">Crear Plan de Ahorro</h3>
+                  <p className="text-emerald-200 text-sm">Ahorro actual: {pct(kpis.tasaAhorro)} • Define metas personalizadas</p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-emerald-300" />
+              </div>
+              <div className="space-y-1 text-sm text-emerald-100 pl-12">
+                <p>✓ Vacaciones, compras o emergencias</p>
+                <p>✓ Calcula ahorro mensual/semanal</p>
+                <p>✓ Estrategias personalizadas</p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Problemas */}
       {report.problems && report.problems.length > 0 && (
         <ExpandableCard
           title="Problemas Detectados"
@@ -425,7 +517,7 @@ function ExpandableCard({ title, count, emoji, expanded, onToggle, children, typ
   );
 }
 
-function MetaAutomaticaMobile({ autoGoal, onChangeMeta }) {
+function MetaAutomaticaMobile({ autoGoal, onChangeMeta, onOpenDebtPlanner, onOpenSavingsPlanner }) {
   if (!autoGoal) return null;
 
   const { title, auto, progress, status, insights } = autoGoal;
@@ -460,8 +552,86 @@ function MetaAutomaticaMobile({ autoGoal, onChangeMeta }) {
 
       {/* Métricas específicas según tipo */}
       {autoGoal.type === "controlar_gastos" && <ControlGastosMobile auto={auto} />}
-      {autoGoal.type === "ahorrar_mas" && <AhorrarMasMobile auto={auto} />}
-      {autoGoal.type === "fondo_emergencia" && <FondoEmergenciaMobile auto={auto} />}
+      
+      {autoGoal.type === "ahorrar_mas" && (
+        <>
+          <AhorrarMasMobile auto={auto} />
+          {onOpenSavingsPlanner && (
+            <button
+              onClick={onOpenSavingsPlanner}
+              className="w-full bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-2xl p-5 hover:scale-[1.02] transition-transform active:scale-[0.99] text-left"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-emerald-600/30 rounded-lg">
+                  <span className="text-2xl">💰</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-lg">Crear Plan de Ahorro</h3>
+                  <p className="text-emerald-200 text-sm">Define metas personalizadas y alcánzalas</p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-emerald-300" />
+              </div>
+              <div className="space-y-1 text-sm text-emerald-100 pl-12">
+                <p>✓ Vacaciones, compras o fondo de emergencia</p>
+                <p>✓ Calcula ahorro mensual/semanal</p>
+                <p>✓ Estrategias personalizadas</p>
+              </div>
+            </button>
+          )}
+        </>
+      )}
+      
+      {autoGoal.type === "fondo_emergencia" && (
+        <>
+          <FondoEmergenciaMobile auto={auto} />
+          {onOpenSavingsPlanner && (
+            <button
+              onClick={onOpenSavingsPlanner}
+              className="w-full bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-2xl p-5 hover:scale-[1.02] transition-transform active:scale-[0.99] text-left"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-blue-600/30 rounded-lg">
+                  <span className="text-2xl">🛡️</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-lg">Plan de Fondo de Emergencia</h3>
+                  <p className="text-blue-200 text-sm">Construye tu colchón financiero</p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-blue-300" />
+              </div>
+              <div className="space-y-1 text-sm text-blue-100 pl-12">
+                <p>✓ Cálculo automático de 3-6 meses de gastos</p>
+                <p>✓ Plan mensual personalizado</p>
+                <p>✓ Tracking de progreso</p>
+              </div>
+            </button>
+          )}
+        </>
+      )}
+      
+      {autoGoal.type === "pagar_deudas" && onOpenDebtPlanner && (
+        <button
+          onClick={onOpenDebtPlanner}
+          className="w-full bg-gradient-to-br from-pink-600/20 to-rose-600/20 border border-pink-500/30 rounded-2xl p-5 hover:scale-[1.02] transition-transform active:scale-[0.99] text-left"
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <div className="p-2 bg-pink-600/30 rounded-lg">
+              <span className="text-2xl">💳</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-bold text-lg">Plan de Pago de Deudas</h3>
+              <p className="text-pink-200 text-sm">Elimina deudas estratégicamente</p>
+            </div>
+            <ChevronRight className="w-6 h-6 text-pink-300" />
+          </div>
+          <div className="space-y-1 text-sm text-pink-100 pl-12">
+            <p>✓ Selecciona qué deudas pagar primero</p>
+            <p>✓ 3 estrategias comprobadas (Avalancha, Bola de Nieve)</p>
+            <p>✓ Timeline mes a mes con milestones</p>
+          </div>
+        </button>
+      )}
+      
       {autoGoal.type === "recortar_subs" && <RecortarSubsMobile auto={auto} />}
 
       {/* Insights */}
