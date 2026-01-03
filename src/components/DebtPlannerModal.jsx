@@ -98,11 +98,11 @@ function simulatePaymentPlan(debts, monthlyPayment, maxMonths) {
     month++;
     let availableThisMonth = monthlyPayment;
     
-    remainingDebts.forEach(debt => {
+    for (const debt of remainingDebts) {
       const monthlyInterest = (debt.balance * (debt.interes / 100)) / 12;
       debt.balance += monthlyInterest;
       totalInterest += monthlyInterest;
-    });
+    }
     
     for (let i = 0; i < remainingDebts.length; i++) {
       const debt = remainingDebts[i];
@@ -134,11 +134,11 @@ function calculateMonthlyPlanWithTarget(debts, monthlyPayment, maxMonths) {
     let availableThisMonth = monthlyPayment;
     
     // Aplicar intereses
-    remainingDebts.forEach(debt => {
+    for (const debt of remainingDebts) {
       const monthlyInterest = (debt.balance * (debt.interes / 100)) / 12;
       debt.balance += monthlyInterest;
       totalInterest += monthlyInterest;
-    });
+    }
     
     // Pagar deudas según estrategia
     for (let i = 0; i < remainingDebts.length; i++) {
@@ -218,11 +218,11 @@ function calculateMonthlyPlan(debts, capacity) {
     month++;
     let availableThisMonth = monthlyPayment;
     
-    remainingDebts.forEach(debt => {
+    for (const debt of remainingDebts) {
       const monthlyInterest = (debt.balance * (debt.interes / 100)) / 12;
       debt.balance += monthlyInterest;
       totalInterest += monthlyInterest;
-    });
+    }
     
     for (let i = 0; i < remainingDebts.length; i++) {
       const debt = remainingDebts[i];
@@ -717,7 +717,7 @@ function PlanView({ plan, onBack }) {
     );
   }
 
-  const { strategy, summary = {}, financialCapacity = {}, timeline = {}, recommendations = [] } = plan;
+  const { strategy, summary = {}, recommendations = [] } = plan;
   const totalDebt = Number(summary.totalDebt) || 0;
   const monthsToPayoff = Number(summary.monthsToPayoff) || 0;
   const monthlyPayment = Number(summary.monthlyPayment) || 0;

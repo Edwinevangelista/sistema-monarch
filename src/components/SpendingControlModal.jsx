@@ -1,9 +1,8 @@
 // src/components/SpendingControlModal.jsx
 import { useState } from 'react';
-import { X, TrendingDown, Target, DollarSign, AlertTriangle, CheckCircle2, Zap } from 'lucide-react';
+import { X, TrendingDown, AlertTriangle, Zap } from 'lucide-react';
 
 export default function SpendingControlModal({ gastosFijos = [], gastosVariables = [], suscripciones = [], kpis = {}, onClose }) {
-  const [selectedCategories, setSelectedCategories] = useState([]);
   const [customGoal, setCustomGoal] = useState('');
   const [view, setView] = useState('analysis');
 
@@ -51,7 +50,6 @@ export default function SpendingControlModal({ gastosFijos = [], gastosVariables
   // Análisis de reducción
   const metaRecomendada = totalIngresos * 0.6; // 60% de ingresos
   const reduccionNecesaria = Math.max(0, totalGastos - metaRecomendada);
-  const porcentajeReduccion = totalGastos > 0 ? (reduccionNecesaria / totalGastos) * 100 : 0;
 
   // Identificar categorías problemáticas
   const categoriasCriticas = categoriasOrdenadas

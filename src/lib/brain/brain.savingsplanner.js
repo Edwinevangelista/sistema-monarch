@@ -72,7 +72,7 @@ export function generateSavingsPlan(goalData = {}, kpis = {}) {
 
 function calculateSavingsCapacity(kpis) {
   const saldo = Number(kpis.saldo) || 0;
-  const totalIngresos = Number(kpis.totalIngresos) || 1000;
+
   const tasaAhorro = Number(kpis.tasaAhorro) || 0.10;
   
   const currentSavings = Math.max(0, saldo);
