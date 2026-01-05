@@ -3,24 +3,18 @@ import { Target, Trash2, Calendar, AlertCircle, CheckCircle } from 'lucide-react
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 export default function SavedPlansList({ refreshSignal = 0 }) {
-  // ✅ CORRECCIÓN: Cambiar 'plans' por 'planes'
   const { planes, loading, deletePlan, refresh } = usePlanesGuardados();
 
-  useEffect(() => {
-    console.log('🔄 SavedPlansList recibió señal de actualización:', refreshSignal);
-    if (refreshSignal > 0) {
-      refresh();
-    }
-  }, [refreshSignal, refresh]);
+  // ✅ CORRECCIÓN: Solo cargar al montar y cuando cambie refreshSignal
+useEffect(() => {
+  console.log('🔄 Actualizando planes...');
+  refresh();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [refreshSignal]);
 
+  // ✅ Debug log
   useEffect(() => {
-    console.log('📊 SavedPlansList montado, cargando planes...');
-    refresh();
-  }, [refresh]); // ✅ CORRECCIÓN: Quitar refreshSignal de aquí para evitar loop
-
-  // ✅ CORRECCIÓN: Agregar log para debug
-  useEffect(() => {
-    console.log('📋 Planes cargados:', planes);
+    console.log('📋 Planes actuales:', planes);
   }, [planes]);
 
   if (loading) {
@@ -31,7 +25,6 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
     );
   }
 
-  // ✅ CORRECCIÓN: Cambiar 'plans' por 'planes'
   if (!planes || planes.length === 0) {
     return (
       <div className="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700">
