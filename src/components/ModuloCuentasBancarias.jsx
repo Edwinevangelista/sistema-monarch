@@ -2,7 +2,7 @@
 // ✅ MÓDULO COMPLETO - Gestión de cuentas bancarias y débito
 
 import React, { useState } from 'react'
-import { Wallet, Plus, Edit2, Trash2, DollarSign, TrendingUp, TrendingDown, MoreVertical, X, CreditCard } from 'lucide-react'
+import { Wallet, Plus, Edit, Trash2, ArrowDown, ArrowUp } from 'lucide-react'
 
 export default function ModuloCuentasBancarias({ cuentas, onAgregar, onEditar, onEliminar }) {
   const [showModal, setShowModal] = useState(false)
