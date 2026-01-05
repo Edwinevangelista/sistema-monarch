@@ -1,6 +1,4 @@
 // src/hooks/useCuentasBancarias.js
-// ✅ Hook para gestionar cuentas bancarias
-
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -9,16 +7,16 @@ export function useCuentasBancarias() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const user = supabase.auth.getUser()
-
   // Cargar cuentas
   const fetchCuentas = async () => {
     try {
       setLoading(true)
+      // ✅ CORREGIDO: Obtenemos el usuario aquí, no afuera
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         setCuentas([])
+        setLoading(false)
         return
       }
 
@@ -42,6 +40,7 @@ export function useCuentasBancarias() {
   // Agregar cuenta
   const addCuenta = async (cuentaData) => {
     try {
+      // ✅ CORREGIDO: Obtenemos el usuario aquí dentro de la función
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
 
