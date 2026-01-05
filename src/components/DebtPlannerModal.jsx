@@ -1,6 +1,6 @@
-// src/components/DebtPlannerModal.jsx
 import { useState, useEffect } from 'react';
 import { X, CreditCard, TrendingDown, CheckCircle2, AlertCircle, Zap, Calendar } from 'lucide-react';
+import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 // ========== FUNCIONES DE CÁLCULO ==========
 
@@ -398,13 +398,17 @@ function compareDebtStrategies(debts, kpis = {}) {
 
 // ========== COMPONENTE MODAL ==========
 
-export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
+export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPlanGuardado }) {
   const [selectedDebts, setSelectedDebts] = useState([]);
   const [strategy, setStrategy] = useState('avalancha');
   const [targetMonths, setTargetMonths] = useState('');
   const [plan, setPlan] = useState(null);
   const [comparison, setComparison] = useState(null);
   const [view, setView] = useState('select');
+  
+  const { addPlan } = usePlanesGuardados();
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
+  const [planParaGuardar, setPlanParaGuardar] = useState(null);
 
   useEffect(() => {
     if (deudas && deudas.length > 0) {
@@ -415,8 +419,10 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
   const normalizeDebt = (deuda) => {
     const balance = Number(deuda.balance || deuda.monto || deuda.amount || deuda.saldo || 0);
     const interes = Number(deuda.interes || deuda.interest || deuda.tasa || deuda.rate || 0);
-    const pagoMinimo = Number(deuda.pagoMinimo || deuda.pagoMin || deuda.minPayment || Math.max(25, balance * 0.03));
-    const nombre = deuda.nombre || deuda.cuenta || deuda.name || deuda.descripcion || 'Deuda sin nombre';
+    const pagoMinimo = Number(deuda.pagoMinimo || deuda.pago_min || deuda.minPayment || Math.max(25, balance * 0.03));
+    
+    // CORREGIDO: Cambiado 'debt.descripcion' por 'deuda.descripcion'
+    const nombre = deuda.nombre || deuda.cuenta || deuda.name || deuda.descripcion || 'Deuda sin nombre'; 
     
     return { ...deuda, balance, interes, pagoMinimo, nombre };
   };
@@ -445,6 +451,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
       }
       
       setPlan(generatedPlan);
+      setPlanParaGuardar(generatedPlan); // AGREGAR
       setView('plan');
     } catch (error) {
       console.error('Error generando plan:', error);
@@ -535,9 +542,47 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
             <PlanView 
               plan={plan}
               onBack={() => setView('select')}
+              onGuardar={() => setShowConfirmacion(true)}
             />
           )}
         </div>
+        
+        {showConfirmacion && planParaGuardar && (
+          <ConfirmacionGuardadoPlan
+            plan={planParaGuardar}
+            tipo="deudas"
+            onConfirmar={async (nombre) => {
+              try {
+                const config = planParaGuardar;
+                
+                await addPlan({
+                  tipo: 'deudas',
+                  nombre: nombre,
+                  descripcion: `Plan de pago de deudas: ${config.strategy?.name || 'Libertad financiera'}`,
+                  configuracion: config,
+                  meta_principal: config.strategy?.name || 'Pagar deudas',
+                  monto_objetivo: config.summary?.totalDebt || 0,
+                  monto_actual: 0,
+                  progreso: 0,
+                  fecha_inicio: new Date().toISOString().split('T')[0],
+                  fecha_objetivo: new Date(Date.now() + (config.summary?.monthsToPayoff || 0) * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                  meses_duracion: config.summary?.monthsToPayoff || 0,
+                  activo: true,
+                  completado: false
+                });
+
+                alert('✅ Plan guardado exitosamente');
+                setShowConfirmacion(false);
+                if (onPlanGuardado) onPlanGuardado();
+                onClose();
+              } catch (error) {
+                console.error('Error guardando plan:', error);
+                alert('Error al guardar el plan: ' + error.message);
+              }
+            }}
+            onCancelar={() => setShowConfirmacion(false)}
+          />
+        )}
       </div>
     </div>
   );
@@ -706,7 +751,7 @@ function CompareStrategiesView({ comparison, onSelectStrategy, onBack }) {
   );
 }
 
-function PlanView({ plan, onBack }) {
+function PlanView({ plan, onBack, onGuardar }) {
   if (!plan || plan.error) {
     return (
       <div className="text-center py-8">
@@ -769,6 +814,90 @@ function PlanView({ plan, onBack }) {
           ))}
         </div>
       )}
+      
+      <button
+        onClick={onGuardar}
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition"
+      >
+        💾 Guardar Este Plan
+      </button>
+    </div>
+  );
+}
+
+// Componente auxiliar para confirmar guardado
+function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
+  const [nombre, setNombre] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    if (!nombre.trim()) {
+      alert('Por favor ingresa un nombre para tu plan');
+      return;
+    }
+    setGuardando(true);
+    await onConfirmar(nombre);
+    setGuardando(false);
+  };
+
+  const getTipoInfo = () => {
+    switch(tipo) {
+      case 'ahorro':
+        return { emoji: '💰', color: 'from-green-600 to-emerald-600', label: 'Ahorro' };
+      case 'deudas':
+        return { emoji: '💳', color: 'from-red-600 to-pink-600', label: 'Deudas' };
+      case 'gastos':
+        return { emoji: '💸', color: 'from-orange-600 to-yellow-600', label: 'Gastos' };
+      default:
+        return { emoji: '📋', color: 'from-blue-600 to-purple-600', label: 'Plan' };
+    }
+  };
+
+  const { emoji, color, label } = getTipoInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+      <div className={`bg-gradient-to-br ${color} rounded-2xl max-w-md w-full p-6 shadow-2xl`}>
+        <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          {emoji} Guardar Plan de {label}
+        </h3>
+        
+        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur">
+          <p className="text-white/90 text-sm mb-2">
+            Este plan se guardará en tu lista de planes activos. Podrás verlo, editarlo y seguir tu progreso.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-white text-sm mb-2 font-medium">
+            Nombre del plan:
+          </label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder={`Ej: ${label} ${new Date().getFullYear()}`}
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancelar}
+            className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold hover:bg-white/20 transition backdrop-blur"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="flex-1 bg-white text-gray-900 py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 transition"
+          >
+            {guardando ? 'Guardando...' : '✅ Guardar'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

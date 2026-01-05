@@ -1,7 +1,7 @@
 import React from 'react'
-import { Bell, AlertTriangle, Clock } from 'lucide-react'
+import { Bell, AlertTriangle, Clock, ExternalLink } from 'lucide-react'
 
-const Notificaciones = ({ alertas }) => {
+const Notificaciones = ({ alertas, onAlertClick }) => {
   const getIconoTipo = (tipo) => {
     if (tipo === 'critical') return <AlertTriangle className="w-5 h-5 text-red-400" />
     if (tipo === 'warning') return <Clock className="w-5 h-5 text-yellow-400" />
@@ -36,15 +36,23 @@ const Notificaciones = ({ alertas }) => {
         {alertas.map((alerta, idx) => (
           <div 
             key={idx} 
-            className={`flex items-start gap-3 p-4 rounded-xl border-2 ${getColorFondo(alerta.tipo)} backdrop-blur-sm`}
+            onClick={() => onAlertClick ? onAlertClick(alerta) : null}
+            className={`
+              flex items-start gap-3 p-4 rounded-xl border-2 ${getColorFondo(alerta.tipo)} 
+              backdrop-blur-sm transition-all active:scale-95 cursor-pointer
+              hover:bg-white/10
+            `}
           >
             <div className="mt-0.5">
               {getIconoTipo(alerta.tipo)}
             </div>
             <div className="flex-1">
-              <p className="text-white font-semibold text-sm leading-relaxed">
-                {alerta.mensaje}
-              </p>
+              <div className="flex items-start justify-between">
+                <p className="text-white font-semibold text-sm leading-relaxed flex-1">
+                  {alerta.mensaje}
+                </p>
+                <ExternalLink className="w-4 h-4 text-gray-300 ml-2 flex-shrink-0" />
+              </div>
               {alerta.monto && (
                 <p className="text-gray-300 text-xs mt-1">
                   Monto: ${alerta.monto.toLocaleString('es-MX')}
@@ -54,6 +62,9 @@ const Notificaciones = ({ alertas }) => {
           </div>
         ))}
       </div>
+      <p className="text-center text-xs text-purple-200 mt-3 opacity-80">
+        Toca una alerta para ver detalles o gestionar el pago
+      </p>
     </div>
   )
 }

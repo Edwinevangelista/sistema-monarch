@@ -1,6 +1,6 @@
 // src/lib/brain/brain.patterns.js
 // 🧠 Detección de Patrones de Comportamiento
-// Analiza histórico y detecta tendencias, hábitos y señales de alerta
+// CORRECCIÓN: Validación defensiva para evitar errores con datos undefined
 
 import { addInsight } from './brain.memory';
 
@@ -8,7 +8,15 @@ import { addInsight } from './brain.memory';
  * Analiza el perfil completo y detecta patrones de comportamiento
  */
 export function detectBehaviorPatterns(profile) {
-  if (!profile.monthly || Object.keys(profile.monthly).length < 2) {
+  // 🔹 VALIDACIÓN DEFENSIVA
+  if (!profile || typeof profile !== 'object') {
+    return {
+      patterns: [],
+      message: "Perfil inválido o no proporcionado"
+    };
+  }
+
+  if (!profile.monthly || typeof profile.monthly !== 'object' || Object.keys(profile.monthly).length < 2) {
     return {
       patterns: [],
       message: "Necesitamos más datos (2+ meses) para detectar patrones"
@@ -44,8 +52,8 @@ function detectSpendingPatterns(profile) {
   if (months.length < 2) return patterns;
 
   // Patrón 1: Gastos creciendo consistentemente
-  const spendingTrend = calculateTrend(months.map(m => profile.monthly[m].gastos));
-  if (spendingTrend > 0.05) { // Crecimiento >5% mensual
+  const spendingTrend = calculateTrend(months.map(m => profile.monthly[m].gastos || 0));
+  if (spendingTrend > 0.05) {
     patterns.push({
       id: 'spending_increasing',
       type: 'spending',
@@ -58,7 +66,7 @@ function detectSpendingPatterns(profile) {
 
   // Patrón 2: Gastos variables muy inestables
   const variableStability = calculateVolatility(months.map(m => profile.monthly[m].gastosVariables || 0));
-  if (variableStability > 30) { // Volatilidad >30%
+  if (variableStability > 30) {
     patterns.push({
       id: 'variable_spending_unstable',
       type: 'spending',
@@ -111,7 +119,7 @@ function detectIncomePatterns(profile) {
   if (months.length < 2) return patterns;
 
   // Patrón 1: Ingresos decreciendo
-  const incomeTrend = calculateTrend(months.map(m => profile.monthly[m].ingresos));
+  const incomeTrend = calculateTrend(months.map(m => profile.monthly[m].ingresos || 0));
   if (incomeTrend < -0.05) {
     patterns.push({
       id: 'income_decreasing',
@@ -124,7 +132,7 @@ function detectIncomePatterns(profile) {
   }
 
   // Patrón 2: Ingresos muy volátiles
-  const incomeStability = calculateVolatility(months.map(m => profile.monthly[m].ingresos));
+  const incomeStability = calculateVolatility(months.map(m => profile.monthly[m].ingresos || 0));
   if (incomeStability > 25) {
     patterns.push({
       id: 'income_unstable',
@@ -180,7 +188,7 @@ function detectDebtPatterns(profile) {
   
   if (avgDebtPayment > 0 && avgDebtBalance > 0) {
     const paymentRatio = avgDebtPayment / avgDebtBalance;
-    if (paymentRatio < 0.05) { // Menos del 5% mensual
+    if (paymentRatio < 0.05) {
       patterns.push({
         id: 'minimum_payments_only',
         type: 'debt',
@@ -268,9 +276,6 @@ function detectSavingsPatterns(profile) {
 function detectDisciplinePatterns(profile) {
   const patterns = [];
   
-  // Esto requiere datos de brain.memory.js
-  // Por ahora, análisis básico del profile
-  
   if (profile.discipline !== undefined) {
     if (profile.discipline < 40) {
       patterns.push({
@@ -302,7 +307,16 @@ function detectDisciplinePatterns(profile) {
  * Predice la situación del próximo mes basado en patrones
  */
 export function predictNextMonth(profile) {
+  // 🔹 VALIDACIÓN DEFENSIVA
+  if (!profile || !profile.monthly || typeof profile.monthly !== 'object') {
+    return {
+      canPredict: false,
+      message: "Datos insuficientes para predicción"
+    };
+  }
+
   const months = getSortedMonths(profile.monthly);
+  
   if (months.length < 3) {
     return {
       canPredict: false,
@@ -313,16 +327,16 @@ export function predictNextMonth(profile) {
   const lastMonths = months.slice(0, 3).map(m => profile.monthly[m]);
 
   const prediction = {
-    expectedIncome: average(lastMonths.map(m => m.ingresos)),
-    expectedExpenses: average(lastMonths.map(m => m.gastos)),
+    expectedIncome: average(lastMonths.map(m => m.ingresos || 0)),
+    expectedExpenses: average(lastMonths.map(m => m.gastos || 0)),
     riskLevel: 'medium',
     warnings: [],
     opportunities: []
   };
 
   // Calcular tendencias
-  const incomeTrend = calculateTrend(lastMonths.map(m => m.ingresos));
-  const expenseTrend = calculateTrend(lastMonths.map(m => m.gastos));
+  const incomeTrend = calculateTrend(lastMonths.map(m => m.ingresos || 0));
+  const expenseTrend = calculateTrend(lastMonths.map(m => m.gastos || 0));
 
   // Ajustar predicción por tendencia
   prediction.expectedIncome *= (1 + incomeTrend);
@@ -359,11 +373,21 @@ export function predictNextMonth(profile) {
 // ========== UTILIDADES ==========
 
 function getSortedMonths(monthly) {
-  return Object.keys(monthly).sort().reverse(); // Más reciente primero
+  // 🔹 VALIDACIÓN DEFENSIVA - Esta era la línea 362 que causaba el error
+  if (!monthly || typeof monthly !== 'object') {
+    return [];
+  }
+  
+  try {
+    return Object.keys(monthly).sort().reverse(); // Más reciente primero
+  } catch (error) {
+    console.error('Error en getSortedMonths:', error);
+    return [];
+  }
 }
 
 function calculateTrend(values) {
-  if (values.length < 2) return 0;
+  if (!Array.isArray(values) || values.length < 2) return 0;
   
   // Regresión lineal simple
   const n = values.length;
@@ -375,25 +399,35 @@ function calculateTrend(values) {
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
   const avgValue = sumY / n;
   
-  return avgValue > 0 ? slope / avgValue : 0; // Retorna tasa de cambio
+  return avgValue > 0 ? slope / avgValue : 0;
 }
 
 function calculateVolatility(values) {
-  if (values.length < 2) return 0;
+  if (!Array.isArray(values) || values.length < 2) return 0;
   
   const avg = average(values);
   const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
   const stdDev = Math.sqrt(variance);
   
-  return avg > 0 ? (stdDev / avg) * 100 : 0; // Coeficiente de variación en %
+  return avg > 0 ? (stdDev / avg) * 100 : 0;
 }
 
 function average(values) {
-  if (values.length === 0) return 0;
+  if (!Array.isArray(values) || values.length === 0) return 0;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 function generatePatternSummary(patterns) {
+  if (!Array.isArray(patterns)) {
+    return {
+      totalPatterns: 0,
+      criticalIssues: 0,
+      highPriorityIssues: 0,
+      positivePatterns: 0,
+      overallHealth: 'unknown'
+    };
+  }
+
   const critical = patterns.filter(p => p.severity === 'critical').length;
   const high = patterns.filter(p => p.severity === 'high').length;
   const positive = patterns.filter(p => p.impact === 'positive').length;
@@ -411,6 +445,10 @@ function generatePatternSummary(patterns) {
  * Recomendar siguiente acción basada en patrones
  */
 export function recommendNextAction(patterns) {
+  if (!Array.isArray(patterns) || patterns.length === 0) {
+    return "Mantén tus buenos hábitos financieros. Considera aumentar tu tasa de ahorro.";
+  }
+
   // Priorizar por severidad
   const critical = patterns.find(p => p.severity === 'critical');
   if (critical) return critical.recommendation;

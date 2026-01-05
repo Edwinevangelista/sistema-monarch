@@ -1,9 +1,12 @@
 // src/components/SavingsPlannerModal.jsx
+// ✅ VERSIÓN COMPLETA Y CORREGIDA con guardado de planes
+
 import { useState } from 'react';
 import { X, Target, Plane, ShoppingBag, Shield, Sparkles, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { generateSavingsPlan } from '../lib/brain/brain.savingsplanner';
+import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
-export default function SavingsPlannerModal({ kpis = {}, onClose }) {
+export default function SavingsPlannerModal({ kpis, onClose, onPlanGuardado }) {
   const [step, setStep] = useState(1);
   const [goalType, setGoalType] = useState('');
   const [formData, setFormData] = useState({
@@ -16,7 +19,10 @@ export default function SavingsPlannerModal({ kpis = {}, onClose }) {
     timeframe: ''
   });
   const [plan, setPlan] = useState(null);
-
+  const { addPlan } = usePlanesGuardados();
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
+  const [planParaGuardar, setPlanParaGuardar] = useState(null);
+  
   const goalTypes = [
     { id: 'vacation', name: 'Vacaciones', icon: <Plane className="w-8 h-8" />, color: 'from-blue-600 to-cyan-600' },
     { id: 'purchase', name: 'Compra Específica', icon: <ShoppingBag className="w-8 h-8" />, color: 'from-purple-600 to-pink-600' },
@@ -68,6 +74,7 @@ export default function SavingsPlannerModal({ kpis = {}, onClose }) {
       console.log('Plan generado:', generatedPlan);
       
       setPlan(generatedPlan);
+      setPlanParaGuardar(generatedPlan);
       setStep(3);
     } catch (error) {
       console.error('Error generando plan:', error);
@@ -331,16 +338,88 @@ export default function SavingsPlannerModal({ kpis = {}, onClose }) {
 
           {/* PASO 3: PLAN */}
           {step === 3 && plan && (
-            <PlanView plan={plan} onBack={() => setStep(2)} />
+            <PlanView plan={plan} onBack={() => setStep(2)} onGuardar={() => setShowConfirmacion(true)} />
           )}
         </div>
+
+        {/* ✅ MODAL DE CONFIRMACIÓN */}
+        {showConfirmacion && planParaGuardar && (
+          <ConfirmacionGuardadoPlan
+            plan={planParaGuardar}
+            tipo="ahorro"
+            onConfirmar={async (nombre) => {
+              try {
+                const config = planParaGuardar.configuracion || planParaGuardar;
+                
+                // ✅ CALCULAR MESES
+                let mesesCalculados = 0;
+                
+                if (config.meses) {
+                  mesesCalculados = Number(config.meses);
+                } else if (config.plan?.timeframe) {
+                  mesesCalculados = Number(config.plan.timeframe);
+                } else if (config.timeline?.length) {
+                  mesesCalculados = config.timeline.length;
+                } else if (config.fechaObjetivo) {
+                  const hoy = new Date();
+                  const objetivo = new Date(config.fechaObjetivo);
+                  const diffMeses = Math.ceil((objetivo - hoy) / (1000 * 60 * 60 * 24 * 30));
+                  mesesCalculados = Math.max(1, diffMeses);
+                }
+                
+                mesesCalculados = isNaN(mesesCalculados) || mesesCalculados <= 0 ? 12 : mesesCalculados;
+
+                console.log('💾 Guardando plan con:', {
+                  nombre,
+                  meses: mesesCalculados,
+                  config
+                });
+
+                await addPlan({
+                  tipo: 'ahorro',
+                  nombre: nombre,
+                  descripcion: `Plan de ahorro para ${config.goal?.name || formData.name || goalTypes.find(t => t.id === goalType)?.name || 'objetivo financiero'}`,
+                  configuracion: config,
+                  meta_principal: config.goal?.name || formData.name || goalTypes.find(t => t.id === goalType)?.name || 'Ahorro',
+                  monto_objetivo: config.plan?.targetAmount || Number(formData.amount) || 0,
+                  monto_actual: 0,
+                  progreso: 0,
+                  fecha_inicio: new Date().toISOString().split('T')[0],
+                  fecha_objetivo: config.fechaObjetivo || null,
+                  meses_duracion: mesesCalculados,
+                  activo: true,
+                  completado: false
+                });
+
+                console.log('✅ Plan guardado en DB');
+
+                if (onPlanGuardado) {
+                  console.log('🔄 Actualizando lista de planes...');
+                  await onPlanGuardado();
+                }
+
+                alert('✅ Plan guardado exitosamente');
+                setShowConfirmacion(false);
+                
+                setTimeout(() => {
+                  onClose();
+                }, 300);
+
+              } catch (error) {
+                console.error('❌ Error guardando plan:', error);
+                alert('Error al guardar el plan: ' + error.message);
+              }
+            }}
+            onCancelar={() => setShowConfirmacion(false)}
+          />
+        )}
       </div>
     </div>
   );
 }
 
 // ========== VISTA DEL PLAN ==========
-function PlanView({ plan, onBack }) {
+function PlanView({ plan, onBack, onGuardar }) {
   if (!plan || !plan.plan) {
     return (
       <div className="text-center py-8">
@@ -453,6 +532,123 @@ function PlanView({ plan, onBack }) {
           ))}
         </div>
       )}
+      
+      <button
+        onClick={onGuardar}
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition"
+      >
+        💾 Guardar Este Plan
+      </button>
+    </div>
+  );
+}
+
+// ========== COMPONENTE DE CONFIRMACIÓN ==========
+function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
+  const [nombre, setNombre] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    if (!nombre.trim()) {
+      alert('Por favor ingresa un nombre para tu plan');
+      return;
+    }
+    
+    setGuardando(true);
+    try {
+      await onConfirmar(nombre);
+    } catch (error) {
+      console.error('Error en handleGuardar:', error);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const getTipoInfo = () => {
+    switch(tipo) {
+      case 'ahorro':
+        return { emoji: '💰', color: 'from-green-600 to-emerald-600', label: 'Ahorro' };
+      case 'deudas':
+        return { emoji: '💳', color: 'from-red-600 to-pink-600', label: 'Deudas' };
+      case 'gastos':
+        return { emoji: '💸', color: 'from-orange-600 to-yellow-600', label: 'Gastos' };
+      default:
+        return { emoji: '📋', color: 'from-blue-600 to-purple-600', label: 'Plan' };
+    }
+  };
+
+  const { emoji, color, label } = getTipoInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+      <div className={`bg-gradient-to-br ${color} rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200`}>
+        
+        <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          {emoji} Guardar Plan de {label}
+        </h3>
+        
+        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur">
+          <p className="text-white/90 text-sm mb-3">
+            Este plan se guardará en tu lista de planes activos. Podrás verlo, editarlo y seguir tu progreso.
+          </p>
+          
+          {plan && plan.plan && (
+            <div className="bg-white/10 rounded-lg p-3 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-white/70">Monto:</span>
+                <span className="text-white font-semibold">
+                  ${(plan.plan.targetAmount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/70">Tiempo:</span>
+                <span className="text-white font-semibold">
+                  {plan.plan.timeframe || 12} meses
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-white text-sm mb-2 font-medium">
+            Nombre del plan:
+          </label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder={`Ej: ${label} ${new Date().getFullYear()}`}
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur"
+            autoFocus
+            disabled={guardando}
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancelar}
+            disabled={guardando}
+            className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold hover:bg-white/20 transition backdrop-blur disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando || !nombre.trim()}
+            className="flex-1 bg-white text-gray-900 py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {guardando ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Guardando...
+              </span>
+            ) : (
+              '✅ Guardar'
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

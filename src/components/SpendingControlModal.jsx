@@ -1,10 +1,14 @@
-// src/components/SpendingControlModal.jsx
 import { useState } from 'react';
-import { X, TrendingDown, AlertTriangle, Zap } from 'lucide-react';
+import { X, TrendingDown, AlertTriangle, Zap, Save } from 'lucide-react';
+import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
-export default function SpendingControlModal({ gastosFijos = [], gastosVariables = [], suscripciones = [], kpis = {}, onClose }) {
+export default function SpendingControlModal({ gastosFijos = [], gastosVariables = [], suscripciones = [], kpis = {}, onClose, onPlanGuardado }) {
   const [customGoal, setCustomGoal] = useState('');
   const [view, setView] = useState('analysis');
+  
+  const { addPlan } = usePlanesGuardados();
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
+  const [planParaGuardar, setPlanParaGuardar] = useState(null);
 
   // Calcular totales
   const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
@@ -160,6 +164,19 @@ export default function SpendingControlModal({ gastosFijos = [], gastosVariables
   const recomendaciones = generarRecomendaciones();
   const metaPersonalizada = customGoal ? Number(customGoal) : metaRecomendada;
   const progresoMeta = totalGastos > 0 ? (metaPersonalizada / totalGastos) * 100 : 100;
+
+  // Objeto del plan actual para guardar
+  const currentPlanData = {
+    totalGastos,
+    totalIngresos,
+    porcentajeGastos,
+    metaRecomendada,
+    reduccionNecesaria,
+    categoriasCriticas,
+    recomendaciones,
+    customGoal,
+    fechaCalculo: new Date().toISOString()
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
@@ -394,8 +411,134 @@ export default function SpendingControlModal({ gastosFijos = [], gastosVariables
                   )}
                 </div>
               </div>
+
+              {/* Botón para Guardar Plan */}
+              <button
+                onClick={() => {
+                  setPlanParaGuardar(currentPlanData);
+                  setShowConfirmacion(true);
+                }}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                Guardar Plan de Control
+              </button>
             </div>
           )}
+        </div>
+
+        {showConfirmacion && planParaGuardar && (
+          <ConfirmacionGuardadoPlan
+            plan={planParaGuardar}
+            tipo="gastos"
+            onConfirmar={async (nombre) => {
+              try {
+                const config = planParaGuardar;
+                
+                       await addPlan({
+          tipo: 'gastos',
+          nombre: nombre,
+          descripcion: `Plan de control de gastos para alcanzar un presupuesto de $${Math.round(config.customGoal || config.metaRecomendada)}`,
+          configuracion: config,
+          meta_principal: 'Control de Gastos',
+          monto_objetivo: config.customGoal ? Number(config.customGoal) : config.metaRecomendada,
+          monto_actual: config.totalGastos || 0,
+          progreso: 0, 
+          fecha_inicio: new Date().toISOString().split('T')[0],
+          fecha_objetivo: null, 
+          meses_duracion: 1, // <--- AQUÍ: Control mensual
+          activo: true,
+          completado: false
+        });
+
+                alert('✅ Plan guardado exitosamente');
+                setShowConfirmacion(false);
+                if (onPlanGuardado) onPlanGuardado();
+                onClose();
+              } catch (error) {
+                console.error('Error guardando plan:', error);
+                alert('Error al guardar el plan: ' + error.message);
+              }
+            }}
+            onCancelar={() => setShowConfirmacion(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente auxiliar para confirmar guardado
+function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
+  const [nombre, setNombre] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    if (!nombre.trim()) {
+      alert('Por favor ingresa un nombre para tu plan');
+      return;
+    }
+    setGuardando(true);
+    await onConfirmar(nombre);
+    setGuardando(false);
+  };
+
+  const getTipoInfo = () => {
+    switch(tipo) {
+      case 'ahorro':
+        return { emoji: '💰', color: 'from-green-600 to-emerald-600', label: 'Ahorro' };
+      case 'deudas':
+        return { emoji: '💳', color: 'from-red-600 to-pink-600', label: 'Deudas' };
+      case 'gastos':
+        return { emoji: '💸', color: 'from-orange-600 to-yellow-600', label: 'Gastos' };
+      default:
+        return { emoji: '📋', color: 'from-blue-600 to-purple-600', label: 'Plan' };
+    }
+  };
+
+  const { emoji, color, label } = getTipoInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+      <div className={`bg-gradient-to-br ${color} rounded-2xl max-w-md w-full p-6 shadow-2xl`}>
+        <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          {emoji} Guardar Plan de {label}
+        </h3>
+        
+        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur">
+          <p className="text-white/90 text-sm mb-2">
+            Este plan se guardará en tu lista de planes activos. Podrás verlo, editarlo y seguir tu progreso.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-white text-sm mb-2 font-medium">
+            Nombre del plan:
+          </label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder={`Ej: ${label} ${new Date().getFullYear()}`}
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancelar}
+            className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold hover:bg-white/20 transition backdrop-blur"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="flex-1 bg-white text-gray-900 py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 transition"
+          >
+            {guardando ? 'Guardando...' : '✅ Guardar'}
+          </button>
         </div>
       </div>
     </div>

@@ -1,38 +1,40 @@
+// src/App.js - VERSIÓN CORREGIDA
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
+// NUEVO SISTEMA DE AUTENTICACIÓN
+import Auth from './pages/Auth'
+import AuthGuard from './components/AuthGuard'
+
+// COMPONENTES EXISTENTES
 import DashboardCompleto from './components/DashboardCompleto'
-import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Públicas */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        {/* RUTA DE AUTENTICACIÓN ÚNICA */}
+        <Route path="/auth" element={<Auth />} />
+        
+        {/* ALIAS PARA COMPATIBILIDAD */}
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/signup" element={<Navigate to="/auth" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/auth" replace />} />
 
-        {/* Protegida - Dashboard */}
+        {/* RUTA PROTEGIDA - DASHBOARD */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <AuthGuard>
               <DashboardCompleto />
-            </ProtectedRoute>
+            </AuthGuard>
           }
         />
 
-        {/* Redirect raíz a login si no está autenticado, o a dashboard si lo está */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-
-        {/* Fallback - cualquier ruta no encontrada va al login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* REDIRECCIONES */}
+        <Route path="/" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
     </BrowserRouter>
   )

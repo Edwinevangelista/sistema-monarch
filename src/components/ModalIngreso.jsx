@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { DollarSign, X } from 'lucide-react'
+import { DollarSign, X, Building2 } from 'lucide-react'
+import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
+  const { cuentas, loading: loadingCuentas } = useCuentasBancarias()
+  
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     fuente: '',
     descripcion: '',
-    monto: ''
+    monto: '',
+    cuenta_id: '' // NUEVO: ID de la cuenta bancaria
   })
 
   // Pre-cargar datos si estamos editando
@@ -16,7 +20,8 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
         fecha: ingresoInicial.fecha || new Date().toISOString().split('T')[0],
         fuente: ingresoInicial.fuente || '',
         descripcion: ingresoInicial.descripcion || '',
-        monto: ingresoInicial.monto?.toString() || ''
+        monto: ingresoInicial.monto?.toString() || '',
+        cuenta_id: ingresoInicial.cuenta_id || ''
       })
     }
   }, [ingresoInicial])
@@ -28,14 +33,13 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
     }
 
     try {
-      // Ejecutamos la función de guardar que viene del padre (addIngreso)
-      await onSave({
+      const dataToSave = {
         ...formData,
-        monto: parseFloat(formData.monto)
-      })
+        monto: parseFloat(formData.monto),
+        cuenta_id: formData.cuenta_id || null // null si no seleccionó cuenta
+      }
 
-      // CORRECCIÓN: Ya no intentamos leer 'resultado.success'.
-      // Asumimos que si no hubo error en el try/catch, fue exitoso.
+      await onSave(dataToSave)
       onClose()
     } catch (error) {
       console.error("Error guardando:", error)
@@ -45,7 +49,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="bg-green-600 p-2 rounded-xl">
@@ -85,6 +89,30 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
             />
           </div>
 
+          {/* NUEVO: Selector de Cuenta Bancaria */}
+          <div>
+            <label className="block text-gray-300 mb-2 flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Cuenta Bancaria (Opcional)
+            </label>
+            <select
+              value={formData.cuenta_id}
+              onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              disabled={loadingCuentas}
+            >
+              <option value="">Sin asignar</option>
+              {cuentas?.map((cuenta) => (
+                <option key={cuenta.id} value={cuenta.id}>
+                  {cuenta.banco} - {cuenta.tipo_cuenta} (${cuenta.balance?.toLocaleString()})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              💡 Si seleccionas una cuenta, el saldo se actualizará automáticamente
+            </p>
+          </div>
+
           <div>
             <label className="block text-gray-300 mb-2">Descripción</label>
             <input
@@ -98,14 +126,19 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
 
           <div>
             <label className="block text-gray-300 mb-2">Monto *</label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.monto}
-              onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
+                $
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.monto}
+                onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+                className="w-full bg-gray-700 text-white pl-8 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
           </div>
         </div>
 

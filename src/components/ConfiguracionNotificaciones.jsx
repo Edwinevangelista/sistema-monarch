@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 
@@ -12,14 +12,26 @@ export default function ConfiguracionNotificaciones() {
   } = useNotifications();
 
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState({
-    gastosProximosVencer: true,
-    diasAnticipacion: 3,
-    suscripcionesRenovar: true,
-    saldoBajo: true,
-    montoMinimo: 100,
-    resumenSemanal: false
+
+  // ✅ INICIO: Cargar configuración desde LocalStorage al inicio
+  const [config, setConfig] = useState(() => {
+    const guardadas = localStorage.getItem("configNotificaciones");
+    return guardadas
+      ? JSON.parse(guardadas)
+      : {
+          gastosProximosVencer: true,
+          diasAnticipacion: 3,
+          suscripcionesRenovar: true,
+          saldoBajo: true,
+          montoMinimo: 100,
+          resumenSemanal: false,
+        };
   });
+
+  // ✅ FIN: Guardar en LocalStorage cada vez que cambia la config
+  useEffect(() => {
+    localStorage.setItem("configNotificaciones", JSON.stringify(config));
+  }, [config]);
 
   const handleActivarNotificaciones = async () => {
     setLoading(true);

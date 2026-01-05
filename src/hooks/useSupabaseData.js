@@ -1,17 +1,10 @@
+// src/hooks/useSupabaseData.js
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, getCurrentUserId } from '../lib/supabase'
+import { supabase } from '../lib/supabase' // Asegúrate de usar el archivo correcto
 
 /**
  * Hook genérico optimizado para cargar datos de Supabase con caché
- * 
- * @param {string} tableName - Nombre de la tabla en Supabase
- * @param {object} options - Opciones de configuración
- * @param {boolean} options.lazyLoad - Si es true, no carga automáticamente
- * @param {number} options.cacheDuration - Duración del caché en ms (default: 5 min)
- * @param {string} options.orderBy - Campo para ordenar (default: 'created_at')
- * @param {boolean} options.ascending - Orden ascendente o descendente
- * @param {number} options.limit - Límite de registros a cargar
- * @param {string} options.select - Campos a seleccionar (default: '*')
+ * CORREGIDO: Se eliminó la dependencia de 'getCurrentUserId' fantasma
  */
 export const useSupabaseData = (
   tableName, 
@@ -30,6 +23,13 @@ export const useSupabaseData = (
   const [loading, setLoading] = useState(!lazyLoad)
   const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState(null)
+
+  // Función auxiliar REAL para obtener el usuario
+  const getCurrentUser = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) throw new Error("Usuario no autenticado");
+    return user;
+  };
 
   // Cargar desde caché
   const loadFromCache = useCallback(() => {
@@ -74,12 +74,12 @@ export const useSupabaseData = (
     setError(null)
     
     try {
-      const userId = await getCurrentUserId()
+      const user = await getCurrentUser(); // USO CORRECTO
       
       let query = supabase
         .from(tableName)
         .select(select)
-        .eq('user_id', userId)
+        .eq('user_id', user.id) // USO DE USER.ID
       
       if (orderBy) {
         query = query.order(orderBy, { ascending })
@@ -116,11 +116,17 @@ export const useSupabaseData = (
   // Add new record
   const addRecord = useCallback(async (newRecord) => {
     try {
-      const userId = await getCurrentUserId()
+      const user = await getCurrentUser(); // USO CORRECTO
       
+      // Nota: Si newRecord ya viene con user_id, se usa ese. Si no, se inyecta.
+      const payload = {
+        ...newRecord,
+        user_id: newRecord.user_id || user.id
+      }
+
       const { data: insertedData, error: insertError } = await supabase
         .from(tableName)
-        .insert([{ ...newRecord, user_id: userId }])
+        .insert([payload])
         .select()
       
       if (insertError) throw insertError
@@ -138,30 +144,30 @@ export const useSupabaseData = (
   }, [tableName, data, saveToCache])
 
   // Update record
-const updateRecord = useCallback(async (id, updates) => {
-  try {
-    const { data: updatedData, error } = await supabase
-      .from(tableName)
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+  const updateRecord = useCallback(async (id, updates) => {
+    try {
+      const { data: updatedData, error } = await supabase
+        .from(tableName)
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const newData = data.map(item =>
-      item.id === id ? updatedData : item
-    );
+      const newData = data.map(item =>
+        item.id === id ? updatedData : item
+      );
 
-    setData(newData);
-    saveToCache(newData);
+      setData(newData);
+      saveToCache(newData);
 
-    return { success: true, data: updatedData };
-  } catch (err) {
-    console.error(`Error updating ${tableName}:`, err);
-    return { success: false, error: err };
-  }
-}, [tableName, data, saveToCache]);
+      return { success: true, data: updatedData };
+    } catch (err) {
+      console.error(`Error updating ${tableName}:`, err);
+      return { success: false, error: err };
+    }
+  }, [tableName, data, saveToCache]);
 
 
   // Delete record
