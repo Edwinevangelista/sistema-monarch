@@ -36,6 +36,7 @@ import ModalDetallesCategorias from './ModalDetallesCategorias'
 import MenuInferior from './MenuInferior'
 import ModalUsuario from './ModalUsuario'
 import Footer from './Footer'
+import ListaIngresos from './ListaIngresos'
 
 // --- MODALES NUEVOS ---
 import DebtPlannerModal from './DebtPlannerModal'
@@ -287,7 +288,9 @@ const DashboardContent = () => {
 
   useInactivityTimeout(15)
 
-  const { ingresos, addIngreso } = useIngresos()
+  const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
+
+
   const { gastos, addGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
@@ -691,9 +694,14 @@ const DashboardContent = () => {
   // HANDLERS
   // ============================================
 
-  const handleGuardarIngreso = async (data) => {
+const handleGuardarIngreso = async (data) => {
     try {
-      await addIngreso(data)
+      // ✅ Si hay ID, es edición
+      if (data.id) {
+        await updateIngreso(data.id, data)
+      } else {
+        await addIngreso(data)
+      }
 
       if (data.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === data.cuenta_id)
@@ -892,6 +900,14 @@ const DashboardContent = () => {
     setPlanUpdateCounter(prev => prev + 1);
   };
 
+const handleEliminarIngreso = async (id) => {
+    try {
+      await deleteIngreso(id);
+    } catch (error) {
+      console.error('Error al eliminar ingreso:', error);
+      alert('Error al eliminar el ingreso');
+    }
+  };
   // ============================================
   // RENDER
   // ============================================
@@ -1186,7 +1202,14 @@ const DashboardContent = () => {
           />
           <GraficaBarras data={dataGraficaBarras} title="📈 Tendencia Semanal" />
         </div>
-
+ <ListaIngresos 
+          ingresos={ingresos}
+          onEditar={(ingreso) => {
+            setIngresoEditando(ingreso);
+            setShowModal('ingreso');
+          }}
+          onEliminar={handleEliminarIngreso}
+        />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ListaDeudas
             deudas={deudas}

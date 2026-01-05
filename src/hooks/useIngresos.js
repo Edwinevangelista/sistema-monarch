@@ -30,7 +30,12 @@ export const useIngresos = (lazyLoad = false) => {
       return res ?? { success: true };
     },
 
-    deleteIngreso: deleteRecord,
+    // ✅ NUEVA FUNCIÓN
+    deleteIngreso: async (id) => {
+      const res = await deleteRecord(id);
+      return res ?? { success: true };
+    },
+
     refresh,
     initialize,
   };

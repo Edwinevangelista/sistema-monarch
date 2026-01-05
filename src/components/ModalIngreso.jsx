@@ -10,7 +10,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
     fuente: '',
     descripcion: '',
     monto: '',
-    cuenta_id: '' // NUEVO: ID de la cuenta bancaria
+    cuenta_id: ''
   })
 
   // Pre-cargar datos si estamos editando
@@ -34,9 +34,16 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
 
     try {
       const dataToSave = {
-        ...formData,
+        fecha: formData.fecha,
+        fuente: formData.fuente,
+        descripcion: formData.descripcion,
         monto: parseFloat(formData.monto),
-        cuenta_id: formData.cuenta_id || null // null si no seleccionó cuenta
+        cuenta_id: formData.cuenta_id || null
+      }
+
+      // ✅ Si hay ingresoInicial, incluir el ID para edición
+      if (ingresoInicial?.id) {
+        dataToSave.id = ingresoInicial.id
       }
 
       await onSave(dataToSave)
@@ -69,7 +76,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-gray-300 mb-2">Fecha</label>
+            <label className="block text-gray-300 mb-2 font-semibold">Fecha</label>
             <input
               type="date"
               value={formData.fecha}
@@ -79,19 +86,20 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2">Fuente *</label>
+            <label className="block text-gray-300 mb-2 font-semibold">
+              Fuente <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               placeholder="Ej: Salario, Freelance, Venta"
               value={formData.fuente}
               onChange={(e) => setFormData({ ...formData, fuente: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
             />
           </div>
 
-          {/* NUEVO: Selector de Cuenta Bancaria */}
           <div>
-            <label className="block text-gray-300 mb-2 flex items-center gap-2">
+            <label className="block text-gray-300 mb-2 font-semibold flex items-center gap-2">
               <Building2 className="w-4 h-4" />
               Cuenta Bancaria (Opcional)
             </label>
@@ -104,7 +112,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
               <option value="">Sin asignar</option>
               {cuentas?.map((cuenta) => (
                 <option key={cuenta.id} value={cuenta.id}>
-                  {cuenta.banco} - {cuenta.tipo_cuenta} (${cuenta.balance?.toLocaleString()})
+                  {cuenta.banco} - {cuenta.tipo_cuenta} (${Number(cuenta.balance || 0).toLocaleString()})
                 </option>
               ))}
             </select>
@@ -114,18 +122,20 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2">Descripción</label>
-            <input
-              type="text"
+            <label className="block text-gray-300 mb-2 font-semibold">Descripción</label>
+            <textarea
               placeholder="Detalles adicionales (opcional)"
               value={formData.descripcion}
               onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+              rows={3}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500 resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2">Monto *</label>
+            <label className="block text-gray-300 mb-2 font-semibold">
+              Monto <span className="text-red-400">*</span>
+            </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
                 $
@@ -136,7 +146,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
                 placeholder="0.00"
                 value={formData.monto}
                 onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-                className="w-full bg-gray-700 text-white pl-8 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full bg-gray-700 text-white pl-8 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-500"
               />
             </div>
           </div>
@@ -151,7 +161,8 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
           </button>
           <button
             onClick={handleSubmit}
-            className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
+            disabled={!formData.fuente || !formData.monto}
+            className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {ingresoInicial ? 'Actualizar' : 'Guardar'}
           </button>
