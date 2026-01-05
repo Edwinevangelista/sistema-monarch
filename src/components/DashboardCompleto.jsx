@@ -418,46 +418,67 @@ const DashboardContent = () => {
 }, [suscripciones, cuentas, updateCuenta, addGasto, updateSuscripcion]) // ✅ Agregadas las dependencias
 
 
-  // 🔹 FUNCIÓN AUXILIAR: Validar que un monto sea número válido
-  const validarMonto = (valor) => {
-    const num = Number(valor)
-    return isNaN(num) || num < 0 ? 0 : num
-  }
+{/* KPIs Reorganizados - VALORES REALES */}
+<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-lg font-bold text-white">Resumen Financiero (Hasta Hoy)</h3>
+    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">Real</span>
+  </div>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    {/* Columna de Ingresos */}
+    <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-700/30">
+      <div className="text-green-400 text-sm font-semibold mb-2">💵 INGRESOS</div>
+      <div className="text-3xl font-bold text-white">
+        ${totalIngresos.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+    </div>
 
-  // 🔹 NUEVA FUNCIÓN: Calcular Tasa de Ahorro CORREGIDA
-  const calcularTasaAhorro = (ingresos, gastos) => {
-    const ingresosValidos = validarMonto(ingresos)
-    const gastosValidos = validarMonto(gastos)
-    
-    if (ingresosValidos === 0) return 0
-    
-    const saldo = ingresosValidos - gastosValidos
-    const tasa = (saldo / ingresosValidos) * 100
-    
-    if (tasa > 100) return 100
-    if (tasa < -100) return -100
-    
-    return Number(tasa.toFixed(1))
-  }
+    {/* Columna de Gastos */}
+    <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-xl p-4 border border-red-700/30">
+      <div className="text-red-400 text-sm font-semibold mb-2">💸 GASTOS</div>
+      <div className="text-3xl font-bold text-white">
+        ${totalGastosReales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+      <div className="mt-3 space-y-1 text-xs">
+        <div className="flex justify-between text-gray-400">
+          <span>Fijos pagados:</span>
+          <span>${totalGastosFijosReales.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>Variables:</span>
+          <span>${totalGastosVariablesReales.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>Suscripciones:</span>
+          <span>${totalSuscripcionesReales.toFixed(2)}</span>
+        </div>
+      </div>
+    </div>
 
-  // Cálculos con validación
-  const totalIngresos = ingresos.reduce((sum, i) => sum + validarMonto(i.monto), 0)
-  const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + validarMonto(g.monto), 0)
-  const totalGastosVariables = gastos.reduce((sum, g) => sum + validarMonto(g.monto), 0)
-  
-  const totalSuscripciones = suscripciones
-    .filter(s => s.estado === 'Activo')
-    .reduce((sum, s) => {
-      const costo = validarMonto(s.costo)
-      if (s.ciclo === 'Anual') return sum + (costo / 12)
-      if (s.ciclo === 'Semanal') return sum + (costo * 4.33)
-      return sum + costo
-    }, 0)
-  
-  const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones
-  const saldoMes = totalIngresos - totalGastos
-  
-  const tasaAhorro = calcularTasaAhorro(totalIngresos, totalGastos)
+    {/* Columna de Saldo y Ahorro */}
+    <div className="bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 rounded-xl p-4 border border-cyan-700/30">
+      <div className="text-cyan-400 text-sm font-semibold mb-2">💰 DISPONIBLE</div>
+      <div className={`text-3xl font-bold ${saldoReal >= 0 ? 'text-white' : 'text-red-400'}`}>
+        ${saldoReal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+      <div className="mt-3">
+        <div className="flex items-center justify-between">
+          <span className="text-orange-400 text-xs font-semibold">📊 Tasa de Ahorro</span>
+          <span className={`text-lg font-bold ${tasaAhorroReal >= 20 ? 'text-green-400' : tasaAhorroReal >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {tasaAhorroReal}%
+          </span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+          <div 
+            className={`h-2 rounded-full transition-all ${tasaAhorroReal >= 20 ? 'bg-green-500' : tasaAhorroReal >= 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
+            style={{ width: `${Math.min(Math.max(tasaAhorroReal, 0), 100)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 // ============================================
 // ALERTAS (debe estar ANTES de obtenerSaludo)
 // ============================================
