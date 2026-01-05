@@ -17,7 +17,6 @@ import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 import { useNotifications } from '../hooks/useNotifications'
 
 // --- COMPONENTES ---
-
 import ModalIngreso from './ModalIngreso'
 import ModalGastos from './ModalGastos'
 import ModalSuscripcion from './ModalSuscripcion'
@@ -31,7 +30,6 @@ import ListaDeudas from './ListaDeudas'
 import ListaSuscripciones from './ListaSuscripciones'
 import AsistenteFinancieroV2 from './AsistenteFinancieroV2'
 import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
-
 import LogoutButton from './LogoutButton'
 import MenuFlotante from './MenuFlotante'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
@@ -65,12 +63,10 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     
     const dias = []
     
-    // Días vacíos del inicio
     for (let i = 0; i < diaSemanaInicio; i++) {
       dias.push(null)
     }
     
-    // Días del mes
     for (let dia = 1; dia <= diasEnMes; dia++) {
       dias.push(dia)
     }
@@ -88,21 +84,18 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     let totalGastos = 0
     const eventos = []
     
-    // Ingresos del día
     ingresos?.forEach(ing => {
       if (ing.fecha === fechaStr) {
         totalIngresos += Number(ing.monto || 0)
       }
     })
     
-    // Gastos del día
     gastos?.forEach(g => {
       if (g.fecha === fechaStr) {
         totalGastos += Number(g.monto || 0)
       }
     })
     
-    // Gastos fijos
     gastosFijos?.forEach(gf => {
       if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
         totalGastos += Number(gf.monto || 0)
@@ -110,7 +103,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Suscripciones
     suscripciones?.forEach(sub => {
       if (sub.estado === 'Activo' && sub.proximo_pago) {
         const proxPago = new Date(sub.proximo_pago)
@@ -123,7 +115,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Deudas
     deudas?.forEach(d => {
       if (d.vence) {
         const vence = new Date(d.vence)
@@ -155,7 +146,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
   
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
-      {/* Header del calendario */}
       <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => cambiarMes(-1)}
@@ -176,7 +166,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         </button>
       </div>
       
-      {/* Días de la semana */}
       <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
         {diasSemana.map(dia => (
           <div key={dia} className="text-center text-xs text-gray-400 font-semibold py-2">
@@ -185,7 +174,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         ))}
       </div>
       
-      {/* Grid de días */}
       <div className="grid grid-cols-7 gap-1 md:gap-2">
         {dias.map((dia, index) => {
           if (!dia) {
@@ -220,7 +208,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                 </div>
               )}
               
-              {/* Tooltip con eventos */}
               {eventos.length > 0 && (
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
                               opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none
@@ -241,7 +228,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         })}
       </div>
       
-      {/* Leyenda */}
       <div className="mt-4 flex flex-wrap gap-3 justify-center text-xs">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-blue-600"></div>
@@ -261,7 +247,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
 }
 
 const DashboardContent = () => {
-  // Estado del Usuario (Simulado)
   const [usuario, setUsuario] = useState({ 
     email: 'usuario@ejemplo.com', 
     nombre: '' 
@@ -274,7 +259,6 @@ const DashboardContent = () => {
     deleteCuenta,
   } = useCuentasBancarias()
 
-  
   const [preferenciasUsuario, setPreferenciasUsuario] = useState(() => {
     const guardadas = localStorage.getItem("preferenciasUsuario");
     return guardadas
@@ -288,17 +272,13 @@ const DashboardContent = () => {
         };
   });
 
-  // Estados de Modales
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
-
-  // --- NUEVO: Contador para forzar actualización de SavedPlansList ---
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
 
-  // Estados para Edición
   const [ingresoEditando, setIngresoEditando] = useState(null)
   const [gastoEditando, setGastoEditando] = useState(null)
   const [gastoFijoEditando, setGastoFijoEditando] = useState(null)
@@ -307,7 +287,6 @@ const DashboardContent = () => {
 
   useInactivityTimeout(15)
 
-  // Hooks de datos
   const { ingresos, addIngreso } = useIngresos()
   const { gastos, addGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo } = useGastosFijos()
@@ -317,7 +296,6 @@ const DashboardContent = () => {
   const { refresh: refreshPlanes } = usePlanesGuardados()
   const { permission, showLocalNotification } = useNotifications()
 
-  // 🔹 UTIL: ¿Pagada este mes?
   const deudaPagadaEsteMes = (deudaId) => {
     const hoy = new Date()
     return pagos?.some(p => {
@@ -330,7 +308,6 @@ const DashboardContent = () => {
     })
   }
 
-  // 🔍 DEBUG
   useEffect(() => {
     console.log('📊 DASHBOARD DATA:', {
       suscripciones: {
@@ -349,7 +326,6 @@ const DashboardContent = () => {
     });
   }, [suscripciones, gastosFijos, deudas]);
 
-  // Extraer nombre del email
   useEffect(() => {
     if (usuario.email) {
       const nombre = usuario.email.split('@')[0]
@@ -364,7 +340,6 @@ const DashboardContent = () => {
     );
   }, [preferenciasUsuario]);
 
-  // ✅ 1. PRIMERO VA LA FUNCIÓN AUXILIAR
   const calcularProximoPago = (fechaActualStr, ciclo) => {
     const fecha = new Date(fechaActualStr + 'T00:00:00');
     let nuevaFecha = new Date(fecha);
@@ -378,242 +353,291 @@ const DashboardContent = () => {
     return nuevaFecha.toISOString().split('T')[0];
   };
 
-  // ✅ 2. SEGUNDO VA EL NUEVO MOTOR DE AUTOPAGO
- useEffect(() => {
-  const hoy = new Date().toISOString().split('T')[0]
+  useEffect(() => {
+    const hoy = new Date().toISOString().split('T')[0]
 
-  suscripciones.forEach(async (sub) => {
-    if (sub.estado !== 'Activo') return
-    if (!sub.autopago || !sub.cuenta_id) return
-    if (sub.proximo_pago !== hoy) return
+    suscripciones.forEach(async (sub) => {
+      if (sub.estado !== 'Activo') return
+      if (!sub.autopago || !sub.cuenta_id) return
+      if (sub.proximo_pago !== hoy) return
 
-    const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-    if (!cuenta) return
+      const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
+      if (!cuenta) return
 
-    try {
-      await updateCuenta(cuenta.id, {
-        balance: Number(cuenta.balance) - Number(sub.costo)
-      })
-
-      await addGasto({
-        fecha: hoy,
-        monto: sub.costo,
-        categoria: '📅 Suscripciones',
-        descripcion: `Autopago: ${sub.servicio}`,
-        cuenta_id: cuenta.id,
-        metodo: 'Autopago'
-      })
-
-      const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
-      
-      if (updateSuscripcion) {
-        await updateSuscripcion(sub.id, {
-          proximo_pago: nuevoProximoPago
+      try {
+        await updateCuenta(cuenta.id, {
+          balance: Number(cuenta.balance) - Number(sub.costo)
         })
+
+        await addGasto({
+          fecha: hoy,
+          monto: sub.costo,
+          categoria: '📅 Suscripciones',
+          descripcion: `Autopago: ${sub.servicio}`,
+          cuenta_id: cuenta.id,
+          metodo: 'Autopago'
+        })
+
+        const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
+        
+        if (updateSuscripcion) {
+          await updateSuscripcion(sub.id, {
+            proximo_pago: nuevoProximoPago
+          })
+        }
+      } catch (error) {
+        console.error("Error en autopago:", error)
       }
-    } catch (error) {
-      console.error("Error en autopago:", error)
-    }
-  })
-}, [suscripciones, cuentas, updateCuenta, addGasto, updateSuscripcion]) // ✅ Agregadas las dependencias
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suscripciones, cuentas])
 
-
-{/* KPIs Reorganizados - VALORES REALES */}
-<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
-  <div className="flex items-center justify-between mb-4">
-    <h3 className="text-lg font-bold text-white">Resumen Financiero (Hasta Hoy)</h3>
-    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">Real</span>
-  </div>
+  // ============================================
+  // CÁLCULOS FINANCIEROS
+  // ============================================
   
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {/* Columna de Ingresos */}
-    <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-700/30">
-      <div className="text-green-400 text-sm font-semibold mb-2">💵 INGRESOS</div>
-      <div className="text-3xl font-bold text-white">
-        ${totalIngresos.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </div>
-    </div>
+  const validarMonto = (valor) => {
+    const num = Number(valor)
+    return isNaN(num) || num < 0 ? 0 : num
+  }
 
-    {/* Columna de Gastos */}
-    <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-xl p-4 border border-red-700/30">
-      <div className="text-red-400 text-sm font-semibold mb-2">💸 GASTOS</div>
-      <div className="text-3xl font-bold text-white">
-        ${totalGastosReales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </div>
-      <div className="mt-3 space-y-1 text-xs">
-        <div className="flex justify-between text-gray-400">
-          <span>Fijos pagados:</span>
-          <span>${totalGastosFijosReales.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Variables:</span>
-          <span>${totalGastosVariablesReales.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Suscripciones:</span>
-          <span>${totalSuscripcionesReales.toFixed(2)}</span>
-        </div>
-      </div>
-    </div>
-
-    {/* Columna de Saldo y Ahorro */}
-    <div className="bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 rounded-xl p-4 border border-cyan-700/30">
-      <div className="text-cyan-400 text-sm font-semibold mb-2">💰 DISPONIBLE</div>
-      <div className={`text-3xl font-bold ${saldoReal >= 0 ? 'text-white' : 'text-red-400'}`}>
-        ${saldoReal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </div>
-      <div className="mt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-orange-400 text-xs font-semibold">📊 Tasa de Ahorro</span>
-          <span className={`text-lg font-bold ${tasaAhorroReal >= 20 ? 'text-green-400' : tasaAhorroReal >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
-            {tasaAhorroReal}%
-          </span>
-        </div>
-        <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-          <div 
-            className={`h-2 rounded-full transition-all ${tasaAhorroReal >= 20 ? 'bg-green-500' : tasaAhorroReal >= 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
-            style={{ width: `${Math.min(Math.max(tasaAhorroReal, 0), 100)}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-// ============================================
-// ALERTAS (debe estar ANTES de obtenerSaludo)
-// ============================================
-const obtenerAlertas = () => {
-  const hoy = new Date()
-  const alertas = []
-
-  gastosFijos.forEach(gf => {
-    if (gf.estado === 'Pagado' || !gf.dia_venc) return
-    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-    const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
+  const calcularTasaAhorro = (ingresos, gastos) => {
+    const ingresosValidos = validarMonto(ingresos)
+    const gastosValidos = validarMonto(gastos)
     
-    if (diff <= 0) alertas.push({ 
-      tipo: 'critical', 
-      mensaje: `⚠️ ${gf.nombre} está vencido. ¡Págalo ahora para evitar cargos!`, 
-      mensajeCorto: `${gf.nombre} - VENCIDO`,
-      monto: gf.monto,
-      tipoItem: 'gasto_fijo',
-      item: gf 
-    })
-    else if (diff <= 5) alertas.push({ 
-      tipo: 'warning', 
-      mensaje: `📅 ${gf.nombre} vence ${diff === 1 ? 'mañana' : `en ${diff} días`}. Prepara el pago.`, 
-      mensajeCorto: `${gf.nombre} - ${diff} días`,
-      monto: gf.monto,
-      tipoItem: 'gasto_fijo',
-      item: gf
-    })
-  })
-
-  suscripciones.forEach(sub => {
-    if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
-    const proxPago = new Date(sub.proximo_pago)
-    const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
-    if (diff <= 3 && diff >= 0) alertas.push({ 
-      tipo: 'info', 
-      mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}`, 
-      mensajeCorto: `${sub.servicio} - Renueva ${diff === 0 ? 'hoy' : `en ${diff}d`}`,
-      monto: sub.costo,
-      tipoItem: 'suscripcion',
-      item: sub
-    })
-  })
-
-  deudas.forEach(d => {
-    if (!d.vence) return
-    const vence = new Date(d.vence)
-    const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
-    if (diff <= 5 && diff >= 0) alertas.push({ 
-      tipo: 'warning', 
-      mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}`, 
-      mensajeCorto: `${d.cuenta} - ${diff}d`,
-      monto: d.pago_minimo,
-      tipoItem: 'deuda',
-      item: d
-    })
-  })
-
-  return alertas
-}
-
-const alertas = obtenerAlertas()
-
-// ============================================
-// SALUDO (ahora SÍ puede usar saldoMes y alertas)
-// ============================================
-const obtenerSaludo = () => {
-  const hora = new Date().getHours()
-  const dia = new Date().getDay()
-  let textoHora = ''
-  let icono = null
-  
-  if (hora >= 5 && hora < 12) {
-    textoHora = 'Buenos días'
-    icono = <Sun className="w-6 h-6 text-yellow-400" />
-  } else if (hora >= 12 && hora < 19) {
-    textoHora = 'Buenas tardes'
-    icono = <Coffee className="w-6 h-6 text-orange-400" />
-  } else {
-    textoHora = 'Buenas noches'
-    icono = <Moon className="w-6 h-6 text-indigo-400" />
+    if (ingresosValidos === 0) return 0
+    
+    const saldo = ingresosValidos - gastosValidos
+    const tasa = (saldo / ingresosValidos) * 100
+    
+    if (tasa > 100) return 100
+    if (tasa < -100) return -100
+    
+    return Number(tasa.toFixed(1))
   }
 
-  const esFindeSemana = dia === 0 || dia === 6
-  const esLunes = dia === 1
-  const esViernes = dia === 5
-  
-  let frasesDisponibles = []
+  const hoy = new Date()
+  const hoyStr = hoy.toISOString().split('T')[0]
 
-  if (saldoMes > 0) {
-    frasesDisponibles = [
-      "¡Excelente gestión! Tu disciplina financiera está dando frutos 🌟",
-      "¡Vas muy bien! Sigue así y alcanzarás tus metas 💪",
-      "Tu esfuerzo está funcionando, ¡sigue adelante! 🚀",
-      "¡Increíble progreso! Tu futuro financiero se ve brillante ✨"
-    ]
-  } else if (saldoMes === 0) {
-    frasesDisponibles = [
-      "Estás en equilibrio. Cada pequeño ahorro cuenta 💡",
-      "¡Bien hecho! Mantener el balance es un gran logro 🎯",
-      "Estás controlando tus finanzas, ¡excelente! 📊",
-      "El equilibrio es el primer paso hacia el crecimiento 🌱"
-    ]
-  } else {
-    frasesDisponibles = [
-      "No te desanimes, cada nuevo día es una oportunidad para mejorar 🌅",
-      "Pequeños cambios hoy, grandes resultados mañana 💪",
-      "Estás tomando el control, eso es lo importante 🎯",
-      "Cada decisión financiera te acerca a tu meta 🚀"
-    ]
+  const totalIngresos = ingresos.reduce((sum, i) => sum + validarMonto(i.monto), 0)
+
+  const totalGastosFijosReales = gastosFijos.reduce((sum, gf) => {
+    if (!gf.dia_venc) return sum
+    
+    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+    
+    if (diaVenc <= hoy) {
+      return sum + validarMonto(gf.monto)
+    }
+    return sum
+  }, 0)
+
+  const totalGastosVariablesReales = gastos
+    .filter(g => g.fecha <= hoyStr)
+    .reduce((sum, g) => sum + validarMonto(g.monto), 0)
+
+  const totalSuscripcionesReales = suscripciones
+    .filter(s => s.estado === 'Activo' && s.proximo_pago)
+    .reduce((sum, s) => {
+      const proxPago = new Date(s.proximo_pago)
+      const costo = validarMonto(s.costo)
+      
+      if (proxPago <= hoy && proxPago.getMonth() === hoy.getMonth()) {
+        if (s.ciclo === 'Anual') return sum + (costo / 12)
+        if (s.ciclo === 'Semanal') return sum + costo
+        return sum + costo
+      }
+      return sum
+    }, 0)
+
+  const totalGastosReales = totalGastosFijosReales + totalGastosVariablesReales + totalSuscripcionesReales
+  const saldoReal = totalIngresos - totalGastosReales
+  const tasaAhorroReal = calcularTasaAhorro(totalIngresos, totalGastosReales)
+
+  const diasDelMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()
+  const diaActual = hoy.getDate()
+
+  const ingresosPromedioSemanal = totalIngresos / Math.ceil(diaActual / 7)
+  const semanasRestantes = Math.ceil((diasDelMes - diaActual) / 7)
+  const ingresosProyectados = totalIngresos + (ingresosPromedioSemanal * semanasRestantes)
+
+  const gastosFijosPendientes = gastosFijos.reduce((sum, gf) => {
+    if (!gf.dia_venc) return sum
+    
+    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+    
+    if (diaVenc > hoy) {
+      return sum + validarMonto(gf.monto)
+    }
+    return sum
+  }, 0)
+
+  const suscripcionesPendientes = suscripciones
+    .filter(s => s.estado === 'Activo' && s.proximo_pago)
+    .reduce((sum, s) => {
+      const proxPago = new Date(s.proximo_pago)
+      const costo = validarMonto(s.costo)
+      
+      if (proxPago > hoy && proxPago.getMonth() === hoy.getMonth()) {
+        if (s.ciclo === 'Anual') return sum + (costo / 12)
+        if (s.ciclo === 'Semanal') return sum + costo
+        return sum + costo
+      }
+      return sum
+    }, 0)
+
+  const gastosVariablesDiarios = diaActual > 0 ? totalGastosVariablesReales / diaActual : 0
+  const diasRestantes = diasDelMes - diaActual
+
+  const totalGastosProyectados = totalGastosReales + gastosFijosPendientes + suscripcionesPendientes + (gastosVariablesDiarios * diasRestantes)
+  const saldoProyectado = ingresosProyectados - totalGastosProyectados
+
+  const totalGastos = totalGastosReales
+  const saldoMes = saldoReal
+  const tasaAhorro = tasaAhorroReal
+
+  const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + validarMonto(g.monto), 0)
+  const totalGastosVariables = gastos.reduce((sum, g) => sum + validarMonto(g.monto), 0)
+  const totalSuscripciones = suscripciones
+    .filter(s => s.estado === 'Activo')
+    .reduce((sum, s) => {
+      const costo = validarMonto(s.costo)
+      if (s.ciclo === 'Anual') return sum + (costo / 12)
+      if (s.ciclo === 'Semanal') return sum + (costo * 4.33)
+      return sum + costo
+    }, 0)
+
+  // ============================================
+  // ALERTAS Y SALUDO
+  // ============================================
+
+  const obtenerAlertas = () => {
+    const alertas = []
+
+    gastosFijos.forEach(gf => {
+      if (gf.estado === 'Pagado' || !gf.dia_venc) return
+      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+      const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 0) alertas.push({ 
+        tipo: 'critical', 
+        mensaje: `⚠️ ${gf.nombre} está vencido. ¡Págalo ahora para evitar cargos!`, 
+        mensajeCorto: `${gf.nombre} - VENCIDO`,
+        monto: gf.monto,
+        tipoItem: 'gasto_fijo',
+        item: gf 
+      })
+      else if (diff <= 5) alertas.push({ 
+        tipo: 'warning', 
+        mensaje: `📅 ${gf.nombre} vence ${diff === 1 ? 'mañana' : `en ${diff} días`}. Prepara el pago.`, 
+        mensajeCorto: `${gf.nombre} - ${diff} días`,
+        monto: gf.monto,
+        tipoItem: 'gasto_fijo',
+        item: gf
+      })
+    })
+
+    suscripciones.forEach(sub => {
+      if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
+      const proxPago = new Date(sub.proximo_pago)
+      const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
+      if (diff <= 3 && diff >= 0) alertas.push({ 
+        tipo: 'info', 
+        mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}`, 
+        mensajeCorto: `${sub.servicio} - Renueva ${diff === 0 ? 'hoy' : `en ${diff}d`}`,
+        monto: sub.costo,
+        tipoItem: 'suscripcion',
+        item: sub
+      })
+    })
+
+    deudas.forEach(d => {
+      if (!d.vence) return
+      const vence = new Date(d.vence)
+      const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
+      if (diff <= 5 && diff >= 0) alertas.push({ 
+        tipo: 'warning', 
+        mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}`, 
+        mensajeCorto: `${d.cuenta} - ${diff}d`,
+        monto: d.pago_minimo,
+        tipoItem: 'deuda',
+        item: d
+      })
+    })
+
+    return alertas
   }
 
-  if (esLunes) {
-    frasesDisponibles.push("¡Nuevo inicio de semana! Comienza con el pie derecho 🌟")
-  } else if (esViernes) {
-    frasesDisponibles.push("¡Llegó el viernes! Revisa tu progreso semanal 📈")
-  } else if (esFindeSemana) {
-    frasesDisponibles.push("Buen momento para planificar la semana que viene 📅")
+  const alertas = obtenerAlertas()
+
+  const obtenerSaludo = () => {
+    const hora = new Date().getHours()
+    const dia = new Date().getDay()
+    let textoHora = ''
+    let icono = null
+    
+    if (hora >= 5 && hora < 12) {
+      textoHora = 'Buenos días'
+      icono = <Sun className="w-6 h-6 text-yellow-400" />
+    } else if (hora >= 12 && hora < 19) {
+      textoHora = 'Buenas tardes'
+      icono = <Coffee className="w-6 h-6 text-orange-400" />
+    } else {
+      textoHora = 'Buenas noches'
+      icono = <Moon className="w-6 h-6 text-indigo-400" />
+    }
+
+    const esFindeSemana = dia === 0 || dia === 6
+    const esLunes = dia === 1
+    const esViernes = dia === 5
+    
+    let frasesDisponibles = []
+
+    if (saldoMes > 0) {
+      frasesDisponibles = [
+        "¡Excelente gestión! Tu disciplina financiera está dando frutos 🌟",
+        "¡Vas muy bien! Sigue así y alcanzarás tus metas 💪",
+        "Tu esfuerzo está funcionando, ¡sigue adelante! 🚀",
+        "¡Increíble progreso! Tu futuro financiero se ve brillante ✨"
+      ]
+    } else if (saldoMes === 0) {
+      frasesDisponibles = [
+        "Estás en equilibrio. Cada pequeño ahorro cuenta 💡",
+        "¡Bien hecho! Mantener el balance es un gran logro 🎯",
+        "Estás controlando tus finanzas, ¡excelente! 📊",
+        "El equilibrio es el primer paso hacia el crecimiento 🌱"
+      ]
+    } else {
+      frasesDisponibles = [
+        "No te desanimes, cada nuevo día es una oportunidad para mejorar 🌅",
+        "Pequeños cambios hoy, grandes resultados mañana 💪",
+        "Estás tomando el control, eso es lo importante 🎯",
+        "Cada decisión financiera te acerca a tu meta 🚀"
+      ]
+    }
+
+    if (esLunes) {
+      frasesDisponibles.push("¡Nuevo inicio de semana! Comienza con el pie derecho 🌟")
+    } else if (esViernes) {
+      frasesDisponibles.push("¡Llegó el viernes! Revisa tu progreso semanal 📈")
+    } else if (esFindeSemana) {
+      frasesDisponibles.push("Buen momento para planificar la semana que viene 📅")
+    }
+
+    if (alertas.filter(a => a.tipo === 'critical').length > 0) {
+      frasesDisponibles = [
+        "Tienes pagos pendientes que requieren atención ⚠️",
+        "Revisa tus alertas críticas para evitar cargos adicionales 🔔",
+        "Algunos pagos necesitan tu atención inmediata 💳"
+      ]
+    }
+
+    const fraseMotivacional = frasesDisponibles[Math.floor(Math.random() * frasesDisponibles.length)]
+
+    return { textoHora, icono, fraseMotivacional }
   }
 
-  if (alertas.filter(a => a.tipo === 'critical').length > 0) {
-    frasesDisponibles = [
-      "Tienes pagos pendientes que requieren atención ⚠️",
-      "Revisa tus alertas críticas para evitar cargos adicionales 🔔",
-      "Algunos pagos necesitan tu atención inmediata 💳"
-    ]
-  }
-
-  const fraseMotivacional = frasesDisponibles[Math.floor(Math.random() * frasesDisponibles.length)]
-
-  return { textoHora, icono, fraseMotivacional }
-}
-
-const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
-
+  const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
 
   const gastosPorCategoria = {}
   ;[...gastosFijos, ...gastos, ...suscripciones.filter(s => s.estado === 'Activo')].forEach(item => {
@@ -634,7 +658,6 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
     { name: 'Sem 4', ingresos: totalIngresos * 0.25, gastos: totalGastos * 0.25 },
   ]
 
-
   useEffect(() => {
     if (permission === 'granted' && alertas.length > 0) {
       const hoy = new Date().toDateString()
@@ -653,7 +676,6 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
     }
   }, [alertas, permission, showLocalNotification])
 
-  // KPIs para los planificadores
   const kpis = {
     totalIngresos,
     totalGastos,
@@ -665,28 +687,30 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
     totalDeudas: deudas.reduce((sum, d) => sum + validarMonto(d.balance), 0)
   }
 
-  // Handlers
- const handleGuardarIngreso = async (data) => {
-  try {
-    await addIngreso(data)
+  // ============================================
+  // HANDLERS
+  // ============================================
 
-    // Si seleccionó una cuenta, actualizar el balance
-    if (data.cuenta_id) {
-      const cuenta = cuentas.find(c => c.id === data.cuenta_id)
-      if (cuenta) {
-        await updateCuenta(cuenta.id, {
-          balance: Number(cuenta.balance) + Number(data.monto)
-        })
+  const handleGuardarIngreso = async (data) => {
+    try {
+      await addIngreso(data)
+
+      if (data.cuenta_id) {
+        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+        if (cuenta) {
+          await updateCuenta(cuenta.id, {
+            balance: Number(cuenta.balance) + Number(data.monto)
+          })
+        }
       }
-    }
 
-    setShowModal(null)
-    setIngresoEditando(null)
-  } catch (e) {
-    console.error('Error al guardar ingreso:', e)
-    alert('Error al guardar el ingreso')
+      setShowModal(null)
+      setIngresoEditando(null)
+    } catch (e) {
+      console.error('Error al guardar ingreso:', e)
+      alert('Error al guardar el ingreso')
+    }
   }
-}
 
   const handleGuardarGasto = async (data) => {
     try {
@@ -868,6 +892,10 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
     setPlanUpdateCounter(prev => prev + 1);
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4">
       {/* HEADER */}
@@ -892,100 +920,144 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
           </div>
         </div>
       </div>
- }
-    {/* Widget de Resumen Inteligente */}
-    <div className="max-w-7xl mx-auto px-4 mb-6">
-      <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-blue-500/30">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* Estado Financiero */}
-          <div className="flex-1">
-            <h3 className="text-sm text-gray-300 mb-1">Estado de tus finanzas este mes</h3>
-            <div className="flex items-center gap-3">
-              {saldoMes > 0 ? (
+
+      {/* Widget de Resumen Inteligente CON Balance Real y Proyección */}
+      <div className="max-w-7xl mx-auto px-4 mb-6">
+        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-blue-500/30">
+          
+          {/* Balance REAL (Hasta Hoy) */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-blue-300 flex items-center gap-2">
+                💰 Balance Real (Hasta Hoy - {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })})
+              </h3>
+              <div className="text-xs text-gray-400">
+                Día {new Date().getDate()} de {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/30">
+                <div className="text-xs text-green-300 mb-1">Ingresos</div>
+                <div className="text-lg font-bold text-white">${totalIngresos.toLocaleString()}</div>
+              </div>
+              
+              <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/30">
+                <div className="text-xs text-red-300 mb-1">Gastos</div>
+                <div className="text-lg font-bold text-white">${totalGastosReales.toLocaleString()}</div>
+              </div>
+              
+              <div className={`${saldoReal >= 0 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-orange-500/10 border-orange-500/30'} rounded-lg p-3 border`}>
+                <div className={`text-xs ${saldoReal >= 0 ? 'text-cyan-300' : 'text-orange-300'} mb-1`}>Saldo Actual</div>
+                <div className={`text-lg font-bold ${saldoReal >= 0 ? 'text-cyan-400' : 'text-orange-400'}`}>
+                  ${saldoReal.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Estado Financiero Actual */}
+            <div className="flex items-center gap-3 bg-gray-800/50 rounded-lg p-3">
+              {saldoReal > 0 ? (
                 <>
                   <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
                     <span className="text-2xl">😊</span>
                   </div>
                   <div>
-                    <p className="text-green-400 font-semibold text-lg">Excelente</p>
-                    <p className="text-xs text-gray-400">Tienes un superávit de ${saldoMes.toFixed(2)}</p>
+                    <p className="text-green-400 font-semibold">¡Vas muy bien!</p>
+                    <p className="text-xs text-gray-400">Tienes un superávit de ${Math.abs(saldoReal).toFixed(2)}</p>
                   </div>
                 </>
-              ) : saldoMes === 0 ? (
+              ) : saldoReal === 0 ? (
                 <>
                   <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
                     <span className="text-2xl">😐</span>
                   </div>
                   <div>
-                    <p className="text-yellow-400 font-semibold text-lg">En equilibrio</p>
+                    <p className="text-yellow-400 font-semibold">En equilibrio</p>
                     <p className="text-xs text-gray-400">Ingresos = Gastos</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
                     <span className="text-2xl">😟</span>
                   </div>
                   <div>
-                    <p className="text-red-400 font-semibold text-lg">Necesita atención</p>
-                    <p className="text-xs text-gray-400">Déficit de ${Math.abs(saldoMes).toFixed(2)}</p>
+                    <p className="text-orange-400 font-semibold">Atención</p>
+                    <p className="text-xs text-gray-400">Déficit de ${Math.abs(saldoReal).toFixed(2)} hasta hoy</p>
                   </div>
                 </>
               )}
             </div>
           </div>
 
-          {/* Acciones Rápidas */}
-          <div className="flex flex-col gap-2 w-full md:w-auto">
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setShowModal('ingreso')}
-                className="flex-1 md:flex-none px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden md:inline">Ingreso</span>
-              </button>
-              <button 
-                onClick={() => setShowModal('gastos')}
-                className="flex-1 md:flex-none px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden md:inline">Gasto</span>
-              </button>
+          {/* Divisor */}
+          <div className="border-t border-gray-600 my-4"></div>
+
+          {/* PROYECCIÓN (Fin de Mes) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2">
+                📊 Proyección (Fin de Mes)
+              </h3>
+              <div className="text-xs text-gray-400">
+                Faltan {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate()} días
+              </div>
             </div>
             
-            {alertas.length > 0 && (
-              <button
-                onClick={() => setShowModal('notificaciones')}
-                className="px-4 py-2 bg-yellow-600/80 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-all flex items-center gap-2 justify-center"
-              >
-                <Bell className="w-4 h-4" />
-                {alertas.length} Alerta{alertas.length > 1 ? 's' : ''}
-              </button>
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="bg-green-500/5 rounded-lg p-3 border border-green-500/20">
+                <div className="text-xs text-green-300 mb-1">Esperados</div>
+                <div className="text-sm font-bold text-gray-300">${ingresosProyectados.toFixed(0)}</div>
+              </div>
+              
+              <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/20">
+                <div className="text-xs text-red-300 mb-1">Pendientes</div>
+                <div className="text-sm font-bold text-gray-300">${totalGastosProyectados.toFixed(0)}</div>
+              </div>
+              
+              <div className={`${saldoProyectado >= 0 ? 'bg-purple-500/5 border-purple-500/20' : 'bg-red-500/5 border-red-500/20'} rounded-lg p-3 border`}>
+                <div className={`text-xs ${saldoProyectado >= 0 ? 'text-purple-300' : 'text-red-300'} mb-1`}>Proyectado</div>
+                <div className={`text-sm font-bold ${saldoProyectado >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
+                  ${saldoProyectado.toFixed(0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Mensaje de proyección */}
+            {saldoProyectado < 0 && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-yellow-400 text-xl">⚠️</span>
+                <div className="text-xs text-yellow-300">
+                  <p className="font-semibold mb-1">Alerta de Proyección</p>
+                  <p className="text-gray-400">
+                    Se espera un déficit de ${Math.abs(saldoProyectado).toFixed(2)} al finalizar el mes. 
+                    Considera reducir gastos variables o aumentar ingresos.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Barra de progreso del mes */}
-        <div className="mt-4">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Progreso del mes</span>
-            <span>{new Date().getDate()} de {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} días</span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
-              style={{ 
-                width: `${(new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100}%` 
-              }}
-            />
+          {/* Barra de progreso del mes */}
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <span>Progreso del mes</span>
+              <span>{new Date().getDate()} de {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} días</span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                style={{ 
+                  width: `${(new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100}%` 
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    {/* FIN DEL WIDGET */}
+
       <div className="max-w-7xl mx-auto px-4 space-y-6">
-        {/* CALENDARIO DE PAGOS - Nuevo */}
         <CalendarioPagos 
           gastosFijos={gastosFijos}
           suscripciones={suscripciones}
@@ -994,12 +1066,14 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
           gastos={gastos}
         />
 
-        {/* KPIs Reorganizados */}
+        {/* KPIs Reorganizados - VALORES REALES */}
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
-          <h3 className="text-lg font-bold text-white mb-4">Resumen Financiero</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Resumen Financiero (Hasta Hoy)</h3>
+            <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">Real</span>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Columna de Ingresos */}
             <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl p-4 border border-green-700/30">
               <div className="text-green-400 text-sm font-semibold mb-2">💵 INGRESOS</div>
               <div className="text-3xl font-bold text-white">
@@ -1007,45 +1081,43 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
               </div>
             </div>
 
-            {/* Columna de Gastos */}
             <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 rounded-xl p-4 border border-red-700/30">
               <div className="text-red-400 text-sm font-semibold mb-2">💸 GASTOS</div>
               <div className="text-3xl font-bold text-white">
-                ${totalGastos.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${totalGastosReales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between text-gray-400">
-                  <span>Fijos:</span>
-                  <span>${totalGastosFijos.toFixed(2)}</span>
+                  <span>Fijos pagados:</span>
+                  <span>${totalGastosFijosReales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
                   <span>Variables:</span>
-                  <span>${totalGastosVariables.toFixed(2)}</span>
+                  <span>${totalGastosVariablesReales.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
                   <span>Suscripciones:</span>
-                  <span>${totalSuscripciones.toFixed(2)}</span>
+                  <span>${totalSuscripcionesReales.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Columna de Saldo y Ahorro */}
             <div className="bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 rounded-xl p-4 border border-cyan-700/30">
               <div className="text-cyan-400 text-sm font-semibold mb-2">💰 DISPONIBLE</div>
-              <div className={`text-3xl font-bold ${saldoMes >= 0 ? 'text-white' : 'text-red-400'}`}>
-                ${saldoMes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className={`text-3xl font-bold ${saldoReal >= 0 ? 'text-white' : 'text-red-400'}`}>
+                ${saldoReal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-orange-400 text-xs font-semibold">📊 Tasa de Ahorro</span>
-                  <span className={`text-lg font-bold ${tasaAhorro >= 20 ? 'text-green-400' : tasaAhorro >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {tasaAhorro}%
+                  <span className={`text-lg font-bold ${tasaAhorroReal >= 20 ? 'text-green-400' : tasaAhorroReal >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {tasaAhorroReal}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
                   <div 
-                    className={`h-2 rounded-full transition-all ${tasaAhorro >= 20 ? 'bg-green-500' : tasaAhorro >= 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                    style={{ width: `${Math.min(Math.max(tasaAhorro, 0), 100)}%` }}
+                    className={`h-2 rounded-full transition-all ${tasaAhorroReal >= 20 ? 'bg-green-500' : tasaAhorroReal >= 10 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${Math.min(Math.max(tasaAhorroReal, 0), 100)}%` }}
                   />
                 </div>
               </div>
@@ -1143,7 +1215,7 @@ const { textoHora, icono, fraseMotivacional } = obtenerSaludo()
 
       <Footer />
 
-      {/* Modales */}
+      {/* Modales (resto del código de modales sin cambios) */}
       {showModal === 'ingreso' && (
         <ModalIngreso
           onClose={() => { setShowModal(null); setIngresoEditando(null) }}
