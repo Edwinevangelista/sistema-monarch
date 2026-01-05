@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Trash2, Calendar, AlertCircle, CheckCircle } from 'lucide-react'; // ✅ Imports limpios
+import { Target, Trash2, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 export default function SavedPlansList({ refreshSignal = 0 }) {
-  // ✅ Destructuring limpio (Quitamos savePlan y Plus porque no se usan en esta versión)
-  const { plans, loading, deletePlan, refresh } = usePlanesGuardados();
+  // ✅ CORRECCIÓN: Cambiar 'plans' por 'planes'
+  const { planes, loading, deletePlan, refresh } = usePlanesGuardados();
 
-  // ✅ useEffect corregido con dependencias
   useEffect(() => {
     console.log('🔄 SavedPlansList recibió señal de actualización:', refreshSignal);
     if (refreshSignal > 0) {
@@ -17,7 +16,12 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
   useEffect(() => {
     console.log('📊 SavedPlansList montado, cargando planes...');
     refresh();
-  }, [refresh]);
+  }, [refresh]); // ✅ CORRECCIÓN: Quitar refreshSignal de aquí para evitar loop
+
+  // ✅ CORRECCIÓN: Agregar log para debug
+  useEffect(() => {
+    console.log('📋 Planes cargados:', planes);
+  }, [planes]);
 
   if (loading) {
     return (
@@ -27,7 +31,8 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
     );
   }
 
-  if (!plans || plans.length === 0) {
+  // ✅ CORRECCIÓN: Cambiar 'plans' por 'planes'
+  if (!planes || planes.length === 0) {
     return (
       <div className="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700">
         <div className="text-5xl mb-3">📝</div>
@@ -39,11 +44,14 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {plans.map((plan) => (
+      {planes.map((plan) => (
         <PlanCard 
           key={plan.id} 
           plan={plan} 
-          onDelete={deletePlan} 
+          onDelete={async (id) => {
+            await deletePlan(id);
+            await refresh();
+          }} 
         />
       ))}
     </div>
@@ -54,7 +62,6 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
 function PlanCard({ plan, onDelete }) {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Estilos por tipo
   const getInfo = (tipo) => {
     if (!tipo) return { bg: 'bg-blue-900/40', border: 'border-blue-500/30', icon: <CheckCircle className="w-6 h-6 text-blue-400" /> };
     if (tipo.toLowerCase().includes('ahorro')) return { bg: 'from-green-900/40 to-green-800/20', border: 'border-green-500/30', icon: <Target className="w-6 h-6 text-green-400" /> };
@@ -64,7 +71,6 @@ function PlanCard({ plan, onDelete }) {
 
   const { bg, border, icon } = getInfo(plan.tipo);
   
-  // Datos numéricos seguros
   const meta = Number(plan.monto_objetivo) || 0;
   const actual = Number(plan.monto_actual) || 0;
   const progreso = meta > 0 ? ((actual / meta) * 100).toFixed(0) : 0;
@@ -84,7 +90,6 @@ function PlanCard({ plan, onDelete }) {
           </div>
         </div>
         
-        {/* Botón Menú y Eliminar */}
         <div className="relative">
           <button 
             onClick={(e) => {
@@ -93,7 +98,7 @@ function PlanCard({ plan, onDelete }) {
             }}
             className="text-gray-400 hover:text-white transition p-1"
           >
-            <div className="text-2xl">⋮</div> {/* Menú de puntos */}
+            <div className="text-2xl">⋮</div>
           </button>
           
           {showMenu && (
