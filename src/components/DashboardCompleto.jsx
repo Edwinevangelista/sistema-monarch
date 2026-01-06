@@ -4,7 +4,7 @@ import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 
 import React, { useState, useEffect } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Upload, Bell, Sun, Moon, Coffee, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Upload, Bell, Sun, Moon, Coffee, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -184,7 +184,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       <div className="grid grid-cols-7 gap-1 md:gap-2">
         {dias.map((dia, index) => {
           if (!dia) {
-            // CORRECCIÓN APLICADA AQUÍ: Backticks añadidos
             return <div key={`empty-${index}`} className="aspect-square" />
           }
           
@@ -1375,68 +1374,98 @@ const handleEliminarIngreso = async (id) => {
           }}
           onEliminar={handleEliminarIngreso}
         />
-        {/* 🔹 ACCESO FUNCIONAL A GASTOS (Mobile First) */}
-<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-700">
-  <div className="flex items-center justify-between">
-    <div>
-      <h3 className="text-lg font-bold text-white">Gastos & Deudas</h3>
-      <p className="text-xs text-gray-400">
-        Vista inteligente para pagos y control
-      </p>
-    </div>
+        
+        {/* 🔹 MEJORA VISUAL: BOTONES ANIMADOS */}
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white">Gastos & Deudas</h3>
+              <p className="text-xs text-gray-400">
+                Accesos rápidos a tus categorías
+              </p>
+            </div>
 
-    <button
-     onClick={() => {
-  setOverviewMode('ALL')
-  setShowModal('gastosOverview')
-}}
-      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
-    >
-      Ver todo
-    </button>
-  </div>
+            <button
+             onClick={() => {
+              setOverviewMode('ALL')
+              setShowModal('gastosOverview')
+            }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors border border-gray-600"
+            >
+              Ver todo
+            </button>
+          </div>
 
-  {/* Micro-resumen con clickeable directo */}
-  <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-    {/* Deudas */}
-    <div 
-        onClick={() => {
-            setOverviewMode('DEUDAS')
-            setShowModal('gastosOverview')
-        }}
-        className="bg-purple-600/10 rounded-lg p-2 cursor-pointer hover:bg-purple-600/30 transition-colors"
-    >
-      <div className="text-xs text-purple-300">Deudas</div>
-      <div className="text-white font-bold">{deudas.length}</div>
-    </div>
+          {/* Grid de Botones Animados */}
+          <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+            
+            {/* Deudas */}
+            <div
+                onClick={() => {
+                    setOverviewMode('DEUDAS')
+                    setShowModal('gastosOverview')
+                }}
+                className="group relative overflow-hidden
+                bg-gray-700/30 border border-purple-500/30 hover:bg-purple-900/60 hover:border-purple-400
+                rounded-2xl p-4
+                cursor-pointer
+                transform transition-all duration-300 ease-out
+                hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/20
+                active:scale-95 active:translate-y-0
+                "
+            >
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <ArrowRight className="absolute top-2 right-2 w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-10%] group-hover:translate-x-0" />
+                <div className="text-xs text-purple-300 font-medium mb-1 group-hover:text-purple-100 transition-colors">Deudas</div>
+                <div className="text-2xl font-bold text-white">{deudas.length}</div>
+              </div>
+            </div>
 
-    {/* Fijos */}
-    <div 
-        onClick={() => {
-            setOverviewMode('FIJOS')
-            setShowModal('gastosOverview')
-        }}
-        className="bg-yellow-600/10 rounded-lg p-2 cursor-pointer hover:bg-yellow-600/30 transition-colors"
-    >
-      <div className="text-xs text-yellow-300">Fijos</div>
-      <div className="text-white font-bold">{gastosFijos.length}</div>
-    </div>
+            {/* Fijos */}
+            <div
+                onClick={() => {
+                    setOverviewMode('FIJOS')
+                    setShowModal('gastosOverview')
+                }}
+                className="group relative overflow-hidden
+                bg-gray-700/30 border border-yellow-500/30 hover:bg-yellow-900/60 hover:border-yellow-400
+                rounded-2xl p-4
+                cursor-pointer
+                transform transition-all duration-300 ease-out
+                hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-yellow-500/20
+                active:scale-95 active:translate-y-0
+                "
+            >
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <ArrowRight className="absolute top-2 right-2 w-4 h-4 text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-10%] group-hover:translate-x-0" />
+                <div className="text-xs text-yellow-300 font-medium mb-1 group-hover:text-yellow-100 transition-colors">Fijos</div>
+                <div className="text-2xl font-bold text-white">{gastosFijos.length}</div>
+              </div>
+            </div>
 
-    {/* Variables */}
-    <div 
-        onClick={() => {
-            setOverviewMode('VARIABLES')
-            setShowModal('gastosOverview')
-        }}
-        className="bg-red-600/10 rounded-lg p-2 cursor-pointer hover:bg-red-600/30 transition-colors"
-    >
-      <div className="text-xs text-red-300">Variables</div>
-      <div className="text-white font-bold">{gastos.length}</div>
-    </div>
-  </div>
-</div>
-
-
+            {/* Variables */}
+            <div
+                onClick={() => {
+                    setOverviewMode('VARIABLES')
+                    setShowModal('gastosOverview')
+                }}
+                className="group relative overflow-hidden
+                bg-gray-700/30 border border-red-500/30 hover:bg-red-900/60 hover:border-red-400
+                rounded-2xl p-4
+                cursor-pointer
+                transform transition-all duration-300 ease-out
+                hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-500/20
+                active:scale-95 active:translate-y-0
+                "
+            >
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <ArrowRight className="absolute top-2 right-2 w-4 h-4 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-10%] group-hover:translate-x-0" />
+                <div className="text-xs text-red-300 font-medium mb-1 group-hover:text-red-100 transition-colors">Variables</div>
+                <div className="text-2xl font-bold text-white">{gastos.length}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className="hidden md:block space-y-6">
           <ConfiguracionNotificaciones />
@@ -1484,7 +1513,7 @@ const handleEliminarIngreso = async (id) => {
         </button>
       </div>
 
-      {/* --- NUEVO: TABS DE FILTRO --- */}
+      {/* --- TABS DE FILTRO --- */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-gray-700">
         <button
           onClick={() => setOverviewMode('ALL')}
