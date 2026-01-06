@@ -15,6 +15,7 @@ import { useSuscripciones } from '../hooks/useSuscripciones'
 import { useDeudas } from '../hooks/useDeudas'
 import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 import { useNotifications } from '../hooks/useNotifications'
+import { getDeudaStatus } from '../lib/finance/deudaStatus'
 
 // --- COMPONENTES ---
 import ModalIngreso from './ModalIngreso'
@@ -26,8 +27,7 @@ import LectorEstadoCuenta from './LectorEstadoCuenta'
 import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
-import ListaDeudas from './ListaDeudas'
-import ListaSuscripciones from './ListaSuscripciones'
+
 import AsistenteFinancieroV2 from './AsistenteFinancieroV2'
 import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
 import LogoutButton from './LogoutButton'
@@ -37,6 +37,8 @@ import MenuInferior from './MenuInferior'
 import ModalUsuario from './ModalUsuario'
 import Footer from './Footer'
 import ListaIngresos from './ListaIngresos'
+import ModalDetalleUniversal from './ModalDetalleUniversal'
+
 
 // --- MODALES NUEVOS ---
 import DebtPlannerModal from './DebtPlannerModal'
@@ -44,6 +46,10 @@ import SavingsPlannerModal from './SavingsPlannerModal'
 import SpendingControlModal from './SpendingControlModal'
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados'
 import SavedPlansList from './SavedPlansList'
+
+import ListaGastosCompleta from './ListaGastosCompleta'
+import { ITEM_TYPES } from '../constants/itemTypes'
+
 
 // --- COMPONENTE DE CALENDARIO ---
 const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
@@ -178,6 +184,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       <div className="grid grid-cols-7 gap-1 md:gap-2">
         {dias.map((dia, index) => {
           if (!dia) {
+            // CORRECCIÓN APLICADA AQUÍ: Backticks añadidos
             return <div key={`empty-${index}`} className="aspect-square" />
           }
           
@@ -250,8 +257,11 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
 const DashboardContent = () => {
   const [usuario, setUsuario] = useState({ 
     email: 'usuario@ejemplo.com', 
-    nombre: '' 
+    nombre: 'FinTrack User'
   })
+
+const [overviewMode, setOverviewMode] = useState('ALL')
+// ALL | DEUDAS | SUSCRIPCIONES | FIJOS | VARIABLES
 
   const {
     cuentas,
@@ -272,6 +282,7 @@ const DashboardContent = () => {
           iaActiva: true,
         };
   });
+const [itemSeleccionado, setItemSeleccionado] = useState(null)
 
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
@@ -285,19 +296,116 @@ const DashboardContent = () => {
   const [gastoFijoEditando, setGastoFijoEditando] = useState(null)
   const [suscripcionEditando, setSuscripcionEditando] = useState(null)
   const [deudaEditando, setDeudaEditando] = useState(null)
+// ==============================
+// ORQUESTADOR UNIVERSAL DE ACCIONES
+// ==============================
+
+const handleOpenDetail = (item, type) => {
+  let status = null
+
+  if (type === ITEM_TYPES.DEUDA) {
+    status = getDeudaStatus(item, pagos)
+  }
+
+  setItemSeleccionado({ item, type, status })
+}
+
+const handleEditarUniversal = (item, type) => {
+  // Limpieza defensiva (evita estados cruzados)
+  setIngresoEditando(null)
+  setGastoEditando(null)
+  setGastoFijoEditando(null)
+  setSuscripcionEditando(null)
+  setDeudaEditando(null)
+
+  if (type === ITEM_TYPES.DEUDA) {
+    setDeudaEditando(item)
+    setShowModal('agregarDeuda')
+    return
+  }
+
+  if (type === ITEM_TYPES.FIJO) {
+    setGastoFijoEditando(item)
+    setShowModal('gastos')
+    return
+  }
+
+  if (type === ITEM_TYPES.VARIABLE) {
+    setGastoEditando(item)
+    setShowModal('gastos')
+    return
+  }
+
+  if (type === ITEM_TYPES.SUSCRIPCION) {
+    setSuscripcionEditando(item)
+    setShowModal('suscripcion')
+    return
+  }
+}
+
+// ==============================
+// ORQUESTADOR UNIVERSAL DE PAGOS
+// ==============================
+
+const handlePagarUniversal = (item, type) => {
+  if (type === ITEM_TYPES.DEUDA) {
+    setDeudaEditando(item)
+    setShowModal('pagoTarjeta')
+    return
+  }
+
+  if (type === ITEM_TYPES.FIJO) {
+    handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
+    return
+  }
+
+  if (type === ITEM_TYPES.SUSCRIPCION) {
+    handlePagoManual(item)
+    return
+  }
+
+  // VARIABLES: no tienen acción de pagar
+}
+
 
   useInactivityTimeout(15)
 
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
 
 
-  const { gastos, addGasto } = useGastosVariables()
-  const { gastosFijos, addGastoFijo, updateGastoFijo } = useGastosFijos()
-  const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
-  const { deudas, addDebt, updateDebt, refresh: refreshDeudas } = useDeudas()
-  const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
-  const { refresh: refreshPlanes } = usePlanesGuardados()
-  const { permission, showLocalNotification } = useNotifications()
+ const { gastos, addGasto, deleteGasto } = useGastosVariables(); // Agregamos deleteGasto
+  const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos();
+  const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones();
+  const { deudas, addDebt, updateDebt, refresh: refreshDeudas, deleteDebt } = useDeudas();
+  const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta();
+  const { refresh: refreshPlanes } = usePlanesGuardados();
+  const { permission, showLocalNotification } = useNotifications();
+
+  // ==============================
+// LISTAS DERIVADAS PARA OVERVIEW
+// ==============================
+const overviewData = {
+  deudas:
+    overviewMode === 'DEUDAS' || overviewMode === 'ALL'
+      ? deudas
+      : [],
+
+  suscripciones:
+    overviewMode === 'SUSCRIPCIONES' || overviewMode === 'ALL'
+      ? suscripciones
+      : [],
+
+  gastosFijos:
+    overviewMode === 'FIJOS' || overviewMode === 'ALL'
+      ? gastosFijos
+      : [],
+
+  gastosVariables:
+    overviewMode === 'VARIABLES' || overviewMode === 'ALL'
+      ? gastos
+      : [],
+}
+
 
   const deudaPagadaEsteMes = (deudaId) => {
     const hoy = new Date()
@@ -758,20 +866,30 @@ const handleGuardarIngreso = async (data) => {
     }
   }
 
-  const handleAlertClick = (alerta) => {
-    const { tipoItem, item } = alerta;
+ const handleAlertClick = (alerta) => {
+  const { tipoItem, item } = alerta
 
-    if (tipoItem === 'gasto_fijo') {
-      setGastoFijoEditando(item);
-      setShowModal('gastos');
-    } else if (tipoItem === 'suscripcion') {
-      setSuscripcionEditando(item);
-      setShowModal('suscripcion');
-    } else if (tipoItem === 'deuda') {
-      setDeudaEditando(item);
-      setShowModal('pagoTarjeta');
-    }
-  };
+  if (tipoItem === 'deuda') {
+    setOverviewMode('DEUDAS')
+    setShowModal('gastosOverview')
+    handleOpenDetail(item, ITEM_TYPES.DEUDA)
+    return
+  }
+
+  if (tipoItem === 'suscripcion') {
+    setOverviewMode('SUSCRIPCIONES')
+    setShowModal('gastosOverview')
+    handleOpenDetail(item, ITEM_TYPES.SUSCRIPCION)
+    return
+  }
+
+  if (tipoItem === 'gasto_fijo') {
+    setOverviewMode('FIJOS')
+    setShowModal('gastosOverview')
+    handleOpenDetail(item, ITEM_TYPES.FIJO)
+  }
+}
+
 
   const handleGuardarSuscripcion = async (data) => {
     try {
@@ -840,6 +958,31 @@ const handleGuardarIngreso = async (data) => {
       console.error("Error guardando deuda:", e)
     }
   }
+// ============================================
+// NUEVOS HANDLERS PARA GASTOS Y PAGOS UNIFICADOS
+// ============================================
+
+
+// 2. Eliminar (Maneja la eliminación para cualquier tipo)
+const handleEliminarUnificado = (item, type) => {
+  const confirmMsg = `¿Estás seguro de eliminar este ${type === 'deuda' ? 'registro de deuda' : type === 'fijo' ? 'gasto fijo' : type === 'suscripcion' ? 'servicio' : 'gasto'}?`
+  if (!window.confirm(confirmMsg)) return
+
+  if (type === ITEM_TYPES.SUSCRIPCION) {
+    handleEliminarSuscripcion(item.id)
+  } else if (type === ITEM_TYPES.DEUDA) {
+    // Si tu hook useDeudas tiene deleteDebt, descomenta esto:
+    deleteDebt && deleteDebt(item.id) 
+  } else if (type === ITEM_TYPES.FIJO) {
+    // Si tu hook useGastosFijos tiene deleteGastoFijo, descomenta esto:
+    deleteGastoFijo && deleteGastoFijo(item.id)
+  } else if (type === ITEM_TYPES.VARIABLE) {
+    // Si tu hook useGastosVariables tiene deleteGasto, descomenta esto:
+    deleteGasto && deleteGasto(item.id)
+  }
+}
+
+// 3. Pagar (Ejecuta la acción de pago según el tipo)
 
   const handleEliminarSuscripcion = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar esta suscripción?')) {
@@ -860,6 +1003,28 @@ const handleGuardarIngreso = async (data) => {
       const principal = validarMonto(pago.a_principal)
       const intereses = validarMonto(pago.intereses)
       const total = validarMonto(pago.monto_total)
+
+      // ❌ Pago a capital mayor que saldo
+if (principal > deuda.saldo) {
+  alert(
+    `El pago a capital ($${principal}) no puede ser mayor al saldo pendiente ($${deuda.saldo}).`
+  )
+  return
+}
+// ❌ Pago duplicado el mismo día
+const pagoHoy = pagos.some(p => {
+  const f = new Date(p.fecha)
+  const h = new Date()
+  return (
+    p.deuda_id === deuda.id &&
+    f.toDateString() === h.toDateString()
+  )
+})
+
+if (pagoHoy) {
+  alert('Ya se registró un pago hoy para esta deuda.')
+  return
+}
 
       if (Math.abs((principal + intereses) - total) > 0.01) {
         alert('El monto total debe ser igual a Principal + Intereses')
@@ -1210,35 +1375,164 @@ const handleEliminarIngreso = async (id) => {
           }}
           onEliminar={handleEliminarIngreso}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ListaDeudas
-            deudas={deudas}
-            deudaPagadaEsteMes={deudaPagadaEsteMes}
-            onEditar={(deuda) => {
-              setDeudaEditando(deuda)
-              setShowModal('agregarDeuda')
-            }}
-          />
+        {/* 🔹 ACCESO FUNCIONAL A GASTOS (Mobile First) */}
+<div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 border border-gray-700">
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="text-lg font-bold text-white">Gastos & Deudas</h3>
+      <p className="text-xs text-gray-400">
+        Vista inteligente para pagos y control
+      </p>
+    </div>
 
-          <ListaSuscripciones 
-            suscripciones={suscripciones} 
-            onEditar={(sub) => {
-              setSuscripcionEditando(sub)
-              setShowModal('suscripcion')
-            }}
-            onEliminar={handleEliminarSuscripcion} 
-            onPagarManual={handlePagoManual}
-          />
-        </div>
+    <button
+     onClick={() => {
+  setOverviewMode('ALL')
+  setShowModal('gastosOverview')
+}}
+      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+    >
+      Ver todo
+    </button>
+  </div>
+
+  {/* Micro-resumen (no lista) */}
+  <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+    <div className="bg-purple-600/10 rounded-lg p-2">
+      <div className="text-xs text-purple-300">Deudas</div>
+      <div className="text-white font-bold">{deudas.length}</div>
+    </div>
+
+    <div className="bg-yellow-600/10 rounded-lg p-2">
+      <div className="text-xs text-yellow-300">Fijos</div>
+      <div className="text-white font-bold">{gastosFijos.length}</div>
+    </div>
+
+    <div className="bg-red-600/10 rounded-lg p-2">
+      <div className="text-xs text-red-300">Variables</div>
+      <div className="text-white font-bold">{gastos.length}</div>
+    </div>
+  </div>
+</div>
+
+
 
         <div className="hidden md:block space-y-6">
           <ConfiguracionNotificaciones />
         </div>
-      </div>
+      </div> {/* CIERRA max-w-7xl mx-auto px-4 space-y-6 */}
 
-      <Footer />
+       <Footer className="hidden md:block" />
+       
+      {itemSeleccionado && (
+        <ModalDetalleUniversal
+          item={itemSeleccionado.item}
+          type={itemSeleccionado.type}
+          onClose={() => {
+            setItemSeleccionado(null)
+            setOverviewMode('ALL')
+          }}
+          onEditar={handleEditarUniversal}
+          onPagar={handlePagarUniversal}
+        />
+      )}
 
       {/* Modales (resto del código de modales sin cambios) */}
+      {/* ==============================
+   MODAL OVERVIEW DE GASTOS & DEUDAS
+   ============================== */}
+{showModal === 'gastosOverview' && (
+  <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center">
+    <div className="
+      bg-gray-900 w-full md:max-w-3xl
+      h-[92vh] md:h-auto
+      rounded-t-2xl md:rounded-2xl
+      p-4 md:p-6
+      overflow-y-auto
+    ">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+        <h2 className="text-xl font-bold text-white">
+          💳 Gastos & Deudas
+        </h2>
+        <button
+          onClick={() => setShowModal(null)}
+          className="text-gray-400 hover:text-white text-xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* --- NUEVO: TABS DE FILTRO --- */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-gray-700">
+        <button
+          onClick={() => setOverviewMode('ALL')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+            overviewMode === 'ALL' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          Todos
+        </button>
+        <button
+          onClick={() => setOverviewMode('DEUDAS')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2 ${
+            overviewMode === 'DEUDAS' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" /> Deudas
+        </button>
+        <button
+          onClick={() => setOverviewMode('FIJOS')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+            overviewMode === 'FIJOS' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          Fijos
+        </button>
+        <button
+          onClick={() => setOverviewMode('VARIABLES')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors whitespace-nowrap ${
+            overviewMode === 'VARIABLES' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          Variables
+        </button>
+        <button
+          onClick={() => setOverviewMode('SUSCRIPCIONES')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2 ${
+            overviewMode === 'SUSCRIPCIONES' 
+              ? 'bg-blue-600 text-white' 
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          <Repeat className="w-4 h-4" /> Suscripciones
+        </button>
+      </div>
+
+      {/* CONTENIDO REUTILIZADO */}
+     <ListaGastosCompleta
+        deudas={overviewData.deudas}
+        gastosFijos={overviewData.gastosFijos}
+        gastosVariables={overviewData.gastosVariables}
+        suscripciones={overviewData.suscripciones}
+        deudaPagadaEsteMes={deudaPagadaEsteMes}
+        onVerDetalle={handleOpenDetail}
+        onEliminar={handleEliminarUnificado}
+        onPagar={handlePagarUniversal}
+      />
+
+    </div>
+  </div>
+)}
+
       {showModal === 'ingreso' && (
         <ModalIngreso
           onClose={() => { setShowModal(null); setIngresoEditando(null) }}
@@ -1271,15 +1565,16 @@ const handleEliminarIngreso = async (id) => {
         </div>
       )}
 
-      {showModal === 'gastos' && (
+            {showModal === 'gastos' && (
         <ModalGastos
           onClose={() => {
             setShowModal(null)
             setGastoEditando(null)
-            setGastoFijoEditando(null)
+            setGastoFijoEditando(null) // Importante limpiar ambos
           }}
           onSaveVariable={handleGuardarGasto}
           onSaveFijo={handleGuardarGastoFijo}
+          // CLAVE AQUÍ: Pasamos ambos posibles estados
           gastoInicial={gastoEditando || gastoFijoEditando}
         />
       )}
@@ -1297,11 +1592,11 @@ const handleEliminarIngreso = async (id) => {
         />
       )}
 
-      {showModal === 'suscripcion' && (
+       {showModal === 'suscripcion' && (
         <ModalSuscripcion 
           onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} 
           onSave={handleGuardarSuscripcion}
-          suscripcionInicial={suscripcionEditando}
+          suscripcionInicial={suscripcionEditando} // Asegúrate de que esta línea exista
         />
       )}
       
@@ -1345,7 +1640,7 @@ const handleEliminarIngreso = async (id) => {
         <ModalAgregarDeuda 
           onClose={() => { setShowModal(null); setDeudaEditando(null) }} 
           onSave={handleGuardarDeuda}
-          deudaInicial={deudaEditando}
+          deudaInicial={deudaEditando} // Asegúrate de que esta línea exista
         />
       )}
       

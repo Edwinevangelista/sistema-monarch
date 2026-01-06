@@ -1,7 +1,8 @@
 {
-  "name": "sistema-monarch",
+ "name": "fintrack",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@supabase/supabase-js": "^2.89.0",

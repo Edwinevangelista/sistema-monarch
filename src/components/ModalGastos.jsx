@@ -34,8 +34,10 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
 
   useEffect(() => {
     if (gastoInicial) {
-      const esFijo = gastoInicial.nombre !== undefined
+      // ✅ MEJORA: Detectamos si es fijo buscando 'dia_venc' (es más seguro que buscar 'nombre')
+      const esFijo = gastoInicial.dia_venc !== undefined
       setTipoGasto(esFijo ? 'fijo' : 'variable')
+      
       setFormData({
         fecha: gastoInicial.fecha || new Date().toISOString().split('T')[0],
         categoria: gastoInicial.categoria || '',
@@ -46,6 +48,20 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
         nombre: gastoInicial.nombre || '',
         dia_venc: gastoInicial.dia_venc?.toString() || '',
         estado: gastoInicial.estado || 'Pendiente'
+      })
+    } else {
+      // Reseteamos el estado si abrimos el modal para crear uno nuevo
+      setTipoGasto('variable')
+      setFormData({
+        fecha: new Date().toISOString().split('T')[0],
+        categoria: '',
+        descripcion: '',
+        monto: '',
+        metodo: 'Efectivo',
+        cuenta_id: '', 
+        nombre: '',
+        dia_venc: '',
+        estado: 'Pendiente'
       })
     }
   }, [gastoInicial])
@@ -60,6 +76,12 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
       return
     }
 
+    // ✅ CORRECCIÓN: Validación específica para Gastos Fijos
+    if (tipoGasto === 'fijo' && !formData.dia_venc) {
+      setError('Por favor ingresa el día de vencimiento (1-31)')
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -71,10 +93,10 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
           descripcion: formData.descripcion,
           monto: parseFloat(formData.monto),
           metodo: formData.metodo,
-          cuenta_id: formData.cuenta_id || null // ✅ CORREGIDO: null si está vacío
+          cuenta_id: formData.cuenta_id || null
         })
       } else {
-        // ✅ CORREGIDO: Pasamos el ID para identificar si es edición
+        // ✅ Pasamos el ID para identificar si es edición
         await onSaveFijo({
           id: gastoInicial?.id, 
           nombre: formData.nombre,
@@ -82,7 +104,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
           monto: parseFloat(formData.monto),
           dia_venc: parseInt(formData.dia_venc),
           estado: formData.estado,
-          cuenta_id: formData.cuenta_id || null // ✅ CORREGIDO: null si está vacío
+          cuenta_id: formData.cuenta_id || null
         })
       }
       onClose()

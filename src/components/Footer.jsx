@@ -4,18 +4,21 @@ import { Shield, FileText, Mail, Github, ExternalLink } from 'lucide-react';
 import PrivacyPolicy from './PrivacyPolicy';
 import TermsOfService from './TermsOfService';
 
-function Footer() {
+// 1. Recibimos 'className' en los props (con valor por defecto vacío)
+function Footer({ className = "" }) {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
   return (
     <div>
-      <footer className="bg-gray-900 border-t border-gray-800 py-8 mt-16">
+      {/* 2. Inyectamos el className en el footer usando template literals */}
+      {/* Las clases originales se mantienen y se suma la nueva clase condicional */}
+      <footer className={`bg-gray-900 border-t border-gray-800 py-8 mt-16 ${className}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Acerca de */}
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">Sistema Monarch</h3>
+              <h3 className="text-white font-bold text-lg mb-4">FinTrack App</h3>
               <p className="text-gray-400 text-sm mb-4">
                 Tu asistente personal de finanzas. Toma el control de tu dinero con inteligencia y simplicidad.
               </p>
@@ -81,7 +84,7 @@ function Footer() {
           {/* Copyright */}
           <div className="mt-8 pt-8 border-t border-gray-800 text-center">
             <p className="text-gray-500 text-sm">
-              © 2026 Sistema Monarch. Desarrollado por{' '}
+              © 2026 FinTrack App. Desarrollado por{' '}
               <span className="text-white font-semibold">Edwin Evangelista</span>. 
               Todos los derechos reservados.
             </p>
@@ -93,6 +96,8 @@ function Footer() {
       </footer>
 
       {/* Modales */}
+      {/* Al mantener estos fuera del tag <footer>, se aseguran de que puedan renderizarse 
+          aunque el footer esté oculto por CSS en móvil */}
       {showPrivacy && <PrivacyPolicy onClose={() => setShowPrivacy(false)} />}
       {showTerms && <TermsOfService onClose={() => setShowTerms(false)} />}
     </div>
