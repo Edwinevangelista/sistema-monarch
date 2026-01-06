@@ -1396,19 +1396,40 @@ const handleEliminarIngreso = async (id) => {
     </button>
   </div>
 
-  {/* Micro-resumen (no lista) */}
+  {/* Micro-resumen con clickeable directo */}
   <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-    <div className="bg-purple-600/10 rounded-lg p-2">
+    {/* Deudas */}
+    <div 
+        onClick={() => {
+            setOverviewMode('DEUDAS')
+            setShowModal('gastosOverview')
+        }}
+        className="bg-purple-600/10 rounded-lg p-2 cursor-pointer hover:bg-purple-600/30 transition-colors"
+    >
       <div className="text-xs text-purple-300">Deudas</div>
       <div className="text-white font-bold">{deudas.length}</div>
     </div>
 
-    <div className="bg-yellow-600/10 rounded-lg p-2">
+    {/* Fijos */}
+    <div 
+        onClick={() => {
+            setOverviewMode('FIJOS')
+            setShowModal('gastosOverview')
+        }}
+        className="bg-yellow-600/10 rounded-lg p-2 cursor-pointer hover:bg-yellow-600/30 transition-colors"
+    >
       <div className="text-xs text-yellow-300">Fijos</div>
       <div className="text-white font-bold">{gastosFijos.length}</div>
     </div>
 
-    <div className="bg-red-600/10 rounded-lg p-2">
+    {/* Variables */}
+    <div 
+        onClick={() => {
+            setOverviewMode('VARIABLES')
+            setShowModal('gastosOverview')
+        }}
+        className="bg-red-600/10 rounded-lg p-2 cursor-pointer hover:bg-red-600/30 transition-colors"
+    >
       <div className="text-xs text-red-300">Variables</div>
       <div className="text-white font-bold">{gastos.length}</div>
     </div>
