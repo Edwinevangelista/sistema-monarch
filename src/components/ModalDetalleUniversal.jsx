@@ -4,11 +4,9 @@ import {
   Edit2, 
   CheckCircle, 
   CreditCard, 
-  AlertTriangle, 
   Calendar, 
   Info,
   Wallet,
-  TrendingUp,
   FileText,
   Repeat
 } from 'lucide-react'
