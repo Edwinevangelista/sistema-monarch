@@ -84,53 +84,80 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
   const obtenerEventosDelDia = (dia) => {
     if (!dia) return { ingresos: 0, gastos: 0, eventos: [] }
     
-    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
-    const fechaStr = fecha.toISOString().split('T')[0]
+    // Fecha del calendario (Medianoche local del día seleccionado)
+    const fechaCalendario = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
     
     let totalIngresos = 0
     let totalGastos = 0
     const eventos = []
     
+    // --- INGRESOS ---
     ingresos?.forEach(ing => {
-      if (ing.fecha === fechaStr) {
+      if (!ing.fecha) return
+      // Normalizamos la fecha del ingreso a medianoche local para comparación justa
+      const fechaIngreso = new Date(ing.fecha + 'T00:00:00')
+      
+      // Comparamos año, mes y día (ignorando horas y minutos)
+      if (fechaIngreso.getFullYear() === fechaCalendario.getFullYear() &&
+          fechaIngreso.getMonth() === fechaCalendario.getMonth() &&
+          fechaIngreso.getDate() === fechaCalendario.getDate()) {
         totalIngresos += Number(ing.monto || 0)
       }
     })
     
+    // --- GASTOS VARIABLES (Planet Fitness, etc.) ---
     gastos?.forEach(g => {
-      if (g.fecha === fechaStr) {
+      if (!g.fecha) return
+      
+      // FIX AQUÍ: Convertimos string de fecha a objeto Date
+      const fechaGasto = new Date(g.fecha + 'T00:00:00')
+      
+      // Comparamos objetos Date en lugar de textos
+      if (fechaGasto.getFullYear() === fechaCalendario.getFullYear() &&
+          fechaGasto.getMonth() === fechaCalendario.getMonth() &&
+          fechaGasto.getDate() === fechaCalendario.getDate()) {
         totalGastos += Number(g.monto || 0)
+        // Opcional: Puedes descomentar esto si quieres ver el nombre en el tooltip
+        // eventos.push({ tipo: 'gasto', nombre: g.descripcion, monto: g.monto })
       }
     })
     
+    // --- GASTOS FIJOS ---
     gastosFijos?.forEach(gf => {
+      // Si el día de vencimiento coincide con el día del calendario
       if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
         totalGastos += Number(gf.monto || 0)
         eventos.push({ tipo: 'gasto_fijo', nombre: gf.nombre, monto: gf.monto })
       }
     })
     
+    // --- SUSCRIPCIONES ---
     suscripciones?.forEach(sub => {
-      if (sub.estado === 'Activo' && sub.proximo_pago) {
-        const proxPago = new Date(sub.proximo_pago)
-        if (proxPago.getDate() === dia && 
-            proxPago.getMonth() === mesActual.getMonth() &&
-            proxPago.getFullYear() === mesActual.getFullYear()) {
-          totalGastos += Number(sub.costo || 0)
-          eventos.push({ tipo: 'suscripcion', nombre: sub.servicio, monto: sub.costo })
-        }
+      if (sub.estado !== 'Activo' || !sub.proximo_pago) return
+      
+      // Normalizamos fecha de proximo pago
+      const proxPago = new Date(sub.proximo_pago + 'T00:00:00')
+      
+      if (proxPago.getDate() === dia && 
+          proxPago.getMonth() === mesActual.getMonth() &&
+          proxPago.getFullYear() === mesActual.getFullYear()) {
+        totalGastos += Number(sub.costo || 0)
+        eventos.push({ tipo: 'suscripcion', nombre: sub.servicio, monto: sub.costo })
       }
     })
     
+    // --- DEUDAS ---
     deudas?.forEach(d => {
-      if (d.vence) {
-        const vence = new Date(d.vence)
-        if (vence.getDate() === dia && 
-            vence.getMonth() === mesActual.getMonth() &&
-            vence.getFullYear() === mesActual.getFullYear()) {
-          totalGastos += Number(d.pago_minimo || 0)
-          eventos.push({ tipo: 'deuda', nombre: d.cuenta, monto: d.pago_minimo })
-        }
+      if (!d.vence) return
+      
+      // Normalizamos fecha de vencimiento
+      const vence = new Date(d.vence + 'T00:00:00')
+      
+      if (vence.getDate() === dia && 
+          vence.getMonth() === mesActual.getMonth() &&
+          vence.getFullYear() === mesActual.getFullYear()) {
+        totalGastos += Number(d.pago_minimo || 0)
+        eventos.push({ tipo: 'deuda', nombre: d.cuenta, monto: d.pago_minimo })
       }
     })
     
@@ -309,14 +336,23 @@ const handleOpenDetail = (item, type) => {
   setItemSeleccionado({ item, type, status })
 }
 
+  // ==============================
+  // ORQUESTADOR UNIVERSAL DE ACCIONES
+  // ==============================
+
 const handleEditarUniversal = (item, type) => {
-  // Limpieza defensiva (evita estados cruzados)
+  // ✅ MAGIA AQUÍ: Cerramos cualquier modal de detalles que esté abierto
+  // Esto hace que si estabas viendo los detalles y pulsas "Editar", los detalles se cierren.
+  setItemSeleccionado(null)
+
+  // 2. Limpieza defensiva (evita estados cruzados)
   setIngresoEditando(null)
   setGastoEditando(null)
   setGastoFijoEditando(null)
   setSuscripcionEditando(null)
   setDeudaEditando(null)
 
+  // 3. Redirección y llenado del estado de edición según el tipo
   if (type === ITEM_TYPES.DEUDA) {
     setDeudaEditando(item)
     setShowModal('agregarDeuda')
@@ -340,6 +376,9 @@ const handleEditarUniversal = (item, type) => {
     setShowModal('suscripcion')
     return
   }
+  
+  // Si llega aquí, el tipo no fue reconocido (no debería pasar)
+  console.warn('⚠️ Tipo no reconocido en handleEditarUniversal:', type)
 }
 
 // ==============================
@@ -372,7 +411,7 @@ const handlePagarUniversal = (item, type) => {
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
 
 
- const { gastos, addGasto, deleteGasto } = useGastosVariables(); // Agregamos deleteGasto
+ const { gastos, addGasto, deleteGasto } = useGastosVariables(); 
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos();
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones();
   const { deudas, addDebt, updateDebt, refresh: refreshDeudas, deleteDebt } = useDeudas();
@@ -829,6 +868,12 @@ const handleGuardarIngreso = async (data) => {
 
   const handleGuardarGasto = async (data) => {
     try {
+      // 🛑 FIX: Si la fecha viene vacía del modal, usamos la de HOY
+      // Esto asegura que el calendario siempre muestre el gasto nuevo en el día actual.
+      if (!data.fecha) {
+        data.fecha = new Date().toISOString().split('T')[0];
+      }
+
       await addGasto(data)
 
       if (data.cuenta_id) {
@@ -890,9 +935,17 @@ const handleGuardarIngreso = async (data) => {
 }
 
 
-  const handleGuardarSuscripcion = async (data) => {
+   const handleGuardarSuscripcion = async (data) => {
     try {
-      await addSuscripcion(data)
+      // ✅ FIX: Verificamos si tiene ID para saber si es EDICIÓN o CREACIÓN
+      if (data.id) {
+        // Si tiene ID, actualizamos el existente
+        await updateSuscripcion(data.id, data)
+      } else {
+        // Si NO tiene ID, creamos uno nuevo
+        await addSuscripcion(data)
+      }
+
       setShowModal(null)
       setSuscripcionEditando(null)
     } catch (e) {
@@ -970,13 +1023,10 @@ const handleEliminarUnificado = (item, type) => {
   if (type === ITEM_TYPES.SUSCRIPCION) {
     handleEliminarSuscripcion(item.id)
   } else if (type === ITEM_TYPES.DEUDA) {
-    // Si tu hook useDeudas tiene deleteDebt, descomenta esto:
     deleteDebt && deleteDebt(item.id) 
   } else if (type === ITEM_TYPES.FIJO) {
-    // Si tu hook useGastosFijos tiene deleteGastoFijo, descomenta esto:
     deleteGastoFijo && deleteGastoFijo(item.id)
   } else if (type === ITEM_TYPES.VARIABLE) {
-    // Si tu hook useGastosVariables tiene deleteGasto, descomenta esto:
     deleteGasto && deleteGasto(item.id)
   }
 }
@@ -1470,27 +1520,24 @@ const handleEliminarIngreso = async (id) => {
         <div className="hidden md:block space-y-6">
           <ConfiguracionNotificaciones />
         </div>
-      </div> {/* CIERRA max-w-7xl mx-auto px-4 space-y-6 */}
+      </div> 
 
-       <Footer className="hidden md:block" />
+    <Footer className="hidden md:block" />
        
       {itemSeleccionado && (
         <ModalDetalleUniversal
           item={itemSeleccionado.item}
           type={itemSeleccionado.type}
-          onClose={() => {
-            setItemSeleccionado(null)
-            setOverviewMode('ALL')
-          }}
+          status={itemSeleccionado.status}
+          onClose={() => setItemSeleccionado(null)}
           onEditar={handleEditarUniversal}
           onPagar={handlePagarUniversal}
         />
       )}
 
-      {/* Modales (resto del código de modales sin cambios) */}
-      {/* ==============================
-   MODAL OVERVIEW DE GASTOS & DEUDAS
-   ============================== */}
+           {/* ==============================
+          MODAL OVERVIEW DE GASTOS & DEUDAS
+          ============================== */}
 {showModal === 'gastosOverview' && (
   <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center">
     <div className="
@@ -1568,7 +1615,7 @@ const handleEliminarIngreso = async (id) => {
       </div>
 
       {/* CONTENIDO REUTILIZADO */}
-     <ListaGastosCompleta
+      <ListaGastosCompleta
         deudas={overviewData.deudas}
         gastosFijos={overviewData.gastosFijos}
         gastosVariables={overviewData.gastosVariables}
@@ -1577,6 +1624,7 @@ const handleEliminarIngreso = async (id) => {
         onVerDetalle={handleOpenDetail}
         onEliminar={handleEliminarUnificado}
         onPagar={handlePagarUniversal}
+        onEditar={handleEditarUniversal}
       />
 
     </div>
@@ -1604,27 +1652,21 @@ const handleEliminarIngreso = async (id) => {
             />
 
             <div className="p-4">
-              <button
-                onClick={() => setShowModal(null)}
-                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl"
-              >
-                Cerrar
-              </button>
+              <button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl">Cerrar</button>
             </div>
           </div>
         </div>
       )}
 
-            {showModal === 'gastos' && (
+      {showModal === 'gastos' && (
         <ModalGastos
           onClose={() => {
             setShowModal(null)
             setGastoEditando(null)
-            setGastoFijoEditando(null) // Importante limpiar ambos
+            setGastoFijoEditando(null)
           }}
           onSaveVariable={handleGuardarGasto}
           onSaveFijo={handleGuardarGastoFijo}
-          // CLAVE AQUÍ: Pasamos ambos posibles estados
           gastoInicial={gastoEditando || gastoFijoEditando}
         />
       )}
@@ -1642,11 +1684,13 @@ const handleEliminarIngreso = async (id) => {
         />
       )}
 
+    {/* MODAL DE SUSCRIPCION */}
        {showModal === 'suscripcion' && (
         <ModalSuscripcion 
+          key={suscripcionEditando?.id}
           onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} 
           onSave={handleGuardarSuscripcion}
-          suscripcionInicial={suscripcionEditando} // Asegúrate de que esta línea exista
+          suscripcionInicial={suscripcionEditando}
         />
       )}
       
@@ -1655,24 +1699,9 @@ const handleEliminarIngreso = async (id) => {
           <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full">
             <h2 className="text-2xl font-bold text-white mb-4">Gestión de Tarjetas</h2>
             <div className="space-y-3">
-              <button
-                onClick={() => setShowModal('agregarDeuda')}
-                className="w-full p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors"
-              >
-                📝 Registrar Tarjeta/Deuda
-              </button>
-              <button
-                onClick={() => setShowModal('pagoTarjeta')}
-                className="w-full p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
-              >
-                💳 Pagar Tarjeta
-              </button>
-              <button
-                onClick={() => setShowModal(null)}
-                className="w-full p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
+              <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors">📝 Registrar Tarjeta/Deuda</button>
+              <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors">💳 Pagar Tarjeta</button>
+              <button onClick={() => setShowModal(null)} className="w-full p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors">Cancelar</button>
             </div>
           </div>
         </div>
@@ -1690,7 +1719,7 @@ const handleEliminarIngreso = async (id) => {
         <ModalAgregarDeuda 
           onClose={() => { setShowModal(null); setDeudaEditando(null) }} 
           onSave={handleGuardarDeuda}
-          deudaInicial={deudaEditando} // Asegúrate de que esta línea exista
+          deudaInicial={deudaEditando}
         />
       )}
       

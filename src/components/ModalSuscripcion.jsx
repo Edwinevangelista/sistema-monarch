@@ -1,156 +1,284 @@
 import React, { useState, useEffect } from 'react'
-import { Repeat, X, CreditCard, Wallet } from 'lucide-react'
-import { CATEGORIAS, CICLOS_SUSCRIPCION } from '../constants/categorias'
+import { Repeat, X, Calendar, DollarSign, FileText, CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
   const { cuentas } = useCuentasBancarias()
 
-  const [formData, setFormData] = useState({
+  const defaultData = {
     servicio: '',
-    categoria: CATEGORIAS[0],
+    categoria: '📦 Suscripciones',
     costo: '',
     ciclo: 'Mensual',
-    proximo_pago: '',
-    estado: 'Activo',
-    autopago: false,
+    proximo_pago: new Date().toISOString().split('T')[0],
+    descripcion: '',
     cuenta_id: '',
-    notas: ''
-  })
+    autopago: false,
+    estado: 'Activo'
+  }
+
+  const [formData, setFormData] = useState(defaultData)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (suscripcionInicial) {
       setFormData({
         servicio: suscripcionInicial.servicio || '',
-        categoria: suscripcionInicial.categoria || CATEGORIAS[0],
-        costo: suscripcionInicial.costo?.toString() || '',
+        categoria: suscripcionInicial.categoria || '📦 Suscripciones',
+        costo: String(suscripcionInicial.costo || ''),
         ciclo: suscripcionInicial.ciclo || 'Mensual',
         proximo_pago: suscripcionInicial.proximo_pago || '',
-        estado: suscripcionInicial.estado || 'Activo',
-        autopago: suscripcionInicial.autopago || false,
+        descripcion: suscripcionInicial.descripcion || '',
         cuenta_id: suscripcionInicial.cuenta_id || '',
-        notas: suscripcionInicial.notas || ''
+        autopago: !!suscripcionInicial.autopago,
+        estado: suscripcionInicial.estado || 'Activo',
+        id: suscripcionInicial.id
       })
+    } else {
+      setFormData(prev => ({ ...prev, proximo_pago: new Date().toISOString().split('T')[0] }))
     }
   }, [suscripcionInicial])
 
   const handleSubmit = async () => {
-    if (!formData.servicio || !formData.costo) {
-      alert('Por favor completa los campos requeridos')
-      return
-    }
-    if (formData.autopago && !formData.cuenta_id) {
-      alert('Debes seleccionar una cuenta para el cobro automático')
+    if (!formData.servicio || !formData.costo || !formData.ciclo) {
+      setError('Por favor completa servicio, costo y ciclo.')
       return
     }
 
+    setLoading(true)
+    setError('')
+
     try {
-      await onSave({
-        ...formData,
+      const dataAGuardar = {
+        servicio: formData.servicio,
+        categoria: formData.categoria,
         costo: parseFloat(formData.costo),
-        proximo_pago: formData.proximo_pago || null
-      })
+        ciclo: formData.ciclo,
+        proximo_pago: formData.proximo_pago,
+        descripcion: formData.descripcion,
+        cuenta_id: formData.cuenta_id || null,
+        autopago: formData.autopago,
+        estado: formData.estado
+      }
+
+      if (suscripcionInicial) {
+        dataAGuardar.id = suscripcionInicial.id
+      }
+
+      await onSave(dataAGuardar)
       onClose()
-    } catch (error) {
-      console.error(error)
-      alert('Error al guardar')
+    } catch (err) {
+      console.error('Error al guardar suscripción:', err)
+      setError('Ocurrió un error al guardar.')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-gray-800 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border-2 border-indigo-500 shadow-2xl">
+    // ✅ FIX MOBILE: 
+    // 1. items-center justify-center: Centrado en móvil (más seguro para pantallas altas).
+    // 2. p-4 md:p-6: Menos padding en móvil para aprovechar espacio.
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 md:p-6">
+      
+      <div className="bg-gray-900 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-gray-700 shadow-2xl relative">
         
-        {/* Header */}
-        <div className="sticky top-0 bg-gray-800 border-b border-indigo-500/30 p-4 md:p-6 z-10">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-              <Repeat className="w-6 h-6 md:w-7 md:h-7 text-indigo-400" />
-              {suscripcionInicial ? 'Editar Suscripción' : 'Nueva Suscripción'}
-            </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-full transition">
-              <X className="w-5 h-5 md:w-6 md:h-6" />
+        {/* --- HEADER ESTILIZADO --- */}
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-800/80 p-6 rounded-t-2xl border-b border-indigo-500/30 sticky top-0 z-10 bg-gray-900">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-500/20 p-2 rounded-xl border border-indigo-400/30">
+                <Repeat className="w-6 h-6 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {suscripcionInicial ? 'Editar Suscripción' : 'Nueva Suscripción'}
+                </h2>
+                {suscripcionInicial && (
+                  <p className="text-xs text-indigo-300 mt-0.5">Editando: {suscripcionInicial.servicio}</p>
+                )}
+              </div>
+            </div>
+            <button onClick={onClose} disabled={loading} className="p-2 bg-black/20 hover:bg-black/40 rounded-lg text-gray-400 hover:text-white transition-colors">
+              <X className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        {/* Formulario */}
-        <div className="p-4 md:p-6 space-y-4">
+        {error && (
+          <div className="mx-6 mt-4 bg-red-500/10 border border-red-500 text-red-200 px-4 py-3 rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* --- FORMULARIO --- */}
+        <div className="p-4 md:p-6 space-y-5">
           
-          {/* Servicio */}
+          {/* 1. Nombre */}
+          <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium text-sm md:text-base">
+              <Repeat className="w-4 h-4 text-indigo-400" /> Servicio *
+            </label>
+            <input 
+              type="text" 
+              placeholder="Ej: Netflix, Spotify" 
+              value={formData.servicio} 
+              onChange={(e) => setFormData({ ...formData, servicio: e.target.value })} 
+              className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-600 disabled:bg-gray-900 disabled:opacity-50 text-base" 
+              disabled={loading} 
+            />
+          </div>
+
+          {/* 2. Categoría */}
           <div>
-            <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Servicio *</label>
-            <input type="text" placeholder="Ej: Netflix, Spotify" value={formData.servicio} onChange={(e) => setFormData({ ...formData, servicio: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base" />
+            <label className="block text-gray-300 mb-2 text-sm">Categoría</label>
+            <select 
+              value={formData.categoria} 
+              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
+              className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-700 text-base"
+            >
+              <option value="📦 Suscripciones">📦 Suscripciones</option>
+              <option value="🎬 Entretenimiento">🎬 Entretenimiento</option>
+              <option value="💊 Salud / Fitness">💊 Salud / Fitness</option>
+              <option value="📚 Educación">📚 Educación</option>
+              <option value="💻 Tecnología">💻 Tecnología / Software</option>
+              <option value="🏠 Servicios">🏠 Servicios Hogar</option>
+            </select>
           </div>
 
-          {/* Grid Categoría + Ciclo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Categoría</label>
-              <select value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base">
-                {CATEGORIAS.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Ciclo</label>
-              <select value={formData.ciclo} onChange={(e) => setFormData({ ...formData, ciclo: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base">
-                {CICLOS_SUSCRIPCION.map(ciclo => <option key={ciclo} value={ciclo}>{ciclo}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Grid Costo + Estado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Costo *</label>
-              <input type="number" step="0.01" placeholder="0.00" value={formData.costo} onChange={(e) => setFormData({ ...formData, costo: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base" />
-            </div>
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Estado</label>
-              <select value={formData.estado} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base">
-                <option value="Activo">✅ Activo</option>
-                <option value="Cancelado">❌ Cancelado</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Sección Cuenta y Autopago */}
-          <div className="space-y-3">
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-indigo-400" /> Cuenta de cobro</label>
-              <select value={formData.cuenta_id || ''} onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                <option value="">Seleccionar cuenta</option>
-                {cuentas.map(c => <option key={c.id} value={c.id}>{c.nombre} (${Number(c.balance).toFixed(2)})</option>)}
-              </select>
-            </div>
-
-            <div className="bg-indigo-500/10 rounded-xl p-3 border border-indigo-500/20">
-              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                <input type="checkbox" checked={formData.autopago || false} onChange={(e) => setFormData({ ...formData, autopago: e.target.checked })} className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500" />
-                <span className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-indigo-400" /> Cobrar automáticamente</span>
+          {/* 3. Costo y Ciclo */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium text-sm">
+                <DollarSign className="w-4 h-4 text-green-400" /> Monto *
               </label>
-              {formData.autopago && <p className="text-xs text-gray-400 mt-2 ml-6">El cobro se registrará automáticamente en la cuenta seleccionada.</p>}
+              <input 
+                type="number" 
+                step="0.01" 
+                placeholder="0.00" 
+                value={formData.costo} 
+                onChange={(e) => setFormData({ ...formData, costo: e.target.value })} 
+                className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-700 text-base" 
+                disabled={loading} 
+              />
+            </div>
+            <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium text-sm">
+                <FileText className="w-4 h-4 text-blue-400" /> Ciclo *
+              </label>
+              <select 
+                value={formData.ciclo} 
+                onChange={(e) => setFormData({ ...formData, ciclo: e.target.value })} 
+                className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 text-base" 
+              >
+                <option value="Mensual">Mensual</option>
+                <option value="Anual">Anual</option>
+                <option value="Semanal">Semanal</option>
+              </select>
             </div>
           </div>
 
-          {/* Próximo Pago */}
-          <div>
-            <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Próximo Pago</label>
-            <input type="date" value={formData.proximo_pago} onChange={(e) => setFormData({ ...formData, proximo_pago: e.target.value })} className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base" />
+          {/* 4. Fecha */}
+          <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium text-sm">
+              <Calendar className="w-4 h-4 text-purple-400" /> Próximo Pago *
+            </label>
+            <input 
+              type="date" 
+              value={formData.proximo_pago} 
+              onChange={(e) => setFormData({ ...formData, proximo_pago: e.target.value })} 
+              className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-700 text-base" 
+              disabled={loading} 
+            />
           </div>
 
-          {/* Notas */}
+          {/* 5. Descripción */}
           <div>
-            <label className="block text-gray-300 mb-2 text-sm md:text-base font-semibold">Notas</label>
-            <textarea placeholder="Información adicional (opcional)" value={formData.notas} onChange={(e) => setFormData({ ...formData, notas: e.target.value })} rows="2" className="w-full bg-gray-700 text-white px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm md:text-base resize-none" />
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
+              <FileText className="w-4 h-4 text-gray-400" /> Notas
+            </label>
+            <textarea 
+              placeholder="Opcional" 
+              value={formData.descripcion} 
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} 
+              className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 text-sm border border-gray-700" 
+              rows="2"
+              disabled={loading} 
+            />
+          </div>
+
+          {/* 6. Cuenta y Autopago */}
+          <div className="space-y-3 md:space-y-4">
+            <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+              <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta de cobro</label>
+              <select 
+                value={formData.cuenta_id || ''} 
+                onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })} 
+                className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg border border-gray-700 text-base"
+              >
+                <option value="">Seleccionar cuenta</option>
+                {cuentas.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre} (${Number(c.balance).toFixed(2)})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <CreditCard className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                  <div>
+                    <span className="text-white font-medium text-sm md:text-base">Autopago</span>
+                    <p className="text-xs text-gray-400">
+                      {formData.autopago ? 'Se cobrará automáticamente' : 'Pago manual'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, autopago: !formData.autopago })}
+                  className={`
+                    relative inline-flex h-6 w-11 md:w-11 items-center rounded-full transition-colors focus:outline-none
+                    ${formData.autopago ? 'bg-green-600' : 'bg-gray-600'}
+                  `}
+                >
+                  <span
+                    className={`
+                      inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                      ${formData.autopago ? 'translate-x-6' : 'translate-x-1'}
+                    `}
+                  />
+                </button>
+              </div>
+              {formData.autopago && !formData.cuenta_id && (
+                <div className="mt-2 text-orange-400 text-xs flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> Selecciona una cuenta para activar el cobro automático.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Botones */}
-        <div className="sticky bottom-0 bg-gray-800 border-t border-indigo-500/30 p-4 md:p-6">
+        {/* --- BOTONES PEGADOS ABAJO (Sticky) --- */}
+        <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm p-4 border-t border-gray-700 z-20">
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 px-4 py-2.5 md:py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors text-sm md:text-base">Cancelar</button>
-            <button onClick={handleSubmit} className="flex-1 px-4 py-2.5 md:py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-colors text-sm md:text-base">{suscripcionInicial ? 'Actualizar' : 'Guardar'}</button>
+            <button 
+              onClick={onClose} 
+              disabled={loading} 
+              className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 text-base"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleSubmit} 
+              disabled={loading} 
+              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-base"
+            >
+              {loading ? 'Guardando...' : (suscripcionInicial ? 'Guardar' : 'Crear')}
+              {!loading && <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />}
+            </button>
           </div>
         </div>
       </div>
