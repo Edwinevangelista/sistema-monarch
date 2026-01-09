@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { DollarSign, X, Building2 } from 'lucide-react'
+import { DollarSign, X, Building2, Save } from 'lucide-react' // ✅ Agregado icono Save (opcional, o usar texto)
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
   const { cuentas, loading: loadingCuentas } = useCuentasBancarias()
+  
+  const [isLoading, setIsLoading] = useState(false) // ✅ Estado de carga
   
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -32,6 +34,8 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
       return
     }
 
+    setIsLoading(true) // ✅ Iniciar carga
+
     try {
       const dataToSave = {
         fecha: formData.fecha,
@@ -41,16 +45,21 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
         cuenta_id: formData.cuenta_id || null
       }
 
-      // ✅ Si hay ingresoInicial, incluir el ID para edición
+      // Si hay ingresoInicial, incluir el ID para edición
       if (ingresoInicial?.id) {
         dataToSave.id = ingresoInicial.id
       }
 
       await onSave(dataToSave)
+      
+      // ✅ Mensaje de éxito
+      alert(`✅ ${ingresoInicial ? 'Ingreso actualizado' : 'Ingreso guardado'} correctamente`)
       onClose()
     } catch (error) {
       console.error("Error guardando:", error)
       alert('Error al guardar el ingreso. Intenta nuevamente.')
+    } finally {
+      setIsLoading(false) // ✅ Finalizar carga (ejecuta pase lo que pase)
     }
   }
 
@@ -138,8 +147,7 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">
-                $
-              </span>
+                $               </span>
               <input
                 type="number"
                 step="0.01"
@@ -155,16 +163,21 @@ const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors"
+            disabled={isLoading} // ✅ Bloquear botón cancelar mientras carga
+            className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!formData.fuente || !formData.monto}
-            className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || !formData.fuente || !formData.monto}
+            className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {ingresoInicial ? 'Actualizar' : 'Guardar'}
+            {isLoading ? (
+              <span>Guardando...</span>
+            ) : (
+              <>{ingresoInicial ? 'Actualizar' : 'Guardar'}</>
+            )}
           </button>
         </div>
       </div>

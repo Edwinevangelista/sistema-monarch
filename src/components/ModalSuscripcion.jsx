@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Repeat, X, Calendar, DollarSign, FileText, CreditCard, CheckCircle, AlertCircle } from 'lucide-react'
+import { Repeat, X, Calendar, DollarSign, FileText, CreditCard, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
   const { cuentas } = useCuentasBancarias()
 
+  // ✅ FIX: Sintaxis corregida en defaultData
   const defaultData = {
     servicio: '',
     categoria: '📦 Suscripciones',
@@ -36,6 +37,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
         id: suscripcionInicial.id
       })
     } else {
+      // FIX: Corrección de corchetes
       setFormData(prev => ({ ...prev, proximo_pago: new Date().toISOString().split('T')[0] }))
     }
   }, [suscripcionInicial])
@@ -67,6 +69,10 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
       }
 
       await onSave(dataAGuardar)
+      
+      // ✅ FIX: Mensaje de éxito
+      alert(`✅ ${suscripcionInicial ? 'Suscripción actualizada' : 'Suscripción creada'} correctamente`)
+      
       onClose()
     } catch (err) {
       console.error('Error al guardar suscripción:', err)
@@ -77,9 +83,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
   }
 
   return (
-    // ✅ FIX MOBILE: 
-    // 1. items-center justify-center: Centrado en móvil (más seguro para pantallas altas).
-    // 2. p-4 md:p-6: Menos padding en móvil para aprovechar espacio.
+    // FIX MOBILE: Centrado y padding mejorado
     <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 md:p-6">
       
       <div className="bg-gray-900 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-gray-700 shadow-2xl relative">
@@ -100,7 +104,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
                 )}
               </div>
             </div>
-            <button onClick={onClose} disabled={loading} className="p-2 bg-black/20 hover:bg-black/40 rounded-lg text-gray-400 hover:text-white transition-colors">
+            <button onClick={onClose} disabled={loading} className="p-2 bg-black/20 hover:bg-black/40 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -138,6 +142,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
               value={formData.categoria} 
               onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
               className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-700 text-base"
+              disabled={loading}
             >
               <option value="📦 Suscripciones">📦 Suscripciones</option>
               <option value="🎬 Entretenimiento">🎬 Entretenimiento</option>
@@ -172,6 +177,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
                 value={formData.ciclo} 
                 onChange={(e) => setFormData({ ...formData, ciclo: e.target.value })} 
                 className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 text-base" 
+                disabled={loading}
               >
                 <option value="Mensual">Mensual</option>
                 <option value="Anual">Anual</option>
@@ -217,6 +223,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
                 value={formData.cuenta_id || ''} 
                 onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })} 
                 className="w-full bg-gray-700 text-white px-4 py-2 md:py-3 rounded-lg border border-gray-700 text-base"
+                disabled={loading}
               >
                 <option value="">Seleccionar cuenta</option>
                 {cuentas.map(c => (
@@ -239,6 +246,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, autopago: !formData.autopago })}
+                  disabled={loading}
                   className={`
                     relative inline-flex h-6 w-11 md:w-11 items-center rounded-full transition-colors focus:outline-none
                     ${formData.autopago ? 'bg-green-600' : 'bg-gray-600'}
@@ -276,8 +284,17 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
               disabled={loading} 
               className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-base"
             >
-              {loading ? 'Guardando...' : (suscripcionInicial ? 'Guardar' : 'Crear')}
-              {!loading && <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  {suscripcionInicial ? 'Guardar' : 'Crear'}
+                  {!loading && <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />}
+                </>
+              )}
             </button>
           </div>
         </div>
