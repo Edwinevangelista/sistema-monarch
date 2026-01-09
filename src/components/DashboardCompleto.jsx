@@ -381,6 +381,7 @@ export default function DashboardContent() {
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
   const [showLector, setShowLector] = useState(false)
+  const [movimientosBancarios, setMovimientosBancarios] = useState([])
 
   const [ingresoEditando, setIngresoEditando] = useState(null)
   const [gastoEditando, setGastoEditando] = useState(null)
@@ -497,13 +498,31 @@ export default function DashboardContent() {
       deleteGasto && deleteGasto(item.id)
     }
   }
-
-  const handleGuardarIngreso = async (data) => {
+  const handleAgregarMovimientoBancario = (movimiento) => {
+    // Agregamos el nuevo movimiento al inicio de la lista
+    setMovimientosBancarios(prev => [movimiento, ...prev])
+  }
+   const handleGuardarIngreso = async (data) => {
     try {
       if (data.id) {
         await updateIngreso(data.id, data)
       } else {
         await addIngreso(data)
+        // ✅ FIX: Registrar en historial si tiene cuenta
+        if (data.cuenta_id) {
+          const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+          if (cuenta) {
+            handleAgregarMovimientoBancario({
+              id: Date.now(),
+              tipo: 'ingreso',
+              monto: Number(data.monto),
+              ref: `Ingreso: ${data.fuente || 'General'}`,
+              fecha: 'Ahora',
+              cuentaId: cuenta.id,
+              cuentaNombre: cuenta.nombre
+            })
+          }
+        }
       }
       if (data.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === data.cuenta_id)
@@ -528,13 +547,32 @@ const handleGuardarGasto = async (data) => {
     console.log('📦 Guardando gasto:', data)
     
     if (data.id) {
+      // Es EDICIÓN
       console.log('✏️ EDITANDO gasto ID:', data.id)
       await updateGasto(data.id, data)
     } else {
+      // Es CREACIÓN
       console.log('➕ CREANDO nuevo gasto')
       await addGasto(data)
+      
+      // ✅ FIX: Agregar al historial bancario SI tiene una cuenta asignada
+      if (data.cuenta_id) {
+        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+        if (cuenta) {
+          handleAgregarMovimientoBancario({
+            id: Date.now(),
+            tipo: 'gasto',
+            monto: Number(data.monto),
+            ref: data.descripcion || data.categoria || 'Gasto',
+            fecha: 'Ahora',
+            cuentaId: cuenta.id,
+            cuentaNombre: cuenta.nombre
+          })
+        }
+      }
     }
     
+    // Actualizar saldo de la cuenta (ya lo tenías, lo mantengo)
     if (data.cuenta_id) {
       const cuenta = cuentas.find(c => c.id === data.cuenta_id)
       if (cuenta) {
@@ -554,14 +592,43 @@ const handleGuardarGasto = async (data) => {
 
   const handleGuardarGastoFijo = async (data) => {
     try {
+      // Variables de control eliminadas por warnings
+      // const esNuevo = !data.id 
+      // const estadoPago = data.estado || 'Pendiente'
+      
+      let mostrarEnHistorial = false
+
       if (data.id) {
         const { id, ...payload } = data;
         await updateGastoFijo(id, payload);
+        
+        // Solo mostrar en historial si marca como Pagado
+        if (payload.estado === 'Pagado') mostrarEnHistorial = true
       } else {
         await addGastoFijo(data);
+        // Solo mostrar en historial si se crea ya como Pagado
+        if (data.estado === 'Pagado') mostrarEnHistorial = true
       }
+      
       setShowModal(null)
       setGastoFijoEditando(null)
+
+      // ✅ FIX: Registrar en historial solo si aplica
+      if (mostrarEnHistorial && data.cuenta_id) {
+        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+        if (cuenta) {
+          handleAgregarMovimientoBancario({
+            id: Date.now(),
+            tipo: 'gasto',
+            monto: Number(data.monto),
+            ref: `Fijo: ${data.nombre}`,
+            fecha: 'Ahora',
+            cuentaId: cuenta.id,
+            cuentaNombre: cuenta.nombre
+          })
+        }
+      }
+
     } catch (e) {
       console.error('Error al guardar gasto fijo:', e)
       alert('Error al guardar: ' + e.message)
@@ -613,6 +680,18 @@ const handleGuardarGasto = async (data) => {
         cuenta_id: cuenta.id,
         metodo: 'Manual'
       })
+      
+      // ✅ FIX: Registrar en historial
+      handleAgregarMovimientoBancario({
+        id: Date.now(),
+        tipo: 'gasto',
+        monto: Number(sub.costo),
+        ref: `Suscripción: ${sub.servicio}`,
+        fecha: 'Ahora',
+        cuentaId: cuenta.id,
+        cuentaNombre: cuenta.nombre
+      })
+
       const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
       if (updateSuscripcion) {
         await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
@@ -1097,7 +1176,14 @@ const handleGuardarGasto = async (data) => {
       {showModal === 'cuentas' && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <ModuloCuentasBancarias cuentas={cuentas} onAgregar={addCuenta} onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} onEliminar={deleteCuenta} />
+           <ModuloCuentasBancarias 
+  cuentas={cuentas} 
+  onAgregar={addCuenta} 
+  onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
+  onEliminar={deleteCuenta} 
+  balanceTotal={kpis.saldo} // (Opcional, para mostrar el total real)
+  listaMovimientosExternos={movimientosBancarios} // ⬅️ IMPORTANTE: Pasamos el estado real
+/>
             <div className="p-4"><button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button></div>
           </div>
         </div>

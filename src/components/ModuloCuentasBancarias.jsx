@@ -3,7 +3,7 @@ import {
   Plus, 
   Edit2, 
   Trash2, 
-  X, // ✅ AGREGADO ESTO PARA ARREGLAR EL ERROR
+  X, 
   CreditCard, 
   Wallet, 
   ArrowLeftRight, 
@@ -18,7 +18,8 @@ export default function ModuloCuentasBancarias({
   onAgregar, 
   onEditar, 
   onEliminar,
-  balanceTotal
+  balanceTotal,
+  listaMovimientosExternos = [] // FIX: Nueva prop para recibir movimientos reales
 }) {
   const { cuentas: hookCuentas, updateCuenta } = useCuentasBancarias()
   
@@ -32,24 +33,20 @@ export default function ModuloCuentasBancarias({
   const [transLoading, setTransLoading] = useState(false)
   const [msgTrans, setMsgTrans] = useState('')
 
-  // --- 2. ESTADOS DE HISTORIAL (SIMULACIÓN) ---
-  const [listaMovimientos, setListaMovimientos] = useState([])
+  // --- 2. ESTADOS DE HISTORIAL (REALESI) ---
+  // Usamos los movimientos externos si existen, de lo contrario un array vacío
+  const [listaMovimientos, setListaMovimientos] = useState(listaMovimientosExternos)
+
+  // Sincronizar si cambian los movimientos externos
+  useEffect(() => {
+    setListaMovimientos(listaMovimientosExternos)
+  }, [listaMovimientosExternos])
 
   // --- 3. ESTADOS DE FORMULARIO (CREAR/EDITAR) ---
   const [verFormulario, setVerFormulario] = useState(false)
   const [cuentaEditando, setCuentaEditando] = useState(null)
   const [formNombre, setFormNombre] = useState('')
   const [formSaldo, setFormSaldo] = useState('')
-
-  // Cargar Historial Simulado (TODO: Reemplazar con fetch a Supabase)
-  useEffect(() => {
-    setListaMovimientos([
-      { id: 1, tipo: 'transferencia', monto: 500, ref: 'De Ahorros a Principal', fecha: 'Hace 2 min' },
-      { id: 2, tipo: 'deposito', monto: 1500, ref: 'Abono', fecha: 'Hace 10 min' },
-      { id: 3, tipo: 'retiro', monto: 200, ref: 'Cajero', fecha: 'Ayer' },
-      { id: 4, tipo: 'pago', monto: 15.99, ref: 'Netflix', fecha: 'Hace 3 días' },
-    ])
-  }, [])
 
   // --- HANDLERS DEL FORMULARIO DE CUENTA ---
   useEffect(() => {
@@ -66,6 +63,11 @@ export default function ModuloCuentasBancarias({
     }
   }, [verFormulario, cuentaEditando])
 
+  // Función auxiliar para registrar movimiento en el historial
+  const agregarAlHistorial = (nuevoMovimiento) => {
+    setListaMovimientos(prev => [nuevoMovimiento, ...prev])
+  }
+
   const handleGuardarCuenta = async () => {
     if (!formNombre) {
       alert('El nombre es obligatorio')
@@ -77,11 +79,34 @@ export default function ModuloCuentasBancarias({
       if (cuentaEditando) {
         // Modo Edición
         await updateCuenta(cuentaEditando.id, { nombre: formNombre, balance: saldoNum })
-        console.log("✅ Cuenta actualizada")
+        
+        // Registrar ajuste de saldo en historial
+        if (saldoNum !== cuentaEditando.balance) {
+          agregarAlHistorial({
+            id: Date.now(),
+            tipo: 'ajuste',
+            monto: saldoNum,
+            ref: `Ajuste manual: ${formNombre}`,
+            fecha: 'Ahora',
+            cuentaId: cuentaEditando.id,
+            cuentaNombre: formNombre
+          })
+        }
       } else {
         // Modo Creación
         if (onAgregar) {
           await onAgregar({ nombre: formNombre, balance: saldoNum })
+          // Registrar creación de cuenta (depósito inicial)
+          if (saldoNum > 0) {
+            agregarAlHistorial({
+              id: Date.now(),
+              tipo: 'deposito',
+              monto: saldoNum,
+              ref: `Saldo inicial: ${formNombre}`,
+              fecha: 'Ahora',
+              cuentaNombre: formNombre
+            })
+          }
         } else {
           console.log("No se pasó prop onAgregar")
         }
@@ -142,6 +167,16 @@ export default function ModuloCuentasBancarias({
       // 2. Sumar Destino
       await updateCuenta(destino.id, { balance: destino.balance + montoNum })
 
+      // 3. Registrar en el historial local
+      agregarAlHistorial({
+        id: Date.now(),
+        tipo: 'transferencia',
+        monto: montoNum,
+        ref: `${origen.nombre} ➝ ${destino.nombre}`,
+        fecha: 'Ahora',
+        cuentaNombre: origen.nombre
+      })
+
       console.log("💰 Transferencia ejecutada:", { origen: origen.nombre, destino: destino.nombre, monto: montoNum })
 
       setMsgTrans('✅ Transferencia exitosa!')
@@ -149,22 +184,25 @@ export default function ModuloCuentasBancarias({
       setOrigenId('')
       setDestinoId('')
 
-      setListaMovimientos(prev => [
-        { 
-          id: Date.now(), 
-          tipo: 'transferencia', 
-          monto: montoNum, 
-          ref: `A ${origen.nombre}`, 
-          fecha: 'Ahora' 
-        },
-        ...prev
-      ])
-
     } catch (err) {
       console.error("Error transfiriendo:", err)
       setMsgTrans('Error al procesar la transferencia')
     } finally {
       setTransLoading(false)
+    }
+  }
+
+  // Helper para colorear según tipo
+  const getIconoYColor = (mov) => {
+    switch (mov.tipo) {
+      case 'deposito': return { icon: <PlusCircle className="w-4 h-4 text-green-400" />, color: 'text-green-400' }
+      case 'retiro': return { icon: <MinusCircle className="w-4 h-4 text-red-400" />, color: 'text-red-400' }
+      case 'gasto': return { icon: <MinusCircle className="w-4 h-4 text-red-400" />, color: 'text-red-400' }
+      case 'ingreso': return { icon: <PlusCircle className="w-4 h-4 text-green-400" />, color: 'text-green-400' }
+      case 'transferencia': return { icon: <ArrowLeftRight className="w-4 h-4 text-cyan-400" />, color: 'text-cyan-400' }
+      case 'pago': return { icon: <Wallet className="w-4 h-4 text-yellow-400" />, color: 'text-yellow-400' }
+      case 'ajuste': return { icon: <Edit2 className="w-4 h-4 text-blue-400" />, color: 'text-blue-400' }
+      default: return { icon: <Activity className="w-4 h-4 text-gray-400" />, color: 'text-gray-400' }
     }
   }
 
@@ -260,36 +298,39 @@ export default function ModuloCuentasBancarias({
         )}
       </div>
 
-      {/* --- SECCIÓN 2: HISTORIAL DE MOVIMIENTOS --- */}
+      {/* --- SECCIÓN 2: HISTORIAL DE MOVIMIENTOS (REAL) --- */}
       <div className="bg-gray-800/30 rounded-xl p-4 mb-6 border border-gray-700">
         <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
           <Activity className="w-5 h-5 text-gray-400" />
           <h3 className="text-white font-bold text-sm">Historial Reciente</h3>
         </div>
 
-        <div className="space-y-2 max-h-40 overflow-y-auto">
+        <div className="space-y-2 max-h-60 overflow-y-auto">
           {listaMovimientos.length === 0 ? (
             <div className="text-center py-8 text-gray-500 text-xs">
               <div className="text-3xl mb-2">📂</div>
-              Sin movimientos registrados
+              Sin movimientos registrados recientes
             </div>
           ) : (
-            listaMovimientos.map((mov) => (
-              <div key={mov.id} className="flex items-center justify-between text-sm bg-gray-900/50 p-2 rounded border border-gray-700/50">
-                <div className="flex items-center gap-2">
-                  {mov.tipo === 'deposito' && <PlusCircle className="w-4 h-4 text-green-400" />}
-                  {mov.tipo === 'retiro' && <MinusCircle className="w-4 h-4 text-red-400" />}
-                  {mov.tipo === 'transferencia' && <ArrowLeftRight className="w-4 h-4 text-cyan-400" />}
-                  {mov.tipo === 'pago' && <Wallet className="w-4 h-4 text-yellow-400" />}
-                  
-                  <span className="text-gray-400">{mov.fecha}</span>
-                  <span className="text-gray-300 italic truncate max-w-[100px]">{mov.ref}</span>
+            listaMovimientos.map((mov) => {
+              const { icon, color } = getIconoYColor(mov)
+              return (
+                <div key={mov.id} className="flex items-center justify-between text-sm bg-gray-900/50 p-2 rounded border border-gray-700/50 hover:bg-gray-900 transition-colors">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {icon}
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-gray-300 font-medium truncate text-xs">{mov.ref}</span>
+                      <span className="text-[10px] text-gray-500">
+                        {mov.fecha} {mov.cuentaNombre ? `• ${mov.cuentaNombre}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <span className={`font-bold text-xs ${color}`}>
+                    {['retiro', 'gasto', 'ajuste'].includes(mov.tipo) ? '-' : '+'}${mov.monto}
+                  </span>
                 </div>
-                <span className={`font-bold ${mov.tipo === 'deposito' || mov.tipo === 'transferencia' ? 'text-green-400' : 'text-red-400'}`}>
-                  {mov.tipo === 'retiro' ? '-' : '+'}${mov.monto}
-                </span>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
@@ -362,12 +403,12 @@ export default function ModuloCuentasBancarias({
               </div>
 
               {/* Botones de Acción */}
-              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-800">
+              <div className="flex gap-2 mt-4 pt-4 border-t border-gray-800">
                 <button 
                   onClick={() => handleEditarClick(cuenta)} 
-                  className="flex-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 py-2 rounded-lg text-sm font-semibold transition-colors border border-blue-500/30"
+                  className="flex-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors border border-blue-500/30"
                 >
-                  <Edit2 className="w-4 h-4 mr-2"/> Editar
+                  <Edit2 className="w-4 h-4 mr-1"/> Editar
                 </button>
                 
                 <button
@@ -376,10 +417,10 @@ export default function ModuloCuentasBancarias({
                     // Si el destino es igual a esta cuenta, lo limpiamos
                     if (destinoId === cuenta.id) setDestinoId('')
                   }}
-                  className="flex-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 py-2 rounded-lg text-sm font-semibold transition-colors border border-cyan-500/30"
+                  className="flex-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors border border-cyan-500/30"
                   title="Iniciar transferencia"
                 >
-                  <ArrowLeftRight className="w-4 h-4 mr-2"/> Transferir
+                  <ArrowLeftRight className="w-4 h-4 mr-1"/> Transf
                 </button>
 
                 <button
