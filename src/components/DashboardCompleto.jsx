@@ -428,8 +428,10 @@ export default function DashboardContent() {
     setItemSeleccionado({ item: normalizedItem, type, status })
   }
 
-   const handleEditarUniversal = (item, type) => {
+  const handleEditarUniversal = (item, type) => {
+    // FIX: Cerramos el modal de detalles actual
     setItemSeleccionado(null)
+    
     setIngresoEditando(null)
     setGastoEditando(null)
     setGastoFijoEditando(null)
@@ -459,18 +461,24 @@ export default function DashboardContent() {
     console.warn('⚠️ Tipo no reconocido en handleEditarUniversal:', type)
   }
 
-  const handlePagarUniversal = (item, type) => {
+  const handlePagarUniversal = async (item, type) => {
     if (type === ITEM_TYPES.DEUDA) {
+      // Cerramos detalles antes de abrir el modal de pago específico
+      setItemSeleccionado(null)
       setDeudaEditando(item)
       setShowModal('pagoTarjeta')
       return
     }
     if (type === ITEM_TYPES.FIJO) {
-      handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
+      // Esperamos a que guarde y luego cerramos
+      await handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
+      setItemSeleccionado(null)
       return
     }
     if (type === ITEM_TYPES.SUSCRIPCION) {
-      handlePagoManual(item)
+      // Esperamos a que pague manualmente y luego cerramos
+      await handlePagoManual(item)
+      setItemSeleccionado(null)
       return
     }
   }

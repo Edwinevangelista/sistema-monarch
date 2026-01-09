@@ -11,7 +11,6 @@ const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
     metodo: METODOS_PAGO[0]
   })
 
-  // Pre-cargar datos si estamos editando
   useEffect(() => {
     if (gastoInicial) {
       setFormData({
@@ -30,14 +29,22 @@ const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
       return
     }
 
-    const resultado = await onSave({
-      ...formData,
-      monto: parseFloat(formData.monto)
-    })
-
-    if (resultado.success) {
+    try {
+      // ✅ Construir payload con ID si estamos editando
+      const payload = {
+        ...formData,
+        monto: parseFloat(formData.monto)
+      }
+      
+      // ✅ Incluir ID si estamos editando
+      if (gastoInicial?.id) {
+        payload.id = gastoInicial.id
+      }
+      
+      await onSave(payload)
       onClose()
-    } else {
+    } catch (error) {
+      console.error(error)
       alert('Error al guardar')
     }
   }

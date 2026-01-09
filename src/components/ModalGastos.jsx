@@ -66,55 +66,62 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
     }
   }, [gastoInicial])
 
-  const handleSubmit = async () => {
-    if (!formData.categoria || !formData.monto) {
-      setError('Por favor completa categoría y monto')
-      return
-    }
-    if (tipoGasto === 'fijo' && !formData.nombre) {
-      setError('Por favor completa el nombre del gasto fijo')
-      return
-    }
-
-    // ✅ CORRECCIÓN: Validación específica para Gastos Fijos
-    if (tipoGasto === 'fijo' && !formData.dia_venc) {
-      setError('Por favor ingresa el día de vencimiento (1-31)')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      if (tipoGasto === 'variable') {
-        await onSaveVariable({
-          fecha: formData.fecha,
-          categoria: formData.categoria,
-          descripcion: formData.descripcion,
-          monto: parseFloat(formData.monto),
-          metodo: formData.metodo,
-          cuenta_id: formData.cuenta_id || null
-        })
-      } else {
-        // ✅ Pasamos el ID para identificar si es edición
-        await onSaveFijo({
-          id: gastoInicial?.id, 
-          nombre: formData.nombre,
-          categoria: formData.categoria,
-          monto: parseFloat(formData.monto),
-          dia_venc: parseInt(formData.dia_venc),
-          estado: formData.estado,
-          cuenta_id: formData.cuenta_id || null
-        })
-      }
-      onClose()
-    } catch (err) {
-      console.error('Error al guardar gasto:', err)
-      setError(err?.message || 'Error al guardar el gasto')
-    } finally {
-      setLoading(false)
-    }
+const handleSubmit = async () => {
+  if (!formData.categoria || !formData.monto) {
+    setError('Por favor completa categoría y monto')
+    return
   }
+  if (tipoGasto === 'fijo' && !formData.nombre) {
+    setError('Por favor completa el nombre del gasto fijo')
+    return
+  }
+
+  if (tipoGasto === 'fijo' && !formData.dia_venc) {
+    setError('Por favor ingresa el día de vencimiento (1-31)')
+    return
+  }
+
+  setLoading(true)
+  setError('')
+
+  try {
+    if (tipoGasto === 'variable') {
+      // ✅ CORREGIDO: Ahora incluye el ID
+      const payload = {
+        fecha: formData.fecha,
+        categoria: formData.categoria,
+        descripcion: formData.descripcion,
+        monto: parseFloat(formData.monto),
+        metodo: formData.metodo,
+        cuenta_id: formData.cuenta_id || null
+      }
+      
+      // ✅ Agregar ID si estamos editando
+      if (gastoInicial?.id) {
+        payload.id = gastoInicial.id
+      }
+      
+      await onSaveVariable(payload)
+    } else {
+      // Gastos fijos - Ya está correcto
+      await onSaveFijo({
+        id: gastoInicial?.id, 
+        nombre: formData.nombre,
+        categoria: formData.categoria,
+        monto: parseFloat(formData.monto),
+        dia_venc: parseInt(formData.dia_venc),
+        estado: formData.estado,
+        cuenta_id: formData.cuenta_id || null
+      })
+    }
+    onClose()
+  } catch (err) {
+    console.error('Error al guardar gasto:', err)
+    setError(err?.message || 'Error al guardar el gasto')
+  } finally {
+    setLoading(false)
+  }
+}
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

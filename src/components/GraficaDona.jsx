@@ -1,14 +1,13 @@
 import React from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 const GraficaDona = ({ data, onCategoryClick }) => {
-  // 🔧 FIX: Validar que data existe y tiene elementos
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-        <h3 className="text-white text-lg font-semibold mb-4">Gastos por Categoría</h3>
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
+        <h3 className="text-lg md:text-xl font-bold text-white mb-4">Gastos por Categoría</h3>
         <div className="flex items-center justify-center h-64 text-gray-400">
           No hay datos de gastos para mostrar
         </div>
@@ -16,14 +15,16 @@ const GraficaDona = ({ data, onCategoryClick }) => {
     )
   }
 
+  const total = data.reduce((sum, item) => sum + item.value, 0)
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-900 p-3 rounded-lg shadow-lg border border-gray-700">
-          <p className="text-white font-semibold">{payload[0].name}</p>
-          <p className="text-green-400">${payload[0].value.toLocaleString()}</p>
+        <div className="bg-gray-900 border-2 border-gray-700 rounded-xl p-3 shadow-2xl">
+          <p className="text-white font-bold">{payload[0].name}</p>
+          <p className="text-green-400 font-semibold">${payload[0].value.toLocaleString()}</p>
           <p className="text-gray-400 text-sm">
-            {((payload[0].value / data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%
+            {((payload[0].value / total) * 100).toFixed(1)}%
           </p>
         </div>
       )
@@ -32,6 +33,8 @@ const GraficaDona = ({ data, onCategoryClick }) => {
   }
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    if (percent < 0.05) return null // No mostrar porcentajes menores a 5%
+    
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180))
     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180))
@@ -41,9 +44,10 @@ const GraficaDona = ({ data, onCategoryClick }) => {
         x={x} 
         y={y} 
         fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+        textAnchor="middle" 
         dominantBaseline="central"
-        className="text-sm font-semibold"
+        className="text-xs md:text-sm font-bold"
+        style={{ textShadow: '0 0 3px rgba(0,0,0,0.8)' }}
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
@@ -51,28 +55,24 @@ const GraficaDona = ({ data, onCategoryClick }) => {
   }
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-gray-700">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white text-lg font-semibold">Gastos por Categoría</h3>
+        <h3 className="text-lg md:text-xl font-bold text-white">Gastos por Categoría</h3>
         {onCategoryClick && (
           <button
             onClick={onCategoryClick}
-            className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors flex items-center gap-1 group"
+            className="text-blue-400 hover:text-blue-300 text-xs md:text-sm font-medium transition-colors flex items-center gap-1 group"
           >
             Ver detalles
-            <svg 
-              className="w-4 h-4 group-hover:translate-x-1 transition-transform" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         )}
       </div>
       
-      <ResponsiveContainer width="100%" height={300}>
+      {/* Gráfica */}
+      <ResponsiveContainer width="100%" height={280}>
         <PieChart>
           <Pie
             data={data}
@@ -80,7 +80,8 @@ const GraficaDona = ({ data, onCategoryClick }) => {
             cy="50%"
             labelLine={false}
             label={renderCustomLabel}
-            outerRadius={100}
+            outerRadius={90}
+            innerRadius={40}
             fill="#8884d8"
             dataKey="value"
             onClick={onCategoryClick}
@@ -95,17 +96,32 @@ const GraficaDona = ({ data, onCategoryClick }) => {
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            verticalAlign="bottom" 
-            height={36}
-            formatter={(value, entry) => (
-              <span className="text-white text-sm">
-                {value}: ${entry.payload.value.toLocaleString()}
-              </span>
-            )}
-          />
         </PieChart>
       </ResponsiveContainer>
+
+      {/* Leyenda personalizada dentro del contenedor */}
+      <div className="mt-4 max-h-[150px] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {data.map((entry, index) => (
+            <div 
+              key={index} 
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors cursor-pointer"
+              onClick={onCategoryClick}
+            >
+              <div 
+                className="w-3 h-3 rounded-full flex-shrink-0" 
+                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs md:text-sm font-medium truncate">{entry.name}</p>
+                <p className="text-gray-400 text-[10px] md:text-xs">
+                  ${entry.value.toLocaleString()} ({((entry.value / total) * 100).toFixed(1)}%)
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
