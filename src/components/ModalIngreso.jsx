@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { DollarSign, X, Building2, Save } from 'lucide-react' // ✅ Agregado icono Save (opcional, o usar texto)
-import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { DollarSign, X, Building2 } from 'lucide-react' // ✅ DEJAR ASÍimport { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalIngreso = ({ onClose, onSave, ingresoInicial = null }) => {
   const { cuentas, loading: loadingCuentas } = useCuentasBancarias()
