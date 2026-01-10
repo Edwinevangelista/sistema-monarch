@@ -80,12 +80,13 @@ export default function CargandoApp() {
         localStorage.setItem('usuario_fintrack', JSON.stringify(datosUsuario))
 
         setUsuario(datosUsuario)
-
-        // D. Simular carga visual (animación de barra de progreso)
-        // Aunque los datos ya llegaron, esperamos 2 segundos para UX
+        // D. Simular carga visual (Animación de barra de progreso más lenta)
+        // Ajustamos el tiempo a 3 segundos (3000ms) divididos en 20 pasos = 150ms por paso
         const pasos = 20
+        const delayPorPaso = 150 
+        
         for (let i = 1; i <= pasos; i++) {
-          await new Promise(resolve => setTimeout(resolve, 50)) // 50ms * 20 = 1000ms
+          await new Promise(resolve => setTimeout(resolve, delayPorPaso))
           if (montado) setProgreso(Math.floor((i / pasos) * 100))
         }
 
