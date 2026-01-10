@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { 
@@ -107,6 +107,7 @@ function Auth() {
     setLoading(true)
 
     try {
+      console.log("🔍 Intentando login con:", email)
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -114,14 +115,17 @@ function Auth() {
 
       if (error) throw error
 
-           setMessage({ type: 'success', text: '✅ Inicio de sesión exitoso' })
+      console.log("✅ Login correcto. Mostrando mensaje de éxito.")
+      setMessage({ type: 'success', text: '✅ Inicio de sesión exitoso' })
       
+      console.log("⏱️ Esperando 1 segundo antes de navegar...")
       setTimeout(() => {
+        console.log("🚀 Navegando a /loading...")
         navigate('/loading') // ✅ REDIRIGIR A LA NUEVA PANTALLA DE CARGA
       }, 1000)
 
     } catch (error) {
-      console.error('Error login:', error)
+      console.error("❌ Error en login:", error)
       let errorMessage = 'Error en el inicio de sesión'
       
       if (error.message.includes('Invalid login credentials')) {
@@ -132,6 +136,7 @@ function Auth() {
       
       setMessage({ type: 'error', text: `❌ ${errorMessage}` })
     } finally {
+      console.log("🏁 Fin del proceso de login (Finally)")
       setLoading(false)
     }
   }
