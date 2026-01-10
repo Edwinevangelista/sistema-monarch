@@ -82,8 +82,8 @@ export default function CargandoApp() {
         setUsuario(datosUsuario)
         // D. Simular carga visual (Animación de barra de progreso más lenta)
         // Ajustamos el tiempo a 3 segundos (3000ms) divididos en 20 pasos = 150ms por paso
-        const pasos = 20
-        const delayPorPaso = 150 
+        const pasos = 30
+        const delayPorPaso = 200
         
         for (let i = 1; i <= pasos; i++) {
           await new Promise(resolve => setTimeout(resolve, delayPorPaso))
