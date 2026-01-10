@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ChevronLeft, ChevronRight, ScanLine } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react' // ✅ Agregado useMemo
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine } from 'lucide-react'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -33,6 +33,7 @@ import ModalUsuario from './ModalUsuario'
 import Footer from './Footer'
 import ListaIngresos from './ListaIngresos'
 import ModalDetalleUniversal from './ModalDetalleUniversal'
+import CalendarioPagos from './CalendarioPagos' // ✅ Importar Calendario
 
 // --- MODALES NUEVOS ---
 import DebtPlannerModal from './DebtPlannerModal'
@@ -49,324 +50,12 @@ import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import { supabase } from '../lib/supabaseClient'
 
 // ============================================
-// COMPONENTE CALENDARIO DE PAGOS
-// ============================================
-const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
-  const [mesActual, setMesActual] = useState(new Date())
-  const [diaSeleccionado, setDiaSeleccionado] = useState(null)
-  
-  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-  
-  const diasSemana = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB']
-  
-  const obtenerDiasDelMes = (fecha) => {
-    const año = fecha.getFullYear()
-    const mes = fecha.getMonth()
-    const primerDia = new Date(año, mes, 1)
-    const ultimoDia = new Date(año, mes + 1, 0)
-    const diasEnMes = ultimoDia.getDate()
-    const diaSemanaInicio = primerDia.getDay()
-    
-    const dias = []
-    for (let i = 0; i < diaSemanaInicio; i++) {
-      dias.push(null)
-    }
-    for (let dia = 1; dia <= diasEnMes; dia++) {
-      dias.push(dia)
-    }
-    return dias
-  }
-  
-  const obtenerEventosDelDia = (dia) => {
-    if (!dia) return { ingresos: 0, gastos: 0, eventos: [] }
-    
-    const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
-    const fechaStr = fecha.toISOString().split('T')[0]
-    
-    let totalIngresos = 0
-    let totalGastos = 0
-    const eventos = []
-    
-    // Ingresos
-    ingresos?.forEach(ing => {
-      if (ing.fecha === fechaStr) {
-        totalIngresos += Number(ing.monto || 0)
-        eventos.push({ 
-          tipo: 'ingreso', 
-          nombre: ing.fuente || 'Ingreso', 
-          monto: ing.monto,
-          icono: '💵'
-        })
-      }
-    })
-    
-    // Gastos variables
-    gastos?.forEach(g => {
-      if (g.fecha === fechaStr) {
-        totalGastos += Number(g.monto || 0)
-        eventos.push({ 
-          tipo: 'gasto', 
-          nombre: g.descripcion || g.categoria || 'Gasto', 
-          monto: g.monto,
-          icono: '💸'
-        })
-      }
-    })
-    
-    // Gastos fijos
-    gastosFijos?.forEach(gf => {
-      if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
-        totalGastos += Number(gf.monto || 0)
-        eventos.push({ 
-          tipo: 'gasto_fijo', 
-          nombre: gf.nombre, 
-          monto: gf.monto,
-          icono: '📌'
-        })
-      }
-    })
-    
-    // Suscripciones
-    suscripciones?.forEach(sub => {
-      if (sub.estado === 'Activo' && sub.proximo_pago) {
-        const proxPago = new Date(sub.proximo_pago + 'T00:00:00')
-        if (proxPago.getDate() === dia && 
-            proxPago.getMonth() === mesActual.getMonth() &&
-            proxPago.getFullYear() === mesActual.getFullYear()) {
-          totalGastos += Number(sub.costo || 0)
-          eventos.push({ 
-            tipo: 'suscripcion', 
-            nombre: sub.servicio, 
-            monto: sub.costo,
-            icono: '🔄'
-          })
-        }
-      }
-    })
-    
-    // Deudas
-    deudas?.forEach(d => {
-      if (d.vence) {
-        const vence = new Date(d.vence + 'T00:00:00')
-        if (vence.getDate() === dia && 
-            vence.getMonth() === mesActual.getMonth() &&
-            vence.getFullYear() === mesActual.getFullYear()) {
-          totalGastos += Number(d.pago_minimo || 0)
-          eventos.push({ 
-            tipo: 'deuda', 
-            nombre: d.cuenta, 
-            monto: d.pago_minimo,
-            icono: '💳'
-          })
-        }
-      }
-    })
-    
-    return { ingresos: totalIngresos, gastos: totalGastos, eventos }
-  }
-  
-  const cambiarMes = (direccion) => {
-    const nuevaFecha = new Date(mesActual)
-    nuevaFecha.setMonth(nuevaFecha.getMonth() + direccion)
-    setMesActual(nuevaFecha)
-    setDiaSeleccionado(null)
-  }
-  
-  const handleDiaClick = (dia) => {
-    if (!dia) return
-    setDiaSeleccionado(dia)
-  }
-  
-  const dias = obtenerDiasDelMes(mesActual)
-  const hoy = new Date()
-  const esHoy = (dia) => {
-    return dia === hoy.getDate() && 
-           mesActual.getMonth() === hoy.getMonth() && 
-           mesActual.getFullYear() === hoy.getFullYear()
-  }
-  
-  const eventosDelDia = diaSeleccionado ? obtenerEventosDelDia(diaSeleccionado) : null
-  
-  return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-3 md:p-6 border border-gray-700 relative">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 md:mb-4">
-        <button 
-          onClick={() => cambiarMes(-1)}
-          className="p-2 hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
-        >
-          <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-        </button>
-        
-        <h3 className="text-base md:text-xl font-bold text-white">
-          {meses[mesActual.getMonth()]} {mesActual.getFullYear()}
-        </h3>
-        
-        <button 
-          onClick={() => cambiarMes(1)}
-          className="p-2 hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
-        >
-          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-        </button>
-      </div>
-      
-      {/* Días de la semana */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
-        {diasSemana.map(dia => (
-          <div key={dia} className="text-center text-[10px] md:text-xs text-gray-400 font-semibold py-1">
-            {dia}
-          </div>
-        ))}
-      </div>
-      
-      {/* Grid de días */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2">
-        {dias.map((dia, index) => {
-          if (!dia) {
-            return <div key={`empty-${index}`} className="aspect-square" />
-          }
-          
-          const { ingresos, gastos, eventos } = obtenerEventosDelDia(dia)
-          const balance = ingresos - gastos
-          const tieneEventos = eventos.length > 0
-          
-          return (
-            <div
-              key={dia}
-              onClick={() => handleDiaClick(dia)}
-              className={`
-                aspect-square rounded-md md:rounded-lg p-1 md:p-2 
-                flex flex-col items-center justify-center
-                transition-all cursor-pointer relative
-                ${esHoy(dia) 
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-400 font-bold' 
-                  : tieneEventos
-                    ? balance > 0 
-                      ? 'bg-green-500/20 hover:bg-green-500/40 text-white'
-                      : 'bg-red-500/20 hover:bg-red-500/40 text-white'
-                    : 'bg-gray-700/30 hover:bg-gray-700/50 text-gray-400'
-                }
-                ${diaSeleccionado === dia ? 'ring-2 ring-purple-500' : ''}
-                active:scale-95
-              `}
-            >
-              <span className="text-xs md:text-sm font-bold">{dia}</span>
-              
-              {tieneEventos && (
-                <div className="text-[8px] md:text-[10px] font-bold mt-0.5">
-                  {balance > 0 ? `+$${Math.round(balance)}` : `-$${Math.round(gastos)}`}
-                </div>
-              )}
-              
-              {tieneEventos && (
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
-                  {eventos.slice(0, 3).map((_, i) => (
-                    <div key={i} className="w-1 h-1 rounded-full bg-white/60"></div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      
-      {/* Modal flotante con eventos del día - CENTRADO */}
-      {diaSeleccionado && eventosDelDia && eventosDelDia.eventos.length > 0 && (
-        <>
-          {/* Overlay para cerrar */}
-          <div 
-            className="fixed inset-0 z-40 bg-black/60"
-            onClick={() => setDiaSeleccionado(null)}
-          />
-          
-          {/* Modal */}
-          <div 
-            className="fixed z-50 bg-gray-900 rounded-xl shadow-2xl border-2 border-purple-500 p-4 max-w-xs w-full"
-            style={{
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)'
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
-              <h4 className="text-sm font-bold text-white">
-                {diasSemana[new Date(mesActual.getFullYear(), mesActual.getMonth(), diaSeleccionado).getDay()].slice(0, 3)} {diaSeleccionado} de {meses[mesActual.getMonth()]}
-              </h4>
-              <button 
-                onClick={() => setDiaSeleccionado(null)}
-                className="text-gray-400 hover:text-white text-xl"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {/* Lista de eventos */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {eventosDelDia.eventos.map((evento, i) => (
-                <div 
-                  key={i} 
-                  className={`
-                    p-2 rounded-lg flex items-center gap-2
-                    ${evento.tipo === 'ingreso' ? 'bg-green-600/30 border border-green-500/50' : 
-                      evento.tipo === 'suscripcion' ? 'bg-purple-600/30 border border-purple-500/50' :
-                      evento.tipo === 'deuda' ? 'bg-red-600/30 border border-red-500/50' :
-                      evento.tipo === 'gasto_fijo' ? 'bg-orange-600/30 border border-orange-500/50' :
-                      'bg-yellow-600/30 border border-yellow-500/50'}
-                  `}
-                >
-                  <span className="text-lg">{evento.icono}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-white truncate">{evento.nombre}</div>
-                    <div className="text-[10px] text-gray-400 capitalize">{evento.tipo.replace('_', ' ')}</div>
-                  </div>
-                  <div className="text-sm font-bold text-white whitespace-nowrap">
-                    ${Number(evento.monto).toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Total */}
-            <div className="mt-3 pt-3 border-t border-gray-700 flex justify-between text-sm font-bold">
-              <span className="text-gray-400">Total del día:</span>
-              <span className={eventosDelDia.ingresos - eventosDelDia.gastos >= 0 ? 'text-green-400' : 'text-red-400'}>
-                {eventosDelDia.ingresos > 0 && `+$${eventosDelDia.ingresos.toFixed(2)} `}
-                {eventosDelDia.gastos > 0 && `-$${eventosDelDia.gastos.toFixed(2)}`}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
-      
-      {/* Leyenda */}
-      <div className="mt-3 md:mt-4 flex flex-wrap gap-2 md:gap-3 justify-center text-[9px] md:text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 md:w-3 md:h-3 rounded bg-blue-600"></div>
-          <span className="text-gray-400">Hoy</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 md:w-3 md:h-3 rounded bg-green-500/30"></div>
-          <span className="text-gray-400">Balance +</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 md:w-3 md:h-3 rounded bg-red-500/30"></div>
-          <span className="text-gray-400">Gastos</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD
 // ============================================
 
 export default function DashboardContent() {
   
-  const { cuentas, addCuenta, updateCuenta, deleteCuenta } = useCuentasBancarias()
-
+const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
   const [usuario, setUsuario] = useState({ 
     email: 'usuario@ejemplo.com', 
     nombre: 'FinTrack User'
@@ -381,7 +70,12 @@ export default function DashboardContent() {
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
   const [showLector, setShowLector] = useState(false)
-  const [movimientosBancarios, setMovimientosBancarios] = useState([])
+
+  // ✅ FIX: Estado inicial del historial, leemos de localStorage si existe
+  const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
+    const guardado = localStorage.getItem('historial_bancarios_v2');
+    return guardado ? JSON.parse(guardado) : [];
+  });
 
   const [ingresoEditando, setIngresoEditando] = useState(null)
   const [gastoEditando, setGastoEditando] = useState(null)
@@ -402,6 +96,10 @@ export default function DashboardContent() {
         };
   });
 
+  // ✅ FIX: `hoy` definida al inicio para evitar warnings
+  const hoy = useMemo(() => new Date(), [])
+  const hoyStr = hoy.toISOString().split('T')[0]
+
   useInactivityTimeout(15)
 
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
@@ -413,11 +111,90 @@ export default function DashboardContent() {
   const { refresh: refreshPlanes } = usePlanesGuardados()
   const { permission, showLocalNotification } = useNotifications()
 
-  // FIX: Normalizar el item para asegurar que el campo 'monto' exista para todos los tipos
+  // ✅ FIX: Función auxiliar para guardar historial en localStorage y Estado
+  const actualizarHistorial = (nuevoMovimiento) => {
+    setMovimientosBancarios(prev => {
+      const nuevo = [nuevoMovimiento, ...prev];
+      localStorage.setItem('historial_bancarios_v2', JSON.stringify(nuevo));
+      return nuevo;
+    });
+  };
+
+  // ✅ FIX: Reconstrucción inicial desde BD (solo al montar si localStorage está vacío)
+  useEffect(() => {
+    if (movimientosBancarios.length === 0) {
+      const historialInicial = []
+      
+      ingresos?.forEach(ing => {
+        if (ing.cuenta_id) {
+          const cuenta = cuentas.find(c => c.id === ing.cuenta_id)
+          historialInicial.push({
+            id: `ing-${ing.id}`,
+            tipo: 'ingreso',
+            monto: Number(ing.monto),
+            ref: `Ingreso: ${ing.fuente}`,
+            fecha: ing.fecha,
+            cuentaId: ing.cuenta_id,
+            cuentaNombre: cuenta?.nombre || 'Desconocida'
+          })
+        }
+      })
+
+      gastos?.forEach(g => {
+        if (g.cuenta_id) {
+          const cuenta = cuentas.find(c => c.id === g.cuenta_id)
+          historialInicial.push({
+            id: `gasto-var-${g.id}`,
+            tipo: 'gasto',
+            monto: Number(g.monto),
+            ref: g.descripcion || g.categoria,
+            fecha: g.fecha,
+            cuentaId: g.cuenta_id,
+            cuentaNombre: cuenta?.nombre || 'Desconocida'
+          })
+        }
+      })
+
+      gastosFijos?.forEach(gf => {
+        if (gf.cuenta_id) {
+          const cuenta = cuentas.find(c => c.id === gf.cuenta_id)
+          const fechaAprox = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc || 1).toISOString().split('T')[0]
+          historialInicial.push({
+            id: `gasto-fijo-${gf.id}`,
+            tipo: 'gasto',
+            monto: Number(gf.monto),
+            ref: `Fijo: ${gf.nombre}`,
+            fecha: fechaAprox,
+            cuentaId: gf.cuenta_id,
+            cuentaNombre: cuenta?.nombre || 'Desconocida'
+          })
+        }
+      })
+
+      suscripciones?.forEach(sub => {
+        if (sub.cuenta_id && sub.proximo_pago) {
+          const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
+          historialInicial.push({
+            id: `sub-${sub.id}`,
+            tipo: 'gasto',
+            monto: Number(sub.costo),
+            ref: `Suscripción: ${sub.servicio}`,
+            fecha: sub.proximo_pago,
+            cuentaId: sub.cuenta_id,
+            cuentaNombre: cuenta?.nombre || 'Desconocida'
+          })
+        }
+      })
+
+      historialInicial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      setMovimientosBancarios(historialInicial)
+      localStorage.setItem('historial_bancarios_v2', JSON.stringify(historialInicial))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingresos, gastos, gastosFijos, suscripciones, cuentas])
+
   const handleOpenDetail = (item, type) => {
     let status = null
-    
-    // Creamos una copia del item y nos aseguramos de tener un campo 'monto' estandarizado
     const normalizedItem = { 
       ...item, 
       monto: item.monto || item.costo || item.pago_minimo || item.saldo || 0 
@@ -430,9 +207,7 @@ export default function DashboardContent() {
   }
 
   const handleEditarUniversal = (item, type) => {
-    // FIX: Cerramos el modal de detalles actual
     setItemSeleccionado(null)
-    
     setIngresoEditando(null)
     setGastoEditando(null)
     setGastoFijoEditando(null)
@@ -464,20 +239,17 @@ export default function DashboardContent() {
 
   const handlePagarUniversal = async (item, type) => {
     if (type === ITEM_TYPES.DEUDA) {
-      // Cerramos detalles antes de abrir el modal de pago específico
       setItemSeleccionado(null)
       setDeudaEditando(item)
       setShowModal('pagoTarjeta')
       return
     }
     if (type === ITEM_TYPES.FIJO) {
-      // Esperamos a que guarde y luego cerramos
       await handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
       setItemSeleccionado(null)
       return
     }
     if (type === ITEM_TYPES.SUSCRIPCION) {
-      // Esperamos a que pague manualmente y luego cerramos
       await handlePagoManual(item)
       setItemSeleccionado(null)
       return
@@ -498,36 +270,30 @@ export default function DashboardContent() {
       deleteGasto && deleteGasto(item.id)
     }
   }
-  const handleAgregarMovimientoBancario = (movimiento) => {
-    // Agregamos el nuevo movimiento al inicio de la lista
-    setMovimientosBancarios(prev => [movimiento, ...prev])
-  }
-   const handleGuardarIngreso = async (data) => {
+
+  // ✅ FIX: Handlers que llaman a actualizarHistorial
+  const handleGuardarIngreso = async (data) => {
     try {
       if (data.id) {
         await updateIngreso(data.id, data)
       } else {
         await addIngreso(data)
-        // ✅ FIX: Registrar en historial si tiene cuenta
         if (data.cuenta_id) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            handleAgregarMovimientoBancario({
+            // Actualizar Saldo
+            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) + Number(data.monto) })
+            // Actualizar Historial
+            actualizarHistorial({
               id: Date.now(),
               tipo: 'ingreso',
               monto: Number(data.monto),
               ref: `Ingreso: ${data.fuente || 'General'}`,
-              fecha: 'Ahora',
+              fecha: hoyStr,
               cuentaId: cuenta.id,
               cuentaNombre: cuenta.nombre
             })
           }
-        }
-      }
-      if (data.cuenta_id) {
-        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
-        if (cuenta) {
-          await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) + Number(data.monto) })
         }
       }
       setShowModal(null)
@@ -538,97 +304,69 @@ export default function DashboardContent() {
     }
   }
 
-const handleGuardarGasto = async (data) => {
-  try {
-    if (!data.fecha) {
-      data.fecha = new Date().toISOString().split('T')[0];
-    }
-    
-    console.log('📦 Guardando gasto:', data)
-    
-    if (data.id) {
-      // Es EDICIÓN
-      console.log('✏️ EDITANDO gasto ID:', data.id)
-      await updateGasto(data.id, data)
-    } else {
-      // Es CREACIÓN
-      console.log('➕ CREANDO nuevo gasto')
-      await addGasto(data)
+  const handleGuardarGasto = async (data) => {
+    try {
+      if (!data.fecha) data.fecha = hoyStr
       
-      // ✅ FIX: Agregar al historial bancario SI tiene una cuenta asignada
-      if (data.cuenta_id) {
-        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
-        if (cuenta) {
-          handleAgregarMovimientoBancario({
-            id: Date.now(),
-            tipo: 'gasto',
-            monto: Number(data.monto),
-            ref: data.descripcion || data.categoria || 'Gasto',
-            fecha: 'Ahora',
-            cuentaId: cuenta.id,
-            cuentaNombre: cuenta.nombre
-          })
+      if (data.id) {
+        await updateGasto(data.id, data)
+      } else {
+        await addGasto(data)
+        if (data.cuenta_id) {
+          const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+          if (cuenta) {
+            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(data.monto) })
+            actualizarHistorial({
+              id: Date.now(),
+              tipo: 'gasto',
+              monto: Number(data.monto),
+              ref: data.descripcion || data.categoria || 'Gasto',
+              fecha: hoyStr,
+              cuentaId: cuenta.id,
+              cuentaNombre: cuenta.nombre
+            })
+          }
         }
       }
+      setShowModal(null)
+      setGastoEditando(null)
+    } catch (e) {
+      console.error('❌ Error al guardar gasto:', e)
+      alert('Error al guardar el gasto')
     }
-    
-    // Actualizar saldo de la cuenta (ya lo tenías, lo mantengo)
-    if (data.cuenta_id) {
-      const cuenta = cuentas.find(c => c.id === data.cuenta_id)
-      if (cuenta) {
-        await updateCuenta(cuenta.id, { 
-          balance: Number(cuenta.balance) - Number(data.monto) 
-        })
-      }
-    }
-    
-    setShowModal(null)
-    setGastoEditando(null)
-  } catch (e) {
-    console.error('❌ Error al guardar gasto:', e)
-    alert('Error al guardar el gasto')
   }
-}
 
   const handleGuardarGastoFijo = async (data) => {
     try {
-      // Variables de control eliminadas por warnings
-      // const esNuevo = !data.id 
-      // const estadoPago = data.estado || 'Pendiente'
-      
       let mostrarEnHistorial = false
 
       if (data.id) {
         const { id, ...payload } = data;
         await updateGastoFijo(id, payload);
-        
-        // Solo mostrar en historial si marca como Pagado
         if (payload.estado === 'Pagado') mostrarEnHistorial = true
       } else {
         await addGastoFijo(data);
-        // Solo mostrar en historial si se crea ya como Pagado
         if (data.estado === 'Pagado') mostrarEnHistorial = true
       }
       
-      setShowModal(null)
-      setGastoFijoEditando(null)
-
-      // ✅ FIX: Registrar en historial solo si aplica
       if (mostrarEnHistorial && data.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === data.cuenta_id)
         if (cuenta) {
-          handleAgregarMovimientoBancario({
+          await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(data.monto) })
+          actualizarHistorial({
             id: Date.now(),
             tipo: 'gasto',
             monto: Number(data.monto),
             ref: `Fijo: ${data.nombre}`,
-            fecha: 'Ahora',
+            fecha: hoyStr,
             cuentaId: cuenta.id,
             cuentaNombre: cuenta.nombre
           })
         }
       }
 
+      setShowModal(null)
+      setGastoFijoEditando(null)
     } catch (e) {
       console.error('Error al guardar gasto fijo:', e)
       alert('Error al guardar: ' + e.message)
@@ -673,7 +411,7 @@ const handleGuardarGasto = async (data) => {
       }
       await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
       await addGasto({
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: hoyStr,
         monto: sub.costo,
         categoria: '📅 Suscripciones',
         descripcion: `Pago Manual: ${sub.servicio}`,
@@ -681,13 +419,12 @@ const handleGuardarGasto = async (data) => {
         metodo: 'Manual'
       })
       
-      // ✅ FIX: Registrar en historial
-      handleAgregarMovimientoBancario({
+      actualizarHistorial({
         id: Date.now(),
         tipo: 'gasto',
         monto: Number(sub.costo),
         ref: `Suscripción: ${sub.servicio}`,
-        fecha: 'Ahora',
+        fecha: hoyStr,
         cuentaId: cuenta.id,
         cuentaNombre: cuenta.nombre
       })
@@ -706,7 +443,6 @@ const handleGuardarGasto = async (data) => {
   const handleGuardarDeuda = async (data) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
       if (!user) {
         alert('❌ Error: No se pudo identificar al usuario.')
         return
@@ -806,9 +542,6 @@ const handleGuardarGasto = async (data) => {
     return isNaN(num) || num < 0 ? 0 : num
   }
 
-  const hoy = new Date()
-  const hoyStr = hoy.toISOString().split('T')[0]
-  
   const totalIngresos = ingresos.reduce((sum, i) => sum + validarMonto(i.monto), 0)
   
   const overviewData = {
@@ -852,7 +585,6 @@ const handleGuardarGasto = async (data) => {
   const tasaAhorroReal = (totalIngresos > 0 ? ((totalIngresos - totalGastosReales) / totalIngresos) * 100 : 0)
 
   useEffect(() => {
-    const hoyStr = hoy.toISOString().split('T')[0]
     suscripciones.forEach(async (sub) => {
       if (sub.estado !== 'Activo') return
       if (!sub.autopago || !sub.cuenta_id) return
@@ -871,6 +603,18 @@ const handleGuardarGasto = async (data) => {
           cuenta_id: cuenta.id,
           metodo: 'Autopago'
         })
+        
+        // ✅ FIX: Autopago también guarda en historial
+        actualizarHistorial({
+          id: Date.now(),
+          tipo: 'gasto',
+          monto: Number(sub.costo),
+          ref: `Suscripción: ${sub.servicio}`,
+          fecha: hoyStr,
+          cuentaId: cuenta.id,
+          cuentaNombre: cuenta.nombre
+        })
+
         const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
         if (updateSuscripcion) {
           await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
@@ -950,12 +694,12 @@ const handleGuardarGasto = async (data) => {
 
   useEffect(() => {
     if (permission === 'granted' && alertas.length > 0) {
-      const hoyStr = hoy.toDateString()
+      const hoyDateStr = hoy.toDateString()
       const ultimaAlertaEnviada = localStorage.getItem('ultima_alerta_notificacion_fecha')
-      if (ultimaAlertaEnviada !== hoyStr) {
+      if (ultimaAlertaEnviada !== hoyDateStr) {
         const alertaCritica = alertas.find(a => a.tipo === 'critical') || alertas[0]
         showLocalNotification('⚠️ Alertas financieras', { body: `${alertaCritica.mensaje}`, data: { url: '/' } })
-        localStorage.setItem('ultima_alerta_notificacion_fecha', hoyStr)
+        localStorage.setItem('ultima_alerta_notificacion_fecha', hoyDateStr)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1020,15 +764,15 @@ const handleGuardarGasto = async (data) => {
       {/* CONTENIDO */}
       <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         
-    {/* CALENDARIO */}
-<CalendarioPagos 
-  key={JSON.stringify(suscripciones.map(s => s.proximo_pago))}
-  gastosFijos={gastosFijos}
-  suscripciones={suscripciones}
-  deudas={deudas}
-  ingresos={ingresos}
-  gastos={gastos}
-/>
+        {/* CALENDARIO */}
+        <CalendarioPagos 
+          key={JSON.stringify(suscripciones.map(s => s.proximo_pago))}
+          gastosFijos={gastosFijos}
+          suscripciones={suscripciones}
+          deudas={deudas}
+          ingresos={ingresos}
+          gastos={gastos}
+        />
 
         {/* BOTONES DE ACCIÓN */}
         <div className="hidden md:flex flex-wrap gap-3 justify-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
@@ -1072,18 +816,18 @@ const handleGuardarGasto = async (data) => {
         </div>
 
         {/* GRÁFICAS */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-  <GraficaDona 
-    data={dataGraficaDona} 
-    onCategoryClick={() => setShowDetallesCategorias(true)} 
-  />
-  <GraficaBarras 
-    ingresos={ingresos}
-    gastos={gastos}
-    gastosFijos={gastosFijos}
-    suscripciones={suscripciones}
-  />
-</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <GraficaDona 
+            data={dataGraficaDona} 
+            onCategoryClick={() => setShowDetallesCategorias(true)} 
+          />
+          <GraficaBarras 
+            ingresos={ingresos}
+            gastos={gastos}
+            gastosFijos={gastosFijos}
+            suscripciones={suscripciones}
+          />
+        </div>
 
         {/* INGRESOS */}
         <ListaIngresos 
@@ -1173,21 +917,24 @@ const handleGuardarGasto = async (data) => {
         />
       )}
 
-      {showModal === 'cuentas' && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-           <ModuloCuentasBancarias 
-  cuentas={cuentas} 
-  onAgregar={addCuenta} 
-  onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
-  onEliminar={deleteCuenta} 
-  balanceTotal={kpis.saldo} // (Opcional, para mostrar el total real)
-  listaMovimientosExternos={movimientosBancarios} // ⬅️ IMPORTANTE: Pasamos el estado real
-/>
-            <div className="p-4"><button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button></div>
-          </div>
-        </div>
-      )}
+{showModal === 'cuentas' && (
+  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <ModuloCuentasBancarias 
+        cuentas={cuentas} 
+        onAgregar={addCuenta} 
+        onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
+        onEliminar={deleteCuenta} 
+        balanceTotal={cuentas.reduce((sum, c) => sum + Number(c.balance || 0), 0)}
+        listaMovimientosExternos={movimientosBancarios}
+        onTransferenciaExitosa={refreshCuentas}
+      />
+      <div className="p-4">
+        <button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button>
+      </div>
+    </div>
+  </div>
+)}
 
       {showModal === 'gastos' && (
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />

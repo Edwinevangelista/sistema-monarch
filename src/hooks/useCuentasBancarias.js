@@ -1,6 +1,5 @@
-// src/hooks/useCuentasBancarias.js
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabaseClient'
 
 export function useCuentasBancarias() {
   const [cuentas, setCuentas] = useState([])
@@ -11,7 +10,6 @@ export function useCuentasBancarias() {
   const fetchCuentas = async () => {
     try {
       setLoading(true)
-      // ✅ CORREGIDO: Obtenemos el usuario aquí, no afuera
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
@@ -28,9 +26,10 @@ export function useCuentasBancarias() {
 
       if (error) throw error
       
+      console.log('✅ Cuentas cargadas:', data)
       setCuentas(data || [])
     } catch (err) {
-      console.error('Error cargando cuentas:', err)
+      console.error('❌ Error cargando cuentas:', err)
       setError(err)
     } finally {
       setLoading(false)
@@ -40,7 +39,6 @@ export function useCuentasBancarias() {
   // Agregar cuenta
   const addCuenta = async (cuentaData) => {
     try {
-      // ✅ CORREGIDO: Obtenemos el usuario aquí dentro de la función
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
 
@@ -55,17 +53,20 @@ export function useCuentasBancarias() {
 
       if (error) throw error
       
+      console.log('✅ Cuenta agregada:', data[0])
       await fetchCuentas()
       return data[0]
     } catch (err) {
-      console.error('Error agregando cuenta:', err)
+      console.error('❌ Error agregando cuenta:', err)
       throw err
     }
   }
 
-  // Actualizar cuenta
+  // Actualizar cuenta - ✅ MEJORADO
   const updateCuenta = async (id, cuentaData) => {
     try {
+      console.log('🔄 Actualizando cuenta:', id, cuentaData)
+      
       const { data, error } = await supabase
         .from('cuentas_bancarias')
         .update(cuentaData)
@@ -74,10 +75,23 @@ export function useCuentasBancarias() {
 
       if (error) throw error
       
+      console.log('✅ Cuenta actualizada en BD:', data[0])
+      
+      // ✅ Actualizar estado local INMEDIATAMENTE
+      setCuentas(prevCuentas => 
+        prevCuentas.map(cuenta => 
+          cuenta.id === id 
+            ? { ...cuenta, ...cuentaData } 
+            : cuenta
+        )
+      )
+      
+      // ✅ También refrescar desde BD para estar seguros
       await fetchCuentas()
+      
       return data[0]
     } catch (err) {
-      console.error('Error actualizando cuenta:', err)
+      console.error('❌ Error actualizando cuenta:', err)
       throw err
     }
   }
@@ -92,9 +106,10 @@ export function useCuentasBancarias() {
 
       if (error) throw error
       
+      console.log('✅ Cuenta eliminada:', id)
       await fetchCuentas()
     } catch (err) {
-      console.error('Error eliminando cuenta:', err)
+      console.error('❌ Error eliminando cuenta:', err)
       throw err
     }
   }

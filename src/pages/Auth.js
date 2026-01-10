@@ -1,4 +1,3 @@
-// src/pages/Auth.js - Sistema de Autenticación Completo
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
@@ -11,7 +10,10 @@ import {
   Wallet,
   Mail,
   Lock,
-  ArrowLeft
+  ArrowLeft,
+  User,
+  Phone,
+  Globe
 } from 'lucide-react'
 import Footer from '../components/Footer'
 
@@ -26,21 +28,19 @@ function Auth() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  
+
+  // ✅ NUEVOS ESTADOS PARA DATOS DEL CLIENTE (DEFINIDO UNA SOLA VEZ)
+  const [nombre, setNombre] = useState('')
+  const [apellido, setApellido] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [moneda, setMoneda] = useState('USD')
+  const [pais, setPais] = useState('Mexico')
+
   // ESTADOS DE UI
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
 
-  // Verificar si hay sesión activa
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        navigate('/dashboard')
-      }
-    }
-    checkSession()
-  }, [navigate])
+ 
 
   // ============================================
   // FUNCIONES DE VALIDACIÓN
@@ -107,17 +107,17 @@ function Auth() {
     setLoading(true)
 
     try {
-const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: '✅ Inicio de sesión exitoso' })
+           setMessage({ type: 'success', text: '✅ Inicio de sesión exitoso' })
       
       setTimeout(() => {
-        navigate('/dashboard')
+        navigate('/loading') // ✅ REDIRIGIR A LA NUEVA PANTALLA DE CARGA
       }, 1000)
 
     } catch (error) {
@@ -140,7 +140,20 @@ const { error } = await supabase.auth.signInWithPassword({
     e.preventDefault()
     setMessage({ type: '', text: '' })
 
-    // Validaciones
+    // ✅ Validaciones para campos nuevos
+    if (!nombre.trim()) {
+      setMessage({ type: 'error', text: '❌ El nombre es obligatorio' })
+      return
+    }
+    if (!apellido.trim()) {
+      setMessage({ type: 'error', text: '❌ El apellido es obligatorio' })
+      return
+    }
+    if (!telefono.trim()) {
+      setMessage({ type: 'error', text: '❌ El teléfono es obligatorio' })
+      return
+    }
+
     if (!validateEmail(email)) {
       setMessage({ type: 'error', text: '❌ Por favor ingresa un email válido' })
       return
@@ -167,29 +180,59 @@ const { error } = await supabase.auth.signInWithPassword({
     setLoading(true)
 
     try {
-const { error } = await supabase.auth.signUp({
+      // 1. Registro de Autenticación
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: {
+            nombre,
+            apellido,
+            telefono,
+            moneda,
+            pais,
+            rol: 'cliente'
+          }
         }
       })
 
       if (error) throw error
 
+      // 2. Guardar datos adicionales en tabla 'perfiles'
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('perfiles')
+          .insert({
+            id: data.user.id, // Crucial para conectar con auth.users
+            email: data.user.email,
+            nombre: nombre,
+            apellido: apellido,
+            telefono: telefono,
+            moneda_preferencia: moneda,
+            pais: pais,
+            avatar_url: `https://ui-avatars.com/api/?name=${nombre}+${apellido}&background=random`
+          })
+        
+        if (profileError) console.warn('No se pudo guardar perfil (tabla "perfiles" inexistente):', profileError)
+      }
+
       setMessage({ 
         type: 'success', 
-        text: '✅ ¡Cuenta creada exitosamente! Por favor verifica tu email para continuar.' 
+        text: '✅ ¡Cuenta creada exitosamente! Bienvenido.' 
       })
       
-      // Limpiar campos y cambiar a modo login después de 3 segundos
+      // Limpiar campos y cambiar a modo login
       setTimeout(() => {
         setMode('login')
         setPassword('')
         setConfirmPassword('')
+        setNombre('')
+        setApellido('')
+        setTelefono('')
         setMessage({ 
-          type: 'info', 
-          text: '📧 Revisa tu bandeja de entrada y haz clic en el enlace de verificación.' 
+          type: '', 
+          text: '' 
         })
       }, 3000)
 
@@ -197,7 +240,7 @@ const { error } = await supabase.auth.signUp({
       console.error('Error signup:', error)
       let errorMessage = 'Error al crear la cuenta'
       
-      if (error.message.includes('already registered')) {
+      if (error.message.includes('User already registered')) {
         errorMessage = 'Este email ya está registrado. Intenta iniciar sesión.'
       } else if (error.message.includes('Password should be')) {
         errorMessage = 'La contraseña no cumple con los requisitos mínimos'
@@ -334,6 +377,11 @@ const { error } = await supabase.auth.signUp({
     setMessage({ type: '', text: '' })
     setPassword('')
     setConfirmPassword('')
+    setNombre('')
+    setApellido('')
+    setTelefono('')
+    setPais('Mexico')
+    setMoneda('USD')
   }
 
   // ============================================
@@ -346,13 +394,13 @@ const { error } = await supabase.auth.signUp({
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <Wallet className="w-10 h-10 text-blue-400" />
-          <h1 className="text-3xl font-bold text-white">Sistema Monarch</h1>
+          <h1 className="text-3xl font-bold text-white">FinTrack App</h1>
         </div>
       </div>
 
       {/* MAIN CONTENT */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-gray-700 shadow-2xl">
+        <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 w-full max-w-lg border border-gray-700 shadow-2xl">
           
           {/* TÍTULO DINÁMICO */}
           <div className="mb-6">
@@ -398,7 +446,7 @@ const { error } = await supabase.auth.signUp({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* EMAIL INPUT */}
             <div>
@@ -479,7 +527,7 @@ const { error } = await supabase.auth.signUp({
                       </span>
                     </div>
 
-                    <div className="space-y-1 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className={`flex items-center gap-2 ${passwordStrength.checks.length ? 'text-green-400' : 'text-gray-500'}`}>
                         {passwordStrength.checks.length ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                         Al menos 8 caracteres
@@ -503,6 +551,100 @@ const { error } = await supabase.auth.signUp({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ✅ NUEVO: DATOS PERSONALES (Solo en Signup) */}
+            {mode === 'signup' && (
+              <div className="space-y-4 pb-6 border-b border-gray-700 mb-6">
+                <h3 className="text-sm font-bold text-blue-300 mb-3 uppercase tracking-wider">
+                  Información del Cliente
+                </h3>
+                
+                {/* Grid para Nombre y Apellido */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                      <User className="w-4 h-4 text-blue-400" /> Nombre
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Juan"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                      <User className="w-4 h-4 text-purple-400" /> Apellido
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Pérez"
+                      value={apellido}
+                      onChange={(e) => setApellido(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Teléfono */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-yellow-400" /> Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="55 1234 5678"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
+                    required
+                  />
+                </div>
+
+                {/* Grid para País y Divisa */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-green-400" /> País
+                    </label>
+                    <select
+                      value={pais}
+                      onChange={(e) => setPais(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
+                    >
+                      <option value="Mexico">🇲🇽 México</option>
+                      <option value="USA">🇺🇸 Estados Unidos</option>
+                      <option value="Spain">🇪🇸 España</option>
+                      <option value="Argentina">🇦🇷 Argentina</option>
+                      <option value="Colombia">🇨🇴 Colombia</option>
+                      <option value="Chile">🇨🇱 Chile</option>
+                      <option value="Peru">🇵🇪 Perú</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                      💵 Divisa
+                    </label>
+                    <select
+                      value={moneda}
+                      onChange={(e) => setMoneda(e.target.value)}
+                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="MXN">MXN ($)</option>
+                      <option value="COP">COP ($)</option>
+                      <option value="ARS">ARS ($)</option>
+                      <option value="CLP">CLP ($)</option>
+                      <option value="PEN">PEN (S/.)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -581,9 +723,9 @@ const { error } = await supabase.auth.signUp({
                 <div className="text-center">
                   <button
                     onClick={() => switchMode('signup')}
-                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors font-semibold"
                   >
-                    ¿No tienes cuenta? <span className="font-semibold">Regístrate aquí</span>
+                    ¿No tienes cuenta? <span className="text-white">Regístrate aquí</span>
                   </button>
                 </div>
                 <div className="text-center">
@@ -601,9 +743,9 @@ const { error } = await supabase.auth.signUp({
               <div className="text-center">
                 <button
                   onClick={() => switchMode('login')}
-                  className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                  className="text-blue-400 hover:text-blue-300 text-sm transition-colors font-semibold"
                 >
-                  ¿Ya tienes cuenta? <span className="font-semibold">Inicia sesión</span>
+                  ¿Ya tienes cuenta? <span className="text-white">Inicia sesión</span>
                 </button>
               </div>
             )}

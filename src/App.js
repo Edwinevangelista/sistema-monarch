@@ -1,4 +1,3 @@
-// src/App.js - VERSIÓN CORREGIDA
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
@@ -6,14 +5,26 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Auth from './pages/Auth'
 import AuthGuard from './components/AuthGuard'
 
-// COMPONENTES EXISTENTES
+// COMPONENTES EXISTENTES Y NUEVO
 import DashboardCompleto from './components/DashboardCompleto'
+import CargandoApp from './components/CargandoApp' // ✅ IMPORTAR LA NUEVA PANTALLA DE BIENVENIDA
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* RUTA DE AUTENTICACIÓN ÚNICA */}
+        {/* ✅ NUEVA RUTA: PANTALLA DE CARGA / BIENVENIDA */}
+        {/* Se ejecuta después de un login exitoso */}
+        <Route
+          path="/loading"
+          element={
+            <AuthGuard>
+              <CargandoApp />
+            </AuthGuard>
+          }
+        />
+
+        {/* RUTA DE AUTENTICACIÓN */}
         <Route path="/auth" element={<Auth />} />
         
         {/* ALIAS PARA COMPATIBILIDAD */}
@@ -22,7 +33,7 @@ function App() {
         <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
         <Route path="/reset-password" element={<Navigate to="/auth" replace />} />
 
-        {/* RUTA PROTEGIDA - DASHBOARD */}
+        {/* RUTA DEL DASHBOARD */}
         <Route
           path="/dashboard"
           element={
@@ -32,7 +43,7 @@ function App() {
           }
         />
 
-        {/* REDIRECCIONES */}
+        {/* REDIRECCIONES POR DEFECTO */}
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>

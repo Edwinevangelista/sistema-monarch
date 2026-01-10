@@ -19,51 +19,53 @@ export default function ModuloCuentasBancarias({
   onEditar, 
   onEliminar,
   balanceTotal,
-  listaMovimientosExternos = [] // FIX: Nueva prop para recibir movimientos reales
+  listaMovimientosExternos = []
 }) {
   const { cuentas: hookCuentas, updateCuenta } = useCuentasBancarias()
   
-  // Usamos las cuentas pasadas por props, si no hay, usamos las del hook
   const cuentasList = cuentas && cuentas.length > 0 ? cuentas : hookCuentas
 
-  // --- 1. ESTADOS DE TRANSFERENCIA ---
+  // --- ESTADOS DE TRANSFERENCIA ---
   const [montoTrans, setMontoTrans] = useState('')
   const [origenId, setOrigenId] = useState('')
   const [destinoId, setDestinoId] = useState('')
   const [transLoading, setTransLoading] = useState(false)
   const [msgTrans, setMsgTrans] = useState('')
 
-  // --- 2. ESTADOS DE HISTORIAL (REALESI) ---
-  // Usamos los movimientos externos si existen, de lo contrario un array vacío
+  // --- ESTADOS DE HISTORIAL ---
   const [listaMovimientos, setListaMovimientos] = useState(listaMovimientosExternos)
 
-  // Sincronizar si cambian los movimientos externos
   useEffect(() => {
     setListaMovimientos(listaMovimientosExternos)
   }, [listaMovimientosExternos])
 
-  // --- 3. ESTADOS DE FORMULARIO (CREAR/EDITAR) ---
+  // --- ESTADOS DE FORMULARIO ---
   const [verFormulario, setVerFormulario] = useState(false)
   const [cuentaEditando, setCuentaEditando] = useState(null)
   const [formNombre, setFormNombre] = useState('')
+  const [formTipo, setFormTipo] = useState('')
+  const [formBanco, setFormBanco] = useState('')
+  const [formUltimosDigitos, setFormUltimosDigitos] = useState('')
   const [formSaldo, setFormSaldo] = useState('')
 
-  // --- HANDLERS DEL FORMULARIO DE CUENTA ---
   useEffect(() => {
     if (verFormulario) {
       if (cuentaEditando) {
-        // Modo Edición
         setFormNombre(cuentaEditando.nombre || '')
+        setFormTipo(cuentaEditando.tipo || '')
+        setFormBanco(cuentaEditando.banco || '')
+        setFormUltimosDigitos(cuentaEditando.ultimos_digitos || '')
         setFormSaldo(cuentaEditando.balance ? String(cuentaEditando.balance) : '')
       } else {
-        // Modo Creación
         setFormNombre('')
+        setFormTipo('')
+        setFormBanco('')
+        setFormUltimosDigitos('')
         setFormSaldo('')
       }
     }
   }, [verFormulario, cuentaEditando])
 
-  // Función auxiliar para registrar movimiento en el historial
   const agregarAlHistorial = (nuevoMovimiento) => {
     setListaMovimientos(prev => [nuevoMovimiento, ...prev])
   }
@@ -76,11 +78,17 @@ export default function ModuloCuentasBancarias({
     const saldoNum = parseFloat(formSaldo || 0)
 
     try {
+      const dataCuenta = {
+        nombre: formNombre,
+        tipo: formTipo,
+        banco: formBanco,
+        ultimos_digitos: formUltimosDigitos,
+        balance: saldoNum
+      }
+
       if (cuentaEditando) {
-        // Modo Edición
-        await updateCuenta(cuentaEditando.id, { nombre: formNombre, balance: saldoNum })
+        await updateCuenta(cuentaEditando.id, dataCuenta)
         
-        // Registrar ajuste de saldo en historial
         if (saldoNum !== cuentaEditando.balance) {
           agregarAlHistorial({
             id: Date.now(),
@@ -93,10 +101,8 @@ export default function ModuloCuentasBancarias({
           })
         }
       } else {
-        // Modo Creación
         if (onAgregar) {
-          await onAgregar({ nombre: formNombre, balance: saldoNum })
-          // Registrar creación de cuenta (depósito inicial)
+          await onAgregar(dataCuenta)
           if (saldoNum > 0) {
             agregarAlHistorial({
               id: Date.now(),
@@ -107,13 +113,14 @@ export default function ModuloCuentasBancarias({
               cuentaNombre: formNombre
             })
           }
-        } else {
-          console.log("No se pasó prop onAgregar")
         }
       }
       setVerFormulario(false)
       setCuentaEditando(null)
       setFormNombre('')
+      setFormTipo('')
+      setFormBanco('')
+      setFormUltimosDigitos('')
       setFormSaldo('')
     } catch (err) {
       console.error("Error al guardar cuenta:", err)
@@ -162,12 +169,9 @@ export default function ModuloCuentasBancarias({
         return
       }
 
-      // 1. Restar Origen
       await updateCuenta(origen.id, { balance: origen.balance - montoNum })
-      // 2. Sumar Destino
       await updateCuenta(destino.id, { balance: destino.balance + montoNum })
 
-      // 3. Registrar en el historial local
       agregarAlHistorial({
         id: Date.now(),
         tipo: 'transferencia',
@@ -176,8 +180,6 @@ export default function ModuloCuentasBancarias({
         fecha: 'Ahora',
         cuentaNombre: origen.nombre
       })
-
-      console.log("💰 Transferencia ejecutada:", { origen: origen.nombre, destino: destino.nombre, monto: montoNum })
 
       setMsgTrans('✅ Transferencia exitosa!')
       setMontoTrans('')
@@ -192,7 +194,6 @@ export default function ModuloCuentasBancarias({
     }
   }
 
-  // Helper para colorear según tipo
   const getIconoYColor = (mov) => {
     switch (mov.tipo) {
       case 'deposito': return { icon: <PlusCircle className="w-4 h-4 text-green-400" />, color: 'text-green-400' }
@@ -229,7 +230,7 @@ export default function ModuloCuentasBancarias({
         </button>
       </div>
 
-      {/* --- SECCIÓN 1: TRANSFERENCIA ENTRE CUENTAS --- */}
+      {/* --- TRANSFERENCIA ENTRE CUENTAS --- */}
       <div className="bg-gradient-to-r from-cyan-900/20 to-blue-900/20 rounded-xl p-4 md:p-5 border border-cyan-500/30 mb-6">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-cyan-300 font-bold flex items-center gap-2">
@@ -245,7 +246,6 @@ export default function ModuloCuentasBancarias({
               value={origenId} 
               onChange={(e) => {
                 setOrigenId(e.target.value)
-                // Limpiar destino si es igual al origen
                 if (destinoId === e.target.value) setDestinoId('')
               }}
               className="w-full bg-gray-800 text-white px-3 py-2.5 rounded-lg border border-gray-600 text-sm focus:border-cyan-500"
@@ -298,7 +298,7 @@ export default function ModuloCuentasBancarias({
         )}
       </div>
 
-      {/* --- SECCIÓN 2: HISTORIAL DE MOVIMIENTOS (REAL) --- */}
+      {/* --- HISTORIAL DE MOVIMIENTOS --- */}
       <div className="bg-gray-800/30 rounded-xl p-4 mb-6 border border-gray-700">
         <div className="flex items-center gap-2 mb-3 border-b border-gray-700 pb-2">
           <Activity className="w-5 h-5 text-gray-400" />
@@ -335,7 +335,7 @@ export default function ModuloCuentasBancarias({
         </div>
       </div>
 
-      {/* --- SECCIÓN 3: LISTA DE CUENTAS --- */}
+      {/* --- LISTA DE CUENTAS --- */}
       <div>
         {/* Formulario de Creación/Edición */}
         {verFormulario && (
@@ -344,7 +344,6 @@ export default function ModuloCuentasBancarias({
               <h3 className="text-white font-bold">
                 {cuentaEditando ? 'Editar Cuenta' : 'Nueva Cuenta'}
               </h3>
-              {/* Botón Cancelar (X) */}
               <button 
                 onClick={handleCancelarEdicion}
                 className="text-gray-400 hover:text-white transition-colors"
@@ -355,11 +354,37 @@ export default function ModuloCuentasBancarias({
             
             <input 
               type="text" 
-              placeholder="Nombre (Ej: Ahorros)" 
+              placeholder="Nombre de la cuenta" 
               value={formNombre} 
               onChange={(e) => setFormNombre(e.target.value)} 
               className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 border border-gray-700" 
             />
+            
+            <input 
+              type="text" 
+              placeholder="Tipo (Débito/Crédito)" 
+              value={formTipo} 
+              onChange={(e) => setFormTipo(e.target.value)} 
+              className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 border border-gray-700" 
+            />
+            
+            <input 
+              type="text" 
+              placeholder="Banco" 
+              value={formBanco} 
+              onChange={(e) => setFormBanco(e.target.value)} 
+              className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 border border-gray-700" 
+            />
+            
+            <input 
+              type="text" 
+              placeholder="Últimos 4 dígitos" 
+              maxLength="4"
+              value={formUltimosDigitos} 
+              onChange={(e) => setFormUltimosDigitos(e.target.value)} 
+              className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 border border-gray-700" 
+            />
+            
             <input 
               type="number" 
               placeholder="Saldo" 
@@ -367,6 +392,7 @@ export default function ModuloCuentasBancarias({
               onChange={(e) => setFormSaldo(e.target.value)} 
               className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 border border-gray-700" 
             />
+            
             <div className="flex gap-2">
               <button 
                 onClick={handleGuardarCuenta} 
@@ -383,44 +409,42 @@ export default function ModuloCuentasBancarias({
           {cuentasList.map(cuenta => (
             <div 
               key={cuenta.id} 
-              className="bg-gray-900/60 hover:bg-gray-900 border border-gray-700 p-4 rounded-xl transition-all group"
+              className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 p-5 rounded-xl transition-all hover:shadow-xl hover:border-blue-500/50"
             >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex gap-3">
-                  <div className="bg-blue-600/20 p-2 rounded-lg border border-blue-500/30">
-                    <CreditCard className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold text-sm md:text-base">{cuenta.nombre}</h3>
-                    <p className="text-xs text-gray-400">{cuenta.tipo || 'Cuenta Principal'}</p>
-                  </div>
+              {/* Header con banco y tipo */}
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-gray-400 text-xs font-medium uppercase">{cuenta.banco || 'Banco'}</p>
+                  <p className="text-white font-bold text-lg">{cuenta.nombre}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold text-white">
-                    ${Number(cuenta.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                <div className="bg-blue-600/20 p-2 rounded-lg border border-blue-500/30">
+                  <CreditCard className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
 
+              {/* Tipo y últimos dígitos */}
+              <div className="mb-4">
+                <p className="text-gray-400 text-xs">{cuenta.tipo || 'Débito'}</p>
+                <p className="text-gray-500 text-sm font-mono">
+                  •••• •••• •••• {cuenta.ultimos_digitos || '****'}
+                </p>
+              </div>
+
+              {/* Saldo */}
+              <div className="mb-4 p-3 bg-gray-800/50 rounded-lg">
+                <p className="text-gray-400 text-xs mb-1">Saldo disponible</p>
+                <p className="text-white text-2xl font-bold">
+                  ${Number(cuenta.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
               {/* Botones de Acción */}
-              <div className="flex gap-2 mt-4 pt-4 border-t border-gray-800">
+              <div className="flex gap-2">
                 <button 
                   onClick={() => handleEditarClick(cuenta)} 
-                  className="flex-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors border border-blue-500/30"
+                  className="flex-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 py-2 rounded-lg text-xs font-semibold transition-colors border border-blue-500/30 flex items-center justify-center gap-1"
                 >
-                  <Edit2 className="w-4 h-4 mr-1"/> Editar
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setOrigenId(cuenta.id)
-                    // Si el destino es igual a esta cuenta, lo limpiamos
-                    if (destinoId === cuenta.id) setDestinoId('')
-                  }}
-                  className="flex-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors border border-cyan-500/30"
-                  title="Iniciar transferencia"
-                >
-                  <ArrowLeftRight className="w-4 h-4 mr-1"/> Transf
+                  <Edit2 className="w-3 h-3"/> Editar
                 </button>
 
                 <button
@@ -429,7 +453,7 @@ export default function ModuloCuentasBancarias({
                       onEliminar(cuenta.id)
                     }
                   }}
-                  className="px-3 bg-gray-700 hover:bg-red-600 hover:bg-opacity-20 text-red-300 py-2 rounded-lg transition-colors border border-gray-600"
+                  className="px-3 bg-gray-700 hover:bg-red-600/20 text-red-300 py-2 rounded-lg transition-colors border border-gray-600"
                   title="Eliminar"
                 >
                   <Trash2 className="w-3 h-3" />
