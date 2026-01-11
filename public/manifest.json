@@ -1,26 +1,25 @@
 {
-  "name": "Sistema Monarch",
-  "short_name": "Monarch",
-  "description": "Sistema de gestión financiera personal",
+  "name": "FinGuide",
+  "short_name": "FinGuide",
+  "description": "Your Financial Guide",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#1e40af",
+  "background_color": "#0B1220",
+  "theme_color": "#1E3A8A",
   "orientation": "portrait",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
-      "src": "/logo192.png",
+      "src": "/branding/app/FinGuide_AppIcon_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo512.png",
+      "src": "/branding/app/FinGuide_AppIcon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["finance", "productivity"],
-  "screenshots": []
+  ]
 }

@@ -23,7 +23,7 @@ import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
 import AsistenteFinancieroV2 from './AsistenteFinancieroV2'
-import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
+
 import LogoutButton from './LogoutButton'
 import MenuFlotante from './MenuFlotante'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
@@ -956,9 +956,7 @@ export default function DashboardContent() {
           </div>
         </div>
 
-        <div className="hidden md:block">
-          <ConfiguracionNotificaciones />
-        </div>
+       
       </div>
 
       <Footer className="hidden md:block" />
@@ -1033,8 +1031,17 @@ export default function DashboardContent() {
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
       )}
 
-      {showModal === 'usuario' && (
-        <ModalUsuario usuario={usuario} preferencias={preferenciasUsuario} onChangePreferencias={setPreferenciasUsuario} onClose={() => setShowModal(null)} onLogout={() => { localStorage.clear(); window.location.href = "/auth"; }} />
+           {showModal === 'usuario' && (
+        <ModalUsuario 
+          usuario={usuario} 
+          preferencias={preferenciasUsuario} 
+          onChangePreferencias={setPreferenciasUsuario} 
+          onClose={() => setShowModal(null)} 
+          onLogout={() => { localStorage.clear(); window.location.href = "/auth"; }}
+          // ✅ AGREGA ESTOS DOS PROPS:
+          permission={permission}
+          showLocalNotification={showLocalNotification}
+        />
       )}
 
       {showModal === 'suscripcion' && (

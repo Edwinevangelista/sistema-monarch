@@ -21,7 +21,7 @@ const CONSEJOS_FINANCIEROS = [
   "💡 Si te sobra dinero al final del mes, abona a deuda o inviértelo.",
   "💡 La inflación aumenta, ajusta tu presupuesto mensual si puedes.",
   "💡 No gastes el dinero que aún no has recibido (bonos futuros).",
-  "💡 Tu salud mental es más importante que tu dinero, pero el dinero ayuda a tu salud."
+  "💡 Tu salud mental es más importante que tu dinero, pero el dinero ayuda a tu salud.",
 ]
 
 export default function CargandoApp() {
@@ -40,7 +40,7 @@ export default function CargandoApp() {
     const randomTip = CONSEJOS_FINANCIEROS[Math.floor(Math.random() * CONSEJOS_FINANCIEROS.length)]
     setConsejo(randomTip)
 
-    // 2. Lógica de Carga Inteligente
+    // 2. Lógica de Carga Inteligente + PRE-CARGA DE DATOS
     const inicializarSesion = async () => {
       try {
         // A. Obtener sesión de Supabase
@@ -75,9 +75,48 @@ export default function CargandoApp() {
           console.warn("No se pudo obtener el perfil (tabla 'perfiles' inexistente), usando datos de auth:", err)
         }
 
-        // C. Guardar en localStorage para que el Dashboard lo use inmediatamente
+        // ✅ NUEVO: C. PRE-CARGAR DATOS FINANCIEROS EN CACHÉ MIENTRAS SE CARGA
+        // Esto asegura que cuando llegues al Dashboard, no tengas pantallas vacías.
+        try {
+          const user_id = session.user.id
+
+          // Fetch Ingresos
+          const { data: ingresos } = await supabase.from('ingresos').select('*').eq('user_id', user_id)
+          localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos || []))
+          console.log('📦 Pre-cargado Ingresos:', ingresos?.length)
+
+          // Fetch Gastos
+          const { data: gastos } = await supabase.from('gastos').select('*').eq('user_id', user_id)
+          localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos || []))
+          console.log('📦 Pre-cargado Gastos:', gastos?.length)
+
+          // Fetch Gastos Fijos
+          const { data: gastosFijos } = await supabase.from('gastos_fijos').select('*').eq('user_id', user_id)
+          localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos || []))
+          console.log('📦 Pre-cargado Gastos Fijos:', gastosFijos?.length)
+
+          // Fetch Suscripciones
+          const { data: suscripciones } = await supabase.from('suscripciones').select('*').eq('user_id', user_id)
+          localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones || []))
+          console.log('📦 Pre-cargado Suscripciones:', suscripciones?.length)
+
+          // Fetch Deudas
+          const { data: deudas } = await supabase.from('deudas').select('*').eq('user_id', user_id)
+          localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas || []))
+          console.log('📦 Pre-cargado Deudas:', deudas?.length)
+
+          // Fetch Cuentas (opcional, pero buena para la app completa)
+          const { data: cuentas } = await supabase.from('cuentas_bancarias').select('*').eq('user_id', user_id)
+          localStorage.setItem('cuentas_cache_v2', JSON.stringify(cuentas || []))
+          console.log('📦 Pre-cargado Cuentas:', cuentas?.length)
+
+        } catch (err) {
+          console.error("❌ Error al pre-cargar datos financieros:", err)
+        }
+
+        // D. Guardar en localStorage para que el Dashboard lo use inmediatamente
         localStorage.setItem('usuario_fintrack', JSON.stringify(datosUsuario))
-        localStorage.setItem('preferenciasUsuario', JSON.stringify({
+        localStorage.setItem("preferenciasUsuario", JSON.stringify({
             moneda: datosUsuario.moneda || 'USD',
             inicioMes: 1,
             objetivo: "Reducir deudas",
@@ -87,21 +126,20 @@ export default function CargandoApp() {
 
         setUsuario(datosUsuario)
 
-        // D. SIMULAR CARGA DE HOOKS (Crítico para evitar pantalla vacía)
-        // Simular que la app necesita "pensar" y cargar los hooks del Dashboard
-        // Esperamos un poco para que useIngresos, useGastos, etc. se hidraten
-        const delayDeCarga = 2000 // 2 segundos de espera para que la app "respire"
-        
-        // Simulamos el tiempo de carga (animación de barra) + tiempo de hidratación de datos
-        const pasosTotales = 30 // Más pasos para mayor duración de la barra visual
+        // E. SIMULAR CARGA DE HOOKS (Visual)
+        // Usamos el tiempo de carga real (fetching datos) + un pequeño delay de la UI
+        const delayDeCarga = 2000 // 2 segundos para que se vea la barra
+
+        const pasosTotales = 20 // Menos pasos para que se sienta más rápido, pero cubra el delayDeCarga
         const delayPorPaso = delayDeCarga / pasosTotales 
 
         for (let i = 1; i <= pasosTotales; i++) {
+          if (!montado) break
           await new Promise(resolve => setTimeout(resolve, delayPorPaso))
           if (montado) setProgreso(Math.floor((i / pasosTotales) * 100))
         }
 
-        // E. MARCAR COMO LISTO Y REDIRIGIR
+        // F. MARCAR COMO LISTO Y REDIRIGIR
         if (montado) {
           setListoParaNavegar(true)
           // Pequeña pausa final para que el usuario vea "Listo para iniciar"
@@ -116,12 +154,11 @@ export default function CargandoApp() {
       }
     }
 
-    // ⚡ OPTIMIZACIÓN: Si el usuario recién se logueó (hace < 10s), saltarse a la carga
+    // ✅ OPTIMIZACIÓN: Si el usuario recién se logueó (hace < 10s), saltarse a la carga
     const tiempoLogin = sessionStorage.getItem('ultimo_login_timestamp')
     if (tiempoLogin) {
       const segundosPasados = (Date.now() - parseInt(tiempoLogin)) / 1000
       if (segundosPasados < 10) {
-        // Salto directo al Dashboard
         console.log("🚀 Login reciente detectado, saltando pantalla de carga")
         sessionStorage.setItem('ultimo_login_timestamp', '') // Limpiar para la próxima vez
         navigate('/dashboard')
@@ -226,7 +263,7 @@ export default function CargandoApp() {
 
         {/* ESTADO FINAL DE CARGA */}
         {!listoParaNavegar && (
-          <div className="flex items-center justify-center gap-3 text-gray-400 text-sm">
+          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
