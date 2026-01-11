@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet, Coffee, Sparkles, Loader2 } from 'lucide-react'
+import { Wallet, Coffee, Sparkles, Loader2, CheckCircle } from 'lucide-react'
 
 const CONSEJOS_FINANCIEROS = [
   "💡 Una regla de oro: Ahorra al menos el 10% de tus ingresos.",
@@ -25,12 +25,13 @@ const CONSEJOS_FINANCIEROS = [
 ]
 
 export default function CargandoApp() {
-  const navigate = useNavigate()  
+  const navigate = useNavigate()
+  
   // Estados de UI
-  const [loading, setLoading] = useState(true)
   const [progreso, setProgreso] = useState(0)
-  const [usuario, setUsuario] = useState(null) // { nombre, email, avatar, ... }
+  const [usuario, setUsuario] = useState(null) 
   const [consejo, setConsejo] = useState(CONSEJOS_FINANCIEROS[0])
+  const [listoParaNavegar, setListoParaNavegar] = useState(false) // Nuevo estado para bloquear la carga
 
   useEffect(() => {
     let montado = true
@@ -39,27 +40,25 @@ export default function CargandoApp() {
     const randomTip = CONSEJOS_FINANCIEROS[Math.floor(Math.random() * CONSEJOS_FINANCIEROS.length)]
     setConsejo(randomTip)
 
-    // 2. Iniciar el proceso de carga
+    // 2. Lógica de Carga Inteligente
     const inicializarSesion = async () => {
       try {
         // A. Obtener sesión de Supabase
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (!session || sessionError) {
-          // Si no hay sesión, ir a Login
           if (montado) navigate('/auth')
           return
         }
 
         // B. Obtener datos adicionales del perfil
-        // Si falla, usamos los datos básicos del auth
         let datosUsuario = {
           id: session.user.id,
           email: session.user.email,
-          nombre: session.user.user_metadata?.nombre || session.user.email.split('@')[0],
+          nombre: session.user.user_metadata?.nombre || '',
           apellido: session.user.user_metadata?.apellido || '',
           moneda: session.user.user_metadata?.moneda || 'USD',
-          avatar_url: session.user.user_metadata?.avatar_url || null
+          avatar_url: session.user.user_metadata?.avatar_url
         }
 
         try {
@@ -73,26 +72,42 @@ export default function CargandoApp() {
             datosUsuario = { ...datosUsuario, ...perfil }
           }
         } catch (err) {
-          console.warn("No se pudo obtener el perfil (quizás no existe la tabla), usando datos de auth:", err)
+          console.warn("No se pudo obtener el perfil (tabla 'perfiles' inexistente), usando datos de auth:", err)
         }
 
         // C. Guardar en localStorage para que el Dashboard lo use inmediatamente
         localStorage.setItem('usuario_fintrack', JSON.stringify(datosUsuario))
+        localStorage.setItem('preferenciasUsuario', JSON.stringify({
+            moneda: datosUsuario.moneda || 'USD',
+            inicioMes: 1,
+            objetivo: "Reducir deudas",
+            riesgo: "Conservador",
+            iaActiva: true,
+        }))
 
         setUsuario(datosUsuario)
-        // D. Simular carga visual (Animación de barra de progreso más lenta)
-        // Ajustamos el tiempo a 3 segundos (3000ms) divididos en 20 pasos = 150ms por paso
-        const pasos = 30
-        const delayPorPaso = 200
+
+        // D. SIMULAR CARGA DE HOOKS (Crítico para evitar pantalla vacía)
+        // Simular que la app necesita "pensar" y cargar los hooks del Dashboard
+        // Esperamos un poco para que useIngresos, useGastos, etc. se hidraten
+        const delayDeCarga = 2000 // 2 segundos de espera para que la app "respire"
         
-        for (let i = 1; i <= pasos; i++) {
+        // Simulamos el tiempo de carga (animación de barra) + tiempo de hidratación de datos
+        const pasosTotales = 30 // Más pasos para mayor duración de la barra visual
+        const delayPorPaso = delayDeCarga / pasosTotales 
+
+        for (let i = 1; i <= pasosTotales; i++) {
           await new Promise(resolve => setTimeout(resolve, delayPorPaso))
-          if (montado) setProgreso(Math.floor((i / pasos) * 100))
+          if (montado) setProgreso(Math.floor((i / pasosTotales) * 100))
         }
 
+        // E. MARCAR COMO LISTO Y REDIRIGIR
         if (montado) {
-          setLoading(false)
-          navigate('/dashboard')
+          setListoParaNavegar(true)
+          // Pequeña pausa final para que el usuario vea "Listo para iniciar"
+          setTimeout(() => {
+            navigate('/dashboard')
+          }, 500) 
         }
 
       } catch (err) {
@@ -101,6 +116,20 @@ export default function CargandoApp() {
       }
     }
 
+    // ⚡ OPTIMIZACIÓN: Si el usuario recién se logueó (hace < 10s), saltarse a la carga
+    const tiempoLogin = sessionStorage.getItem('ultimo_login_timestamp')
+    if (tiempoLogin) {
+      const segundosPasados = (Date.now() - parseInt(tiempoLogin)) / 1000
+      if (segundosPasados < 10) {
+        // Salto directo al Dashboard
+        console.log("🚀 Login reciente detectado, saltando pantalla de carga")
+        sessionStorage.setItem('ultimo_login_timestamp', '') // Limpiar para la próxima vez
+        navigate('/dashboard')
+        return
+      }
+    }
+
+    // Si no es un login reciente, mostrar la pantalla de carga
     inicializarSesion()
 
     return () => {
@@ -112,12 +141,12 @@ export default function CargandoApp() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex flex-col items-center justify-center p-6 text-center">
       
       {/* CARD CENTRAL */}
-      <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 md:p-12 max-w-md w-full shadow-2xl relative overflow-hidden">
+      <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 md:p-12 max-w-md w-full shadow-2xl relative overflow-hidden transition-all duration-500">
         
         {/* Decoración de fondo */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
 
         {/* AVATAR / ICONO */}
         <div className="mb-6 relative inline-block">
@@ -132,25 +161,41 @@ export default function CargandoApp() {
               <Wallet className="w-10 h-10" />
             </div>
           )}
-          {/* Indicador de carga animado */}
-          <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-gray-800 animate-pulse">
-            <Loader2 className="w-3 h-3 text-white animate-spin" />
-          </div>
+          
+          {/* Indicador de carga animado (Solo visible si NO estamos listos) */}
+          {!listoParaNavegar && (
+            <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-gray-800 animate-pulse">
+              <Loader2 className="w-3 h-3 text-white animate-spin" />
+            </div>
+          )}
+
+          {/* Indicador de Listo (Check verde) */}
+          {listoParaNavegar && (
+            <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+              <CheckCircle className="w-3 h-3 text-white" />
+            </div>
+          )}
         </div>
 
         {/* SALUDO DINÁMICO */}
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          {loading ? 'Hola...' : `Hola, ${usuario.nombre.split(' ')[0]} 👋`}
+          {listoParaNavegar 
+            ? `¡Todo listo, ${usuario?.nombre ? usuario.nombre.split(' ')[0] : ''}! 👋` 
+            : `Hola, ${usuario?.nombre ? usuario.nombre.split(' ')[0] : ''} 👋`
+          }
         </h1>
         <p className="text-blue-200 text-sm md:text-base mb-6 opacity-90">
-          {loading ? 'Preparando tu espacio financiero...' : 'Bienvenido de nuevo a FinTrack'}
+          {listoParaNavegar 
+            ? 'Iniciando tu panel financiero...' 
+            : 'Preparando tus datos y herramientas...'
+          }
         </p>
 
         {/* BARRA DE PROGRESO */}
-        {loading && (
+        {!listoParaNavegar && (
           <div className="mb-8">
             <div className="flex justify-between text-xs text-gray-400 mb-2">
-              <span>Cargando datos</span>
+              <span>Cargando datos históricos...</span>
               <span>{progreso}%</span>
             </div>
             <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
@@ -180,13 +225,15 @@ export default function CargandoApp() {
         </div>
 
         {/* ESTADO FINAL DE CARGA */}
-        {loading ? (
+        {!listoParaNavegar && (
           <div className="flex items-center justify-center gap-3 text-gray-400 text-sm">
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
              <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
           </div>
-        ) : (
+        )}
+
+        {listoParaNavegar && (
           <div className="flex items-center justify-center gap-2 text-green-400 text-sm font-semibold animate-pulse">
             <Coffee className="w-4 h-4" /> Listo para iniciar
           </div>

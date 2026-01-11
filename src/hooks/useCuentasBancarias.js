@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
+// ✅ FUNCIÓN PRINCIPAL (Exportación con Nombre para coincidir con import { })
 export function useCuentasBancarias() {
   const [cuentas, setCuentas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -62,7 +63,7 @@ export function useCuentasBancarias() {
     }
   }
 
-  // Actualizar cuenta - ✅ MEJORADO
+  // Actualizar cuenta
   const updateCuenta = async (id, cuentaData) => {
     try {
       console.log('🔄 Actualizando cuenta:', id, cuentaData)
@@ -134,3 +135,4 @@ export function useCuentasBancarias() {
     refresh: fetchCuentas
   }
 }
+// ✅ IMPORTANTE: NO DEJAR NINGÚN CÓDIGO DESPUÉS DE ESTA LLAVE }

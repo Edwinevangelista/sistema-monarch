@@ -44,12 +44,13 @@ export default function ListaGastosCompleta({
         ? item.estado === 'Pagado'
         : false
 
+    // ✅ CORRECCIÓN: Orden correcto según el tipo de item
     const title =
-      item.nombre ||
-      item.descripcion ||
-      item.servicio ||
-      item.cuenta ||
-      'Sin título'
+      type === ITEM_TYPES.SUSCRIPCION
+        ? item.servicio || item.nombre || 'Sin título' // Para suscripciones: primero servicio
+        : type === ITEM_TYPES.DEUDA
+        ? item.cuenta || item.nombre || 'Sin título' // Para deudas: cuenta
+        : item.nombre || item.descripcion || 'Sin título' // Para otros: nombre primero
 
     const subtitle = item.categoria || item.tipo || ''
 

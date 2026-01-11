@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react' // ✅ Agregado useMemo
+import React, { useState, useEffect, useMemo } from 'react'
 import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine } from 'lucide-react'
 
 // --- HOOKS ---
@@ -12,7 +12,6 @@ import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 import { useNotifications } from '../hooks/useNotifications'
 import { getDeudaStatus } from '../lib/finance/deudaStatus'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
-
 // --- COMPONENTES ---
 import ModalIngreso from './ModalIngreso'
 import ModalGastos from './ModalGastos'
@@ -33,7 +32,7 @@ import ModalUsuario from './ModalUsuario'
 import Footer from './Footer'
 import ListaIngresos from './ListaIngresos'
 import ModalDetalleUniversal from './ModalDetalleUniversal'
-import CalendarioPagos from './CalendarioPagos' // ✅ Importar Calendario
+import CalendarioPagos from './CalendarioPagos'
 
 // --- MODALES NUEVOS ---
 import DebtPlannerModal from './DebtPlannerModal'
@@ -55,11 +54,18 @@ import { supabase } from '../lib/supabaseClient'
 
 export default function DashboardContent() {
   
-const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
-  const [usuario, setUsuario] = useState({ 
-    email: 'usuario@ejemplo.com', 
-    nombre: 'FinTrack User'
-  })
+  // --- ESTADOS PRINCIPALES ---
+  const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
+
+
+  // ✅ OPTIMIZACIÓN: Cargar usuario instantáneamente desde localStorage
+  const [usuario, setUsuario] = useState(() => {
+    const guardado = localStorage.getItem('usuario_fintrack');
+    return guardado ? JSON.parse(guardado) : {
+      email: 'usuario@ejemplo.com',
+      nombre: 'FinTrack User'
+    };
+  });
 
   const [overviewMode, setOverviewMode] = useState('ALL')
   const [itemSeleccionado, setItemSeleccionado] = useState(null)
@@ -71,7 +77,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
   const [showLector, setShowLector] = useState(false)
 
-  // ✅ FIX: Estado inicial del historial, leemos de localStorage si existe
+  // ✅ OPTIMIZACIÓN: Cargar historial instantáneamente desde localStorage
   const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
     const guardado = localStorage.getItem('historial_bancarios_v2');
     return guardado ? JSON.parse(guardado) : [];
@@ -96,7 +102,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         };
   });
 
-  // ✅ FIX: `hoy` definida al inicio para evitar warnings
+  // ✅ OPTIMIZACIÓN: Calcular fecha solo una vez
   const hoy = useMemo(() => new Date(), [])
   const hoyStr = hoy.toISOString().split('T')[0]
 
@@ -111,7 +117,70 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
   const { refresh: refreshPlanes } = usePlanesGuardados()
   const { permission, showLocalNotification } = useNotifications()
 
-  // ✅ FIX: Función auxiliar para guardar historial en localStorage y Estado
+  // ✅ PUENTE DE ESTADO INSTANTÁNEO (Para evitar pantalla vacía al inicio)
+  const [ingresosInstant, setIngresosInstant] = useState(() => {
+    const cached = localStorage.getItem('ingresos_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  });
+  
+  const [gastosInstant, setGastosInstant] = useState(() => {
+    const cached = localStorage.getItem('gastos_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [gastosFijosInstant, setGastosFijosInstant] = useState(() => {
+    const cached = localStorage.getItem('gastos_fijos_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [suscripcionesInstant, setSuscripcionesInstant] = useState(() => {
+    const cached = localStorage.getItem('suscripciones_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [deudasInstant, setDeudasInstant] = useState(() => {
+    const cached = localStorage.getItem('deudas_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  // --- EFECTOS DE SINCRONIZACIÓN ---
+  // Cuando los hooks llegan de BD, actualizan los estados instantáneos y el caché
+  useEffect(() => {
+    if (ingresos.length > 0) {
+      setIngresosInstant(ingresos);
+      localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos));
+    }
+  }, [ingresos]);
+
+  useEffect(() => {
+    if (gastos.length > 0) {
+      setGastosInstant(gastos);
+      localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos));
+    }
+  }, [gastos]);
+
+  useEffect(() => {
+    if (gastosFijos.length > 0) {
+      setGastosFijosInstant(gastosFijos);
+      localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos));
+    }
+  }, [gastosFijos]);
+
+  useEffect(() => {
+    if (suscripciones.length > 0) {
+      setSuscripcionesInstant(suscripciones);
+      localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones));
+    }
+  }, [suscripciones]);
+
+  useEffect(() => {
+    if (deudas.length > 0) {
+      setDeudasInstant(deudas);
+      localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
+    }
+  }, [deudas]);
+
+  // ✅ FUNCIÓN OPTIMIZADA: Actualizar historial
   const actualizarHistorial = (nuevoMovimiento) => {
     setMovimientosBancarios(prev => {
       const nuevo = [nuevoMovimiento, ...prev];
@@ -120,78 +189,35 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     });
   };
 
-  // ✅ FIX: Reconstrucción inicial desde BD (solo al montar si localStorage está vacío)
+  // ✅ SINCRONIZACIÓN INTELIGENTE: Solo limpia borrados
   useEffect(() => {
-    if (movimientosBancarios.length === 0) {
-      const historialInicial = []
+    if (movimientosBancarios.length === 0) return
+    
+    const idsActivos = new Set()
+    
+    // Recolectar IDs válidos de la base de datos actual
+    ingresos?.forEach(ing => ing.cuenta_id && idsActivos.add(`ing-${ing.id}`))
+    gastos?.forEach(g => g.cuenta_id && idsActivos.add(`gasto-var-${g.id}`))
+    gastosFijos?.forEach(gf => gf.cuenta_id && idsActivos.add(`gasto-fijo-${gf.id}`))
+    suscripciones?.forEach(sub => sub.cuenta_id && idsActivos.add(`sub-${sub.id}`))
+    
+    // Filtrar movimientos: Solo mantener los que existan en la BD
+    setMovimientosBancarios(prev => {
+      const filtrado = prev.filter(m => idsActivos.has(m.id) || m.tipo === 'transferencia' || m.tipo === 'ajuste')
       
-      ingresos?.forEach(ing => {
-        if (ing.cuenta_id) {
-          const cuenta = cuentas.find(c => c.id === ing.cuenta_id)
-          historialInicial.push({
-            id: `ing-${ing.id}`,
-            tipo: 'ingreso',
-            monto: Number(ing.monto),
-            ref: `Ingreso: ${ing.fuente}`,
-            fecha: ing.fecha,
-            cuentaId: ing.cuenta_id,
-            cuentaNombre: cuenta?.nombre || 'Desconocida'
-          })
-        }
-      })
+      // Si hubo un cambio (se borró algo), actualizar localStorage
+      if (filtrado.length !== prev.length) {
+        localStorage.setItem('historial_bancarios_v2', JSON.stringify(filtrado))
+        return filtrado
+      }
+      
+      return prev
+    })
+  }, [ingresos, gastos, gastosFijos, suscripciones, movimientosBancarios.length])
 
-      gastos?.forEach(g => {
-        if (g.cuenta_id) {
-          const cuenta = cuentas.find(c => c.id === g.cuenta_id)
-          historialInicial.push({
-            id: `gasto-var-${g.id}`,
-            tipo: 'gasto',
-            monto: Number(g.monto),
-            ref: g.descripcion || g.categoria,
-            fecha: g.fecha,
-            cuentaId: g.cuenta_id,
-            cuentaNombre: cuenta?.nombre || 'Desconocida'
-          })
-        }
-      })
-
-      gastosFijos?.forEach(gf => {
-        if (gf.cuenta_id) {
-          const cuenta = cuentas.find(c => c.id === gf.cuenta_id)
-          const fechaAprox = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc || 1).toISOString().split('T')[0]
-          historialInicial.push({
-            id: `gasto-fijo-${gf.id}`,
-            tipo: 'gasto',
-            monto: Number(gf.monto),
-            ref: `Fijo: ${gf.nombre}`,
-            fecha: fechaAprox,
-            cuentaId: gf.cuenta_id,
-            cuentaNombre: cuenta?.nombre || 'Desconocida'
-          })
-        }
-      })
-
-      suscripciones?.forEach(sub => {
-        if (sub.cuenta_id && sub.proximo_pago) {
-          const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-          historialInicial.push({
-            id: `sub-${sub.id}`,
-            tipo: 'gasto',
-            monto: Number(sub.costo),
-            ref: `Suscripción: ${sub.servicio}`,
-            fecha: sub.proximo_pago,
-            cuentaId: sub.cuenta_id,
-            cuentaNombre: cuenta?.nombre || 'Desconocida'
-          })
-        }
-      })
-
-      historialInicial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-      setMovimientosBancarios(historialInicial)
-      localStorage.setItem('historial_bancarios_v2', JSON.stringify(historialInicial))
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ingresos, gastos, gastosFijos, suscripciones, cuentas])
+  // ============================================
+  // MANEJADORES DE DATOS (MODIFICADOS PARA ACTUALIZAR CACHE)
+  // ============================================
 
   const handleOpenDetail = (item, type) => {
     let status = null
@@ -263,7 +289,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     if (type === ITEM_TYPES.SUSCRIPCION) {
       handleEliminarSuscripcion(item.id)
     } else if (type === ITEM_TYPES.DEUDA) {
-      deleteDebt && deleteDebt(item.id) 
+      deleteDebt && deleteDebt(item.id)
     } else if (type === ITEM_TYPES.FIJO) {
       deleteGastoFijo && deleteGastoFijo(item.id)
     } else if (type === ITEM_TYPES.VARIABLE) {
@@ -271,7 +297,6 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     }
   }
 
-  // ✅ FIX: Handlers que llaman a actualizarHistorial
   const handleGuardarIngreso = async (data) => {
     try {
       if (data.id) {
@@ -281,9 +306,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         if (data.cuenta_id) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            // Actualizar Saldo
             await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) + Number(data.monto) })
-            // Actualizar Historial
             actualizarHistorial({
               id: Date.now(),
               tipo: 'ingreso',
@@ -482,7 +505,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
 
   const handleRegistrarPagoTarjeta = async (pago) => {
     try {
-      const deuda = deudas.find(d => d.id === pago.deuda_id)
+      const deuda = deudasInstant.find(d => d.id === pago.deuda_id) // ✅ Usar deudasInstant
       if (!deuda) throw new Error('Deuda no encontrada')
 
       const principal = Number(pago.a_principal || 0)
@@ -490,13 +513,35 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
       const total = Number(pago.monto_total || 0)
 
       if (principal > deuda.saldo) {
-        alert(`El pago a capital ($${principal}) no puede ser mayor al saldo pendiente ($${deuda.saldo}).`)
+        alert(`El pago a capital ($${principal.toFixed(2)}) no puede ser mayor al saldo pendiente ($${deuda.saldo.toFixed(2)}).`)
         return
       }
 
-      if (Math.abs((principal + intereses) - total) > 0.01) {
-        alert('El monto total debe ser igual a Principal + Intereses')
-        return
+      if (pago.metodo === 'Débito' && pago.cuenta_id) {
+        const cuenta = cuentas.find(c => c.id === pago.cuenta_id)
+        if (!cuenta) {
+          alert('❌ Cuenta bancaria no encontrada')
+          return
+        }
+
+        if (Number(cuenta.balance) < total) {
+          alert(`❌ Fondos insuficientes\n\nSaldo: $${Number(cuenta.balance).toFixed(2)}\nRequerido: $${total.toFixed(2)}`)
+          return
+        }
+
+        await updateCuenta(cuenta.id, {
+          balance: Number(cuenta.balance) - total
+        })
+
+        actualizarHistorial({
+          id: Date.now(),
+          tipo: 'gasto',
+          monto: total,
+          ref: `Pago Tarjeta: ${deuda.cuenta}`,
+          fecha: pago.fecha,
+          cuentaId: cuenta.id,
+          cuentaNombre: cuenta.nombre
+        })
       }
 
       await addPago({
@@ -511,20 +556,41 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         notas: pago.notas || null,
       })
 
-      if (principal > 0) {
-        await updateDebt(deuda.id, {
-          saldo: Math.max(0, deuda.saldo - principal),
-          ultimo_pago: pago.fecha,
-        })
-      }
+      const nuevoSaldo = Math.max(0, Number(deuda.saldo) - principal)
+      
+      await updateDebt(deuda.id, {
+        saldo: nuevoSaldo,
+        ultimo_pago: pago.fecha,
+      })
 
       await refreshPagos()
       await refreshDeudas()
+      if (pago.cuenta_id) await refreshCuentas()
+
+      let mensaje = '✅ Pago registrado correctamente\n\n'
+      mensaje += `💰 Total pagado: $${total.toFixed(2)}\n`
+      if (pago.metodo === 'Débito' && pago.cuenta_id) {
+        const cuenta = cuentas.find(c => c.id === pago.cuenta_id)
+        mensaje += `💳 Debitado de: ${cuenta?.nombre}\n`
+      }
+      if (intereses > 0) {
+        mensaje += `📊 Intereses: $${intereses.toFixed(2)}\n`
+      }
+      if (principal > 0) {
+        mensaje += `💳 Reducción de deuda: $${principal.toFixed(2)}\n`
+        mensaje += `\n🎯 Nuevo saldo: $${nuevoSaldo.toFixed(2)}`
+      } else {
+        mensaje += `\n⚠️ Este pago solo cubrió intereses.\nEl saldo permanece en: $${deuda.saldo.toFixed(2)}`
+      }
+
+      alert(mensaje)
+      
       setShowModal(null)
+      setDeudaEditando(null)
 
     } catch (err) {
-      console.error(err)
-      alert('Error registrando el pago')
+      console.error('❌ Error registrando pago:', err)
+      alert('Error registrando el pago: ' + (err.message || 'Error desconocido'))
     }
   }
 
@@ -542,14 +608,15 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     return isNaN(num) || num < 0 ? 0 : num
   }
 
-  const totalIngresos = ingresos.reduce((sum, i) => sum + validarMonto(i.monto), 0)
+  // ✅ OPTIMIZACIÓN: Usar useMemo con estados INSTANTÁNEOS
+  const totalIngresos = useMemo(() => ingresosInstant.reduce((sum, i) => sum + validarMonto(i.monto), 0), [ingresosInstant])
   
-  const overviewData = {
-    deudas: overviewMode === 'DEUDAS' || overviewMode === 'ALL' ? deudas : [],
-    suscripciones: overviewMode === 'SUSCRIPCIONES' || overviewMode === 'ALL' ? suscripciones : [],
-    gastosFijos: overviewMode === 'FIJOS' || overviewMode === 'ALL' ? gastosFijos : [],
-    gastosVariables: overviewMode === 'VARIABLES' || overviewMode === 'ALL' ? gastos : [],
-  }
+  const overviewData = useMemo(() => ({
+    deudas: overviewMode === 'DEUDAS' || overviewMode === 'ALL' ? deudasInstant : [],
+    suscripciones: overviewMode === 'SUSCRIPCIONES' || overviewMode === 'ALL' ? suscripcionesInstant : [],
+    gastosFijos: overviewMode === 'FIJOS' || overviewMode === 'ALL' ? gastosFijosInstant : [],
+    gastosVariables: overviewMode === 'VARIABLES' || overviewMode === 'ALL' ? gastosInstant : [],
+  }), [overviewMode, deudasInstant, suscripcionesInstant, gastosFijosInstant, gastosInstant])
 
   const deudaPagadaEsteMes = (deudaId) => {
     return pagos?.some(p => {
@@ -558,73 +625,90 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     })
   }
 
-  const totalGastosFijosReales = gastosFijos.reduce((sum, gf) => {
-    if (!gf.dia_venc) return sum
-    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-    if (diaVenc <= hoy) return sum + validarMonto(gf.monto)
-    return sum
-  }, 0)
-
-  const totalGastosVariablesReales = gastos.filter(g => g.fecha <= hoyStr).reduce((sum, g) => sum + validarMonto(g.monto), 0)
-
-  const totalSuscripcionesReales = suscripciones
-    .filter(s => s.estado === 'Activo' && s.proximo_pago)
-    .reduce((sum, s) => {
-      const proxPago = new Date(s.proximo_pago)
-      const costo = validarMonto(s.costo)
-      if (proxPago <= hoy && proxPago.getMonth() === hoy.getMonth()) {
-        if (s.ciclo === 'Anual') return sum + (costo / 12)
-        if (s.ciclo === 'Semanal') return sum + costo
-        return sum + costo
-      }
+  const totalGastosFijosReales = useMemo(() => 
+    gastosFijosInstant.reduce((sum, gf) => {
+      if (!gf.dia_venc) return sum
+      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+      if (diaVenc <= hoy) return sum + validarMonto(gf.monto)
       return sum
-    }, 0)
+    }, 0), 
+    [gastosFijosInstant, hoy]
+  )
+
+  const totalGastosVariablesReales = useMemo(() => 
+    gastosInstant.filter(g => g.fecha <= hoyStr).reduce((sum, g) => sum + validarMonto(g.monto), 0), 
+    [gastosInstant, hoyStr]
+  )
+
+  const totalSuscripcionesReales = useMemo(() => 
+    suscripcionesInstant
+      .filter(s => s.estado === 'Activo' && s.proximo_pago)
+      .reduce((sum, s) => {
+        const proxPago = new Date(s.proximo_pago)
+        const costo = validarMonto(s.costo)
+        if (proxPago <= hoy && proxPago.getMonth() === hoy.getMonth()) {
+          if (s.ciclo === 'Anual') return sum + (costo / 12)
+          if (s.ciclo === 'Semanal') return sum + costo
+          return sum + costo
+        }
+        return sum
+      }, 0), 
+    [suscripcionesInstant, hoy]
+  )
 
   const totalGastosReales = totalGastosFijosReales + totalGastosVariablesReales + totalSuscripcionesReales
   const saldoReal = totalIngresos - totalGastosReales
   const tasaAhorroReal = (totalIngresos > 0 ? ((totalIngresos - totalGastosReales) / totalIngresos) * 100 : 0)
 
+  // ✅ AUTOPAGO OPTIMIZADO
   useEffect(() => {
-    suscripciones.forEach(async (sub) => {
-      if (sub.estado !== 'Activo') return
-      if (!sub.autopago || !sub.cuenta_id) return
-      if (sub.proximo_pago !== hoyStr) return
+    let mounted = true
+    const processAutopago = async () => {
+      if (!mounted || suscripcionesInstant.length === 0) return
 
-      const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-      if (!cuenta) return
+      for (const sub of suscripcionesInstant) {
+        if (sub.estado !== 'Activo' || !sub.autopago || !sub.cuenta_id || sub.proximo_pago !== hoyStr) continue
 
-      try {
-        await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
-        await addGasto({
-          fecha: hoyStr,
-          monto: sub.costo,
-          categoria: '📅 Suscripciones',
-          descripcion: `Autopago: ${sub.servicio}`,
-          cuenta_id: cuenta.id,
-          metodo: 'Autopago'
-        })
-        
-        // ✅ FIX: Autopago también guarda en historial
-        actualizarHistorial({
-          id: Date.now(),
-          tipo: 'gasto',
-          monto: Number(sub.costo),
-          ref: `Suscripción: ${sub.servicio}`,
-          fecha: hoyStr,
-          cuentaId: cuenta.id,
-          cuentaNombre: cuenta.nombre
-        })
+        const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
+        if (!cuenta) continue
 
-        const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
-        if (updateSuscripcion) {
-          await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
+        try {
+          await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
+          await addGasto({
+            fecha: hoyStr,
+            monto: sub.costo,
+            categoria: '📅 Suscripciones',
+            descripcion: `Autopago: ${sub.servicio}`,
+            cuenta_id: cuenta.id,
+            metodo: 'Autopago'
+          })
+          
+          actualizarHistorial({
+            id: Date.now(),
+            tipo: 'gasto',
+            monto: Number(sub.costo),
+            ref: `Suscripción: ${sub.servicio}`,
+            fecha: hoyStr,
+            cuentaId: cuenta.id,
+            cuentaNombre: cuenta.nombre
+          })
+
+          const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
+          if (updateSuscripcion) {
+            await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
+          }
+        } catch (error) {
+          console.error("Error en autopago:", error)
         }
-      } catch (error) {
-        console.error("Error en autopago:", error)
       }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suscripciones, cuentas])
+    }
+
+    const timeoutId = setTimeout(processAutopago, 1000)
+    return () => {
+      mounted = false
+      clearTimeout(timeoutId)
+    }
+   }, [suscripcionesInstant, cuentas, hoyStr, addGasto, updateCuenta, updateSuscripcion])
 
   useEffect(() => {
     if (usuario.email) {
@@ -637,60 +721,34 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
-  const obtenerAlertas = () => {
-    const alertas = []
-    gastosFijos.forEach(gf => {
+  // ✅ OPTIMIZACIÓN DE ALERTAS (Usar estados Instantáneos)
+  const alertas = useMemo(() => {
+    const listaAlertas = []
+    
+    gastosFijosInstant.forEach(gf => {
       if (gf.estado === 'Pagado' || !gf.dia_venc) return
       const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
       const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 0) alertas.push({ tipo: 'critical', mensaje: `⚠️ ${gf.nombre} está vencido.`, mensajeCorto: `${gf.nombre} - VENCIDO`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
-      else if (diff <= 5) alertas.push({ tipo: 'warning', mensaje: `📅 ${gf.nombre} vence ${diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${gf.nombre} - ${diff} días`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
+      if (diff <= 0) listaAlertas.push({ tipo: 'critical', mensaje: `⚠️ ${gf.nombre} está vencido.`, mensajeCorto: `${gf.nombre} - VENCIDO`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
+      else if (diff <= 5) listaAlertas.push({ tipo: 'warning', mensaje: `📅 ${gf.nombre} vence ${diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${gf.nombre} - ${diff} días`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
     })
-    suscripciones.forEach(sub => {
+    
+    suscripcionesInstant.forEach(sub => {
       if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
       const proxPago = new Date(sub.proximo_pago)
       const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 3 && diff >= 0) alertas.push({ tipo: 'info', mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${sub.servicio} - Renueva`, monto: sub.costo, tipoItem: ITEM_TYPES.SUSCRIPCION, item: sub })
+      if (diff <= 3 && diff >= 0) listaAlertas.push({ tipo: 'info', mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${sub.servicio} - Renueva`, monto: sub.costo, tipoItem: ITEM_TYPES.SUSCRIPCION, item: sub })
     })
-    deudas.forEach(d => {
+    
+    deudasInstant.forEach(d => {
       if (!d.vence) return
       const vence = new Date(d.vence)
       const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 5 && diff >= 0) alertas.push({ tipo: 'warning', mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${d.cuenta} - ${diff}d`, monto: d.pago_minimo, tipoItem: ITEM_TYPES.DEUDA, item: d })
+      if (diff <= 5 && diff >= 0) listaAlertas.push({ tipo: 'warning', mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${d.cuenta} - ${diff}d`, monto: d.pago_minimo, tipoItem: ITEM_TYPES.DEUDA, item: d })
     })
-    return alertas
-  }
-
-  const alertas = obtenerAlertas()
-
-  const obtenerSaludo = () => {
-    const hora = new Date().getHours()
-    let textoHora = ''
-    let icono = null
-    if (hora >= 5 && hora < 12) { textoHora = 'Buenos días'; icono = <Sun className="w-6 h-6 text-yellow-400" /> }
-    else if (hora >= 12 && hora < 19) { textoHora = 'Buenas tardes'; icono = <Coffee className="w-6 h-6 text-orange-400" /> }
-    else { textoHora = 'Buenas noches'; icono = <Moon className="w-6 h-6 text-indigo-400" /> }
-
-    const frases = saldoReal > 0 
-      ? ["¡Excelente gestión!", "¡Vas muy bien!", "Tu esfuerzo funciona"]
-      : saldoReal === 0
-      ? ["Estás en equilibrio.", "¡Bien hecho!", "Controlando finanzas"]
-      : ["No te desanimes.", "Pequeños cambios.", "Tomando control"]
-
-    const frase = frases[Math.floor(Math.random() * frases.length)]
-    return { textoHora, icono, frase }
-  }
-
-  const { textoHora, icono, frase } = obtenerSaludo()
-
-  const gastosPorCategoria = {}
-  ;[...gastosFijos, ...gastos, ...suscripciones.filter(s => s.estado === 'Activo')].forEach(item => {
-    const cat = item.categoria || '📦 Otros'
-    const monto = validarMonto(item.monto || item.costo)
-    gastosPorCategoria[cat] = (gastosPorCategoria[cat] || 0) + monto
-  })
-
-  const dataGraficaDona = Object.entries(gastosPorCategoria).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8)
+    
+    return listaAlertas
+  }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
 
   useEffect(() => {
     if (permission === 'granted' && alertas.length > 0) {
@@ -702,8 +760,45 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         localStorage.setItem('ultima_alerta_notificacion_fecha', hoyDateStr)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertas, permission])
+    }, [alertas, permission, hoy, showLocalNotification])
+
+  // ✅ OPTIMIZACIÓN DE GRÁFICAS (Usar estados Instantáneos)
+  const gastosPorCategoria = useMemo(() => {
+    const categorias = {}
+    ;[...gastosFijosInstant, ...gastosInstant, ...suscripcionesInstant.filter(s => s.estado === 'Activo')].forEach(item => {
+      const cat = item.categoria || '📦 Otros'
+      const monto = validarMonto(item.monto || item.costo)
+      categorias[cat] = (categorias[cat] || 0) + monto
+    })
+    return categorias
+  }, [gastosFijosInstant, gastosInstant, suscripcionesInstant])
+
+  const dataGraficaDona = useMemo(() => 
+    Object.entries(gastosPorCategoria).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8),
+    [gastosPorCategoria]
+  )
+
+   const { textoHora, icono, frase } = useMemo(() => {
+    const hora = new Date().getHours()
+    // Cambiar let por const
+    const texto = hora >= 5 && hora < 12 ? 'Buenos días' 
+                : hora >= 12 && hora < 19 ? 'Buenas tardes' 
+                : 'Buenas noches';
+    
+    let icono = null
+    if (hora >= 5 && hora < 12) { icono = <Sun className="w-6 h-6 text-yellow-400" /> }
+    else if (hora >= 12 && hora < 19) { icono = <Coffee className="w-6 h-6 text-orange-400" /> }
+    else { icono = <Moon className="w-6 h-6 text-indigo-400" /> }
+
+    const frases = saldoReal > 0 
+      ? ["¡Excelente gestión!", "¡Vas muy bien!", "Tu esfuerzo funciona"]
+      : saldoReal === 0
+      ? ["Estás en equilibrio.", "¡Bien hecho!", "Controlando finanzas"]
+      : ["No te desanimes.", "Pequeños cambios.", "Tomando control"]
+
+    const frase = frases[Math.floor(Math.random() * frases.length)]
+    return { textoHora: texto, icono, frase }
+  }, [saldoReal])
 
   const kpis = {
     totalIngresos,
@@ -713,7 +808,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
     totalSuscripciones: totalSuscripcionesReales,
     saldo: saldoReal,
     tasaAhorro: parseFloat(tasaAhorroReal || 0) / 100,
-    totalDeudas: deudas.reduce((sum, d) => sum + validarMonto(d.balance), 0)
+    totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.balance), 0)
   }
 
   return (
@@ -766,12 +861,12 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         
         {/* CALENDARIO */}
         <CalendarioPagos 
-          key={JSON.stringify(suscripciones.map(s => s.proximo_pago))}
-          gastosFijos={gastosFijos}
-          suscripciones={suscripciones}
-          deudas={deudas}
-          ingresos={ingresos}
-          gastos={gastos}
+          key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+          deudas={deudasInstant}
+          ingresos={ingresosInstant}
+          gastos={gastosInstant}
         />
 
         {/* BOTONES DE ACCIÓN */}
@@ -796,11 +891,11 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
 
         {/* ASISTENTE */}
         <AsistenteFinancieroV2
-          ingresos={ingresos}
-          gastosFijos={gastosFijos}
-          gastosVariables={gastos}
-          suscripciones={suscripciones}
-          deudas={deudas}
+          ingresos={ingresosInstant}
+          gastosFijos={gastosFijosInstant}
+          gastosVariables={gastosInstant}
+          suscripciones={suscripcionesInstant}
+          deudas={deudasInstant}
           onOpenDebtPlanner={() => setShowDebtPlanner(true)}
           onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
           onOpenSpendingControl={() => setShowSpendingControl(true)}
@@ -822,16 +917,16 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
             onCategoryClick={() => setShowDetallesCategorias(true)} 
           />
           <GraficaBarras 
-            ingresos={ingresos}
-            gastos={gastos}
-            gastosFijos={gastosFijos}
-            suscripciones={suscripciones}
+            ingresos={ingresosInstant}
+            gastos={gastosInstant}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
           />
         </div>
 
         {/* INGRESOS */}
         <ListaIngresos 
-          ingresos={ingresos}
+          ingresos={ingresosInstant}
           onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
           onEliminar={handleEliminarIngreso}
         />
@@ -847,15 +942,15 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
           </div>
           <div className="grid grid-cols-3 gap-2 md:gap-3">
             <div onClick={() => { setOverviewMode('DEUDAS'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-purple-500/30 hover:bg-purple-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{deudas.length}</div>
+              <div className="text-xl md:text-2xl font-bold text-white">{deudasInstant.length}</div>
               <div className="text-[10px] md:text-xs text-purple-300">Deudas</div>
             </div>
             <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-yellow-500/30 hover:bg-yellow-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{gastosFijos.length}</div>
+              <div className="text-xl md:text-2xl font-bold text-white">{gastosFijosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-yellow-300">Fijos</div>
             </div>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-red-500/30 hover:bg-red-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{gastos.length}</div>
+              <div className="text-xl md:text-2xl font-bold text-white">{gastosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-red-300">Variables</div>
             </div>
           </div>
@@ -917,24 +1012,22 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
         />
       )}
 
-{showModal === 'cuentas' && (
-  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-    <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-      <ModuloCuentasBancarias 
-        cuentas={cuentas} 
-        onAgregar={addCuenta} 
-        onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
-        onEliminar={deleteCuenta} 
-        balanceTotal={cuentas.reduce((sum, c) => sum + Number(c.balance || 0), 0)}
-        listaMovimientosExternos={movimientosBancarios}
-        onTransferenciaExitosa={refreshCuentas}
-      />
-      <div className="p-4">
-        <button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button>
-      </div>
-    </div>
-  </div>
-)}
+      {showModal === 'cuentas' && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <ModuloCuentasBancarias 
+              cuentas={cuentas} 
+              onAgregar={addCuenta} 
+              onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
+              onEliminar={deleteCuenta} 
+              balanceTotal={kpis.saldo}
+              listaMovimientosExternos={movimientosBancarios}
+              onTransferenciaExitosa={refreshCuentas}
+            />
+            <div className="p-4"><button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button></div>
+          </div>
+        </div>
+      )}
 
       {showModal === 'gastos' && (
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
@@ -962,7 +1055,15 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
       )}
 
       {showModal === 'pagoTarjeta' && (
-        <ModalPagoTarjeta onClose={() => setShowModal(null)} onSave={handleRegistrarPagoTarjeta} deudas={deudas} />
+        <ModalPagoTarjeta 
+          onClose={() => {
+            setShowModal(null)
+            setDeudaEditando(null)
+          }} 
+          onSave={handleRegistrarPagoTarjeta} 
+          deudas={deudasInstant}
+          deudaPreseleccionada={deudaEditando}
+        />
       )}
       
       {showModal === 'agregarDeuda' && (
@@ -970,11 +1071,11 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
       )}
 
       {showDetallesCategorias && (
-        <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijos} gastosVariables={gastos} suscripciones={suscripciones} onClose={() => setShowDetallesCategorias(false)} />
+        <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} onClose={() => setShowDetallesCategorias(false)} />
       )}
 
       {showDebtPlanner && (
-        <DebtPlannerModal deudas={deudas} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
+        <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       )}
 
       {showSavingsPlanner && (
@@ -982,7 +1083,7 @@ const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas 
       )}
 
       {showSpendingControl && (
-        <SpendingControlModal gastosFijos={gastosFijos} gastosVariables={gastos} suscripciones={suscripciones} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
+        <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       )}
 
       {showLector && (
