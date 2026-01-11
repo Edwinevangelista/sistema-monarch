@@ -1,67 +1,87 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'monarch-v1';
+const CACHE_NAME = 'finguide-app-v1';
 
-// Instalación - cachear solo lo básico
+// ==============================
+// INSTALL
+// ==============================
 self.addEventListener('install', (event) => {
   console.log('Service Worker: Instalando...');
-  self.skipWaiting(); // Activar inmediatamente
+  self.skipWaiting();
 });
 
-// Activación
+// ==============================
+// ACTIVATE
+// ==============================
 self.addEventListener('activate', (event) => {
   console.log('Service Worker: Activado');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
-      );
-    })
+      )
+    )
   );
   return self.clients.claim();
 });
 
-// Fetch - solo para requests válidos
+// ==============================
+// FETCH
+// ==============================
 self.addEventListener('fetch', (event) => {
-  // Solo cachear GET requests
   if (event.request.method !== 'GET') return;
-  
+
+  const url = event.request.url;
+
+  // Cache SOLO assets estáticos (seguro para finanzas)
+  const isStaticAsset =
+    url.includes('/static/') ||
+    url.includes('/branding/') ||
+    event.request.destination === 'image' ||
+    event.request.destination === 'style' ||
+    event.request.destination === 'script';
+
+  if (!isStaticAsset) return;
+
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Solo cachear respuestas exitosas
-        if (response && response.status === 200) {
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(event.request)
+        .then((response) => {
+          if (!response || response.status !== 200) return response;
+
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
           });
-        }
-        return response;
-      })
-      .catch(() => {
-        // Si falla, intentar desde cache
-        return caches.match(event.request);
-      })
+
+          return response;
+        })
+        .catch(() => caches.match(event.request));
+    })
   );
 });
 
-// Push Notifications - ESTA ES LA PARTE IMPORTANTE
+// ==============================
+// PUSH NOTIFICATIONS
+// ==============================
 self.addEventListener('push', (event) => {
   console.log('Push recibido:', event);
-  
+
   const data = event.data ? event.data.json() : {};
-  
-  const title = data.title || 'Sistema Monarch';
+
+  const title = data.title || 'FinGuide';
   const options = {
     body: data.body || 'Tienes una nueva notificación',
-    icon: '/logo192.png',
-    badge: '/logo192.png',
+    icon: '/branding/app/FinGuide_AppIcon_192.png',
+    badge: '/branding/app/FinGuide_AppIcon_192.png',
     vibrate: [200, 100, 200],
-    tag: 'monarch-notification',
+    tag: 'finguide-notification',
     requireInteraction: false,
     data: data.data || {}
   };
@@ -71,13 +91,15 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Click en notificación
+// ==============================
+// NOTIFICATION CLICK
+// ==============================
 self.addEventListener('notificationclick', (event) => {
   console.log('Notificación clickeada');
   event.notification.close();
-  
+
   event.waitUntil(
-    clients.openWindow(event.notification.data.url || '/')
+    clients.openWindow(event.notification.data?.url || '/')
   );
 });
 

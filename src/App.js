@@ -5,16 +5,20 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Auth from './pages/Auth'
 import AuthGuard from './components/AuthGuard'
 
-// COMPONENTES EXISTENTES Y NUEVO
+// COMPONENTES PRINCIPALES
 import DashboardCompleto from './components/DashboardCompleto'
-import CargandoApp from './components/CargandoApp' // ✅ IMPORTAR LA NUEVA PANTALLA DE BIENVENIDA
+import CargandoApp from './components/CargandoApp'
+
+// PWA INSTALL BANNER (GLOBAL)
+
 
 function App() {
   return (
     <BrowserRouter>
+
+
       <Routes>
-        {/* ✅ NUEVA RUTA: PANTALLA DE CARGA / BIENVENIDA */}
-        {/* Se ejecuta después de un login exitoso */}
+        {/* ✅ PANTALLA DE CARGA / BIENVENIDA (POST LOGIN) */}
         <Route
           path="/loading"
           element={
@@ -26,14 +30,14 @@ function App() {
 
         {/* RUTA DE AUTENTICACIÓN */}
         <Route path="/auth" element={<Auth />} />
-        
+
         {/* ALIAS PARA COMPATIBILIDAD */}
         <Route path="/login" element={<Navigate to="/auth" replace />} />
         <Route path="/signup" element={<Navigate to="/auth" replace />} />
         <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
         <Route path="/reset-password" element={<Navigate to="/auth" replace />} />
 
-        {/* RUTA DEL DASHBOARD */}
+        {/* DASHBOARD PRINCIPAL */}
         <Route
           path="/dashboard"
           element={
@@ -47,6 +51,7 @@ function App() {
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
+
     </BrowserRouter>
   )
 }

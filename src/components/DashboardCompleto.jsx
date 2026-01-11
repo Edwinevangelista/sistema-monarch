@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle } from 'lucide-react'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -12,6 +12,7 @@ import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 import { useNotifications } from '../hooks/useNotifications'
 import { getDeudaStatus } from '../lib/finance/deudaStatus'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+
 // --- COMPONENTES ---
 import ModalIngreso from './ModalIngreso'
 import ModalGastos from './ModalGastos'
@@ -22,10 +23,9 @@ import LectorEstadoCuenta from './LectorEstadoCuenta'
 import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
-import AsistenteFinancieroV2 from './AsistenteFinancieroV2'
+// import AsistenteFinancieroV2 from './AsistenteFinancieroV2' // ❌ ELIMINADO/OCULTO para quitar el cerebro flotante
 
 import LogoutButton from './LogoutButton'
-import MenuFlotante from './MenuFlotante'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
 import MenuInferior from './MenuInferior'
 import ModalUsuario from './ModalUsuario'
@@ -57,13 +57,12 @@ export default function DashboardContent() {
   // --- ESTADOS PRINCIPALES ---
   const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
 
-
   // ✅ OPTIMIZACIÓN: Cargar usuario instantáneamente desde localStorage
   const [usuario, setUsuario] = useState(() => {
-    const guardado = localStorage.getItem('usuario_fintrack');
+    const guardado = localStorage.getItem('usuario_finguide');
     return guardado ? JSON.parse(guardado) : {
       email: 'usuario@ejemplo.com',
-      nombre: 'FinTrack User'
+      nombre: 'finguide User'
     };
   });
 
@@ -75,7 +74,47 @@ export default function DashboardContent() {
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
-  const [showLector, setShowLector] = useState(false)
+
+  // ✅ CORRECCIÓN WARNING: 'showLector' eliminado
+  // ✅ ELIMINADO: MenuFlotante
+  // ✅ ELIMINADO: AsistenteFinancieroV2 (cerebro flotante)
+
+  // ✅ NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
+  const [mostrarMenuInferior, setMostrarMenuInferior] = useState(true)
+  const inactivityTimerRef = useRef(null)
+
+  // ✅ NUEVO: Estado para el Tutorial
+  const [tutorialActivo, setTutorialActivo] = useState(false)
+  const [pasoTutorial, setPasoTutorial] = useState(0)
+
+  // Pasos del tutorial
+  const pasosTutorialConfig = [
+    {
+      titulo: "¡Bienvenido a FinGuide! 👋",
+      texto: "Aquí es donde controlas tus finanzas. Empecemos revisando tu estado actual.",
+      target: "balance-widget"
+    },
+    {
+      titulo: "Tu Balance en Tiempo Real ⚖️",
+      texto: "Este widget te muestra cuánto has ingresado, gastado y cuánto te queda disponible hoy. ¡Míralo seguido!",
+      target: "balance-widget"
+    },
+    {
+      titulo: "Tus Gastos en Detalle 📊",
+      texto: "Las gráficas te ayudan a ver en qué se va tu dinero. Toca la gráfica circular para ver detalles por categoría.",
+      target: "graficas-section"
+    },
+    {
+      titulo: "Agrega tus Movimientos ➕",
+      texto: "Para registrar un ingreso o gasto, usa el botón '+' en el menú inferior. ¡Es muy rápido!",
+      target: "boton-agregar"
+    },
+    {
+      titulo: "¡Listo para empezar! 🚀",
+      texto: "Ahora tienes el control. Si necesitas ayuda, toca el ícono de 'Perfil' en el menú.",
+      target: null
+    }
+  ]
 
   // ✅ OPTIMIZACIÓN: Cargar historial instantáneamente desde localStorage
   const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
@@ -102,7 +141,6 @@ export default function DashboardContent() {
         };
   });
 
-  // ✅ OPTIMIZACIÓN: Calcular fecha solo una vez
   const hoy = useMemo(() => new Date(), [])
   const hoyStr = hoy.toISOString().split('T')[0]
 
@@ -180,6 +218,57 @@ export default function DashboardContent() {
     }
   }, [deudas]);
 
+  // ✅ FUNCIÓN: Auto-ocultar menú inferior (Solo móvil)
+  useEffect(() => {
+    const resetTimer = () => {
+      setMostrarMenuInferior(true)
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      inactivityTimerRef.current = setTimeout(() => {
+        setMostrarMenuInferior(false)
+      }, 4000) // Se oculta después de 4 segundos de inactividad
+    }
+
+    // Detectar eventos de usuario
+    window.addEventListener('mousemove', resetTimer)
+    window.addEventListener('touchstart', resetTimer)
+    window.addEventListener('click', resetTimer)
+    window.addEventListener('scroll', resetTimer)
+
+    resetTimer() // Iniciar timer al montar
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      window.removeEventListener('mousemove', resetTimer)
+      window.removeEventListener('touchstart', resetTimer)
+      window.removeEventListener('click', resetTimer)
+      window.removeEventListener('scroll', resetTimer)
+    }
+  }, [])
+
+  // ✅ FUNCIÓN: Inicializar Tutorial
+  useEffect(() => {
+    const tutorialVisto = localStorage.getItem('finguide_tutorial_visto_v2')
+    if (!tutorialVisto) {
+      // Pequeño delay para que la app cargue
+      setTimeout(() => {
+        setTutorialActivo(true)
+      }, 1500)
+    }
+  }, [])
+
+  const cerrarTutorial = () => {
+    setTutorialActivo(false)
+    localStorage.setItem('finguide_tutorial_visto_v2', 'true')
+  }
+
+  const siguientePasoTutorial = () => {
+    if (pasoTutorial < pasosTutorialConfig.length - 1) {
+      setPasoTutorial(prev => prev + 1)
+    } else {
+      cerrarTutorial()
+    }
+  }
+
   // ✅ FUNCIÓN OPTIMIZADA: Actualizar historial
   const actualizarHistorial = (nuevoMovimiento) => {
     setMovimientosBancarios(prev => {
@@ -195,17 +284,14 @@ export default function DashboardContent() {
     
     const idsActivos = new Set()
     
-    // Recolectar IDs válidos de la base de datos actual
     ingresos?.forEach(ing => ing.cuenta_id && idsActivos.add(`ing-${ing.id}`))
     gastos?.forEach(g => g.cuenta_id && idsActivos.add(`gasto-var-${g.id}`))
     gastosFijos?.forEach(gf => gf.cuenta_id && idsActivos.add(`gasto-fijo-${gf.id}`))
     suscripciones?.forEach(sub => sub.cuenta_id && idsActivos.add(`sub-${sub.id}`))
     
-    // Filtrar movimientos: Solo mantener los que existan en la BD
     setMovimientosBancarios(prev => {
       const filtrado = prev.filter(m => idsActivos.has(m.id) || m.tipo === 'transferencia' || m.tipo === 'ajuste')
       
-      // Si hubo un cambio (se borró algo), actualizar localStorage
       if (filtrado.length !== prev.length) {
         localStorage.setItem('historial_bancarios_v2', JSON.stringify(filtrado))
         return filtrado
@@ -216,7 +302,7 @@ export default function DashboardContent() {
   }, [ingresos, gastos, gastosFijos, suscripciones, movimientosBancarios.length])
 
   // ============================================
-  // MANEJADORES DE DATOS (MODIFICADOS PARA ACTUALIZAR CACHE)
+  // MANEJADORES DE DATOS
   // ============================================
 
   const handleOpenDetail = (item, type) => {
@@ -299,31 +385,102 @@ export default function DashboardContent() {
 
   const handleGuardarIngreso = async (data) => {
     try {
+      console.log('💾 Guardando ingreso:', data)
+      
       if (data.id) {
         await updateIngreso(data.id, data)
+        console.log('✅ Ingreso actualizado')
       } else {
-        await addIngreso(data)
-        if (data.cuenta_id) {
+        const nuevoIngreso = await addIngreso(data)
+        console.log('✅ Ingreso creado:', nuevoIngreso)
+        
+        if (data.cuenta_id && data.monto > 0) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) + Number(data.monto) })
-            actualizarHistorial({
-              id: Date.now(),
+            const nuevoBalance = Number(cuenta.balance) + Number(data.monto)
+            await updateCuenta(cuenta.id, { balance: nuevoBalance })
+            console.log('✅ Saldo actualizado:', nuevoBalance)
+            
+            await registrarMovimientoEnHistorial({
               tipo: 'ingreso',
               monto: Number(data.monto),
               ref: `Ingreso: ${data.fuente || 'General'}`,
-              fecha: hoyStr,
               cuentaId: cuenta.id,
               cuentaNombre: cuenta.nombre
             })
+            console.log('✅ Movimiento registrado en historial')
           }
         }
       }
+      
       setShowModal(null)
       setIngresoEditando(null)
+      
     } catch (e) {
-      console.error('Error al guardar ingreso:', e)
-      alert('Error al guardar el ingreso')
+      console.error('❌ Error al guardar ingreso:', e)
+      alert('Error al guardar el ingreso: ' + e.message)
+    }
+  }
+
+  const registrarMovimientoEnHistorial = async (movimiento) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        console.warn('⚠️ No hay usuario autenticado')
+        return
+      }
+
+      const movimientoData = {
+        user_id: user.id,
+        tipo: movimiento.tipo,
+        monto: Number(movimiento.monto),
+        descripcion: movimiento.ref,
+        cuenta_id: movimiento.cuentaId || null,
+        cuenta_nombre: movimiento.cuentaNombre || null,
+        created_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('movimientos_bancarios')
+        .insert([movimientoData])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ Error en BD:', error.message)
+        guardarEnLocalStorage(movimiento)
+      } else {
+        console.log('✅ Movimiento guardado en BD:', data.id)
+        guardarEnLocalStorage({
+          ...data,
+          fecha: new Date(data.created_at).toLocaleString('es-MX'),
+          ref: data.descripcion
+        })
+      }
+    } catch (err) {
+      console.error('❌ Error en registrarMovimientoEnHistorial:', err)
+      guardarEnLocalStorage(movimiento)
+    }
+  }
+
+  const guardarEnLocalStorage = (movimiento) => {
+    try {
+      const historialActual = JSON.parse(localStorage.getItem('historial_bancarios_v2') || '[]')
+      const movimientoConFecha = {
+        ...movimiento,
+        id: movimiento.id || Date.now(),
+        fecha: movimiento.fecha || new Date().toLocaleString('es-MX', { 
+          day: '2-digit', 
+          month: 'short', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      }
+      localStorage.setItem('historial_bancarios_v2', JSON.stringify([movimientoConFecha, ...historialActual]))
+      console.log('💾 Guardado en localStorage')
+    } catch (err) {
+      console.error('Error en localStorage:', err)
     }
   }
 
@@ -333,18 +490,22 @@ export default function DashboardContent() {
       
       if (data.id) {
         await updateGasto(data.id, data)
+        console.log('✅ Gasto actualizado')
       } else {
         await addGasto(data)
-        if (data.cuenta_id) {
+        console.log('✅ Gasto creado')
+        
+        if (data.cuenta_id && data.monto > 0) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(data.monto) })
-            actualizarHistorial({
-              id: Date.now(),
+            const nuevoBalance = Number(cuenta.balance) - Number(data.monto)
+            await updateCuenta(cuenta.id, { balance: nuevoBalance })
+            console.log('💳 Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
+            
+            await registrarMovimientoEnHistorial({
               tipo: 'gasto',
               monto: Number(data.monto),
-              ref: data.descripcion || data.categoria || 'Gasto',
-              fecha: hoyStr,
+              ref: `Gasto: ${data.descripcion || data.categoria || 'Variable'}`,
               cuentaId: cuenta.id,
               cuentaNombre: cuenta.nombre
             })
@@ -362,26 +523,27 @@ export default function DashboardContent() {
   const handleGuardarGastoFijo = async (data) => {
     try {
       let mostrarEnHistorial = false
-
+      
       if (data.id) {
-        const { id, ...payload } = data;
-        await updateGastoFijo(id, payload);
+        const { id, ...payload } = data
+        await updateGastoFijo(id, payload)
         if (payload.estado === 'Pagado') mostrarEnHistorial = true
       } else {
-        await addGastoFijo(data);
+        await addGastoFijo(data)
         if (data.estado === 'Pagado') mostrarEnHistorial = true
       }
       
-      if (mostrarEnHistorial && data.cuenta_id) {
+      if (mostrarEnHistorial && data.cuenta_id && data.monto > 0) {
         const cuenta = cuentas.find(c => c.id === data.cuenta_id)
         if (cuenta) {
-          await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(data.monto) })
-          actualizarHistorial({
-            id: Date.now(),
+          const nuevoBalance = Number(cuenta.balance) - Number(data.monto)
+          await updateCuenta(cuenta.id, { balance: nuevoBalance })
+          console.log('💳 Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
+          
+          await registrarMovimientoEnHistorial({
             tipo: 'gasto',
             monto: Number(data.monto),
-            ref: `Fijo: ${data.nombre}`,
-            fecha: hoyStr,
+            ref: `Gasto Fijo: ${data.nombre}`,
             cuentaId: cuenta.id,
             cuentaNombre: cuenta.nombre
           })
@@ -426,13 +588,14 @@ export default function DashboardContent() {
       setShowModal('suscripcion')
       return
     }
+    
     try {
       const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-      if (!cuenta) {
-        alert('Error: Cuenta no encontrada.')
-        return
-      }
-      await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
+      if (!cuenta) return
+      
+      const nuevoBalance = Number(cuenta.balance) - Number(sub.costo)
+      await updateCuenta(cuenta.id, { balance: nuevoBalance })
+      
       await addGasto({
         fecha: hoyStr,
         monto: sub.costo,
@@ -442,12 +605,10 @@ export default function DashboardContent() {
         metodo: 'Manual'
       })
       
-      actualizarHistorial({
-        id: Date.now(),
+      await registrarMovimientoEnHistorial({
         tipo: 'gasto',
         monto: Number(sub.costo),
-        ref: `Suscripción: ${sub.servicio}`,
-        fecha: hoyStr,
+        ref: `Suscripción (Manual): ${sub.servicio}`,
         cuentaId: cuenta.id,
         cuentaNombre: cuenta.nombre
       })
@@ -456,10 +617,10 @@ export default function DashboardContent() {
       if (updateSuscripcion) {
         await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
       }
+      
       alert('✅ Pago registrado correctamente.')
     } catch (error) {
-      console.error('Error en pago manual:', error)
-      alert('Hubo un error al procesar el pago.')
+      console.error('❌ Error en pago manual:', error)
     }
   }
 
@@ -501,11 +662,11 @@ export default function DashboardContent() {
         alert('Error al eliminar la suscripción');
       }
     }
-  };
+  }
 
   const handleRegistrarPagoTarjeta = async (pago) => {
     try {
-      const deuda = deudasInstant.find(d => d.id === pago.deuda_id) // ✅ Usar deudasInstant
+      const deuda = deudasInstant.find(d => d.id === pago.deuda_id)
       if (!deuda) throw new Error('Deuda no encontrada')
 
       const principal = Number(pago.a_principal || 0)
@@ -529,16 +690,13 @@ export default function DashboardContent() {
           return
         }
 
-        await updateCuenta(cuenta.id, {
-          balance: Number(cuenta.balance) - total
-        })
-
-        actualizarHistorial({
-          id: Date.now(),
-          tipo: 'gasto',
+        const nuevoBalance = Number(cuenta.balance) - total
+        await updateCuenta(cuenta.id, { balance: nuevoBalance })
+        
+        await registrarMovimientoEnHistorial({
+          tipo: 'pago',
           monto: total,
           ref: `Pago Tarjeta: ${deuda.cuenta}`,
-          fecha: pago.fecha,
           cuentaId: cuenta.id,
           cuentaNombre: cuenta.nombre
         })
@@ -567,23 +725,7 @@ export default function DashboardContent() {
       await refreshDeudas()
       if (pago.cuenta_id) await refreshCuentas()
 
-      let mensaje = '✅ Pago registrado correctamente\n\n'
-      mensaje += `💰 Total pagado: $${total.toFixed(2)}\n`
-      if (pago.metodo === 'Débito' && pago.cuenta_id) {
-        const cuenta = cuentas.find(c => c.id === pago.cuenta_id)
-        mensaje += `💳 Debitado de: ${cuenta?.nombre}\n`
-      }
-      if (intereses > 0) {
-        mensaje += `📊 Intereses: $${intereses.toFixed(2)}\n`
-      }
-      if (principal > 0) {
-        mensaje += `💳 Reducción de deuda: $${principal.toFixed(2)}\n`
-        mensaje += `\n🎯 Nuevo saldo: $${nuevoSaldo.toFixed(2)}`
-      } else {
-        mensaje += `\n⚠️ Este pago solo cubrió intereses.\nEl saldo permanece en: $${deuda.saldo.toFixed(2)}`
-      }
-
-      alert(mensaje)
+      alert('✅ Pago registrado correctamente')
       
       setShowModal(null)
       setDeudaEditando(null)
@@ -608,7 +750,6 @@ export default function DashboardContent() {
     return isNaN(num) || num < 0 ? 0 : num
   }
 
-  // ✅ OPTIMIZACIÓN: Usar useMemo con estados INSTANTÁNEOS
   const totalIngresos = useMemo(() => ingresosInstant.reduce((sum, i) => sum + validarMonto(i.monto), 0), [ingresosInstant])
   
   const overviewData = useMemo(() => ({
@@ -660,7 +801,6 @@ export default function DashboardContent() {
   const saldoReal = totalIngresos - totalGastosReales
   const tasaAhorroReal = (totalIngresos > 0 ? ((totalIngresos - totalGastosReales) / totalIngresos) * 100 : 0)
 
-  // ✅ AUTOPAGO OPTIMIZADO
   useEffect(() => {
     let mounted = true
     const processAutopago = async () => {
@@ -721,7 +861,6 @@ export default function DashboardContent() {
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
-  // ✅ OPTIMIZACIÓN DE ALERTAS (Usar estados Instantáneos)
   const alertas = useMemo(() => {
     const listaAlertas = []
     
@@ -762,7 +901,6 @@ export default function DashboardContent() {
     }
     }, [alertas, permission, hoy, showLocalNotification])
 
-  // ✅ OPTIMIZACIÓN DE GRÁFICAS (Usar estados Instantáneos)
   const gastosPorCategoria = useMemo(() => {
     const categorias = {}
     ;[...gastosFijosInstant, ...gastosInstant, ...suscripcionesInstant.filter(s => s.estado === 'Activo')].forEach(item => {
@@ -780,7 +918,6 @@ export default function DashboardContent() {
 
    const { textoHora, icono, frase } = useMemo(() => {
     const hora = new Date().getHours()
-    // Cambiar let por const
     const texto = hora >= 5 && hora < 12 ? 'Buenos días' 
                 : hora >= 12 && hora < 19 ? 'Buenas tardes' 
                 : 'Buenas noches';
@@ -812,28 +949,39 @@ export default function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4">
+     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4 relative">
+      
       {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-3 md:pt-4">
-        <div className="bg-blue-600/90 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl border border-blue-400/20">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <Wallet className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              <div>
-                <h1 className="text-xl md:text-3xl font-bold text-white">{textoHora}, {usuario.nombre}</h1>
-                <div className="flex items-center gap-2 text-blue-100 mt-1 text-xs md:text-base">
-                  {icono}
-                  <span className="italic">{frase}</span>
-                </div>
+        <div className="bg-blue-600/90 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl border border-blue-400/20 flex justify-between items-center">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Wallet className="w-8 h-8 md:w-10 md:h-10 text-white" />
+            <div>
+              <h1 className="text-xl md:text-3xl font-bold text-white">{textoHora}, {usuario.nombre}</h1>
+              <div className="flex items-center gap-2 text-blue-100 mt-1 text-xs md:text-base">
+                {icono}
+                <span className="italic">{frase}</span>
               </div>
             </div>
-            <div className="hidden md:block"><LogoutButton /></div>
+          </div>
+          <div className="flex items-center gap-2">
+             <button 
+               onClick={() => {
+                 setTutorialActivo(true)
+                 setPasoTutorial(0)
+               }}
+               className="p-2 bg-blue-500/30 rounded-full hover:bg-blue-500/50 text-white transition"
+               title="Repetir Tutorial"
+             >
+               <HelpCircle className="w-5 h-5" />
+             </button>
+             <div className="hidden md:block"><LogoutButton /></div>
           </div>
         </div>
       </div>
 
       {/* WIDGET DE RESUMEN */}
-      <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4 md:mb-6">
+      <div id="balance-widget" className="max-w-7xl mx-auto px-3 md:px-4 mb-4 md:mb-6">
         <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-6 border border-blue-500/30">
           <div className="flex items-center justify-between mb-2 md:mb-3">
             <h3 className="text-xs md:text-sm font-semibold text-blue-300">💰 Balance Real</h3>
@@ -869,28 +1017,37 @@ export default function DashboardContent() {
           gastos={gastosInstant}
         />
 
-        {/* BOTONES DE ACCIÓN */}
+        {/* BOTONES DE ACCIÓN (Desktop) */}
         <div className="hidden md:flex flex-wrap gap-3 justify-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
           <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm touch-manipulation"><Plus className="w-4 h-4" /> Ingreso</button>
           <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm touch-manipulation"><Plus className="w-4 h-4" /> Gasto</button>
           <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm touch-manipulation"><Repeat className="w-4 h-4" /> Suscripción</button>
           <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm touch-manipulation"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          <button onClick={() => setShowLector(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm touch-manipulation border border-gray-500"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
+          
+          {/* ✅ CORRECCIÓN WARNING: Botón actualizado para usar showModal */}
+          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm touch-manipulation border border-gray-500"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
         </div>
 
         {/* NOTIFICACIONES */}
-        <div>
+        <div id="dashboard-alertas">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2"><Bell className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /> Alertas</h3>
-            <span className="bg-yellow-500/20 text-yellow-400 text-[10px] md:text-xs px-2 py-1 rounded-full border border-yellow-500/30">{alertas.length}</span>
+            <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+              <Bell className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /> Alertas
+            </h3>
+            <span className="bg-yellow-500/20 text-yellow-400 text-[10px] md:text-xs px-2 py-1 rounded-full border border-yellow-500/30">
+              {alertas.length}
+            </span>
           </div>
-          <Notificaciones alertas={alertas} onAlertClick={(alerta) => {
-            handleOpenDetail(alerta.item, alerta.tipoItem)
-          }} />
+          <Notificaciones
+            alertas={alertas}
+            onAlertClick={(alerta) => {
+              handleOpenDetail(alerta.item, alerta.tipoItem)
+            }}
+          />
         </div>
 
-        {/* ASISTENTE */}
-        <AsistenteFinancieroV2
+        {/* ASISTENTE - OCULTADO PARA QUITAR EL CEREBRO FLOTANTE */}
+        {/* <AsistenteFinancieroV2
           ingresos={ingresosInstant}
           gastosFijos={gastosFijosInstant}
           gastosVariables={gastosInstant}
@@ -899,7 +1056,7 @@ export default function DashboardContent() {
           onOpenDebtPlanner={() => setShowDebtPlanner(true)}
           onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
           onOpenSpendingControl={() => setShowSpendingControl(true)}
-        />
+        /> */}
 
         {/* PLANES */}
         <div>
@@ -911,7 +1068,7 @@ export default function DashboardContent() {
         </div>
 
         {/* GRÁFICAS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div id="graficas-section" className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <GraficaDona 
             data={dataGraficaDona} 
             onCategoryClick={() => setShowDetallesCategorias(true)} 
@@ -955,13 +1112,11 @@ export default function DashboardContent() {
             </div>
           </div>
         </div>
-
-       
       </div>
 
       <Footer className="hidden md:block" />
 
-      {/* MODALES */}
+      {/* --- MODALES --- */}
       {itemSeleccionado && (
         <ModalDetalleUniversal
           item={itemSeleccionado.item}
@@ -1031,14 +1186,13 @@ export default function DashboardContent() {
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
       )}
 
-           {showModal === 'usuario' && (
+      {showModal === 'usuario' && (
         <ModalUsuario 
           usuario={usuario} 
           preferencias={preferenciasUsuario} 
           onChangePreferencias={setPreferenciasUsuario} 
           onClose={() => setShowModal(null)} 
           onLogout={() => { localStorage.clear(); window.location.href = "/auth"; }}
-          // ✅ AGREGA ESTOS DOS PROPS:
           permission={permission}
           showLocalNotification={showLocalNotification}
         />
@@ -1077,6 +1231,10 @@ export default function DashboardContent() {
         <ModalAgregarDeuda onClose={() => { setShowModal(null); setDeudaEditando(null) }} onSave={handleGuardarDeuda} deudaInicial={deudaEditando} />
       )}
 
+      {showModal === 'lectorEstado' && (
+        <LectorEstadoCuenta onClose={() => setShowModal(null)} />
+      )}
+
       {showDetallesCategorias && (
         <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} onClose={() => setShowDetallesCategorias(false)} />
       )}
@@ -1093,15 +1251,72 @@ export default function DashboardContent() {
         <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       )}
 
-      {showLector && (
-        <LectorEstadoCuenta onClose={() => setShowLector(false)} />
+      {/* --- TUTORIAL OVERLAY --- */}
+      {tutorialActivo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-800 border border-blue-500 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative animate-bounce-in">
+            <button 
+              onClick={cerrarTutorial}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="bg-blue-500/20 p-3 rounded-full mb-3">
+                <HelpCircle className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                {pasosTutorialConfig[pasoTutorial].titulo}
+              </h3>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                {pasosTutorialConfig[pasoTutorial].texto}
+              </p>
+            </div>
+
+            <div className="flex justify-between items-center mt-4">
+              <button 
+                onClick={cerrarTutorial}
+                className="text-xs text-gray-400 hover:text-gray-200 underline"
+              >
+                Saltar tutorial
+              </button>
+              <button 
+                onClick={siguientePasoTutorial}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+              >
+                {pasoTutorial === pasosTutorialConfig.length - 1 ? 'Entendido' : 'Siguiente'}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Indicador de pasos */}
+            <div className="flex justify-center gap-2 mt-4">
+              {pasosTutorialConfig.map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === pasoTutorial ? 'w-6 bg-blue-500' : 'w-1.5 bg-gray-600'}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="hidden md:block">
-        <MenuFlotante onIngresoCreado={addIngreso} onGastoCreado={addGasto} />
+      {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
+      <div 
+        id="boton-agregar"
+        className={`fixed bottom-0 left-0 right-0 md:hidden transition-transform duration-300 z-40 ease-in-out ${
+          mostrarMenuInferior || tutorialActivo ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <MenuInferior 
+          onOpenModal={setShowModal} 
+          alertasCount={alertas.length} 
+          nombreUsuario={usuario.nombre} 
+          onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} 
+        />
       </div>
-
-      <MenuInferior onOpenModal={setShowModal} alertasCount={alertas.length} nombreUsuario={usuario.nombre} onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} />
     </div>
   )
 }
