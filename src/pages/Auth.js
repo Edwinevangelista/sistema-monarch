@@ -399,7 +399,7 @@ function Auth() {
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <Wallet className="w-10 h-10 text-blue-400" />
-          <h1 className="text-3xl font-bold text-white">FinTrack App</h1>
+          <h1 className="text-3xl font-bold text-white">finguide App</h1>
         </div>
       </div>
 
