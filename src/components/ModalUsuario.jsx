@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react' // Quitamos useState porque no se usa
+import React, { useEffect, useMemo } from 'react';
 import { X, Brain, Shield, DollarSign, Target, AlertTriangle, Bell, Smartphone, CreditCard, Repeat } from 'lucide-react'
 
 
@@ -50,7 +50,7 @@ const ModalUsuario = ({
   const handleLogout = () => {
     if(window.confirm("¿Estás seguro de cerrar sesión?")) {
       // Limpiar datos sensibles si es necesario
-      localStorage.removeItem('usuario_fintrack');
+      localStorage.removeItem('usuario_finguide');
       localStorage.removeItem('preferenciasUsuario');
       // Llamar la función de logout del padre
       if (onLogout) onLogout();
@@ -59,12 +59,15 @@ const ModalUsuario = ({
 
   // ✅ ESTADO PARA LAS PREFERENCIAS DE NOTIFICACIÓN
   // Usamos preferencias generales pero si no existen, usamos defaults
-  const prefsNotificaciones = preferencias?.notificaciones || {
-    gastos: true,
-    deudas: true,
-    suscripciones: true,
-    alertasPush: false // Falso por defecto hasta que el usuario active
-  };
+    // ✅ OPTIMIZACIÓN: useMemo para prefsNotificaciones (Soluciona error de Vercel)
+  const prefsNotificaciones = useMemo(() => {
+    return preferencias?.notificaciones || {
+      gastos: true,
+      deudas: true,
+      suscripciones: true,
+      alertasPush: false // Falso por defecto hasta que el usuario active
+    };
+  }, [preferencias?.notificaciones]);
 
   const toggleNotificacion = (tipo) => {
     const nuevasPrefs = {
