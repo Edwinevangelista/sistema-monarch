@@ -23,7 +23,7 @@ import LectorEstadoCuenta from './LectorEstadoCuenta'
 import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
-// import AsistenteFinancieroV2 from './AsistenteFinancieroV2' // ❌ ELIMINADO/OCULTO para quitar el cerebro flotante
+import AsistenteFinancieroV2 from './AsistenteFinancieroV2' // ✅ REACTIVADO
 
 import LogoutButton from './LogoutButton'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
@@ -74,10 +74,6 @@ export default function DashboardContent() {
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
-
-  // ✅ CORRECCIÓN WARNING: 'showLector' eliminado
-  // ✅ ELIMINADO: MenuFlotante
-  // ✅ ELIMINADO: AsistenteFinancieroV2 (cerebro flotante)
 
   // ✅ NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   const [mostrarMenuInferior, setMostrarMenuInferior] = useState(true)
@@ -1023,8 +1019,6 @@ export default function DashboardContent() {
           <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm touch-manipulation"><Plus className="w-4 h-4" /> Gasto</button>
           <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm touch-manipulation"><Repeat className="w-4 h-4" /> Suscripción</button>
           <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm touch-manipulation"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          
-          {/* ✅ CORRECCIÓN WARNING: Botón actualizado para usar showModal */}
           <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm touch-manipulation border border-gray-500"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
         </div>
 
@@ -1046,8 +1040,8 @@ export default function DashboardContent() {
           />
         </div>
 
-        {/* ASISTENTE - OCULTADO PARA QUITAR EL CEREBRO FLOTANTE */}
-        {/* <AsistenteFinancieroV2
+        {/* ✅ ASISTENTE FINANCIERO REACTIVADO */}
+        <AsistenteFinancieroV2
           ingresos={ingresosInstant}
           gastosFijos={gastosFijosInstant}
           gastosVariables={gastosInstant}
@@ -1056,7 +1050,7 @@ export default function DashboardContent() {
           onOpenDebtPlanner={() => setShowDebtPlanner(true)}
           onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
           onOpenSpendingControl={() => setShowSpendingControl(true)}
-        /> */}
+        />
 
         {/* PLANES */}
         <div>
