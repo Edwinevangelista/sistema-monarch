@@ -2,10 +2,9 @@
   "name": "FinGuide",
   "short_name": "FinGuide",
   "description": "Your Financial Guide",
- "start_url": "/?source=pwa",
-"scope": "/",
-"display": "standalone",
-
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
   "background_color": "#0B1220",
   "theme_color": "#1E3A8A",
   "orientation": "portrait",
@@ -14,14 +13,12 @@
     {
       "src": "/branding/app/FinGuide_AppIcon_192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "/branding/app/FinGuide_AppIcon_512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
