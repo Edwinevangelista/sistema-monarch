@@ -8,7 +8,6 @@
   "background_color": "#0B1220",
   "theme_color": "#1E3A8A",
   "orientation": "portrait",
-  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "/branding/app/FinGuide_AppIcon_192.png",
