@@ -2,8 +2,10 @@
   "name": "FinGuide",
   "short_name": "FinGuide",
   "description": "Your Financial Guide",
-  "start_url": "/",
-  "display": "standalone",
+ "start_url": "/?source=pwa",
+"scope": "/",
+"display": "standalone",
+
   "background_color": "#0B1220",
   "theme_color": "#1E3A8A",
   "orientation": "portrait",
