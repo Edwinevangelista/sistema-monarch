@@ -3,11 +3,13 @@
   <head>
     <meta charset="utf-8" />
 
+    <!-- Viewport (CRÍTICO para iOS) -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
 
+    <!-- App Info -->
     <title>FinGuide</title>
     <meta name="description" content="Your Financial Guide" />
     <meta name="theme-color" content="#1E3A8A" />
@@ -20,25 +22,33 @@
       content="black-translucent"
     />
 
-    <!-- ICONO iOS (CRÍTICO) -->
-    <link
-      rel="apple-touch-icon"
-      href="/branding/app/FinGuide_iOS_180.png"
-    />
+    <!-- 🔴 APPLE TOUCH ICONS (OBLIGATORIO PARA QUE NO SEA GENÉRICO) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/branding/app/FinGuide_iOS_180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/branding/app/FinGuide_iOS_180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/branding/app/FinGuide_iOS_180.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/branding/app/FinGuide_iOS_180.png">
+    <link rel="apple-touch-icon" href="/branding/app/FinGuide_iOS_180.png">
 
-    <!-- Favicon (browser) -->
+    <!-- Favicons (Browser) -->
     <link
       rel="icon"
       type="image/png"
       sizes="32x32"
       href="/branding/app/FinGuide_Favicon_32.png"
     />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/branding/app/FinGuide_Favicon_16.png"
+    />
 
-    <!-- Manifest (Android) -->
+    <!-- Android / PWA -->
     <link rel="manifest" href="/manifest.json" />
   </head>
 
   <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
 </html>
