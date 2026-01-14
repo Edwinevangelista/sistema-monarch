@@ -1,8 +1,8 @@
 {
-  "name": "FinGuide",
+  "name": "FinGuide - Tu Guía Financiera",
   "short_name": "FinGuide",
   "description": "Your Financial Guide",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0B1220",
@@ -16,16 +16,22 @@
       "purpose": "any"
     },
     {
+      "src": "/icons/FinGuide_AppIcon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icons/FinGuide_AppIcon_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/FinGuide_AppIcon_1024.png",
-      "sizes": "1024x1024",
+      "src": "/icons/FinGuide_AppIcon_512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ]
 }
