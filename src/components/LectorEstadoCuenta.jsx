@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Upload, FileText, Image, Loader2, CheckCircle, XCircle, TrendingDown, Wallet, X } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 import { useGastosVariables } from '../hooks/useGastosVariables';
@@ -51,10 +51,9 @@ export default function LectorEstadoCuenta({ onClose }) {
     let totalGastos = 0;
     let totalIngresos = 0;
 
-    // Regex para detectar fechas (DD/MM/YYYY o DD-MM-YY)
-    const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/; 
-    // Regex para detectar montos ($1,200.00 o 1200.00)
-    const amountRegex = /[\$]?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.?\d*)/;
+    // CORREGIDO: Removidos escapes innecesarios dentro de los corchetes []
+    const dateRegex = /(\d{1,2})[/.\\-](\d{1,2})[/.\\-](\d{2,4})/;
+    const amountRegex = /\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.?\d*)/;
 
     lines.forEach((line) => {
       const cleanLine = line.trim();
@@ -64,14 +63,13 @@ export default function LectorEstadoCuenta({ onClose }) {
       const amountMatch = cleanLine.match(amountRegex);
 
       if (dateMatch && amountMatch) {
-        const rawAmount = amountMatch[0].replace(/[^0-9\.\-]/g, '');
+        const rawAmount = amountMatch[0].replace(/[(),\-$]/g, '');
         const amount = parseFloat(rawAmount);
 
         if (!isNaN(amount) && amount !== 0) {
           let tipo = 'gasto';
           let montoFinal = Math.abs(amount);
           
-          // Heurística simple para detectar tipo
           if (cleanLine.includes('-') || cleanLine.includes('(')) {
              tipo = 'gasto';
           } else if (cleanLine.toLowerCase().includes('deposito') || 
@@ -81,10 +79,11 @@ export default function LectorEstadoCuenta({ onClose }) {
              tipo = 'ingreso';
           }
 
+          // CORREGIDO: Removidos escapes innecesarios en replace
           let descripcion = cleanLine
             .replace(dateMatch[0], '')
             .replace(amountMatch[0], '')
-            .replace(/[\-\(\)]/g, '') 
+            .replace(/[()\\-]/g, '')
             .trim()
             .substring(0, 40);
 
@@ -187,7 +186,6 @@ export default function LectorEstadoCuenta({ onClose }) {
         }
       }
       onClose();
-      // Usar una notificación más bonita sería ideal, pero esto es funcional
       console.log('✅ Transacciones guardadas');
     } catch (err) {
       setError('Error al guardar en la base de datos.');
@@ -217,7 +215,6 @@ export default function LectorEstadoCuenta({ onClose }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
       <div className="bg-gray-900 w-full md:max-w-3xl md:h-auto md:max-h-[90vh] h-[95vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden animate-slide-in-from-bottom-10">
         
-        {/* Header Móvil */}
         <div className="flex items-center justify-between p-5 border-b border-white/5 bg-gray-800/50 md:hidden">
            <h2 className="text-white font-bold text-lg flex items-center gap-2">
              <Upload className="w-5 h-5 text-blue-400" /> Escáner Local
@@ -225,7 +222,6 @@ export default function LectorEstadoCuenta({ onClose }) {
            <button onClick={onClose} className="p-2 text-gray-400"><X className="w-6 h-6" /></button>
         </div>
 
-        {/* Header Desktop */}
         <div className="hidden md:flex items-center justify-between p-6 border-b border-white/10 bg-gray-900">
            <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Upload className="w-6 h-6" /></div>
@@ -237,7 +233,6 @@ export default function LectorEstadoCuenta({ onClose }) {
         <div className="p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
           {!result ? (
             <>
-              {/* Area de Carga */}
               <div className="mb-6">
                 <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-2xl p-8 md:p-10 text-center transition-all hover:border-blue-400/50 hover:bg-white/10 group relative overflow-hidden">
                   <input type="file" className="absolute inset-0 w-full h-full cursor-pointer z-10 opacity-0" onChange={handleFileChange} accept=".pdf,.png,.jpg,.jpeg,.webp" />
@@ -273,7 +268,6 @@ export default function LectorEstadoCuenta({ onClose }) {
               </button>
             </>
           ) : (
-            /* Resultados */
             <div className="animate-in fade-in slide-in-from-bottom-4">
               <div className="flex items-center gap-3 mb-6">
                  <div className="p-2 bg-green-500/20 rounded-full border border-green-500/30"><CheckCircle className="w-6 h-6 text-green-400" /></div>
@@ -284,7 +278,6 @@ export default function LectorEstadoCuenta({ onClose }) {
                  <button onClick={() => setResult(null)} className="ml-auto p-2 bg-white/5 hover:bg-white/10 rounded-full"><X className="w-5 h-5 text-gray-400" /></button>
               </div>
 
-              {/* Resumen Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                     <p className="text-gray-400 text-xs uppercase">Total Gastos</p>
@@ -306,7 +299,6 @@ export default function LectorEstadoCuenta({ onClose }) {
                  </div>
               </div>
 
-              {/* Lista Transacciones */}
               <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto custom-scrollbar">
                  {result.transacciones.map((trans, idx) => (
                    <div 
