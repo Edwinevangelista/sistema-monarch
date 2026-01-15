@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet, Coffee, Sparkles, Loader2, CheckCircle, Zap } from 'lucide-react'
+import { Wallet, Coffee, Sparkles, Loader2, CheckCircle } from 'lucide-react'
 
 const CONSEJOS_FINANCIEROS = [
   "💡 Una regla de oro: Ahorra al menos el 10% de tus ingresos.",
