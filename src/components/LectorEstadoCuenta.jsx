@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Upload, FileText, Image, Loader2, CheckCircle, XCircle, TrendingDown, Wallet, X } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 import { useGastosVariables } from '../hooks/useGastosVariables';
