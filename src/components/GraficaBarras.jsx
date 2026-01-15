@@ -9,7 +9,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 // Colores por defecto para las barras
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c'];
@@ -74,23 +74,11 @@ export default function GraficaBarras({ data = [], height = 300, title = "Grafic
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }} />
             
-            {/* --- EL ERROR ESTABA AQUÍ, YA ESTÁ CORREGIDO --- */}
+            {/* LEYENDA CORREGIDA - Sin payload customizado que causaba error */}
             <Legend 
-              wrapperStyle={{ top: 0, left: 0 }}
+              wrapperStyle={{ paddingTop: '10px' }}
               iconType="circle"
-              width="100%"
-              height={30}
-              layout="horizontal"
-              verticalAlign="bottom"
-              align="right"
-              payload={(value) => (
-                <div className="flex items-center gap-2">
-                  <span 
-                    style={{ backgroundColor: value.color, borderRadius: '50%', width: 10, height: 10 }} 
-                  />
-                  <span className="text-gray-300 text-sm">{value.value}</span>
-                </div>
-              )}
+              iconSize={10}
             />
             
             <Bar dataKey="monto" fill="#8884d8" radius={[10, 10, 0, 0]} />
