@@ -117,8 +117,8 @@ export default function AsistenteFinancieroV2({
     setLoading(true);
     setShowAnalysisAnimation(true);
     setAnalisisInsight(null);
-    
-    setTimeout(() => {
+        // 🔧 Guardamos el ID del timeout en la ref para poder cancelarlo si es necesario
+    analysisTimeoutRef.current = setTimeout(() => {
       try {
         const result = runIntelligence({
           ingresos,
@@ -173,8 +173,9 @@ export default function AsistenteFinancieroV2({
       analizar();
     }
     return () => {
-      if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
-    };
+  const timeoutId = analysisTimeoutRef.current;
+  if (timeoutId) clearTimeout(timeoutId);
+};
   }, [hasData, output, analizar]);
 
   // --- MANEJO DE METAS ---
@@ -194,7 +195,7 @@ export default function AsistenteFinancieroV2({
   };
 
   const currentMetaConfig = METAS.find(m => m.key === currentGoal) || METAS[0];
-  const Icon = currentMetaConfig.icon;
+ 
 
   // --- HELPER FUNCTIONS ---
 
