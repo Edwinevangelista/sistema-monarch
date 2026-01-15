@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react'
-import { FileText, X } from 'lucide-react'
-import { CATEGORIAS } from '../constants/categorias'
+import React, { useState, useEffect } from 'react';
+import { FileText, X, CreditCard, Calendar, CheckCircle, Loader2, DollarSign, Tag, AlertCircle } from 'lucide-react';
+import { CATEGORIAS } from '../constants/categorias';
+import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
 
-const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
+export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null }) {
+  const { cuentas } = useCuentasBancarias();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const [formData, setFormData] = useState({
     nombre: '',
     categoria: CATEGORIAS[0],
     dia_venc: '',
     monto: '',
+    cuenta_id: '',
     auto_pago: 'No',
     estado: 'Pendiente',
-    recurrente: true,
     notas: ''
-  })
+  });
 
   useEffect(() => {
     if (gastoInicial) {
@@ -21,74 +26,133 @@ const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
         categoria: gastoInicial.categoria || CATEGORIAS[0],
         dia_venc: gastoInicial.dia_venc?.toString() || '',
         monto: gastoInicial.monto?.toString() || '',
-        auto_pago: gastoInicial.auto_pago || 'No',
+        cuenta_id: gastoInicial.cuenta_id || '',
+        auto_pago: gastoInicial.auto_pago ? 'Sí' : 'No',
         estado: gastoInicial.estado || 'Pendiente',
-        recurrente: gastoInicial.recurrente !== undefined ? gastoInicial.recurrente : true,
         notas: gastoInicial.notas || ''
-      })
+      });
     }
-  }, [gastoInicial])
+  }, [gastoInicial]);
 
   const handleSubmit = async () => {
     if (!formData.nombre || !formData.monto) {
-      alert('Por favor completa los campos requeridos')
-      return
+      setError('Por favor completa el nombre y el monto');
+      return;
+    }
+    if (formData.dia_venc && (formData.dia_venc < 1 || formData.dia_venc > 31)) {
+      setError('El día debe estar entre 1 y 31');
+      return;
     }
 
-    const resultado = await onSave({
-      ...formData,
-      monto: parseFloat(formData.monto),
-      dia_venc: formData.dia_venc ? parseInt(formData.dia_venc) : null
-    })
+    setLoading(true);
+    setError('');
 
-    if (resultado.success) {
-      onClose()
-    } else {
-      alert('Error al guardar')
+    try {
+      const dataToSave = {
+        ...formData,
+        monto: parseFloat(formData.monto),
+        dia_venc: formData.dia_venc ? parseInt(formData.dia_venc) : null,
+        cuenta_id: formData.cuenta_id || null,
+        auto_pago: formData.auto_pago === 'Sí'
+      };
+
+      if (gastoInicial?.id) {
+        dataToSave.id = gastoInicial.id;
+      }
+
+      await onSave(dataToSave);
+      
+      alert(`✅ ${gastoInicial ? 'Gasto fijo actualizado' : 'Gasto fijo creado'} correctamente`);
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar gasto fijo:", error);
+      setError(error?.message || 'Error al guardar el gasto fijo');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-gray-800 rounded-2xl p-4 sm:p-6 w-full max-w-md border-2 border-yellow-500 my-8">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400" />
-            <span className="truncate">{gastoInicial ? 'Editar' : 'Nuevo'}</span>
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <X className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+      <div className="bg-gray-900 w-full max-w-lg md:max-h-[85vh] overflow-y-auto rounded-3xl md:rounded-2xl shadow-2xl border border-yellow-500/20 relative flex flex-col">
+        
+        {/* Header con Gradiente */}
+        <div className="bg-gradient-to-r from-yellow-600 to-yellow-800/80 p-4 md:p-6 rounded-t-3xl md:rounded-t-2xl border-b border-yellow-500/30 sticky top-0 z-10">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-white/20 p-2 rounded-xl border border-white/30">
+                <FileText className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-white">
+                  {gastoInicial ? 'Editar Gasto Fijo' : 'Nuevo Gasto Fijo'}
+                </h2>
+                {gastoInicial && (
+                  <p className="text-yellow-100 text-xs md:text-sm mt-0.5">
+                    Editando: {gastoInicial.nombre}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="p-2 bg-black/30 hover:bg-black/50 rounded-full text-yellow-100 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5 md:w-6 md:h-6" />
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-3 sm:space-y-4">
-          <div>
-            <label className="block text-gray-300 mb-2 text-sm">Nombre *</label>
+        {/* Mensaje de Error */}
+        {error && (
+          <div className="mx-4 md:mx-6 mt-4 bg-red-500/10 border border-red-500 text-red-200 px-3 md:px-4 py-2 md:py-3 rounded-xl flex items-center gap-2 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Formulario */}
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+          
+          {/* Nombre */}
+          <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
+              <FileText className="w-4 h-4 text-yellow-400" /> Nombre del Servicio *
+            </label>
             <input
               type="text"
               placeholder="Ej: Renta, Internet"
               value={formData.nombre}
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+              disabled={loading}
+              className="w-full bg-gray-800 text-white px-3 py-2 md:px-4 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 placeholder-gray-500 text-sm md:text-base"
+              style={{ fontSize: '16px' }} // Fix iOS
             />
           </div>
 
-          <div>
-            <label className="block text-gray-300 mb-2 text-sm">Categoría</label>
-            <select
-              value={formData.categoria}
-              onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-              className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
-            >
-              {CATEGORIAS.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
+          {/* Categoría y Día */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+              <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
+                <Tag className="w-4 h-4 text-purple-400" /> Categoría
+              </label>
+              <select
+                value={formData.categoria}
+                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                disabled={loading}
+                className="w-full bg-gray-800 text-white px-2 py-2 md:px-3 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 text-sm md:text-base"
+                style={{ fontSize: '16px' }}
+              >
+                {CATEGORIAS.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm">Día (1-31)</label>
+            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+              <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
+                <Calendar className="w-4 h-4 text-blue-400" /> Día
+              </label>
               <input
                 type="number"
                 min="1"
@@ -96,93 +160,140 @@ const ModalGastoFijo = ({ onClose, onSave, gastoInicial = null }) => {
                 placeholder="15"
                 value={formData.dia_venc}
                 onChange={(e) => setFormData({ ...formData, dia_venc: e.target.value })}
-                className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+                disabled={loading}
+                className="w-full bg-gray-800 text-white px-2 py-2 md:px-3 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-sm md:text-base"
+                style={{ fontSize: '16px' }}
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm">Monto *</label>
+          {/* Monto y Auto-pago */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+              <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
+                <DollarSign className="w-4 h-4 text-emerald-400" /> Monto *
+              </label>
               <input
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={formData.monto}
                 onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-                className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+                disabled={loading}
+                className="w-full bg-gray-800 text-white px-2 py-2 md:px-3 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 text-sm md:text-base"
+                style={{ fontSize: '16px' }}
               />
             </div>
-          </div>
 
-          <div className="bg-yellow-500/10 border-2 border-yellow-500/30 rounded-xl p-3">
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.recurrente}
-                onChange={(e) => setFormData({ ...formData, recurrente: e.target.checked })}
-                className="w-5 h-5 mt-0.5 rounded border-yellow-500 text-yellow-500 focus:ring-yellow-500"
-              />
-              <div className="flex-1">
-                <div className="text-white font-semibold text-sm">🔄 Recurrente Mensual</div>
-                <div className="text-xs text-gray-400">Se crea automáticamente cada mes</div>
-              </div>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm">Auto-pago</label>
+            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+              <label className="block text-gray-300 mb-2 text-sm md:text-base">Auto-pago</label>
               <select
                 value={formData.auto_pago}
                 onChange={(e) => setFormData({ ...formData, auto_pago: e.target.value })}
-                className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+                disabled={loading}
+                className="w-full bg-gray-800 text-white px-2 py-2 md:px-3 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 text-sm md:text-base"
+                style={{ fontSize: '16px' }}
               >
-                <option value="Sí">Sí</option>
                 <option value="No">No</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-gray-300 mb-2 text-sm">Estado</label>
-              <select
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="Pagado">Pagado</option>
+                <option value="Sí">Sí</option>
               </select>
             </div>
           </div>
 
+          {/* Cuenta Bancaria */}
+          <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
+              <CreditCard className="w-4 h-4 text-blue-400" /> Cuenta de cobro
+            </label>
+            <select
+              value={formData.cuenta_id}
+              onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })}
+              disabled={loading}
+              className="w-full bg-gray-800 text-white px-2 py-2 md:px-3 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-sm md:text-base"
+              style={{ fontSize: '16px' }}
+            >
+              <option value="">Sin asignar</option>
+              {cuentas.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} - {c.tipo_cuenta} (${Number(c.balance || 0).toLocaleString()})
+                </option>
+              ))}
+            </select>
+            <p className="text-gray-500 text-xs mt-2 flex items-start gap-1">
+              <span className="flex-shrink-0">💡</span>
+              <span>Si seleccionas una cuenta, el saldo se descontará automáticamente</span>
+            </p>
+          </div>
+
+          {/* Estado */}
           <div>
-            <label className="block text-gray-300 mb-2 text-sm">Notas</label>
+            <label className="block text-gray-300 mb-3 text-sm md:text-base font-medium">Estado</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                type="button" 
+                onClick={() => setFormData({ ...formData, estado: 'Pendiente' })} 
+                disabled={loading} 
+                className={`p-2.5 md:p-3 rounded-xl border-2 transition-all text-sm md:text-base font-semibold ${
+                  formData.estado === 'Pendiente' 
+                    ? 'bg-yellow-600 border-yellow-600 text-white shadow-lg' 
+                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500 disabled:opacity-50'
+                }`}
+              >
+                ⏳ Pendiente
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setFormData({ ...formData, estado: 'Pagado' })} 
+                disabled={loading} 
+                className={`p-2.5 md:p-3 rounded-xl border-2 transition-all text-sm md:text-base font-semibold ${
+                  formData.estado === 'Pagado' 
+                    ? 'bg-green-600 border-green-600 text-white shadow-lg' 
+                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500 disabled:opacity-50'
+                }`}
+              >
+                ✅ Pagado
+              </button>
+            </div>
+          </div>
+
+          {/* Notas */}
+          <div>
+            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
+              <FileText className="w-4 h-4 text-gray-400" /> Notas
+            </label>
             <textarea
-              placeholder="Información adicional"
+              placeholder="Detalles adicionales..."
               value={formData.notas}
               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-              rows="2"
-              className="w-full bg-gray-700 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+              rows={2}
+              disabled={loading}
+              className="w-full bg-gray-800 text-white px-3 py-2 md:px-4 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 resize-none text-sm md:text-base"
+              style={{ fontSize: '16px' }}
             />
           </div>
         </div>
 
-        <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors text-sm sm:text-base"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl font-semibold transition-colors text-sm sm:text-base"
-          >
-            {gastoInicial ? 'Actualizar' : 'Guardar'}
-          </button>
+        {/* Footer con Botones */}
+        <div className="p-4 md:p-6 border-t border-white/5 bg-gray-800/50 backdrop-blur-sm z-20">
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="px-3 md:px-4 py-3 md:py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 text-sm md:text-base"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 md:px-4 py-3 md:py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-900/20 disabled:opacity-50 text-sm md:text-base"
+            >
+              {loading ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />}
+              {loading ? "Guardando..." : (gastoInicial ? 'Actualizar' : 'Guardar')}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default ModalGastoFijo

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle } from 'lucide-react'
-
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, TrendingDown } from 'lucide-react'
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
 import { useIngresos } from '../hooks/useIngresos'
@@ -23,7 +22,7 @@ import LectorEstadoCuenta from './LectorEstadoCuenta'
 import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
 import GraficaBarras from './GraficaBarras'
-import AsistenteFinancieroV2 from './AsistenteFinancieroV2' // ✅ REACTIVADO
+import AsistenteFinancieroV2 from './AsistenteFinancieroV2' 
 
 import LogoutButton from './LogoutButton'
 import ModalDetallesCategorias from './ModalDetallesCategorias'
@@ -49,15 +48,14 @@ import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import { supabase } from '../lib/supabaseClient'
 
 // ============================================
-// COMPONENTE PRINCIPAL DEL DASHBOARD
+// COMPONENTE PRINCIPAL DEL DASHBOARD (OPTIMIZADO)
 // ============================================
 
-export default function DashboardContent() {
+export default function DashboardCompleto()  {
   
   // --- ESTADOS PRINCIPALES ---
   const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
 
-  // ✅ OPTIMIZACIÓN: Cargar usuario instantáneamente desde localStorage
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem('usuario_finguide');
     return guardado ? JSON.parse(guardado) : {
@@ -75,15 +73,14 @@ export default function DashboardContent() {
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
 
-  // ✅ NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
+  // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   const [mostrarMenuInferior, setMostrarMenuInferior] = useState(true)
   const inactivityTimerRef = useRef(null)
 
-  // ✅ NUEVO: Estado para el Tutorial
+  // NUEVO: Estado para el Tutorial
   const [tutorialActivo, setTutorialActivo] = useState(false)
   const [pasoTutorial, setPasoTutorial] = useState(0)
 
-  // Pasos del tutorial
   const pasosTutorialConfig = [
     {
       titulo: "¡Bienvenido a FinGuide! 👋",
@@ -112,7 +109,6 @@ export default function DashboardContent() {
     }
   ]
 
-  // ✅ OPTIMIZACIÓN: Cargar historial instantáneamente desde localStorage
   const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
     const guardado = localStorage.getItem('historial_bancarios_v2');
     return guardado ? JSON.parse(guardado) : [];
@@ -151,7 +147,7 @@ export default function DashboardContent() {
   const { refresh: refreshPlanes } = usePlanesGuardados()
   const { permission, showLocalNotification } = useNotifications()
 
-  // ✅ PUENTE DE ESTADO INSTANTÁNEO (Para evitar pantalla vacía al inicio)
+  // PUENTE DE ESTADO INSTANTÁNEO
   const [ingresosInstant, setIngresosInstant] = useState(() => {
     const cached = localStorage.getItem('ingresos_cache_v2');
     return cached ? JSON.parse(cached) : [];
@@ -178,7 +174,6 @@ export default function DashboardContent() {
   });
 
   // --- EFECTOS DE SINCRONIZACIÓN ---
-  // Cuando los hooks llegan de BD, actualizan los estados instantáneos y el caché
   useEffect(() => {
     if (ingresos.length > 0) {
       setIngresosInstant(ingresos);
@@ -214,23 +209,22 @@ export default function DashboardContent() {
     }
   }, [deudas]);
 
-  // ✅ FUNCIÓN: Auto-ocultar menú inferior (Solo móvil)
+  // FUNCIÓN: Auto-ocultar menú inferior
   useEffect(() => {
     const resetTimer = () => {
       setMostrarMenuInferior(true)
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
       inactivityTimerRef.current = setTimeout(() => {
         setMostrarMenuInferior(false)
-      }, 4000) // Se oculta después de 4 segundos de inactividad
+      }, 4000) 
     }
 
-    // Detectar eventos de usuario
     window.addEventListener('mousemove', resetTimer)
     window.addEventListener('touchstart', resetTimer)
     window.addEventListener('click', resetTimer)
     window.addEventListener('scroll', resetTimer)
 
-    resetTimer() // Iniciar timer al montar
+    resetTimer()
 
     return () => {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
@@ -241,11 +235,10 @@ export default function DashboardContent() {
     }
   }, [])
 
-  // ✅ FUNCIÓN: Inicializar Tutorial
+  // FUNCIÓN: Inicializar Tutorial
   useEffect(() => {
     const tutorialVisto = localStorage.getItem('finguide_tutorial_visto_v2')
     if (!tutorialVisto) {
-      // Pequeño delay para que la app cargue
       setTimeout(() => {
         setTutorialActivo(true)
       }, 1500)
@@ -265,7 +258,7 @@ export default function DashboardContent() {
     }
   }
 
-  // ✅ FUNCIÓN OPTIMIZADA: Actualizar historial
+  // FUNCIÓN OPTIMIZADA: Actualizar historial
   const actualizarHistorial = (nuevoMovimiento) => {
     setMovimientosBancarios(prev => {
       const nuevo = [nuevoMovimiento, ...prev];
@@ -274,7 +267,7 @@ export default function DashboardContent() {
     });
   };
 
-  // ✅ SINCRONIZACIÓN INTELIGENTE: Solo limpia borrados
+  // SINCRONIZACIÓN INTELIGENTE: Solo limpia borrados
   useEffect(() => {
     if (movimientosBancarios.length === 0) return
     
@@ -298,7 +291,7 @@ export default function DashboardContent() {
   }, [ingresos, gastos, gastosFijos, suscripciones, movimientosBancarios.length])
 
   // ============================================
-  // MANEJADORES DE DATOS
+  // MANEJADORES DE DATOS (SIN CAMBIOS FUNCIONALES)
   // ============================================
 
   const handleOpenDetail = (item, type) => {
@@ -912,7 +905,31 @@ export default function DashboardContent() {
     [gastosPorCategoria]
   )
 
-   const { textoHora, icono, frase } = useMemo(() => {
+  // --- LÓGICA DE INTELIGENCIA FINANCIERA (NUEVO) ---
+  const financialHealth = useMemo(() => {
+    let score = 60;
+    const tasaAhorroNum = (totalIngresos - totalGastosReales) / (totalIngresos || 1);
+    const deudaTotal = deudasInstant.reduce((sum, d) => sum + (d.saldo || 0), 0);
+    
+    // Ahorro positivo sube score
+    if (tasaAhorroNum > 0.2) score += 20;
+    else if (tasaAhorroNum > 0.1) score += 10;
+    else score -= 10;
+    
+    // Deudas altas bajan score
+    if (deudaTotal > totalIngresos * 3) score -= 20;
+    
+    // Score entre 0 y 100
+    return Math.max(0, Math.min(100, score));
+  }, [totalIngresos, totalGastosReales, deudasInstant]);
+
+  const dailyBudget = useMemo(() => {
+    const diasRestantes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate() - hoy.getDate() + 1;
+    if (saldoReal <= 0 || diasRestantes <= 0) return 0;
+    return Math.floor(saldoReal / diasRestantes);
+  }, [saldoReal, hoy]);
+
+  const { textoHora, icono, frase } = useMemo(() => {
     const hora = new Date().getHours()
     const texto = hora >= 5 && hora < 12 ? 'Buenos días' 
                 : hora >= 12 && hora < 19 ? 'Buenas tardes' 
@@ -941,246 +958,354 @@ export default function DashboardContent() {
     totalSuscripciones: totalSuscripcionesReales,
     saldo: saldoReal,
     tasaAhorro: parseFloat(tasaAhorroReal || 0) / 100,
-    totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.balance), 0)
+    totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.balance), 0),
+    financialHealth,
+    dailyBudget
   }
 
+  // ============================================
+  // RENDERIZADO UI MODERNA
+  // ============================================
   return (
-     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 pb-20 md:pb-4 relative">
+     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-24 md:pb-4 relative text-gray-100 selection:bg-purple-500/30">
       
-      {/* HEADER */}
-      <div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-3 md:pt-4">
-        <div className="bg-blue-600/90 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl border border-blue-400/20 flex justify-between items-center">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Wallet className="w-8 h-8 md:w-10 md:h-10 text-white" />
-            <div>
-              <h1 className="text-xl md:text-3xl font-bold text-white">{textoHora}, {usuario.nombre}</h1>
-              <div className="flex items-center gap-2 text-blue-100 mt-1 text-xs md:text-base">
-                {icono}
-                <span className="italic">{frase}</span>
+      {/* FONDO AMBIENTAL */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+      </div>
+
+      {/* HEADER INTELIGENTE */}
+      <div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-4 md:pt-6 animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 relative z-10">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30">
+                <Wallet className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                  {textoHora}, {usuario.nombre}
+                </h1>
+                <div className="flex items-center gap-2 text-sm md:text-base text-gray-400 mt-1">
+                  {icono}
+                  <span className="italic text-gray-300">{frase}</span>
+                  <span className="hidden md:inline mx-2 text-white/20">|</span>
+                  <span className="hidden md:inline-flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full border border-white/5">
+                    <Activity className="w-3 h-3 text-green-400" />
+                    Score: {kpis.financialHealth}/100
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
+                className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
+                title="Repetir Tutorial"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <div className="hidden md:block"><LogoutButton /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* WIDGET DE PRESUPUESTO INTELIGENTE */}
+      <div id="balance-widget" className="max-w-7xl mx-auto px-3 md:px-4 mb-6 animate-in fade-in slide-in-from-top-4 delay-100">
+        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-1">
+          <div className="bg-black/20 rounded-2xl p-4 md:p-5">
+            
+            {/* SALDO PRINCIPAL */}
+            <div className="mb-4 text-center">
+              <div className="text-xs md:text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Balance Neto</div>
+              <div className={`text-3xl md:text-5xl font-bold tracking-tight ${saldoReal >= 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-300' : 'text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-red-300'}`}>
+                ${saldoReal.toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">{hoy.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</div>
+            </div>
+
+            {/* BARRA DE PROGRESO INTELIGENTE */}
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-gray-400 mb-2">
+                <span>Gastos (${totalGastosReales.toLocaleString()})</span>
+                <span>Meta</span>
+              </div>
+              <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-1000 ${totalIngresos > 0 && totalGastosReales > totalIngresos ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}
+                  style={{ width: `${Math.min(100, (totalGastosReales / (totalIngresos || 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* KPI GRID OPTIMIZADO */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors">
+                <div className="text-[10px] md:text-xs text-emerald-400 mb-1 font-medium">Ingresos</div>
+                <div className="text-sm md:text-lg font-bold text-white">${totalIngresos.toLocaleString()}</div>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors">
+                <div className="text-[10px] md:text-xs text-rose-400 mb-1 font-medium">Gastos</div>
+                <div className="text-sm md:text-lg font-bold text-white">${totalGastosReales.toLocaleString()}</div>
+              </div>
+              <div className={`bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors ${dailyBudget < 0 ? 'bg-red-500/10' : ''}`}>
+                <div className="text-[10px] md:text-xs text-blue-400 mb-1 font-medium flex items-center justify-center gap-1">
+                  <TrendingDown className="w-3 h-3" /> Diario
+                </div>
+                <div className={`text-sm md:text-lg font-bold ${dailyBudget < 0 ? 'text-red-400' : 'text-white'}`}>
+                  ${dailyBudget}
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-             <button 
-               onClick={() => {
-                 setTutorialActivo(true)
-                 setPasoTutorial(0)
-               }}
-               className="p-2 bg-blue-500/30 rounded-full hover:bg-blue-500/50 text-white transition"
-               title="Repetir Tutorial"
-             >
-               <HelpCircle className="w-5 h-5" />
-             </button>
-             <div className="hidden md:block"><LogoutButton /></div>
-          </div>
         </div>
       </div>
 
-      {/* WIDGET DE RESUMEN */}
-      <div id="balance-widget" className="max-w-7xl mx-auto px-3 md:px-4 mb-4 md:mb-6">
-        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-6 border border-blue-500/30">
-          <div className="flex items-center justify-between mb-2 md:mb-3">
-            <h3 className="text-xs md:text-sm font-semibold text-blue-300">💰 Balance Real</h3>
-            <span className="text-[10px] md:text-xs text-gray-400">{hoy.toLocaleDateString()}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 md:gap-3">
-            <div className="bg-green-500/10 p-2 md:p-3 rounded-lg border border-green-500/30">
-              <div className="text-[10px] md:text-xs text-green-300">Ingresos</div>
-              <div className="text-sm md:text-lg font-bold text-white">${totalIngresos.toLocaleString()}</div>
-            </div>
-            <div className="bg-red-500/10 p-2 md:p-3 rounded-lg border border-red-500/30">
-              <div className="text-[10px] md:text-xs text-red-300">Gastos</div>
-              <div className="text-sm md:text-lg font-bold text-white">${totalGastosReales.toLocaleString()}</div>
-            </div>
-            <div className={`${saldoReal >= 0 ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-red-500/10 border-red-500/30'} p-2 md:p-3 rounded-lg border`}>
-              <div className={`text-[10px] md:text-xs ${saldoReal >= 0 ? 'text-cyan-300' : 'text-red-300'}`}>Disponible</div>
-              <div className={`text-sm md:text-lg font-bold ${saldoReal >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>${saldoReal.toLocaleString()}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CONTENIDO */}
-      <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">
         
         {/* CALENDARIO */}
-        <CalendarioPagos 
-          key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
-          gastosFijos={gastosFijosInstant}
-          suscripciones={suscripcionesInstant}
-          deudas={deudasInstant}
-          ingresos={ingresosInstant}
-          gastos={gastosInstant}
-        />
-
-        {/* BOTONES DE ACCIÓN (Desktop) */}
-        <div className="hidden md:flex flex-wrap gap-3 justify-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-          <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm touch-manipulation"><Plus className="w-4 h-4" /> Ingreso</button>
-          <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm touch-manipulation"><Plus className="w-4 h-4" /> Gasto</button>
-          <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm touch-manipulation"><Repeat className="w-4 h-4" /> Suscripción</button>
-          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm touch-manipulation"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm touch-manipulation border border-gray-500"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
-        </div>
-
-        {/* NOTIFICACIONES */}
-        <div id="dashboard-alertas">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
-              <Bell className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /> Alertas
-            </h3>
-            <span className="bg-yellow-500/20 text-yellow-400 text-[10px] md:text-xs px-2 py-1 rounded-full border border-yellow-500/30">
-              {alertas.length}
-            </span>
-          </div>
-          <Notificaciones
-            alertas={alertas}
-            onAlertClick={(alerta) => {
-              handleOpenDetail(alerta.item, alerta.tipoItem)
-            }}
+        <div className="animate-in fade-in slide-in-from-top-4 delay-200">
+          <CalendarioPagos 
+            key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
+            deudas={deudasInstant}
+            ingresos={ingresosInstant}
+            gastos={gastosInstant}
           />
         </div>
 
-        {/* ✅ ASISTENTE FINANCIERO REACTIVADO */}
-        <AsistenteFinancieroV2
-          ingresos={ingresosInstant}
-          gastosFijos={gastosFijosInstant}
-          gastosVariables={gastosInstant}
-          suscripciones={suscripcionesInstant}
-          deudas={deudasInstant}
-          onOpenDebtPlanner={() => setShowDebtPlanner(true)}
-          onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
-          onOpenSpendingControl={() => setShowSpendingControl(true)}
-        />
+        {/* BOTONES DE ACCIÓN (Solo Desktop) */}
+        <div className="hidden md:flex flex-wrap gap-3 justify-center bg-white/5 backdrop-blur-sm p-4 rounded-2xl border border-white/10 animate-in fade-in delay-300">
+          <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-green-500/50 shadow-lg shadow-green-900/20"><Plus className="w-4 h-4" /> Ingreso</button>
+          <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-red-500/50 shadow-lg shadow-red-900/20"><Plus className="w-4 h-4" /> Gasto</button>
+          <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-indigo-500/50 shadow-lg shadow-indigo-900/20"><Repeat className="w-4 h-4" /> Suscripción</button>
+          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-purple-500/50 shadow-lg shadow-purple-900/20"><CreditCard className="w-4 h-4" /> Tarjetas</button>
+          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-gray-500/50 shadow-lg shadow-gray-900/20"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
+        </div>
+
+        {/* NOTIFICACIONES (HORIZONTAL SCROLL MOBILE) */}
+        <div id="dashboard-alertas" className="animate-in fade-in slide-in-from-top-4 delay-300">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Bell className="w-4 h-4 text-yellow-400" /> Alertas
+            </h3>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${alertas.length > 0 ? 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+              {alertas.length}
+            </span>
+          </div>
+          <div className="md:hidden overflow-x-auto pb-2 -mx-3 px-3 no-scrollbar">
+            <div className="flex gap-3 min-w-max">
+              {alertas.length === 0 ? (
+                <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center w-full min-w-[200px]">
+                  <div className="text-2xl mb-1">🎉</div>
+                  <div className="text-xs text-gray-400">Sin alertas pendientes</div>
+                </div>
+              ) : (
+                alertas.map((alerta, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => handleOpenDetail(alerta.item, alerta.tipoItem)}
+                    className={`p-3 rounded-2xl border text-left min-w-[200px] flex flex-col justify-between transition-transform active:scale-95 ${
+                      alerta.tipo === 'critical' ? 'bg-red-500/10 border-red-500/20' : 
+                      alerta.tipo === 'warning' ? 'bg-orange-500/10 border-orange-500/20' : 'bg-blue-500/10 border-blue-500/20'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-gray-300 mb-1">{alerta.mensajeCorto}</div>
+                    <div className="text-lg font-bold text-white">$${alerta.monto}</div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+          {/* Vista escritorio normal */}
+          <div className="hidden md:block">
+            <Notificaciones alertas={alertas} onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)} />
+          </div>
+        </div>
+
+        {/* ASISTENTE FINANCIERO */}
+        <div className="animate-in fade-in delay-300">
+          <AsistenteFinancieroV2
+            ingresos={ingresosInstant}
+            gastosFijos={gastosFijosInstant}
+            gastosVariables={gastosInstant}
+            suscripciones={suscripcionesInstant}
+            deudas={deudasInstant}
+            showLocalNotification={showLocalNotification}
+            onOpenDebtPlanner={() => setShowDebtPlanner(true)}
+            onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
+            onOpenSpendingControl={() => setShowSpendingControl(true)}
+          />
+        </div>
 
         {/* PLANES */}
-        <div>
+        <div className="animate-in fade-in delay-400">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h2 className="text-xl md:text-2xl font-bold text-white">Mis Planes</h2>
-            <button onClick={() => setShowSavingsPlanner(true)} className="text-xs md:text-sm bg-purple-600/20 text-purple-300 px-3 py-1 rounded hover:bg-purple-600/30 transition flex items-center gap-2 touch-manipulation"><Plus className="w-3 h-3 md:w-4 md:h-4"/> Nuevo</button>
+            <button onClick={() => setShowSavingsPlanner(true)} className="text-xs md:text-sm bg-purple-600/20 text-purple-300 px-3 py-1.5 rounded-lg hover:bg-purple-600/30 transition flex items-center gap-2 touch-manipulation border border-purple-500/20"><Plus className="w-3 h-3 md:w-4 md:h-4"/> Nuevo Plan</button>
           </div>
           <SavedPlansList refreshSignal={planUpdateCounter} />
         </div>
 
         {/* GRÁFICAS */}
-        <div id="graficas-section" className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <GraficaDona 
-            data={dataGraficaDona} 
-            onCategoryClick={() => setShowDetallesCategorias(true)} 
-          />
-          <GraficaBarras 
-            ingresos={ingresosInstant}
-            gastos={gastosInstant}
-            gastosFijos={gastosFijosInstant}
-            suscripciones={suscripcionesInstant}
-          />
+        <div id="graficas-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in delay-500">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+            <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+            <GraficaBarras 
+              ingresos={ingresosInstant}
+              gastos={gastosInstant}
+              gastosFijos={gastosFijosInstant}
+              suscripciones={suscripcionesInstant}
+            />
+          </div>
         </div>
 
         {/* INGRESOS */}
-        <ListaIngresos 
-          ingresos={ingresosInstant}
-          onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
-          onEliminar={handleEliminarIngreso}
-        />
+        <div className="animate-in fade-in delay-500">
+          <ListaIngresos 
+            ingresos={ingresosInstant}
+            onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
+            onEliminar={handleEliminarIngreso}
+          />
+        </div>
 
-        {/* FINANZAS */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-700">
-          <div className="flex items-center justify-between mb-3">
+        {/* FINANZAS (QUICK ACCESS) */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-white/10 animate-in fade-in delay-500">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base md:text-lg font-bold text-white">Finanzas</h3>
-              <p className="text-[10px] md:text-xs text-gray-400">Gastos & Deudas</p>
+              <h3 className="text-lg md:text-xl font-bold text-white">Finanzas</h3>
+              <p className="text-xs md:text-sm text-gray-400">Gestiona tus gastos y deudas</p>
             </div>
-            <button onClick={() => { setOverviewMode('ALL'); setShowModal('gastosOverview') }} className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs md:text-sm font-semibold transition-colors border border-gray-600 touch-manipulation">Ver</button>
+            <button onClick={() => { setOverviewMode('ALL'); setShowModal('gastosOverview') }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs md:text-sm font-semibold transition-all shadow-lg shadow-blue-900/20 border border-blue-400/20 touch-manipulation">Ver Todo</button>
           </div>
-          <div className="grid grid-cols-3 gap-2 md:gap-3">
-            <div onClick={() => { setOverviewMode('DEUDAS'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-purple-500/30 hover:bg-purple-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{deudasInstant.length}</div>
-              <div className="text-[10px] md:text-xs text-purple-300">Deudas</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div onClick={() => { setOverviewMode('DEUDAS'); setShowModal('gastosOverview') }} className="group bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+              <div className="text-2xl md:text-3xl font-bold text-white mb-1">{deudasInstant.length}</div>
+              <div className="text-[10px] md:text-xs text-purple-300 font-medium uppercase tracking-wide">Deudas</div>
             </div>
-            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-yellow-500/30 hover:bg-yellow-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{gastosFijosInstant.length}</div>
-              <div className="text-[10px] md:text-xs text-yellow-300">Fijos</div>
+            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+              <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosFijosInstant.length}</div>
+              <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
-            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group relative overflow-hidden bg-gray-700/30 border border-red-500/30 hover:bg-red-900/60 active:scale-95 rounded-xl md:rounded-2xl p-3 md:p-4 cursor-pointer touch-manipulation">
-              <div className="text-xl md:text-2xl font-bold text-white">{gastosInstant.length}</div>
-              <div className="text-[10px] md:text-xs text-red-300">Variables</div>
+            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+              <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length}</div>
+              <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
             </div>
           </div>
         </div>
+
       </div>
 
       <Footer className="hidden md:block" />
 
-      {/* --- MODALES --- */}
-      {itemSeleccionado && (
-        <ModalDetalleUniversal
-          item={itemSeleccionado.item}
-          type={itemSeleccionado.type}
-          status={itemSeleccionado.status}
-          onClose={() => setItemSeleccionado(null)}
-          onEditar={handleEditarUniversal}
-          onPagar={handlePagarUniversal}
-        />
-      )}
+      {/* --- MODALES (RESPONSIVE BOTTOM SHEET) --- */}
+      
+{/* DETALLE UNIVERSAL - MAYOR Z-INDEX PARA ESTAR SOBRE OTROS MODALES */}
+{itemSeleccionado && (
+  <div 
+    className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in"
+    onClick={(e) => {
+      // Cerrar si se hace clic en el fondo oscuro
+      if (e.target === e.currentTarget) {
+        setItemSeleccionado(null);
+      }
+    }}
+  >
+    <div 
+      className="bg-gray-900 w-full md:max-w-2xl h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-y-auto border-t border-white/10 md:border border-white/10 transform transition-transform duration-300 translate-y-0"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <ModalDetalleUniversal
+        item={itemSeleccionado.item}
+        type={itemSeleccionado.type}
+        status={itemSeleccionado.status}
+        onClose={() => {
+          console.log('✅ Cerrando modal de detalles');
+          setItemSeleccionado(null);
+        }}
+        onEditar={handleEditarUniversal}
+        onPagar={handlePagarUniversal}
+      />
+    </div>
+  </div>
+)}
 
+      {/* OVERVIEW DE GASTOS */}
       {showModal === 'gastosOverview' && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-end md:items-center justify-center">
-          <div className="bg-gray-900 w-full md:max-w-3xl h-[95vh] md:h-auto md:max-h-[90vh] rounded-t-2xl md:rounded-2xl p-4 md:p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in slide-in-from-bottom-10">
+          <div className="bg-gray-900 w-full md:max-w-3xl h-[95vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl overflow-hidden flex flex-col border-t border-white/10 md:border-white/10">
+            <div className="p-4 md:p-6 border-b border-white/10 flex justify-between items-center bg-gray-800/50">
               <h2 className="text-lg md:text-xl font-bold text-white">💳 Gastos & Deudas</h2>
-              <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-white text-2xl touch-manipulation">✕</button>
+              <button onClick={() => setShowModal(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
             </div>
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2 border-b border-gray-700">
-              <button onClick={() => setOverviewMode('ALL')} className={`px-3 py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation ${overviewMode === 'ALL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>Todos</button>
-              <button onClick={() => setOverviewMode('DEUDAS')} className={`px-3 py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation ${overviewMode === 'DEUDAS' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>Deudas</button>
-              <button onClick={() => setOverviewMode('FIJOS')} className={`px-3 py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation ${overviewMode === 'FIJOS' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>Fijos</button>
-              <button onClick={() => setOverviewMode('VARIABLES')} className={`px-3 py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation ${overviewMode === 'VARIABLES' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>Variables</button>
-              <button onClick={() => setOverviewMode('SUSCRIPCIONES')} className={`px-3 py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation ${overviewMode === 'SUSCRIPCIONES' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>Suscripciones</button>
+            
+            {/* Tabs */}
+            <div className="flex overflow-x-auto p-4 border-b border-white/10 bg-gray-900/50 gap-2">
+              {['ALL', 'DEUDAS', 'FIJOS', 'VARIABLES', 'SUSCRIPCIONES'].map(mode => (
+                <button 
+                  key={mode}
+                  onClick={() => setOverviewMode(mode)} 
+                  className={`px-4 py-2 rounded-xl text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation transition-all ${overviewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                >
+                  {mode.charAt(0) + mode.slice(1).toLowerCase()}
+                </button>
+              ))}
             </div>
-            <ListaGastosCompleta
-              deudas={overviewData.deudas}
-              gastosFijos={overviewData.gastosFijos}
-              gastosVariables={overviewData.gastosVariables}
-              suscripciones={overviewData.suscripciones}
-              deudaPagadaEsteMes={deudaPagadaEsteMes}
-              onVerDetalle={handleOpenDetail}
-              onEliminar={handleEliminarUnificado}
-              onPagar={handlePagarUniversal}
-              onEditar={handleEditarUniversal}
-            />
+
+            <div className="p-4 overflow-y-auto flex-1">
+              <ListaGastosCompleta
+                deudas={overviewData.deudas}
+                gastosFijos={overviewData.gastosFijos}
+                gastosVariables={overviewData.gastosVariables}
+                suscripciones={overviewData.suscripciones}
+                deudaPagadaEsteMes={deudaPagadaEsteMes}
+                onVerDetalle={handleOpenDetail}
+                onEliminar={handleEliminarUnificado}
+                onPagar={handlePagarUniversal}
+                onEditar={handleEditarUniversal}
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {showModal === 'ingreso' && (
-        <ModalIngreso
-          onClose={() => { setShowModal(null); setIngresoEditando(null) }}
-          onSave={handleGuardarIngreso}
-          ingresoInicial={ingresoEditando}
-        />
-      )}
+      {/* MODALES SIMPLES (INGRESO, GASTO, ETC) */}
+      <ModalWrapper show={showModal === 'ingreso'} onClose={() => { setShowModal(null); setIngresoEditando(null) }}>
+        <ModalIngreso onClose={() => { setShowModal(null); setIngresoEditando(null) }} onSave={handleGuardarIngreso} ingresoInicial={ingresoEditando} />
+      </ModalWrapper>
 
-      {showModal === 'cuentas' && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <ModuloCuentasBancarias 
-              cuentas={cuentas} 
-              onAgregar={addCuenta} 
-              onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
-              onEliminar={deleteCuenta} 
-              balanceTotal={kpis.saldo}
-              listaMovimientosExternos={movimientosBancarios}
-              onTransferenciaExitosa={refreshCuentas}
-            />
-            <div className="p-4"><button onClick={() => setShowModal(null)} className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl touch-manipulation">Cerrar</button></div>
+      <ModalWrapper show={showModal === 'cuentas'} onClose={() => setShowModal(null)}>
+        <div className="bg-gray-900 rounded-t-3xl md:rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">Mis Cuentas</h2>
+            <button onClick={() => setShowModal(null)} className="p-2 bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
           </div>
+          <ModuloCuentasBancarias 
+            cuentas={cuentas} 
+            onAgregar={addCuenta} 
+            onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
+            onEliminar={deleteCuenta} 
+            balanceTotal={kpis.saldo}
+            listaMovimientosExternos={movimientosBancarios}
+            onTransferenciaExitosa={refreshCuentas}
+          />
         </div>
-      )}
+      </ModalWrapper>
 
-      {showModal === 'gastos' && (
+      <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }}>
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
-      )}
+      </ModalWrapper>
 
-      {showModal === 'usuario' && (
+      <ModalWrapper show={showModal === 'usuario'} onClose={() => setShowModal(null)}>
         <ModalUsuario 
           usuario={usuario} 
           preferencias={preferenciasUsuario} 
@@ -1190,26 +1315,26 @@ export default function DashboardContent() {
           permission={permission}
           showLocalNotification={showLocalNotification}
         />
-      )}
+      </ModalWrapper>
 
-      {showModal === 'suscripcion' && (
+      <ModalWrapper show={showModal === 'suscripcion'} onClose={() => { setShowModal(null); setSuscripcionEditando(null) }}>
         <ModalSuscripcion key={suscripcionEditando?.id} onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} onSave={handleGuardarSuscripcion} suscripcionInicial={suscripcionEditando} />
-      )}
+      </ModalWrapper>
 
-      {showModal === 'tarjetas' && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-2xl p-4 md:p-6 max-w-md w-full">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4">Gestión de Tarjetas</h2>
-            <div className="space-y-3">
-              <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-3 md:p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-colors touch-manipulation">📝 Registrar Tarjeta</button>
-              <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-3 md:p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors touch-manipulation">💳 Pagar Tarjeta</button>
-              <button onClick={() => setShowModal(null)} className="w-full p-3 md:p-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors touch-manipulation">Cancelar</button>
-            </div>
+      <ModalWrapper show={showModal === 'tarjetas'} onClose={() => setShowModal(null)}>
+        <div className="bg-gray-900 rounded-t-3xl md:rounded-2xl p-4 md:p-6 max-w-md w-full m-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-white">Gestión de Tarjetas</h2>
+            <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
+          </div>
+          <div className="space-y-3">
+            <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-4 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">📝 Registrar Tarjeta</button>
+            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
           </div>
         </div>
-      )}
+      </ModalWrapper>
 
-      {showModal === 'pagoTarjeta' && (
+      <ModalWrapper show={showModal === 'pagoTarjeta'} onClose={() => { setShowModal(null); setDeudaEditando(null) }}>
         <ModalPagoTarjeta 
           onClose={() => {
             setShowModal(null)
@@ -1219,48 +1344,48 @@ export default function DashboardContent() {
           deudas={deudasInstant}
           deudaPreseleccionada={deudaEditando}
         />
-      )}
+      </ModalWrapper>
       
-      {showModal === 'agregarDeuda' && (
+      <ModalWrapper show={showModal === 'agregarDeuda'} onClose={() => { setShowModal(null); setDeudaEditando(null) }}>
         <ModalAgregarDeuda onClose={() => { setShowModal(null); setDeudaEditando(null) }} onSave={handleGuardarDeuda} deudaInicial={deudaEditando} />
-      )}
+      </ModalWrapper>
 
-      {showModal === 'lectorEstado' && (
+      <ModalWrapper show={showModal === 'lectorEstado'} onClose={() => setShowModal(null)}>
         <LectorEstadoCuenta onClose={() => setShowModal(null)} />
-      )}
+      </ModalWrapper>
 
-      {showDetallesCategorias && (
+      <ModalWrapper show={showDetallesCategorias} onClose={() => setShowDetallesCategorias(false)}>
         <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} onClose={() => setShowDetallesCategorias(false)} />
-      )}
+      </ModalWrapper>
 
-      {showDebtPlanner && (
+      <ModalWrapper show={showDebtPlanner} onClose={() => setShowDebtPlanner(false)}>
         <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-      )}
+      </ModalWrapper>
 
-      {showSavingsPlanner && (
+      <ModalWrapper show={showSavingsPlanner} onClose={() => setShowSavingsPlanner(false)}>
         <SavingsPlannerModal kpis={kpis} onClose={() => setShowSavingsPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-      )}
+      </ModalWrapper>
 
-      {showSpendingControl && (
+      <ModalWrapper show={showSpendingControl} onClose={() => setShowSpendingControl(false)}>
         <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-      )}
+      </ModalWrapper>
 
       {/* --- TUTORIAL OVERLAY --- */}
       {tutorialActivo && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-gray-800 border border-blue-500 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative animate-bounce-in">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-gray-900 border border-blue-500/30 rounded-3xl max-w-sm w-full p-6 shadow-2xl shadow-blue-900/50 relative animate-bounce-in">
             <button 
               onClick={cerrarTutorial}
-              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 rounded-full transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
             
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="bg-blue-500/20 p-3 rounded-full mb-3">
-                <HelpCircle className="w-8 h-8 text-blue-400" />
+            <div className="flex flex-col items-center text-center mb-6 mt-2">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-full mb-4 shadow-lg shadow-blue-500/30">
+                <HelpCircle className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-white mb-3">
                 {pasosTutorialConfig[pasoTutorial].titulo}
               </h3>
               <p className="text-gray-300 text-sm leading-relaxed">
@@ -1268,28 +1393,27 @@ export default function DashboardContent() {
               </p>
             </div>
 
-            <div className="flex justify-between items-center mt-4">
+            <div className="flex justify-between items-center mt-6">
               <button 
                 onClick={cerrarTutorial}
-                className="text-xs text-gray-400 hover:text-gray-200 underline"
+                className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
               >
                 Saltar tutorial
               </button>
               <button 
                 onClick={siguientePasoTutorial}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 active:scale-95"
               >
                 {pasoTutorial === pasosTutorialConfig.length - 1 ? 'Entendido' : 'Siguiente'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
             
-            {/* Indicador de pasos */}
-            <div className="flex justify-center gap-2 mt-4">
+            <div className="flex justify-center gap-2 mt-6">
               {pasosTutorialConfig.map((_, idx) => (
                 <div 
                   key={idx} 
-                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === pasoTutorial ? 'w-6 bg-blue-500' : 'w-1.5 bg-gray-600'}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === pasoTutorial ? 'w-8 bg-gradient-to-r from-blue-500 to-indigo-500' : 'w-1.5 bg-gray-700'}`}
                 />
               ))}
             </div>
@@ -1300,8 +1424,8 @@ export default function DashboardContent() {
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
       <div 
         id="boton-agregar"
-        className={`fixed bottom-0 left-0 right-0 md:hidden transition-transform duration-300 z-40 ease-in-out ${
-          mostrarMenuInferior || tutorialActivo ? 'translate-y-0' : 'translate-y-full'
+        className={`fixed bottom-0 left-0 right-0 md:hidden transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] z-40 ${
+          mostrarMenuInferior || tutorialActivo ? 'translate-y-0' : 'translate-y-[85%]'
         }`}
       >
         <MenuInferior 
@@ -1310,6 +1434,43 @@ export default function DashboardContent() {
           nombreUsuario={usuario.nombre} 
           onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} 
         />
+      </div>
+
+      {/* ESTILOS ADICIONALES */}
+      <style jsx>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes slide-in-from-bottom-10 {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes bounce-in {
+          0% { transform: scale(0.9); opacity: 0; }
+          60% { transform: scale(1.02); opacity: 1; }
+          100% { transform: scale(1); }
+        }
+        
+        .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .slide-in-from-bottom-10 { animation: slide-in-from-bottom-10 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+      `}</style>
+    </div>
+  )
+}
+
+// COMPONENTE AUXILIAR PARA MODALES
+function ModalWrapper({ show, onClose, children }) {
+  if (!show) return null
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+      <div className="bg-gray-900 w-full md:max-w-lg h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/10 animate-slide-in-from-bottom-10">
+        <div className="flex justify-end p-4 border-b border-white/5 md:hidden">
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2"><X className="w-6 h-6" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-0 md:p-0">
+          {children}
+        </div>
       </div>
     </div>
   )

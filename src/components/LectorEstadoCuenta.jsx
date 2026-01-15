@@ -1,286 +1,358 @@
-import React, { useState } from 'react'
-import { Upload, FileText, Image, Loader2, CheckCircle, XCircle } from 'lucide-react'
-import { useGastosVariables } from '../hooks/useGastosVariables'
-import { useIngresos } from '../hooks/useIngresos'
+import React, { useState } from 'react';
+import { Upload, FileText, Image, Loader2, CheckCircle, XCircle, TrendingDown, Wallet, X } from 'lucide-react';
+import Tesseract from 'tesseract.js';
+import { useGastosVariables } from '../hooks/useGastosVariables';
+import { useIngresos } from '../hooks/useIngresos';
 
-const LectorEstadoCuenta = ({ onClose }) => {
-  const [file, setFile] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-  
-  const { agregarGasto } = useGastosVariables()
-  const { agregarIngreso } = useIngresos()
+export default function LectorEstadoCuenta({ onClose }) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [scanning, setScanning] = useState(false);
+
+  const { agregarGasto } = useGastosVariables();
+  const { agregarIngreso } = useIngresos();
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0]
-    if (!selectedFile) return
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
 
-    // Validar tipo de archivo
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(selectedFile.type)) {
-      setError('Tipo de archivo no válido. Solo se permiten: JPG, PNG, WEBP, PDF')
-      return
+      setError('Solo aceptamos JPG, PNG, WEBP o PDF.');
+      return;
     }
 
-    // Validar tamaño (máx 10MB)
     if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('El archivo es demasiado grande. Máximo 10MB')
-      return
+      setError('El archivo supera los 10MB permitidos.');
+      return;
     }
 
-    setFile(selectedFile)
-    setError(null)
-    setResult(null)
+    setFile(selectedFile);
+    setError(null);
+    setResult(null);
+    setProgress(0);
 
-    // Crear preview para imágenes
     if (selectedFile.type.startsWith('image/')) {
-      const reader = new FileReader()
-      reader.onload = (e) => setPreview(e.target.result)
-      reader.readAsDataURL(selectedFile)
+      const reader = new FileReader();
+      reader.onload = (ev) => setPreview(ev.target.result);
+      reader.readAsDataURL(selectedFile);
     } else {
-      setPreview(null)
+      setPreview(null);
     }
-  }
+  };
 
-  const handleScan = async () => {
-    if (!file) return
+  const parseTransactionsFromText = (text) => {
+    const lines = text.split('\n');
+    const transactions = [];
+    let totalGastos = 0;
+    let totalIngresos = 0;
 
-    setLoading(true)
-    setError(null)
-    setResult(null)
+    // Regex para detectar fechas (DD/MM/YYYY o DD-MM-YY)
+    const dateRegex = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/; 
+    // Regex para detectar montos ($1,200.00 o 1200.00)
+    const amountRegex = /[\$]?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.?\d*)/;
 
-    try {
-      // Convertir archivo a base64
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      
-      reader.onload = async () => {
-        try {
-          const base64 = reader.result
+    lines.forEach((line) => {
+      const cleanLine = line.trim();
+      if (!cleanLine) return;
 
-          // Llamar a la API serverless
-          const response = await fetch('https://ocr-backend-i9qy.onrender.com/scan', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              file: base64,
-              fileType: file.type
-            })
-          })
+      const dateMatch = cleanLine.match(dateRegex);
+      const amountMatch = cleanLine.match(amountRegex);
 
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.details || 'Error al procesar el archivo')
+      if (dateMatch && amountMatch) {
+        const rawAmount = amountMatch[0].replace(/[^0-9\.\-]/g, '');
+        const amount = parseFloat(rawAmount);
+
+        if (!isNaN(amount) && amount !== 0) {
+          let tipo = 'gasto';
+          let montoFinal = Math.abs(amount);
+          
+          // Heurística simple para detectar tipo
+          if (cleanLine.includes('-') || cleanLine.includes('(')) {
+             tipo = 'gasto';
+          } else if (cleanLine.toLowerCase().includes('deposito') || 
+                     cleanLine.toLowerCase().includes('sueldo') || 
+                     cleanLine.toLowerCase().includes('transferencia rec') ||
+                     cleanLine.toLowerCase().includes('abono')) {
+             tipo = 'ingreso';
           }
 
-          const data = await response.json()
-          setResult(data)
-          setLoading(false)
-        } catch (err) {
-          setError(err.message)
-          setLoading(false)
+          let descripcion = cleanLine
+            .replace(dateMatch[0], '')
+            .replace(amountMatch[0], '')
+            .replace(/[\-\(\)]/g, '') 
+            .trim()
+            .substring(0, 40);
+
+          let categoria = 'Varios';
+          const lowerDesc = descripcion.toLowerCase();
+          
+          if (tipo === 'gasto') {
+            if (lowerDesc.includes('uber') || lowerDesc.includes('didi')) categoria = 'Transporte';
+            else if (lowerDesc.includes('super') || lowerDesc.includes('tienda') || lowerDesc.includes('oxxo')) categoria = 'Comida';
+            else if (lowerDesc.includes('netflix') || lowerDesc.includes('spotify')) categoria = 'Entretenimiento';
+            else if (lowerDesc.includes('luz') || lowerDesc.includes('agua') || lowerDesc.includes('tel')) categoria = 'Servicios';
+            
+            totalGastos += montoFinal;
+          } else {
+            totalIngresos += montoFinal;
+          }
+
+          let fechaStr = dateMatch[0];
+          if (dateMatch[3].length === 2) {
+            fechaStr = `${dateMatch[1]}/${dateMatch[2]}/20${dateMatch[3]}`;
+          }
+
+          transactions.push({
+            fecha: fechaStr,
+            descripcion: descripcion || 'Movimiento detectado',
+            monto: tipo === 'gasto' ? -montoFinal : montoFinal,
+            tipo: tipo,
+            categoria: categoria
+          });
         }
       }
+    });
 
-      reader.onerror = () => {
-        setError('Error al leer el archivo')
-        setLoading(false)
+    return {
+      transacciones: transactions,
+      resumen: {
+        total_gastos: totalGastos,
+        total_ingresos: totalIngresos
       }
+    };
+  };
 
+  const handleScan = async () => {
+    if (!file) return;
+
+    setLoading(true);
+    setScanning(true);
+    setError(null);
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(
+        file,
+        'spa', 
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              setProgress(Math.round(m.progress * 100));
+            }
+          }
+        }
+      );
+
+      const parsedData = parseTransactionsFromText(text);
+
+      if (parsedData.transacciones.length === 0) {
+        setError('No se detectaron transacciones. Intenta con una imagen más clara o verifica el formato.');
+      } else {
+        setResult(parsedData);
+      }
     } catch (err) {
-      setError(err.message)
-      setLoading(false)
+      console.error(err);
+      setError('Error al procesar el archivo localmente: ' + err.message);
+    } finally {
+      setLoading(false);
+      setScanning(false);
     }
-  }
+  };
 
   const handleSaveTransactions = async () => {
-    if (!result || !result.transacciones) return
-
-    setLoading(true)
+    if (!result || !result.transacciones) return;
+    setLoading(true);
     try {
       for (const trans of result.transacciones) {
+        await new Promise(r => setTimeout(r, 50)); 
         if (trans.tipo === 'gasto') {
           await agregarGasto({
             fecha: trans.fecha,
             categoria: trans.categoria,
             descripcion: trans.descripcion,
             monto: Math.abs(trans.monto),
-            metodo: 'Tarjeta'
-          })
-        } else if (trans.tipo === 'ingreso') {
+            metodo: 'Escaneo Local'
+          });
+        } else {
           await agregarIngreso({
             fecha: trans.fecha,
-            fuente: 'Depósito',
+            fuente: 'Escaneo Local',
             descripcion: trans.descripcion,
             monto: trans.monto
-          })
+          });
         }
       }
-
-      alert(`✅ ${result.transacciones.length} transacciones guardadas exitosamente`)
-      onClose()
+      onClose();
+      // Usar una notificación más bonita sería ideal, pero esto es funcional
+      console.log('✅ Transacciones guardadas');
     } catch (err) {
-      setError('Error al guardar transacciones: ' + err.message)
+      setError('Error al guardar en la base de datos.');
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
+  };
+
+  if (scanning) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-gray-900 border border-blue-500/30 rounded-3xl p-8 max-w-sm w-full text-center">
+           <Loader2 className="w-12 h-12 text-blue-500 mx-auto animate-spin mb-4" />
+           <p className="text-white font-bold text-lg">Procesando Localmente...</p>
+           <p className="text-gray-400 text-sm mb-2">Extrayendo texto con OCR</p>
+           <div className="w-full bg-gray-700 rounded-full h-2.5 mb-2 overflow-hidden">
+             <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+           </div>
+           <p className="text-xs text-gray-500">{progress}% Completado</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Upload className="w-6 h-6" />
-              Escanear Estado de Cuenta
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+      <div className="bg-gray-900 w-full md:max-w-3xl md:h-auto md:max-h-[90vh] h-[95vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden animate-slide-in-from-bottom-10">
+        
+        {/* Header Móvil */}
+        <div className="flex items-center justify-between p-5 border-b border-white/5 bg-gray-800/50 md:hidden">
+           <h2 className="text-white font-bold text-lg flex items-center gap-2">
+             <Upload className="w-5 h-5 text-blue-400" /> Escáner Local
+           </h2>
+           <button onClick={onClose} className="p-2 text-gray-400"><X className="w-6 h-6" /></button>
+        </div>
 
-          {/* Upload Area */}
-          <div className="mb-6">
-            <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600 transition">
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                {preview ? (
-                  <img src={preview} alt="Preview" className="max-h-48 rounded" />
-                ) : (
-                  <>
-                    <FileText className="w-12 h-12 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-400">
-                      <span className="font-semibold">Click para subir</span> o arrastra y suelta
+        {/* Header Desktop */}
+        <div className="hidden md:flex items-center justify-between p-6 border-b border-white/10 bg-gray-900">
+           <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-3">
+             <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Upload className="w-6 h-6" /></div>
+             Escáner de Estado de Cuenta (Offline)
+           </h2>
+           <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition"><X className="w-6 h-6" /></button>
+        </div>
+
+        <div className="p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
+          {!result ? (
+            <>
+              {/* Area de Carga */}
+              <div className="mb-6">
+                <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-2xl p-8 md:p-10 text-center transition-all hover:border-blue-400/50 hover:bg-white/10 group relative overflow-hidden">
+                  <input type="file" className="absolute inset-0 w-full h-full cursor-pointer z-10 opacity-0" onChange={handleFileChange} accept=".pdf,.png,.jpg,.jpeg,.webp" />
+                  
+                  <div className="relative z-20 pointer-events-none">
+                    {preview ? (
+                      <div className="mb-4">
+                        <img src={preview} alt="Vista previa" className="max-h-48 mx-auto rounded-lg shadow-lg border border-white/20" />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                    
+                    <p className="text-white font-medium text-lg mb-2">
+                      {file ? file.name : "Subir estado de cuenta"}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      PDF, PNG, JPG, WEBP (Máx. 10MB)
+                    <p className="text-gray-400 text-sm">
+                      El procesamiento ocurre en tu dispositivo.
                     </p>
-                  </>
-                )}
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg,.webp"
-                onChange={handleFileChange}
-              />
-            </label>
-            {file && (
-              <p className="mt-2 text-sm text-gray-400">
-                �� {file.name} ({(file.size / 1024).toFixed(2)} KB)
-              </p>
-            )}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-400" />
-              <p className="text-red-200">{error}</p>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={handleScan}
-              disabled={!file || loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  <Image className="w-5 h-5" />
-                  Escanear Documento
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Results */}
-          {result && (
-            <div className="bg-gray-700 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="w-6 h-6 text-green-400" />
-                <h3 className="text-lg font-semibold text-white">
-                  Transacciones Encontradas: {result.transacciones.length}
-                </h3>
-              </div>
-
-              {/* Resumen */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="bg-gray-800 p-3 rounded">
-                  <p className="text-gray-400 text-sm">Total Gastos</p>
-                  <p className="text-red-400 text-xl font-bold">
-                    ${Math.abs(result.resumen.total_gastos).toLocaleString()}
-                  </p>
-                </div>
-                <div className="bg-gray-800 p-3 rounded">
-                  <p className="text-gray-400 text-sm">Total Ingresos</p>
-                  <p className="text-green-400 text-xl font-bold">
-                    ${result.resumen.total_ingresos.toLocaleString()}
-                  </p>
-                </div>
-                <div className="bg-gray-800 p-3 rounded">
-                  <p className="text-gray-400 text-sm">Transacciones</p>
-                  <p className="text-blue-400 text-xl font-bold">
-                    {result.resumen.cantidad_transacciones}
-                  </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Lista de transacciones */}
-              <div className="max-h-64 overflow-y-auto mb-4">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-800 sticky top-0">
-                    <tr>
-                      <th className="text-left p-2 text-gray-400">Fecha</th>
-                      <th className="text-left p-2 text-gray-400">Descripción</th>
-                      <th className="text-left p-2 text-gray-400">Categoría</th>
-                      <th className="text-right p-2 text-gray-400">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.transacciones.map((trans, idx) => (
-                      <tr key={idx} className="border-b border-gray-600">
-                        <td className="p-2 text-gray-300">{trans.fecha}</td>
-                        <td className="p-2 text-white">{trans.descripcion}</td>
-                        <td className="p-2 text-gray-400">{trans.categoria}</td>
-                        <td className={`p-2 text-right font-semibold ${trans.monto < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          ${Math.abs(trans.monto).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <button
+                onClick={handleScan}
+                disabled={!file || loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 hover:shadow-indigo-900/40 active:scale-[0.98]"
+              >
+                <Image className="w-5 h-5" />
+                {loading ? "Procesando..." : "Analizar con OCR Local"}
+              </button>
+            </>
+          ) : (
+            /* Resultados */
+            <div className="animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="p-2 bg-green-500/20 rounded-full border border-green-500/30"><CheckCircle className="w-6 h-6 text-green-400" /></div>
+                 <div>
+                    <h3 className="text-white font-bold text-xl">¡Análisis Completado!</h3>
+                    <p className="text-gray-400 text-sm">{result.transacciones.length} transacciones detectadas.</p>
+                 </div>
+                 <button onClick={() => setResult(null)} className="ml-auto p-2 bg-white/5 hover:bg-white/10 rounded-full"><X className="w-5 h-5 text-gray-400" /></button>
               </div>
 
-              {/* Guardar botón */}
+              {/* Resumen Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <p className="text-gray-400 text-xs uppercase">Total Gastos</p>
+                    <p className="text-rose-400 text-xl font-bold text-lg">
+                      ${Math.abs(result.resumen.total_gastos).toLocaleString()}
+                    </p>
+                 </div>
+                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <p className="text-gray-400 text-xs uppercase">Total Ingresos</p>
+                    <p className="text-emerald-400 text-xl font-bold text-lg">
+                      ${result.resumen.total_ingresos.toLocaleString()}
+                    </p>
+                 </div>
+                 <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <p className="text-gray-400 text-xs uppercase">Neto</p>
+                    <p className={`text-white text-xl font-bold text-lg ${result.resumen.total_ingresos - result.resumen.total_gastos >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                      ${(result.resumen.total_ingresos - result.resumen.total_gastos).toLocaleString()}
+                    </p>
+                 </div>
+              </div>
+
+              {/* Lista Transacciones */}
+              <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto custom-scrollbar">
+                 {result.transacciones.map((trans, idx) => (
+                   <div 
+                     key={idx} 
+                     className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                   >
+                     <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                           {trans.tipo === 'gasto' ? (
+                              <div className="p-1 bg-rose-500/20 rounded text-rose-400"><TrendingDown className="w-3 h-3" /></div>
+                           ) : (
+                              <div className="p-1 bg-emerald-500/20 rounded text-emerald-400"><Wallet className="w-3 h-3" /></div>
+                           )}
+                           <p className="text-white font-semibold truncate">{trans.descripcion}</p>
+                        </div>
+                        <div className="flex gap-2 text-xs text-gray-400">
+                           <span>{trans.fecha}</span>
+                           <span className="text-gray-600">•</span>
+                           <span>{trans.categoria}</span>
+                        </div>
+                     </div>
+                     <div className={`font-bold text-lg ${trans.monto < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        ${Math.abs(trans.monto).toLocaleString()}
+                     </div>
+                   </div>
+                 ))}
+              </div>
+
               <button
                 onClick={handleSaveTransactions}
                 disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition"
+                className="w-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-2"
               >
-                {loading ? 'Guardando...' : 'Guardar Todas las Transacciones'}
+                {loading ? "Guardando..." : "Guardar Transacciones"}
               </button>
             </div>
+          )}
+          
+          {error && (
+             <div className="mt-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-xl flex items-center gap-3 animate-in fade-in">
+                <XCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">{error}</p>
+             </div>
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default LectorEstadoCuenta

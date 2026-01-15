@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet, Coffee, Sparkles, Loader2, CheckCircle } from 'lucide-react'
+import { Wallet, Coffee, Sparkles, Loader2, CheckCircle, Zap } from 'lucide-react'
 
 const CONSEJOS_FINANCIEROS = [
   "💡 Una regla de oro: Ahorra al menos el 10% de tus ingresos.",
@@ -27,23 +27,21 @@ const CONSEJOS_FINANCIEROS = [
 export default function CargandoApp() {
   const navigate = useNavigate()
   
-  // Estados de UI
   const [progreso, setProgreso] = useState(0)
   const [usuario, setUsuario] = useState(null) 
   const [consejo, setConsejo] = useState(CONSEJOS_FINANCIEROS[0])
-  const [listoParaNavegar, setListoParaNavegar] = useState(false) // Nuevo estado para bloquear la carga
+  const [listoParaNavegar, setListoParaNavegar] = useState(false)
 
   useEffect(() => {
     let montado = true
 
-    // 1. Seleccionar un consejo aleatorio
+    // 1. Seleccionar consejo aleatorio
     const randomTip = CONSEJOS_FINANCIEROS[Math.floor(Math.random() * CONSEJOS_FINANCIEROS.length)]
     setConsejo(randomTip)
 
-    // 2. Lógica de Carga Inteligente + PRE-CARGA DE DATOS
+    // 2. Lógica de Carga Inteligente
     const inicializarSesion = async () => {
       try {
-        // A. Obtener sesión de Supabase
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (!session || sessionError) {
@@ -51,7 +49,7 @@ export default function CargandoApp() {
           return
         }
 
-        // B. Obtener datos adicionales del perfil
+        // Obtener datos del usuario
         let datosUsuario = {
           id: session.user.id,
           email: session.user.email,
@@ -62,75 +60,36 @@ export default function CargandoApp() {
         }
 
         try {
-          const { data: perfil } = await supabase
-            .from('perfiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+          const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', session.user.id).single()
+          if (perfil) datosUsuario = { ...datosUsuario, ...perfil }
+        } catch (err) { /* No fatal */ }
 
-          if (perfil) {
-            datosUsuario = { ...datosUsuario, ...perfil }
-          }
-        } catch (err) {
-          console.warn("No se pudo obtener el perfil (tabla 'perfiles' inexistente), usando datos de auth:", err)
-        }
-
-        // ✅ NUEVO: C. PRE-CARGAR DATOS FINANCIEROS EN CACHÉ MIENTRAS SE CARGA
-        // Esto asegura que cuando llegues al Dashboard, no tengas pantallas vacías.
+        // ✅ PRE-CARGA DE DATOS (Mantener lógica inteligente)
         try {
           const user_id = session.user.id
+          const tables = [
+            { name: 'ingresos', table: 'ingresos' },
+            { name: 'gastos', table: 'gastos' },
+            { name: 'gastos_fijos', table: 'gastos_fijos' },
+            { name: 'suscripciones', table: 'suscripciones' },
+            { name: 'deudas', table: 'deudas' },
+            { name: 'cuentas', table: 'cuentas_bancarias' }
+          ];
 
-          // Fetch Ingresos
-          const { data: ingresos } = await supabase.from('ingresos').select('*').eq('user_id', user_id)
-          localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos || []))
-          console.log('📦 Pre-cargado Ingresos:', ingresos?.length)
-
-          // Fetch Gastos
-          const { data: gastos } = await supabase.from('gastos').select('*').eq('user_id', user_id)
-          localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos || []))
-          console.log('📦 Pre-cargado Gastos:', gastos?.length)
-
-          // Fetch Gastos Fijos
-          const { data: gastosFijos } = await supabase.from('gastos_fijos').select('*').eq('user_id', user_id)
-          localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos || []))
-          console.log('📦 Pre-cargado Gastos Fijos:', gastosFijos?.length)
-
-          // Fetch Suscripciones
-          const { data: suscripciones } = await supabase.from('suscripciones').select('*').eq('user_id', user_id)
-          localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones || []))
-          console.log('📦 Pre-cargado Suscripciones:', suscripciones?.length)
-
-          // Fetch Deudas
-          const { data: deudas } = await supabase.from('deudas').select('*').eq('user_id', user_id)
-          localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas || []))
-          console.log('📦 Pre-cargado Deudas:', deudas?.length)
-
-          // Fetch Cuentas (opcional, pero buena para la app completa)
-          const { data: cuentas } = await supabase.from('cuentas_bancarias').select('*').eq('user_id', user_id)
-          localStorage.setItem('cuentas_cache_v2', JSON.stringify(cuentas || []))
-          console.log('📦 Pre-cargado Cuentas:', cuentas?.length)
-
+          for (const t of tables) {
+            const { data } = await supabase.from(t.table).select('*').eq('user_id', user_id)
+            localStorage.setItem(`${t.name}_cache_v2`, JSON.stringify(data || []))
+          }
         } catch (err) {
-          console.error("❌ Error al pre-cargar datos financieros:", err)
+          console.error("❌ Error pre-cargando datos:", err)
         }
 
-        // D. Guardar en localStorage para que el Dashboard lo use inmediatamente
-        localStorage.setItem('usuario_fintrack', JSON.stringify(datosUsuario))
-        localStorage.setItem("preferenciasUsuario", JSON.stringify({
-            moneda: datosUsuario.moneda || 'USD',
-            inicioMes: 1,
-            objetivo: "Reducir deudas",
-            riesgo: "Conservador",
-            iaActiva: true,
-        }))
-
+        localStorage.setItem('usuario_finguide', JSON.stringify(datosUsuario))
         setUsuario(datosUsuario)
 
-        // E. SIMULAR CARGA DE HOOKS (Visual)
-        // Usamos el tiempo de carga real (fetching datos) + un pequeño delay de la UI
-        const delayDeCarga = 2000 // 2 segundos para que se vea la barra
-
-        const pasosTotales = 20 // Menos pasos para que se sienta más rápido, pero cubra el delayDeCarga
+        // E. SIMULAR CARGA VISUAL
+        const delayDeCarga = 2000
+        const pasosTotales = 20
         const delayPorPaso = delayDeCarga / pasosTotales 
 
         for (let i = 1; i <= pasosTotales; i++) {
@@ -139,13 +98,11 @@ export default function CargandoApp() {
           if (montado) setProgreso(Math.floor((i / pasosTotales) * 100))
         }
 
-        // F. MARCAR COMO LISTO Y REDIRIGIR
         if (montado) {
           setListoParaNavegar(true)
-          // Pequeña pausa final para que el usuario vea "Listo para iniciar"
           setTimeout(() => {
             navigate('/dashboard')
-          }, 500) 
+          }, 800) 
         }
 
       } catch (err) {
@@ -154,19 +111,17 @@ export default function CargandoApp() {
       }
     }
 
-    // ✅ OPTIMIZACIÓN: Si el usuario recién se logueó (hace < 10s), saltarse a la carga
+    // Optimización: Login reciente
     const tiempoLogin = sessionStorage.getItem('ultimo_login_timestamp')
     if (tiempoLogin) {
       const segundosPasados = (Date.now() - parseInt(tiempoLogin)) / 1000
       if (segundosPasados < 10) {
-        console.log("🚀 Login reciente detectado, saltando pantalla de carga")
-        sessionStorage.setItem('ultimo_login_timestamp', '') // Limpiar para la próxima vez
+        sessionStorage.setItem('ultimo_login_timestamp', '')
         navigate('/dashboard')
         return
       }
     }
 
-    // Si no es un login reciente, mostrar la pantalla de carga
     inicializarSesion()
 
     return () => {
@@ -175,106 +130,117 @@ export default function CargandoApp() {
   }, [navigate])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex flex-col items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-black flex flex-col items-center justify-center p-6 relative overflow-hidden text-center">
       
-      {/* CARD CENTRAL */}
-      <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 md:p-12 max-w-md w-full shadow-2xl relative overflow-hidden transition-all duration-500">
-        
-        {/* Decoración de fondo */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-
-        {/* AVATAR / ICONO */}
-        <div className="mb-6 relative inline-block">
-          {usuario?.avatar_url ? (
-            <img 
-              src={usuario.avatar_url} 
-              alt="Avatar" 
-              className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-blue-500/30 object-cover shadow-lg"
-            />
-          ) : (
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-blue-500/30 shadow-lg text-white">
-              <Wallet className="w-10 h-10" />
-            </div>
-          )}
+      {/* Fondo Atmosférico */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+      
+      {/* CARD PRINCIPAL */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
           
-          {/* Indicador de carga animado (Solo visible si NO estamos listos) */}
-          {!listoParaNavegar && (
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-gray-800 animate-pulse">
-              <Loader2 className="w-3 h-3 text-white animate-spin" />
-            </div>
-          )}
+          {/* Linea de progreso superior */}
+          <div className="absolute top-0 left-0 h-1 w-full bg-white/5">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ease-out"
+              style={{ width: `${progreso}%` }}
+            />
+          </div>
 
-          {/* Indicador de Listo (Check verde) */}
-          {listoParaNavegar && (
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
-              <CheckCircle className="w-3 h-3 text-white" />
-            </div>
-          )}
-        </div>
-
-        {/* SALUDO DINÁMICO */}
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          {listoParaNavegar 
-            ? `¡Todo listo, ${usuario?.nombre ? usuario.nombre.split(' ')[0] : ''}! 👋` 
-            : `Hola, ${usuario?.nombre ? usuario.nombre.split(' ')[0] : ''} 👋`
-          }
-        </h1>
-        <p className="text-blue-200 text-sm md:text-base mb-6 opacity-90">
-          {listoParaNavegar 
-            ? 'Iniciando tu panel financiero...' 
-            : 'Preparando tus datos y herramientas...'
-          }
-        </p>
-
-        {/* BARRA DE PROGRESO */}
-        {!listoParaNavegar && (
-          <div className="mb-8">
-            <div className="flex justify-between text-xs text-gray-400 mb-2">
-              <span>Cargando datos históricos...</span>
-              <span>{progreso}%</span>
-            </div>
-            <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-100 ease-out"
-                style={{ width: `${progreso}%` }}
+          {/* AVATAR / ICONO */}
+          <div className="mb-8 relative inline-block">
+            <div className="absolute inset-0 bg-blue-500 blur-xl opacity-40 animate-pulse rounded-full" />
+            {usuario?.avatar_url ? (
+              <img 
+                src={usuario.avatar_url} 
+                alt="Avatar" 
+                className="relative w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/10 object-cover shadow-2xl"
               />
+            ) : (
+              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-white/10">
+                <Wallet className="w-10 h-10 md:w-12 md:h-12 text-white drop-shadow-md" />
+              </div>
+            )}
+            
+            {/* Estado de Carga (Icono) */}
+            <div className="absolute -bottom-2 -right-2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-4 border-gray-900 transition-all duration-500 transform scale-0">
+              {!listoParaNavegar ? (
+                <Loader2 className="w-6 h-6 md:w-8 md:h-8 text-blue-400 animate-spin" />
+              ) : (
+                <div className="bg-green-500 rounded-full w-full h-full flex items-center justify-center animate-bounce-in">
+                  <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                </div>
+              )}
             </div>
           </div>
-        )}
 
-        {/* RECOMENDACIÓN FINANCIERA */}
-        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/20 rounded-xl p-4 mb-6 text-left">
-          <div className="flex items-start gap-3">
-            <div className="bg-yellow-500/20 p-2 rounded-lg text-yellow-400 shrink-0">
-              <Sparkles className="w-5 h-5" />
+          {/* TEXTO DINÁMICO */}
+        <h1 className="text-2xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-purple-200 mb-2 tracking-tight">
+  {listoParaNavegar ? '¡Todo listo!' : (() => {
+    const hora = new Date().getHours();
+    if (hora >= 5 && hora < 12) return '☀️ Buenos días';
+    if (hora >= 12 && hora < 19) return '☕ Buenas tardes';
+    return '🌙 Buenas noches';
+  })()}
+</h1>
+<p className="text-white font-medium text-lg mb-8">
+  {listoParaNavegar 
+    ? 'Iniciando experiencia...' 
+    : `${usuario?.nombre ? usuario.nombre.split(' ')[0] : usuario?.email?.split('@')[0] || 'Usuario'} 👋`
+  }
+</p>
+
+          {/* BARRA DE PROGRESO */}
+          {!listoParaNavegar && (
+            <div className="mb-10">
+              <div className="flex justify-between text-xs md:text-sm font-semibold text-blue-300 mb-3">
+                <span>Cargando activos financieros...</span>
+                <span>{progreso}%</span>
+              </div>
+              <div className="h-2 w-full bg-gray-700/50 rounded-full overflow-hidden shadow-inner">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                  style={{ width: `${progreso}%` }}
+                />
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">
-                Consejo Financiero del Día
-              </p>
-              <p className="text-gray-200 text-sm font-medium leading-snug">
-                {consejo}
-              </p>
+          )}
+
+          {/* TARJETA DE CONSEJO */}
+          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-white/10 rounded-2xl p-6 text-left relative overflow-hidden group hover:border-purple-400/30 transition-all duration-300">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/20 rounded-full blur-xl group-hover:bg-yellow-500/30 transition-colors" />
+            <div className="flex items-start gap-4 relative z-10">
+              <div className="bg-yellow-500/20 p-3 rounded-xl text-yellow-400 shadow-lg">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-yellow-300/80 uppercase tracking-wider mb-2">Consejo del Día</p>
+                <p className="text-sm md:text-base text-gray-200 font-medium leading-relaxed">
+                  {consejo}
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* INDICADOR FINAL */}
+          <div className="mt-8 h-12 flex items-center justify-center">
+            {!listoParaNavegar ? (
+              <div className="flex items-center gap-2 text-blue-400/70 text-sm font-medium animate-pulse">
+                <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                <div className="w-2 h-2 bg-blue-400 rounded-full" style={{ animationDelay: '0.2s' }} />
+                <div className="w-2 h-2 bg-blue-400 rounded-full" style={{ animationDelay: '0.4s' }} />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-400 font-semibold animate-in fade-in slide-in-from-bottom-4">
+                <Coffee className="w-5 h-5" /> Disfruta tu experiencia
+              </div>
+            )}
+          </div>
+
         </div>
-
-        {/* ESTADO FINAL DE CARGA */}
-        {!listoParaNavegar && (
-          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-             <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-             <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-             <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-          </div>
-        )}
-
-        {listoParaNavegar && (
-          <div className="flex items-center justify-center gap-2 text-green-400 text-sm font-semibold animate-pulse">
-            <Coffee className="w-4 h-4" /> Listo para iniciar
-          </div>
-        )}
       </div>
     </div>
   )
