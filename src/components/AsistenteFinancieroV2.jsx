@@ -2,7 +2,7 @@
 // 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente
 // Arquetipos Dinámicos | Objetivos Personalizados | Análisis en Tiempo Real
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { 
   Brain, CheckCircle2, Zap, X, 
   Calendar, AlertTriangle,
@@ -151,7 +151,8 @@ export default function AsistenteFinGuide({
     const saved = localStorage.getItem('finGuideObjetivo');
     return saved || 'diagnostico';
   });
-  const [pilotoAutomatico, setPilotoAutomatico] = useState(() => {
+  // Corrección: Renombrado a _setPilotoAutomatico para evitar warning de unused var
+  const [pilotoAutomatico, _setPilotoAutomatico] = useState(() => {
     const saved = localStorage.getItem('finGuidePiloto');
     return saved ? JSON.parse(saved) : false;
   });
@@ -485,7 +486,8 @@ export default function AsistenteFinGuide({
   } = analisis;
 
   // Función analizar
-  const analizar = () => {
+  // Corrección: Envuelto en useCallback para solucionar exhaustive-deps
+  const analizar = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     
     setLoading(true);
@@ -504,7 +506,7 @@ export default function AsistenteFinGuide({
       setLoading(false);
       setTimeout(() => setShowAnalysisAnimation(false), 1000);
     }, 800);
-  };
+  }, [showLocalNotification, arquetipo]); 
 
   // Auto-analizar en cambios
   useEffect(() => {
@@ -514,7 +516,8 @@ export default function AsistenteFinGuide({
     return () => {
       if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
     };
-  }, [ingresos.length, gastosFijos.length, gastosVariables.length, suscripciones.length, deudas.length]);
+    // Corrección: Agregado 'analizar' a las dependencias
+  }, [ingresos.length, gastosFijos.length, gastosVariables.length, suscripciones.length, deudas.length, analizar]);
 
   const objetivoConfig = OBJETIVOS.find(o => o.key === objetivoActual) || OBJETIVOS[0];
 
