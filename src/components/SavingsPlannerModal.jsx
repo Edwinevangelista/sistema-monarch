@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, PiggyBank, Target, TrendingUp, Calendar, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, PiggyBank, Target, TrendingUp, Zap, CheckCircle2 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 // ==========================================

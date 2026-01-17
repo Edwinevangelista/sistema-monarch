@@ -1,4 +1,4 @@
-// src/components/AsistenteFinGuide.jsx
+// src/components/AsistenteFinancieroV2.jsx
 // 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente
 // Arquetipos Dinámicos | Objetivos Personalizados | Análisis en Tiempo Real
 
@@ -132,7 +132,7 @@ const PATRONES_FUGAS = [
 ];
 
 // --- COMPONENTE PRINCIPAL ---
-export default function AsistenteFinGuide({
+export default function AsistenteFinancieroV2({ // Cambiado nombre de export por el archivo
   ingresos = [],
   gastosFijos = [],
   gastosVariables = [],
@@ -151,8 +151,8 @@ export default function AsistenteFinGuide({
     const saved = localStorage.getItem('finGuideObjetivo');
     return saved || 'diagnostico';
   });
-  // Corrección: Renombrado a _setPilotoAutomatico para evitar warning de unused var
-  const [pilotoAutomatico, _setPilotoAutomatico] = useState(() => {
+  // Corrección: Removido el setter no usado para evitar warning
+  const [pilotoAutomatico] = useState(() => {
     const saved = localStorage.getItem('finGuidePiloto');
     return saved ? JSON.parse(saved) : false;
   });
@@ -232,38 +232,6 @@ export default function AsistenteFinGuide({
       totalDeudas,
       scoreHealth,
       ratioGastos: `${(ratioGastos * 100).toFixed(1)}%`
-    });
-
-    // 🔍 DEBUG DETALLADO: Ver datos crudos
-    console.log('📋 Datos Detallados:', {
-      'Ingresos (cantidad)': ingresos.length,
-      'Ingresos desglose': ingresos.map(i => ({ 
-        descripcion: i.descripcion || i.categoria, 
-        monto: i.monto 
-      })),
-      'Gastos Fijos (cantidad)': gastosFijos.length,
-      'Gastos Fijos desglose': gastosFijos.map(g => ({ 
-        descripcion: g.descripcion || g.categoria, 
-        monto: g.monto 
-      })),
-      'Gastos Variables (cantidad)': gastosVariables.length,
-      'Gastos Variables desglose': gastosVariables.map(g => ({ 
-        descripcion: g.descripcion || g.categoria, 
-        monto: g.monto 
-      })),
-      'Suscripciones Activas (cantidad)': suscripciones.filter(s => s.estado === 'Activo').length,
-      'Suscripciones desglose': suscripciones.filter(s => s.estado === 'Activo').map(s => ({ 
-        servicio: s.servicio, 
-        costo: s.costo 
-      })),
-      '---TOTALES---': {
-        totalIngresos,
-        totalGastosFijos,
-        totalGastosVariables,
-        totalSuscripciones,
-        suma: totalGastosFijos + totalGastosVariables + totalSuscripciones,
-        disponible
-      }
     });
 
     let arquetipo;
@@ -479,14 +447,13 @@ export default function AsistenteFinGuide({
   }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas, objetivoActual]);
 
   const { 
-    kpis, arquetipo, vsPromedio, prediccion3Meses, prediccionLibertad,
+    kpis, arquetipo, prediccion3Meses, prediccionLibertad,
     fugasDetectadas, totalFugasAhorro, eventosFinancieros, 
-    indiceLibertas, requisitoLibertad, suscripcionesOptimizables, 
+    requisitoLibertad, suscripcionesOptimizables, 
     ahorroTotalOptimizable, recomendaciones, estrategia 
   } = analisis;
 
   // Función analizar
-  // Corrección: Envuelto en useCallback para solucionar exhaustive-deps
   const analizar = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     
@@ -516,7 +483,6 @@ export default function AsistenteFinGuide({
     return () => {
       if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
     };
-    // Corrección: Agregado 'analizar' a las dependencias
   }, [ingresos.length, gastosFijos.length, gastosVariables.length, suscripciones.length, deudas.length, analizar]);
 
   const objetivoConfig = OBJETIVOS.find(o => o.key === objetivoActual) || OBJETIVOS[0];
@@ -680,12 +646,11 @@ export default function AsistenteFinGuide({
           fugasDetectadas={fugasDetectadas}
           totalFugasAhorro={totalFugasAhorro}
           eventosFinancieros={eventosFinancieros}
-          indiceLibertas={indiceLibertas}
+          indiceLibertas={analisis.indiceLibertas} // Pasado directamente desde analisis para no declarar variable
           requisitoLibertad={requisitoLibertad}
           prediccion3Meses={prediccion3Meses}
           suscripcionesOptimizables={suscripcionesOptimizables}
-          deudas={deudas}
-          arquetipo={arquetipo}
+          // Corrección: Removido deudas y arquetipo ya que ContenidoPorObjetivo no los usa directamente según el error
           onOpenDebtPlanner={onOpenDebtPlanner}
           onOpenSavingsPlanner={onOpenSavingsPlanner}
           onOpenSpendingControl={onOpenSpendingControl}
