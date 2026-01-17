@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, PiggyBank, Target, TrendingUp, Zap, CheckCircle2 } from 'lucide-react';
+
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 // ==========================================
@@ -68,9 +69,9 @@ function calcularPlanAhorro(config) {
 
 function generarRecomendaciones(plan, kpis) {
   const recomendaciones = [];
-  const { ahorroMensual, montoObjetivo, plazoMeses, tasaInteres } = plan;
+const { ahorroMensual, plazoMeses, tasaInteres } = plan;
   const disponible = kpis.saldo || 0;
-  const ingresos = kpis.totalIngresos || 1;
+
   const capacidad = disponible * 0.3;
 
   // Evaluar capacidad
@@ -539,7 +540,7 @@ function Step4Resultado({ plan, onGuardar }) {
   );
 }
 
-function ConfirmModal({ plan, tipo, onConfirmar, onCancelar }) {
+function ConfirmModal({ onConfirmar, onCancelar }) {
   const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
 
