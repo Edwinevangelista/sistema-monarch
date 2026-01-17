@@ -1,550 +1,545 @@
-// src/components/SavingsPlannerModal.jsx
-// ✅ VERSIÓN COMPLETA Y CORREGIDA con guardado de planes
-
 import { useState } from 'react';
-import { X, Target, Plane, ShoppingBag, Shield, Sparkles, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { generateSavingsPlan } from '../lib/brain/brain.savingsplanner';
+import { X, PiggyBank, Target, TrendingUp, Calendar, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
-export default function SavingsPlannerModal({ kpis, onClose, onPlanGuardado }) {
-  const [step, setStep] = useState(1);
-  const [goalType, setGoalType] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    item: '',
-    destination: '',
-    people: '',
-    days: '',
-    amount: '',
-    timeframe: ''
-  });
-  const [plan, setPlan] = useState(null);
-  const { addPlan } = usePlanesGuardados();
-  const [showConfirmacion, setShowConfirmacion] = useState(false);
-  const [planParaGuardar, setPlanParaGuardar] = useState(null);
-  
-  const goalTypes = [
-    { id: 'vacation', name: 'Vacaciones', icon: <Plane className="w-8 h-8" />, color: 'from-blue-600 to-cyan-600' },
-    { id: 'purchase', name: 'Compra Específica', icon: <ShoppingBag className="w-8 h-8" />, color: 'from-purple-600 to-pink-600' },
-    { id: 'emergency_fund', name: 'Fondo de Emergencia', icon: <Shield className="w-8 h-8" />, color: 'from-green-600 to-emerald-600' },
-    { id: 'custom', name: 'Meta Personalizada', icon: <Sparkles className="w-8 h-8" />, color: 'from-orange-600 to-red-600' }
-  ];
+// ==========================================
+// FUNCIONES DE CÁLCULO
+// ==========================================
 
-  const handleInputChange = (field, value) => {
-    console.log('Cambiando', field, '=', value);
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      console.log('Nuevo estado:', newData);
-      return newData;
-    });
-  };
+function calcularPlanAhorro(config) {
+  const {
+    montoObjetivo,
+    plazoMeses,
+    ahorroMensual,
+    tasaInteres = 0,
+    ahorroInicial = 0
+  } = config;
 
-  const handleGeneratePlan = () => {
-    try {
-      // Preparar datos según el tipo de meta
-      const goalData = {
-        type: goalType,
-        amount: Number(formData.amount) || 1000,
-        timeframe: Number(formData.timeframe) || 12,
-        details: {}
-      };
-
-      // Agregar detalles específicos según el tipo
-      if (goalType === 'vacation') {
-        goalData.details = {
-          destination: formData.destination || 'Destino',
-          people: Number(formData.people) || 1,
-          days: Number(formData.days) || 7
-        };
-      } else if (goalType === 'purchase') {
-        goalData.details = {
-          item: formData.item || 'Artículo',
-          category: 'general'
-        };
-      } else if (goalType === 'custom') {
-        goalData.details = {
-          name: formData.name || 'Meta personalizada',
-          description: 'Meta de ahorro personalizada'
-        };
-      }
-
-      console.log('Generando plan con:', goalData, 'KPIs:', kpis);
-      
-      const generatedPlan = generateSavingsPlan(goalData, kpis);
-      console.log('Plan generado:', generatedPlan);
-      
-      setPlan(generatedPlan);
-      setPlanParaGuardar(generatedPlan);
-      setStep(3);
-    } catch (error) {
-      console.error('Error generando plan:', error);
-      alert('Error al generar el plan: ' + error.message + '\nRevisa la consola para más detalles.');
+  // Si especifica monto objetivo y plazo, calcular ahorro mensual
+  if (montoObjetivo && plazoMeses) {
+    const tasaMensual = tasaInteres / 12 / 100;
+    let ahorroNecesario;
+    
+    if (tasaMensual > 0) {
+      // Fórmula con interés compuesto
+      const factor = (Math.pow(1 + tasaMensual, plazoMeses) - 1) / tasaMensual;
+      ahorroNecesario = (montoObjetivo - ahorroInicial * Math.pow(1 + tasaMensual, plazoMeses)) / factor;
+    } else {
+      // Sin interés
+      ahorroNecesario = (montoObjetivo - ahorroInicial) / plazoMeses;
     }
-  };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl max-w-4xl w-full my-8" onClick={e => e.stopPropagation()}>
-        
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600/30 to-purple-600/30 p-6 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Target className="w-8 h-8 text-indigo-300" />
-            <div>
-              <h2 className="text-2xl font-bold text-white">Plan de Ahorro</h2>
-              <p className="text-indigo-200 text-sm">Define metas personalizadas y alcánzalas</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
-            <X className="w-6 h-6 text-white" />
-          </button>
-        </div>
-
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-2 p-6 bg-white/5">
-          {[1, 2, 3].map(s => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                step >= s ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-400'
-              }`}>
-                {s}
-              </div>
-              <span className={`text-sm ${step >= s ? 'text-white' : 'text-gray-400'}`}>
-                {s === 1 ? 'Tipo' : s === 2 ? 'Detalles' : 'Plan'}
-              </span>
-              {s < 3 && <div className="w-8 h-0.5 bg-white/20" />}
-            </div>
-          ))}
-        </div>
-
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
-          {/* PASO 1: TIPO */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-white mb-4">¿Qué quieres ahorrar?</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {goalTypes.map(type => (
-                  <button
-                    key={type.id}
-                    onClick={() => {
-                      setGoalType(type.id);
-                      setStep(2);
-                    }}
-                    className={`bg-gradient-to-br ${type.color} p-6 rounded-xl hover:scale-105 transition text-left`}
-                  >
-                    <div className="text-white mb-3">{type.icon}</div>
-                    <h4 className="text-white font-bold text-lg">{type.name}</h4>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PASO 2: DETALLES */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <button onClick={() => setStep(1)} className="text-purple-300 hover:text-purple-200">
-                ← Volver
-              </button>
-
-              <h3 className="text-xl font-bold text-white">
-                {goalTypes.find(t => t.id === goalType)?.name}
-              </h3>
-
-              {goalType === 'custom' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Nombre de tu meta</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Ej: Casa nueva, Educación, Negocio..."
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Monto objetivo</label>
-                    <input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => handleInputChange('amount', e.target.value)}
-                      placeholder="10000"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">¿En cuántos meses?</label>
-                    <input
-                      type="number"
-                      value={formData.timeframe}
-                      onChange={(e) => handleInputChange('timeframe', e.target.value)}
-                      placeholder="24"
-                      min="1"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {goalType === 'purchase' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">¿Qué quieres comprar?</label>
-                    <input
-                      type="text"
-                      value={formData.item}
-                      onChange={(e) => handleInputChange('item', e.target.value)}
-                      placeholder="Ej: Laptop, Auto, Muebles..."
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Precio</label>
-                    <input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => handleInputChange('amount', e.target.value)}
-                      placeholder="5000"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">¿En cuántos meses?</label>
-                    <input
-                      type="number"
-                      value={formData.timeframe}
-                      onChange={(e) => handleInputChange('timeframe', e.target.value)}
-                      placeholder="12"
-                      min="1"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {goalType === 'vacation' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Destino</label>
-                    <input
-                      type="text"
-                      value={formData.destination}
-                      onChange={(e) => handleInputChange('destination', e.target.value)}
-                      placeholder="Ej: Cancún, París, Nueva York..."
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-white font-semibold mb-2 block">Personas</label>
-                      <input
-                        type="number"
-                        value={formData.people}
-                        onChange={(e) => handleInputChange('people', e.target.value)}
-                        placeholder="2"
-                        min="1"
-                        className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-white font-semibold mb-2 block">Días</label>
-                      <input
-                        type="number"
-                        value={formData.days}
-                        onChange={(e) => handleInputChange('days', e.target.value)}
-                        placeholder="7"
-                        min="1"
-                        className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Presupuesto Estimado</label>
-                    <input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => handleInputChange('amount', e.target.value)}
-                      placeholder="3000"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">¿En cuántos meses?</label>
-                    <input
-                      type="number"
-                      value={formData.timeframe}
-                      onChange={(e) => handleInputChange('timeframe', e.target.value)}
-                      placeholder="12"
-                      min="1"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {goalType === 'emergency_fund' && (
-                <div className="space-y-4">
-                  <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-4">
-                    <p className="text-blue-200 text-sm">
-                      💡 Se recomienda tener 3-6 meses de gastos ahorrados
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">Meta de Ahorro</label>
-                    <input
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => handleInputChange('amount', e.target.value)}
-                      placeholder="5000"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-white font-semibold mb-2 block">¿En cuántos meses?</label>
-                    <input
-                      type="number"
-                      value={formData.timeframe}
-                      onChange={(e) => handleInputChange('timeframe', e.target.value)}
-                      placeholder="12"
-                      min="1"
-                      className="w-full bg-white/10 text-white px-4 py-3 rounded-lg border border-white/20 focus:border-purple-400 outline-none placeholder-gray-400"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleGeneratePlan}
-                disabled={!formData.amount || !formData.timeframe}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-              >
-                <TrendingUp className="w-5 h-5" />
-                Generar Plan de Ahorro
-              </button>
-            </div>
-          )}
-
-          {/* PASO 3: PLAN */}
-          {step === 3 && plan && (
-            <PlanView plan={plan} onBack={() => setStep(2)} onGuardar={() => setShowConfirmacion(true)} />
-          )}
-        </div>
-
-        {/* ✅ MODAL DE CONFIRMACIÓN */}
-        {showConfirmacion && planParaGuardar && (
-          <ConfirmacionGuardadoPlan
-            plan={planParaGuardar}
-            tipo="ahorro"
-            onConfirmar={async (nombre) => {
-              try {
-                const config = planParaGuardar.configuracion || planParaGuardar;
-                
-                // ✅ CALCULAR MESES
-                let mesesCalculados = 0;
-                
-                if (config.meses) {
-                  mesesCalculados = Number(config.meses);
-                } else if (config.plan?.timeframe) {
-                  mesesCalculados = Number(config.plan.timeframe);
-                } else if (config.timeline?.length) {
-                  mesesCalculados = config.timeline.length;
-                } else if (config.fechaObjetivo) {
-                  const hoy = new Date();
-                  const objetivo = new Date(config.fechaObjetivo);
-                  const diffMeses = Math.ceil((objetivo - hoy) / (1000 * 60 * 60 * 24 * 30));
-                  mesesCalculados = Math.max(1, diffMeses);
-                }
-                
-                mesesCalculados = isNaN(mesesCalculados) || mesesCalculados <= 0 ? 12 : mesesCalculados;
-
-                console.log('💾 Guardando plan con:', {
-                  nombre,
-                  meses: mesesCalculados,
-                  config
-                });
-
-                await addPlan({
-                  tipo: 'ahorro',
-                  nombre: nombre,
-                  descripcion: `Plan de ahorro para ${config.goal?.name || formData.name || goalTypes.find(t => t.id === goalType)?.name || 'objetivo financiero'}`,
-                  configuracion: config,
-                  meta_principal: config.goal?.name || formData.name || goalTypes.find(t => t.id === goalType)?.name || 'Ahorro',
-                  monto_objetivo: config.plan?.targetAmount || Number(formData.amount) || 0,
-                  monto_actual: 0,
-                  progreso: 0,
-                  fecha_inicio: new Date().toISOString().split('T')[0],
-                  fecha_objetivo: config.fechaObjetivo || null,
-                  meses_duracion: mesesCalculados,
-                  activo: true,
-                  completado: false
-                });
-
-                console.log('✅ Plan guardado en DB');
-
-                if (onPlanGuardado) {
-                  console.log('🔄 Actualizando lista de planes...');
-                  await onPlanGuardado();
-                }
-
-                alert('✅ Plan guardado exitosamente');
-                setShowConfirmacion(false);
-                
-                setTimeout(() => {
-                  onClose();
-                }, 300);
-
-              } catch (error) {
-                console.error('❌ Error guardando plan:', error);
-                alert('Error al guardar el plan: ' + error.message);
-              }
-            }}
-            onCancelar={() => setShowConfirmacion(false)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========== VISTA DEL PLAN ==========
-function PlanView({ plan, onBack, onGuardar }) {
-  if (!plan || !plan.plan) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-        <p className="text-white text-lg">Error al generar el plan</p>
-        <button onClick={onBack} className="mt-4 bg-purple-600 text-white px-6 py-2 rounded-lg">
-          Volver
-        </button>
-      </div>
-    );
+    return {
+      tipoCalculo: 'por_objetivo',
+      montoObjetivo,
+      plazoMeses,
+      ahorroMensual: Math.ceil(ahorroNecesario),
+      ahorroInicial,
+      tasaInteres,
+      interesesGanados: montoObjetivo - (ahorroNecesario * plazoMeses + ahorroInicial)
+    };
   }
 
-  const { plan: planDetails, capacity = {}, feasibility = {}, recommendations = [] } = plan;
-  const targetAmount = Number(planDetails.targetAmount) || 0;
-  const monthlyRequired = Number(planDetails.monthlyRequired) || 0;
-  const timeframe = Number(planDetails.timeframe) || 1;
+  // Si especifica ahorro mensual, calcular cuánto acumulará
+  if (ahorroMensual && plazoMeses) {
+    const tasaMensual = tasaInteres / 12 / 100;
+    let montoFinal;
+    
+    if (tasaMensual > 0) {
+      const factor = (Math.pow(1 + tasaMensual, plazoMeses) - 1) / tasaMensual;
+      montoFinal = ahorroMensual * factor + ahorroInicial * Math.pow(1 + tasaMensual, plazoMeses);
+    } else {
+      montoFinal = ahorroMensual * plazoMeses + ahorroInicial;
+    }
+
+    return {
+      tipoCalculo: 'por_ahorro_mensual',
+      montoObjetivo: Math.round(montoFinal),
+      plazoMeses,
+      ahorroMensual,
+      ahorroInicial,
+      tasaInteres,
+      interesesGanados: montoFinal - (ahorroMensual * plazoMeses + ahorroInicial)
+    };
+  }
+
+  return null;
+}
+
+function generarRecomendaciones(plan, kpis) {
+  const recomendaciones = [];
+  const { ahorroMensual, montoObjetivo, plazoMeses, tasaInteres } = plan;
+  const disponible = kpis.saldo || 0;
+  const ingresos = kpis.totalIngresos || 1;
+  const capacidad = disponible * 0.3;
+
+  // Evaluar capacidad
+  if (ahorroMensual > capacidad * 1.5) {
+    recomendaciones.push({
+      icon: '⚠️',
+      title: 'Meta muy ambiciosa',
+      message: `Tu ahorro mensual ($${ahorroMensual.toLocaleString()}) supera tu capacidad actual`,
+      priority: 'critical',
+      action: 'Considera extender el plazo o reducir el monto objetivo'
+    });
+  }
+
+  // Recomendar inversión
+  if (plazoMeses >= 12 && tasaInteres === 0) {
+    recomendaciones.push({
+      icon: '📈',
+      title: 'Aprovecha el interés compuesto',
+      message: 'Un plazo largo es ideal para invertir tu ahorro',
+      priority: 'high',
+      action: 'Busca opciones de inversión con al menos 5% anual'
+    });
+  }
+
+  // Progreso positivo
+  if (ahorroMensual <= capacidad) {
+    recomendaciones.push({
+      icon: '✅',
+      title: 'Plan alcanzable',
+      message: 'Tu meta está dentro de tu capacidad de ahorro',
+      priority: 'success',
+      action: 'Mantén la disciplina y ajusta si aumentan tus ingresos'
+    });
+  }
+
+  // Sugerencia de aceleración
+  const extra = Math.floor(capacidad - ahorroMensual);
+  if (extra > 100) {
+    recomendaciones.push({
+      icon: '🚀',
+      title: 'Acelera tu meta',
+      message: `Podrías ahorrar $${extra} extra al mes`,
+      priority: 'medium',
+      action: `Alcanzarías tu meta ${Math.round((ahorroMensual * plazoMeses) / (ahorroMensual + extra))} meses antes`
+    });
+  }
+
+  return recomendaciones;
+}
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
+
+export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado }) {
+  const [step, setStep] = useState(1);
+  const [config, setConfig] = useState({
+    tipoMeta: 'objetivo', // 'objetivo' o 'ahorro_libre'
+    montoObjetivo: '',
+    plazoMeses: '',
+    ahorroMensual: '',
+    ahorroInicial: '',
+    tasaInteres: '',
+    nombreMeta: ''
+  });
+  const [plan, setPlan] = useState(null);
+  const [showConfirmacion, setShowConfirmacion] = useState(false);
+
+  const { addPlan } = usePlanesGuardados();
+
+  const handleNext = () => {
+    if (step === 1 && !config.tipoMeta) {
+      alert('Selecciona un tipo de meta');
+      return;
+    }
+    if (step === 2) {
+      // Validar que tenga datos suficientes
+      if (config.tipoMeta === 'objetivo' && (!config.montoObjetivo || !config.plazoMeses)) {
+        alert('Completa el monto objetivo y el plazo');
+        return;
+      }
+      if (config.tipoMeta === 'ahorro_libre' && (!config.ahorroMensual || !config.plazoMeses)) {
+        alert('Completa el ahorro mensual y el plazo');
+        return;
+      }
+    }
+    setStep(prev => prev + 1);
+  };
+
+  const handleBack = () => {
+    setStep(prev => prev - 1);
+  };
+
+  const generarPlan = () => {
+    const configNumerica = {
+      montoObjetivo: config.tipoMeta === 'objetivo' ? Number(config.montoObjetivo) : null,
+      plazoMeses: Number(config.plazoMeses),
+      ahorroMensual: config.tipoMeta === 'ahorro_libre' ? Number(config.ahorroMensual) : null,
+      tasaInteres: Number(config.tasaInteres) || 0,
+      ahorroInicial: Number(config.ahorroInicial) || 0
+    };
+
+    const resultado = calcularPlanAhorro(configNumerica);
+    
+    if (!resultado) {
+      alert('No se pudo calcular el plan. Verifica los datos.');
+      return;
+    }
+
+    const recomendaciones = generarRecomendaciones(resultado, kpis);
+    
+    setPlan({
+      ...resultado,
+      nombreMeta: config.nombreMeta || 'Ahorro General',
+      recomendaciones
+    });
+    setStep(4);
+  };
 
   return (
-    <div className="space-y-6">
-      <button onClick={onBack} className="text-purple-300 hover:text-purple-200 flex items-center gap-2">
-        ← Volver
-      </button>
+    <>
+      {/* CORRECCIÓN: z-index aumentado de z-50 a z-[70] para estar sobre el dashboard */}
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+        <div className="bg-gray-900 w-full md:max-w-3xl md:h-auto md:max-h-[90vh] h-[95vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10">
+          
+          {/* Header */}
+          <div className="bg-gradient-to-r from-green-900/80 to-emerald-900/80 backdrop-blur-md p-4 md:p-6 border-b border-white/10 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-500/20 p-2 rounded-lg text-green-300 border border-green-500/20">
+                <PiggyBank className="w-6 h-6 md:w-8 md:h-8" />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-white">Planificador de Ahorro</h2>
+                <p className="text-green-200 text-xs md:text-sm">Alcanza tus metas financieras</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
-      <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-xl p-6 border border-purple-400/30">
-        <h3 className="text-2xl font-bold text-white mb-4">Tu Plan de Ahorro</h3>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="text-gray-300 text-sm mb-1">Meta</div>
-            <div className="text-white text-2xl font-bold">${targetAmount.toLocaleString()}</div>
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-center gap-2 p-4 bg-gray-900/50 border-b border-white/5">
+            {[1, 2, 3, 4].map(num => (
+              <div key={num} className={`h-2 rounded-full transition-all ${num === step ? 'w-12 bg-green-500' : num < step ? 'w-2 bg-green-600' : 'w-2 bg-gray-700'}`} />
+            ))}
           </div>
-          
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="text-gray-300 text-sm mb-1">Mensual</div>
-            <div className="text-white text-2xl font-bold">${monthlyRequired}</div>
+
+          {/* Content */}
+          <div className="p-4 md:p-6 overflow-y-auto flex-1">
+            {step === 1 && <Step1TipoMeta config={config} setConfig={setConfig} />}
+            {step === 2 && <Step2Detalles config={config} setConfig={setConfig} kpis={kpis} />}
+            {step === 3 && <Step3Opcionales config={config} setConfig={setConfig} />}
+            {step === 4 && plan && <Step4Resultado plan={plan} onGuardar={() => setShowConfirmacion(true)} />}
           </div>
-          
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="text-gray-300 text-sm mb-1">Tiempo</div>
-            <div className="text-white text-2xl font-bold">{timeframe} meses</div>
-          </div>
-          
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="text-gray-300 text-sm mb-1">Semanal</div>
-            <div className="text-white text-2xl font-bold">${planDetails.weeklyRequired || 0}</div>
+
+          {/* Footer con botones */}
+          <div className="p-4 border-t border-white/10 bg-gray-900/80 backdrop-blur shrink-0 flex gap-3">
+            {step > 1 && step < 4 && (
+              <button onClick={handleBack} className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold transition">
+                Atrás
+              </button>
+            )}
+            {step < 3 && (
+              <button onClick={handleNext} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold transition">
+                Siguiente
+              </button>
+            )}
+            {step === 3 && (
+              <button onClick={generarPlan} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                <Zap className="w-5 h-5" /> Generar Plan
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {feasibility.level && (
-        <div className={`rounded-xl p-5 border ${
-          feasibility.color === 'green' ? 'bg-green-500/20 border-green-400/30' :
-          feasibility.color === 'blue' ? 'bg-blue-500/20 border-blue-400/30' :
-          feasibility.color === 'yellow' ? 'bg-yellow-500/20 border-yellow-400/30' :
-          'bg-red-500/20 border-red-400/30'
-        }`}>
-          <div className="flex items-center gap-3 mb-2">
-            {feasibility.level === 'easy' && <CheckCircle2 className="w-6 h-6 text-green-300" />}
-            {feasibility.level === 'moderate' && <Target className="w-6 h-6 text-blue-300" />}
-            {feasibility.level === 'challenging' && <TrendingUp className="w-6 h-6 text-yellow-300" />}
-            {feasibility.level === 'difficult' && <AlertCircle className="w-6 h-6 text-red-300" />}
-            <h4 className="text-white font-semibold">Factibilidad: {feasibility.percentage}%</h4>
-          </div>
-          <p className="text-gray-200">{feasibility.message}</p>
-        </div>
+      {/* Modal de Confirmación - CORRECCIÓN: z-index aumentado a z-[80] */}
+      {showConfirmacion && plan && (
+        <ConfirmModal
+          plan={plan}
+          tipo="ahorro"
+          onConfirmar={async (nombre) => {
+            try {
+              await addPlan({
+                tipo: 'ahorro',
+                nombre: nombre,
+                descripcion: `Plan de ahorro: ${plan.nombreMeta}`,
+                configuracion: plan,
+                meta_principal: plan.nombreMeta,
+                monto_objetivo: plan.montoObjetivo,
+                monto_actual: plan.ahorroInicial || 0,
+                progreso: 0,
+                fecha_inicio: new Date().toISOString().split('T')[0],
+                fecha_objetivo: new Date(Date.now() + plan.plazoMeses * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                meses_duracion: plan.plazoMeses,
+                activo: true,
+                completado: false
+              });
+
+              alert('✅ Plan guardado exitosamente');
+              setShowConfirmacion(false);
+              if (onPlanGuardado) onPlanGuardado();
+              onClose();
+            } catch (error) {
+              console.error('Error guardando plan:', error);
+              alert('Error al guardar el plan: ' + error.message);
+            }
+          }}
+          onCancelar={() => setShowConfirmacion(false)}
+        />
       )}
+    </>
+  );
+}
 
-      <div className="bg-white/10 rounded-xl p-5">
-        <h4 className="text-white font-semibold mb-3">Tu Capacidad de Ahorro</h4>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Conservador:</span>
-            <span className="text-white font-semibold">${capacity.conservativeMonthly || 0}/mes</span>
+// ==========================================
+// STEPS DEL WIZARD
+// ==========================================
+
+function Step1TipoMeta({ config, setConfig }) {
+  const tipos = [
+    {
+      id: 'objetivo',
+      icon: <Target className="w-8 h-8" />,
+      title: 'Meta Específica',
+      desc: 'Tengo un monto objetivo y necesito saber cuánto ahorrar',
+      examples: 'Ej: Casa, auto, viaje'
+    },
+    {
+      id: 'ahorro_libre',
+      icon: <PiggyBank className="w-8 h-8" />,
+      title: 'Ahorro Mensual',
+      desc: 'Quiero ahorrar una cantidad fija cada mes',
+      examples: 'Ej: Fondo de emergencia, inversión'
+    }
+  ];
+
+  return (
+    <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in">
+      <div className="text-center mb-8">
+        <h3 className="text-2xl font-bold text-white mb-2">¿Qué tipo de plan quieres crear?</h3>
+        <p className="text-gray-400">Elige según tu objetivo de ahorro</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {tipos.map(tipo => {
+          const isSelected = config.tipoMeta === tipo.id;
+          return (
+            <button
+              key={tipo.id}
+              onClick={() => setConfig(prev => ({ ...prev, tipoMeta: tipo.id }))}
+              className={`p-6 rounded-2xl text-left transition-all border-2 ${
+                isSelected
+                  ? 'bg-green-600/20 border-green-500 ring-2 ring-green-500/30 scale-105'
+                  : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30'
+              }`}
+            >
+              <div className={`p-3 rounded-xl mb-4 inline-block ${isSelected ? 'bg-white text-green-600' : 'bg-green-500/20 text-green-300'}`}>
+                {tipo.icon}
+              </div>
+              <h4 className="text-white font-bold text-lg mb-2">{tipo.title}</h4>
+              <p className="text-gray-300 text-sm mb-3">{tipo.desc}</p>
+              <p className="text-gray-500 text-xs italic">{tipo.examples}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Step2Detalles({ config, setConfig, kpis }) {
+  const capacidadEstimada = Math.floor((kpis.saldo || 0) * 0.3);
+
+  return (
+    <div className="space-y-6 max-w-xl mx-auto animate-in fade-in">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold text-white mb-2">Detalles de tu plan</h3>
+        <p className="text-gray-400">Define los números principales</p>
+      </div>
+
+      {/* Capacidad de ahorro estimada */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6">
+        <div className="flex items-center gap-2 text-blue-300 mb-1">
+          <TrendingUp className="w-4 h-4" />
+          <span className="text-sm font-bold">Tu capacidad estimada de ahorro</span>
+        </div>
+        <div className="text-white text-2xl font-bold">${capacidadEstimada.toLocaleString()}<span className="text-sm text-gray-400">/mes</span></div>
+        <p className="text-gray-400 text-xs mt-1">Basado en tu saldo disponible actual</p>
+      </div>
+
+      {/* Nombre de la meta */}
+      <div>
+        <label className="block text-white font-semibold mb-2">Nombre de tu meta</label>
+        <input
+          type="text"
+          value={config.nombreMeta}
+          onChange={(e) => setConfig(prev => ({ ...prev, nombreMeta: e.target.value }))}
+          placeholder="Ej: Vacaciones en Europa"
+          className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+        />
+      </div>
+
+      {config.tipoMeta === 'objetivo' ? (
+        <>
+          <div>
+            <label className="block text-white font-semibold mb-2">Monto objetivo</label>
+            <input
+              type="number"
+              value={config.montoObjetivo}
+              onChange={(e) => setConfig(prev => ({ ...prev, montoObjetivo: e.target.value }))}
+              placeholder="¿Cuánto necesitas?"
+              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+            />
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Recomendado:</span>
-            <span className="text-white font-semibold">${capacity.recommendedMonthly || 0}/mes</span>
+          <div>
+            <label className="block text-white font-semibold mb-2">Plazo (meses)</label>
+            <input
+              type="number"
+              value={config.plazoMeses}
+              onChange={(e) => setConfig(prev => ({ ...prev, plazoMeses: e.target.value }))}
+              placeholder="¿En cuánto tiempo?"
+              min="1"
+              max="120"
+              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+            />
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Agresivo:</span>
-            <span className="text-white font-semibold">${capacity.aggressiveMonthly || 0}/mes</span>
+        </>
+      ) : (
+        <>
+          <div>
+            <label className="block text-white font-semibold mb-2">Ahorro mensual</label>
+            <input
+              type="number"
+              value={config.ahorroMensual}
+              onChange={(e) => setConfig(prev => ({ ...prev, ahorroMensual: e.target.value }))}
+              placeholder="¿Cuánto puedes ahorrar al mes?"
+              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+            />
           </div>
+          <div>
+            <label className="block text-white font-semibold mb-2">Plazo (meses)</label>
+            <input
+              type="number"
+              value={config.plazoMeses}
+              onChange={(e) => setConfig(prev => ({ ...prev, plazoMeses: e.target.value }))}
+              placeholder="¿Por cuánto tiempo?"
+              min="1"
+              max="120"
+              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Step3Opcionales({ config, setConfig }) {
+  return (
+    <div className="space-y-6 max-w-xl mx-auto animate-in fade-in">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold text-white mb-2">Opciones avanzadas</h3>
+        <p className="text-gray-400">Estas son opcionales pero ayudan a mejorar tu plan</p>
+      </div>
+
+      <div>
+        <label className="block text-white font-semibold mb-2">Ahorro inicial (opcional)</label>
+        <input
+          type="number"
+          value={config.ahorroInicial}
+          onChange={(e) => setConfig(prev => ({ ...prev, ahorroInicial: e.target.value }))}
+          placeholder="¿Ya tienes algo ahorrado?"
+          className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+        />
+        <p className="text-gray-500 text-xs mt-1">Ingresa $0 si empiezas desde cero</p>
+      </div>
+
+      <div>
+        <label className="block text-white font-semibold mb-2">Tasa de interés anual (opcional)</label>
+        <input
+          type="number"
+          value={config.tasaInteres}
+          onChange={(e) => setConfig(prev => ({ ...prev, tasaInteres: e.target.value }))}
+          placeholder="% anual"
+          step="0.1"
+          className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500"
+        />
+        <p className="text-gray-500 text-xs mt-1">Si vas a invertir tu ahorro, ingresa el rendimiento esperado</p>
+      </div>
+    </div>
+  );
+}
+
+function Step4Resultado({ plan, onGuardar }) {
+  if (!plan) return null;
+
+  const { montoObjetivo, plazoMeses, ahorroMensual, interesesGanados, recomendaciones, nombreMeta } = plan;
+
+  return (
+    <div className="space-y-6 max-w-2xl mx-auto animate-in fade-in">
+      <div className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 border border-green-500/30 rounded-2xl p-6 text-center">
+        <div className="text-5xl mb-4">💰</div>
+        <h3 className="text-white font-bold text-2xl mb-2">{nombreMeta}</h3>
+        <p className="text-green-200">Tu plan de ahorro personalizado</p>
+      </div>
+
+      {/* Métricas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center">
+          <div className="text-gray-400 text-xs uppercase font-bold mb-1">Meta</div>
+          <div className="text-white font-bold text-xl">${montoObjetivo.toLocaleString()}</div>
+        </div>
+        <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center">
+          <div className="text-gray-400 text-xs uppercase font-bold mb-1">Plazo</div>
+          <div className="text-white font-bold text-xl">{plazoMeses}</div>
+          <div className="text-gray-500 text-xs">meses</div>
+        </div>
+        <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center">
+          <div className="text-gray-400 text-xs uppercase font-bold mb-1">Mensual</div>
+          <div className="text-green-400 font-bold text-xl">${ahorroMensual.toLocaleString()}</div>
+        </div>
+        <div className="bg-black/30 border border-white/10 rounded-xl p-4 text-center">
+          <div className="text-gray-400 text-xs uppercase font-bold mb-1">Intereses</div>
+          <div className="text-white font-bold text-xl">${Math.round(interesesGanados).toLocaleString()}</div>
         </div>
       </div>
 
-      {recommendations.length > 0 && (
+      {/* Recomendaciones */}
+      {recomendaciones.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-white font-semibold">💡 Recomendaciones</h4>
-          {recommendations.map((rec, idx) => (
-            <div key={idx} className={`rounded-xl p-4 border ${
-              rec.priority === 'high' ? 'bg-orange-500/10 border-orange-500/30' :
-              rec.priority === 'success' ? 'bg-green-500/10 border-green-500/30' :
-              'bg-blue-500/10 border-blue-500/30'
-            }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{rec.icon}</span>
-                <div className="flex-1">
-                  <div className="text-white font-semibold mb-1">{rec.title}</div>
-                  <div className="text-gray-300 text-sm mb-2">{rec.message}</div>
-                  {rec.actions && rec.actions.length > 0 && (
-                    <ul className="text-purple-300 text-sm space-y-1">
-                      {rec.actions.map((action, i) => (
-                        <li key={i}>→ {action}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+          <h4 className="text-white font-semibold text-lg flex items-center gap-2">
+            <Zap className="w-5 h-5 text-yellow-400" /> Recomendaciones
+          </h4>
+          {recomendaciones.map((rec, idx) => (
+            <div 
+              key={idx}
+              className={`p-4 rounded-xl border flex items-start gap-3 ${
+                rec.priority === 'critical' ? 'bg-red-500/10 border-red-500/20' :
+                rec.priority === 'high' ? 'bg-orange-500/10 border-orange-500/20' :
+                rec.priority === 'success' ? 'bg-green-500/10 border-green-500/20' :
+                'bg-white/5 border-white/10'
+              }`}
+            >
+              <span className="text-2xl">{rec.icon}</span>
+              <div className="flex-1">
+                <div className="text-white font-semibold">{rec.title}</div>
+                <div className="text-gray-300 text-sm mt-1">{rec.message}</div>
+                {rec.action && (
+                  <div className="text-green-300 text-sm mt-2 font-medium">→ {rec.action}</div>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
-      
+
       <button
         onClick={onGuardar}
-        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition"
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white py-4 rounded-2xl font-bold text-lg transition flex items-center justify-center gap-3"
       >
-        💾 Guardar Este Plan
+        <CheckCircle2 className="w-6 h-6" /> Guardar Mi Plan
       </button>
     </div>
   );
 }
 
-// ========== COMPONENTE DE CONFIRMACIÓN ==========
-function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
+function ConfirmModal({ plan, tipo, onConfirmar, onCancelar }) {
   const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
 
@@ -553,100 +548,63 @@ function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
       alert('Por favor ingresa un nombre para tu plan');
       return;
     }
-    
     setGuardando(true);
-    try {
-      await onConfirmar(nombre);
-    } catch (error) {
-      console.error('Error en handleGuardar:', error);
-    } finally {
-      setGuardando(false);
-    }
+    await onConfirmar(nombre);
+    setGuardando(false);
   };
-
-  const getTipoInfo = () => {
-    switch(tipo) {
-      case 'ahorro':
-        return { emoji: '💰', color: 'from-green-600 to-emerald-600', label: 'Ahorro' };
-      case 'deudas':
-        return { emoji: '💳', color: 'from-red-600 to-pink-600', label: 'Deudas' };
-      case 'gastos':
-        return { emoji: '💸', color: 'from-orange-600 to-yellow-600', label: 'Gastos' };
-      default:
-        return { emoji: '📋', color: 'from-blue-600 to-purple-600', label: 'Plan' };
-    }
-  };
-
-  const { emoji, color, label } = getTipoInfo();
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
-      <div className={`bg-gradient-to-br ${color} rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200`}>
+    // CORRECCIÓN: z-index aumentado a z-[80] para estar sobre el modal principal
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[80] p-4 animate-in fade-in">
+      <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-3xl max-w-md w-full p-8 shadow-2xl relative overflow-hidden border border-white/20">
+        <button 
+          onClick={onCancelar}
+          className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+        >
+          <X className="w-6 h-6" />
+        </button>
         
-        <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          {emoji} Guardar Plan de {label}
-        </h3>
-        
-        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur">
-          <p className="text-white/90 text-sm mb-3">
-            Este plan se guardará en tu lista de planes activos. Podrás verlo, editarlo y seguir tu progreso.
-          </p>
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full border border-white/30 mb-4">
+            <span className="text-4xl">💰</span>
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-4">Guardar Plan de Ahorro</h3>
           
-          {plan && plan.plan && (
-            <div className="bg-white/10 rounded-lg p-3 text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-white/70">Monto:</span>
-                <span className="text-white font-semibold">
-                  ${(plan.plan.targetAmount || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">Tiempo:</span>
-                <span className="text-white font-semibold">
-                  {plan.plan.timeframe || 12} meses
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+          <div className="bg-white/10 backdrop-blur rounded-xl p-4 mb-6 border border-white/20">
+            <p className="text-white/90 text-sm leading-relaxed">
+              Este plan se guardará en tu lista de planes activos. Podrás verlo y seguir tu progreso.
+            </p>
+          </div>
 
-        <div className="mb-4">
-          <label className="block text-white text-sm mb-2 font-medium">
-            Nombre del plan:
-          </label>
-          <input
-            type="text"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder={`Ej: ${label} ${new Date().getFullYear()}`}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur"
-            autoFocus
-            disabled={guardando}
-          />
-        </div>
+          <div className="mb-6 text-left">
+            <label className="block text-white/80 text-sm mb-2 font-bold">Nombre del plan</label>
+            <input 
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder={`Ej: Plan de Ahorro ${new Date().getFullYear()}`}
+              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40"
+              autoFocus
+            />
+          </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onCancelar}
-            disabled={guardando}
-            className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold hover:bg-white/20 transition backdrop-blur disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleGuardar}
-            disabled={guardando || !nombre.trim()}
-            className="flex-1 bg-white text-gray-900 py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            {guardando ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⏳</span>
-                Guardando...
-              </span>
-            ) : (
-              '✅ Guardar'
-            )}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancelar}
+              disabled={guardando}
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold transition disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleGuardar}
+              disabled={guardando}
+              className="flex-1 bg-white text-green-900 py-3 rounded-xl font-bold hover:bg-white/90 transition flex items-center justify-center gap-2"
+            >
+              {guardando ? <span className="animate-spin">⏳</span> : <CheckCircle2 className="w-5 h-5" />}
+              {guardando ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

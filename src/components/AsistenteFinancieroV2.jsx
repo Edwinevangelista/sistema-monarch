@@ -1,71 +1,138 @@
-// src/components/AsistenteFinancieroV2.jsx
-// 🚀 Versión Final: Funcionalidad Mejorada, Animaciones y UX Premium
+// src/components/AsistenteFinGuide.jsx
+// 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente
+// Arquetipos Dinámicos | Objetivos Personalizados | Análisis en Tiempo Real
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { 
-  Brain, Loader, TrendingDown, TrendingUp, AlertCircle, 
-  CheckCircle2, Target, ChevronRight, Sparkles, Zap, ArrowRight, X
+  Brain, CheckCircle2, Zap, X, 
+  Calendar, AlertTriangle,
+  Shield, PiggyBank, CreditCard,
+  Trash2, TrendingUp, TrendingDown,
+  ChevronRight, ChevronDown, ChevronUp, Play,
+  Sparkles, HeartPulse
 } from "lucide-react";
 
-// Importamos la lógica. Asegúrate de que este archivo exista.
-import { runIntelligence, setGoal, loadProfile } from "../lib/intelligenceEngine";
+// --- CONSTANTES ---
+const formatMoney = (v) => `$${Number(v || 0).toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
+const formatPct = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
 
-// --- CONSTANTES Y UTILIDADES ---
+const PROMEDIOS_NACIONALES = {
+  tasaAhorro: 0.15,
+  ratioGastosFijos: 0.50,
+  ratioGastosVariables: 0.30,
+  numeroSuscripciones: 4,
+  costoPromedioSuscripcion: 120
+};
 
-const METAS = [
+// 🎭 ARQUETIPOS FINANCIEROS (PERSONAS DINÁMICAS)
+const ARQUETIPOS = {
+  VISIONARIO: { 
+    nombre: "El Visionario", 
+    emoji: "🚀",
+    color: "from-emerald-500 to-teal-600", 
+    bg: "bg-emerald-500/10", 
+    text: "text-emerald-400",
+    border: "border-emerald-500/30",
+    tono: "assertive",
+    mensaje: "Tus números son excelentes. El foco ahora es maximizar el crecimiento e invertir sabiamente.",
+    min: 85
+  },
+  CONSTRUCTOR: { 
+    nombre: "El Constructor", 
+    emoji: "🏗️",
+    color: "from-blue-500 to-indigo-600", 
+    bg: "bg-blue-500/10", 
+    text: "text-blue-400",
+    border: "border-blue-500/30",
+    tono: "encouraging",
+    mensaje: "Buen trabajo. Estás construyendo patrimonio sólido. Es hora de acelerar y consolidar.",
+    min: 60
+  },
+  DEFENSOR: { 
+    nombre: "El Defensor", 
+    emoji: "🛡️",
+    color: "from-amber-500 to-orange-600", 
+    bg: "bg-amber-500/10", 
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+    tono: "cautious",
+    mensaje: "Estás en zona estable pero vulnerable. Fortalezcamos tu blindaje financiero.",
+    min: 40
+  },
+  CRISIS: { 
+    nombre: "Modo Crisis", 
+    emoji: "🚨",
+    color: "from-rose-500 to-red-600", 
+    bg: "bg-rose-500/10", 
+    text: "text-rose-400",
+    border: "border-rose-500/30",
+    tono: "urgent",
+    mensaje: "Tu salud financiera requiere atención inmediata. Vamos a estabilizar el barco juntos.",
+    min: 0
+  }
+};
+
+// 🎯 OBJETIVOS FINANCIEROS
+const OBJETIVOS = [
   { 
-    key: "general", 
-    label: "Visión General", 
-    icon: Sparkles,
+    key: "diagnostico", 
+    label: "Visión Completa", 
     emoji: "📊",
     color: "from-violet-500/20 to-indigo-500/20 border-violet-500/30",
-    activeColor: "bg-violet-500",
-    descripcion: "Diagnóstico holístico de tu situación"
+    activeColor: "bg-gradient-to-r from-violet-600 to-indigo-600",
+    descripcion: "Análisis holístico de tu situación financiera",
+    icono: Sparkles
   },
   { 
     key: "controlar_gastos", 
     label: "Control de Gastos", 
-    icon: TrendingDown,
     emoji: "💸",
     color: "from-orange-500/20 to-red-500/20 border-orange-500/30",
-    activeColor: "bg-orange-500",
-    descripcion: "Frena el sangrado de capital"
+    activeColor: "bg-gradient-to-r from-orange-600 to-red-600",
+    descripcion: "Identifica y reduce gastos excesivos",
+    icono: TrendingDown
   },
   { 
     key: "ahorrar_mas", 
-    label: "Potenciar Ahorro", 
-    icon: Target,
+    label: "Aumentar Ahorro", 
     emoji: "💰",
     color: "from-emerald-500/20 to-teal-500/20 border-emerald-500/30",
-    activeColor: "bg-emerald-500",
-    descripcion: "Construye tu futuro financiero"
+    activeColor: "bg-gradient-to-r from-emerald-600 to-teal-600",
+    descripcion: "Estrategias para ahorrar más cada mes",
+    icono: PiggyBank
   },
   { 
     key: "pagar_deudas", 
-    label: "Libertad de Deudas", 
-    icon: AlertCircle,
+    label: "Eliminar Deudas", 
     emoji: "💳",
     color: "from-red-500/20 to-rose-500/20 border-red-500/30",
-    activeColor: "bg-rose-500",
-    descripcion: "Elimina cargas estratégicamente"
+    activeColor: "bg-gradient-to-r from-red-600 to-rose-600",
+    descripcion: "Plan acelerado para liberarte de deudas",
+    icono: AlertTriangle
   },
   { 
-    key: "recortar_subs", 
-    label: "Optimización", 
-    icon: Zap,
+    key: "optimizar_subs", 
+    label: "Optimizar Gastos", 
     emoji: "✂️",
     color: "from-amber-500/20 to-yellow-500/20 border-amber-500/30",
-    activeColor: "bg-amber-500",
-    descripcion: "Corta gastos hormiga y suscripciones"
+    activeColor: "bg-gradient-to-r from-amber-600 to-yellow-600",
+    descripcion: "Elimina suscripciones y gastos hormiga",
+    icono: Zap
   },
 ];
 
-const formatMoney = (v) => `$${Number(v || 0).toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
-const formatPct = (v) => `${(Number(v || 0) * 100).toFixed(0)}%`;
+// Patrones de fugas
+const PATRONES_FUGAS = [
+  { keywords: ['café', 'coffee', 'starbucks', 'cafetería'], emoji: '☕', nombre: 'Cafés', solucion: 'Compra cafetera', ahorroEstimado: 0.70 },
+  { keywords: ['uber', 'didi', 'taxi', 'transporte'], emoji: '🚗', nombre: 'Viajes cortos', solucion: 'Bici eléctrica o transporte público', ahorroEstimado: 0.60 },
+  { keywords: ['restaurante', 'comida', 'rappi', 'uber eats', 'delivery'], emoji: '🍔', nombre: 'Delivery/Restaurantes', solucion: 'Meal prep semanal', ahorroEstimado: 0.50 },
+  { keywords: ['netflix', 'spotify', 'amazon prime', 'youtube'], emoji: '📺', nombre: 'Streaming múltiple', solucion: 'Consolida a 2 servicios', ahorroEstimado: 0.40 },
+  { keywords: ['gym', 'gimnasio', 'fitness'], emoji: '💪', nombre: 'Gym sin usar', solucion: 'Rutinas en casa', ahorroEstimado: 0.80 },
+  { keywords: ['snack', 'dulces', 'tienda', 'oxxo', '7-eleven'], emoji: '🍫', nombre: 'Snacks/Antojitos', solucion: 'Compra al mayoreo', ahorroEstimado: 0.65 }
+];
 
 // --- COMPONENTE PRINCIPAL ---
-
-export default function AsistenteFinancieroV2({
+export default function AsistenteFinGuide({
   ingresos = [],
   gastosFijos = [],
   gastosVariables = [],
@@ -74,882 +141,1306 @@ export default function AsistenteFinancieroV2({
   onOpenDebtPlanner,
   onOpenSavingsPlanner,
   onOpenSpendingControl,
-  showLocalNotification, // Prop opcional para notificaciones nativas
+  showLocalNotification,
 }) {
-  // --- ESTADOS ---
+  // Estados
   const [loading, setLoading] = useState(false);
-  const [output, setOutput] = useState(null);
-  const [showMetaModal, setShowMetaModal] = useState(false);
-  const [showSubscriptionOptimizer, setShowSubscriptionOptimizer] = useState(false);
-  
-  // --- NUEVOS ESTADOS ---
+  const [showSelectorObjetivos, setShowSelectorObjetivos] = useState(false);
+  const [showOptimizer, setShowOptimizer] = useState(false);
+  const [objetivoActual, setObjetivoActual] = useState(() => {
+    const saved = localStorage.getItem('finGuideObjetivo');
+    return saved || 'diagnostico';
+  });
+  const [pilotoAutomatico, setPilotoAutomatico] = useState(() => {
+    const saved = localStorage.getItem('finGuidePiloto');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [ultimoAnalisis, setUltimoAnalisis] = useState(null);
   const [showAnalysisAnimation, setShowAnalysisAnimation] = useState(false);
-  const [analisisInsight, setAnalisisInsight] = useState(null);
-  
+  const [expandedAdvanced, setExpandedAdvanced] = useState(false);
+
   const analysisTimeoutRef = useRef(null);
 
-  // --- LÓGICA DE PERFIL Y META ---
-  const profile = useMemo(() => {
-    try {
-      return loadProfile() || {};
-    } catch (e) {
-      console.error("Error cargando perfil:", e);
-      return { goal: "general" };
-    }
-  }, []);
-  
-  const [currentGoal, setGoalState] = useState(profile?.goal || "general");
+  // Guardar en localStorage
+  useEffect(() => {
+    localStorage.setItem('finGuideObjetivo', objetivoActual);
+  }, [objetivoActual]);
 
-  // --- DETECCIÓN DE DATOS ---
-  const hasData = useMemo(() => 
-    ingresos.length || gastosFijos.length || gastosVariables.length || suscripciones.length || deudas.length,
-    [ingresos, gastosFijos, gastosVariables, suscripciones, deudas]
-  );
+  useEffect(() => {
+    localStorage.setItem('finGuidePiloto', JSON.stringify(pilotoAutomatico));
+  }, [pilotoAutomatico]);
 
-  // --- NUEVA FUNCIÓN ANALIZAR ---
-  const analizar = useCallback(() => {
-    // 🎯 Vibración en móvil
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
+  // --- MOTOR DE INTELIGENCIA COMPLETO ---
+  const analisis = useMemo(() => {
+    const totalIngresos = ingresos.reduce((sum, i) => sum + Number(i.monto || 0), 0);
+    const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+    const totalGastosVariables = gastosVariables.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+    const totalSuscripciones = suscripciones
+      .filter(s => s.estado === 'Activo')
+      .reduce((sum, s) => sum + Number(s.costo || 0), 0);
+    const totalDeudas = deudas.reduce((sum, d) => sum + Number(d.saldo || 0), 0);
+    
+    const gastosTotales = totalGastosFijos + totalGastosVariables + totalSuscripciones;
+    const disponible = totalIngresos - gastosTotales;
+    const tasaAhorro = totalIngresos > 0 ? (disponible / totalIngresos) : 0;
+
+    // 🎭 DETERMINAR ARQUETIPO (SCORE MEJORADO)
+    let scoreHealth = 50; // Base neutral
+    
+    // FACTOR 1: Tasa de Ahorro (peso: 35 puntos)
+    if (tasaAhorro > 0.30) scoreHealth += 35;
+    else if (tasaAhorro > 0.20) scoreHealth += 30;
+    else if (tasaAhorro > 0.15) scoreHealth += 25;
+    else if (tasaAhorro > 0.10) scoreHealth += 20;
+    else if (tasaAhorro > 0.05) scoreHealth += 10;
+    else if (tasaAhorro > 0) scoreHealth += 5;
+    else if (tasaAhorro < 0) scoreHealth -= 30; // Déficit es grave
+    
+    // FACTOR 2: Nivel de Deudas (peso: 25 puntos)
+    if (totalDeudas === 0) {
+      scoreHealth += 25; // Sin deudas es excelente
+    } else if (totalDeudas < totalIngresos * 0.5) {
+      scoreHealth += 15; // Deuda manejable
+    } else if (totalDeudas < totalIngresos * 2) {
+      scoreHealth += 5; // Deuda moderada
+    } else if (totalDeudas > totalIngresos * 5) {
+      scoreHealth -= 25; // Deuda crítica
+    } else if (totalDeudas > totalIngresos * 3) {
+      scoreHealth -= 15; // Deuda alta
     }
+    
+    // FACTOR 3: Control de Gastos (peso: 15 puntos)
+    const ratioGastos = totalIngresos > 0 ? (gastosTotales / totalIngresos) : 1;
+    if (ratioGastos < 0.60) scoreHealth += 15; // Gastos muy controlados
+    else if (ratioGastos < 0.70) scoreHealth += 10; // Gastos controlados
+    else if (ratioGastos < 0.80) scoreHealth += 5; // Gastos aceptables
+    else if (ratioGastos > 1.0) scoreHealth -= 20; // Gastando más de lo que ganas
+    
+    // FACTOR 4: Bonus por Balance Positivo
+    if (disponible > totalIngresos * 0.20) scoreHealth += 10; // Excelente margen
+    else if (disponible > 0) scoreHealth += 5; // Margen positivo
+    
+    scoreHealth = Math.max(0, Math.min(100, scoreHealth));
+
+    // 🔍 DEBUG: Ver cálculos en consola
+    console.log('📊 FinGuide Debug:', {
+      totalIngresos,
+      gastosTotales,
+      disponible,
+      tasaAhorro: `${(tasaAhorro * 100).toFixed(1)}%`,
+      totalDeudas,
+      scoreHealth,
+      ratioGastos: `${(ratioGastos * 100).toFixed(1)}%`
+    });
+
+    // 🔍 DEBUG DETALLADO: Ver datos crudos
+    console.log('📋 Datos Detallados:', {
+      'Ingresos (cantidad)': ingresos.length,
+      'Ingresos desglose': ingresos.map(i => ({ 
+        descripcion: i.descripcion || i.categoria, 
+        monto: i.monto 
+      })),
+      'Gastos Fijos (cantidad)': gastosFijos.length,
+      'Gastos Fijos desglose': gastosFijos.map(g => ({ 
+        descripcion: g.descripcion || g.categoria, 
+        monto: g.monto 
+      })),
+      'Gastos Variables (cantidad)': gastosVariables.length,
+      'Gastos Variables desglose': gastosVariables.map(g => ({ 
+        descripcion: g.descripcion || g.categoria, 
+        monto: g.monto 
+      })),
+      'Suscripciones Activas (cantidad)': suscripciones.filter(s => s.estado === 'Activo').length,
+      'Suscripciones desglose': suscripciones.filter(s => s.estado === 'Activo').map(s => ({ 
+        servicio: s.servicio, 
+        costo: s.costo 
+      })),
+      '---TOTALES---': {
+        totalIngresos,
+        totalGastosFijos,
+        totalGastosVariables,
+        totalSuscripciones,
+        suma: totalGastosFijos + totalGastosVariables + totalSuscripciones,
+        disponible
+      }
+    });
+
+    let arquetipo;
+    if (scoreHealth >= ARQUETIPOS.VISIONARIO.min) arquetipo = ARQUETIPOS.VISIONARIO;
+    else if (scoreHealth >= ARQUETIPOS.CONSTRUCTOR.min) arquetipo = ARQUETIPOS.CONSTRUCTOR;
+    else if (scoreHealth >= ARQUETIPOS.DEFENSOR.min) arquetipo = ARQUETIPOS.DEFENSOR;
+    else arquetipo = ARQUETIPOS.CRISIS;
+
+    // COMPARACIÓN CON PROMEDIOS
+    const vsPromedio = {
+      ahorro: totalIngresos > 0 ? ((tasaAhorro - PROMEDIOS_NACIONALES.tasaAhorro) / PROMEDIOS_NACIONALES.tasaAhorro) * 100 : 0,
+      gastosFijos: totalIngresos > 0 ? ((totalGastosFijos / totalIngresos) - PROMEDIOS_NACIONALES.ratioGastosFijos) / PROMEDIOS_NACIONALES.ratioGastosFijos * 100 : 0,
+      suscripciones: ((suscripciones.filter(s => s.estado === 'Activo').length - PROMEDIOS_NACIONALES.numeroSuscripciones) / PROMEDIOS_NACIONALES.numeroSuscripciones) * 100
+    };
+
+    // PREDICCIÓN 3 MESES
+    const prediccion3Meses = {
+      ingresos: totalIngresos * 3,
+      gastos: gastosTotales * 3,
+      ahorro: disponible * 3,
+      deudaRestante: Math.max(0, totalDeudas - (disponible * 0.3 * 3))
+    };
+
+    // PREDICCIÓN LIBERTAD FINANCIERA
+    let mesesLibertad = 0;
+    let fechaLibertad = null;
+    const capacidadPago = disponible * 0.5;
+
+    if (totalDeudas > 0) {
+      if (capacidadPago > 0) {
+        mesesLibertad = Math.ceil(totalDeudas / capacidadPago);
+        const hoy = new Date();
+        fechaLibertad = new Date(hoy.setMonth(hoy.getMonth() + mesesLibertad));
+      } else {
+        mesesLibertad = 999;
+      }
+    } else {
+      mesesLibertad = 0;
+      fechaLibertad = new Date();
+    }
+
+    // DETECTOR DE FUGAS
+    const fugasDetectadas = [];
+    PATRONES_FUGAS.forEach(patron => {
+      const gastosRelacionados = gastosVariables.filter(gasto => {
+        const descripcion = (gasto.descripcion || gasto.categoria || '').toLowerCase();
+        return patron.keywords.some(keyword => descripcion.includes(keyword));
+      });
+
+      if (gastosRelacionados.length > 0) {
+        const totalGastado = gastosRelacionados.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+        const frecuencia = gastosRelacionados.length;
+        const ahorroEstimado = totalGastado * patron.ahorroEstimado;
+        
+        if (totalGastado > 200 || frecuencia > 5) {
+          fugasDetectadas.push({
+            tipo: patron.nombre,
+            emoji: patron.emoji,
+            gastoActual: totalGastado,
+            frecuencia,
+            solucion: patron.solucion,
+            ahorroEstimado,
+            ahorroAnual: ahorroEstimado * 12,
+            prioridad: totalGastado > 1000 ? 'alta' : totalGastado > 500 ? 'media' : 'baja'
+          });
+        }
+      }
+    });
+
+    const totalFugasAhorro = fugasDetectadas.reduce((sum, f) => sum + f.ahorroEstimado, 0);
+
+    // CALENDARIO FINANCIERO
+    const hoy = new Date();
+    const eventosFinancieros = [];
+
+    gastosFijos.forEach(gasto => {
+      const diaVencimiento = gasto.diaVencimiento || 1;
+      const proximaFecha = new Date(hoy.getFullYear(), hoy.getMonth(), diaVencimiento);
+      if (proximaFecha < hoy) {
+        proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+      }
+      
+      eventosFinancieros.push({
+        fecha: proximaFecha,
+        tipo: 'gasto_fijo',
+        descripcion: gasto.categoria || gasto.descripcion || 'Gasto fijo',
+        monto: Number(gasto.monto || 0),
+        estado: disponible >= Number(gasto.monto || 0) ? 'ok' : 'alerta',
+        icono: '💳'
+      });
+    });
+
+    suscripciones.filter(s => s.estado === 'Activo').forEach(sub => {
+      const diaRenovacion = sub.diaRenovacion || 1;
+      const proximaFecha = new Date(hoy.getFullYear(), hoy.getMonth(), diaRenovacion);
+      if (proximaFecha < hoy) {
+        proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+      }
+
+      eventosFinancieros.push({
+        fecha: proximaFecha,
+        tipo: 'suscripcion',
+        descripcion: sub.servicio || 'Suscripción',
+        monto: Number(sub.costo || 0),
+        estado: 'info',
+        icono: '🔄'
+      });
+    });
+
+    eventosFinancieros.sort((a, b) => a.fecha - b.fecha);
+
+    // ÍNDICE DE LIBERTAD FINANCIERA
+    const mesesSinIngreso = gastosTotales > 0 ? (disponible / gastosTotales) : 0;
+    const indiceLibertas = Math.min(100, (mesesSinIngreso / 6) * 100);
+    
+    const requisitoLibertad = {
+      fondoEmergencia: mesesSinIngreso >= 6,
+      sinDeudas: totalDeudas === 0,
+      tasaAhorroSana: tasaAhorro >= 0.20,
+      ingresoPasivo: false
+    };
+
+    const cumplidos = Object.values(requisitoLibertad).filter(Boolean).length;
+    const indiceFinal = (cumplidos / 4) * 100;
+
+    // SUSCRIPCIONES OPTIMIZABLES
+    const suscripcionesOptimizables = suscripciones
+      .filter(s => s.estado === 'Activo')
+      .map(s => {
+        const costo = Number(s.costo || 0);
+        let razonOptimizar = null;
+        let prioridad = 0;
+        
+        if (costo > 200) {
+          razonOptimizar = `Costo muy alto (>${formatMoney(200)})`;
+          prioridad = 3;
+        } else if (s.servicio?.toLowerCase().includes('premium') && costo > 100) {
+          razonOptimizar = 'Plan Premium - considera downgrade';
+          prioridad = 2;
+        } else if (costo < 50 && totalSuscripciones > 300) {
+          razonOptimizar = 'Micro-gasto acumulativo';
+          prioridad = 1;
+        }
+        
+        return razonOptimizar ? { ...s, razonOptimizar, prioridad, ahorroAnual: costo * 12 } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.prioridad - a.prioridad);
+
+    const ahorroTotalOptimizable = suscripcionesOptimizables.reduce((sum, s) => sum + Number(s.costo || 0), 0);
+
+    // RECOMENDACIONES SEGÚN OBJETIVO
+    const recomendaciones = generarRecomendacionesPorObjetivo({
+      objetivoActual,
+      kpis: {
+        totalIngresos,
+        totalGastosFijos,
+        totalGastosVariables,
+        totalSuscripciones,
+        totalDeudas,
+        gastosTotales,
+        disponible,
+        tasaAhorro,
+        scoreHealth
+      },
+      fugasDetectadas,
+      totalFugasAhorro,
+      suscripcionesOptimizables,
+      ahorroTotalOptimizable,
+      deudas,
+      arquetipo
+    });
+
+    // ESTRATEGIA MAESTRA (según arquetipo)
+    const estrategia = generarEstrategiaMaestra({
+      arquetipo,
+      kpis: {
+        totalIngresos,
+        totalDeudas,
+        disponible,
+        tasaAhorro
+      },
+      mesesLibertad,
+      totalFugasAhorro
+    });
+
+    return {
+      kpis: {
+        totalIngresos,
+        totalGastosFijos,
+        totalGastosVariables,
+        totalSuscripciones,
+        totalDeudas,
+        gastosTotales,
+        disponible,
+        tasaAhorro,
+        scoreHealth
+      },
+      arquetipo,
+      vsPromedio,
+      prediccion3Meses,
+      prediccionLibertad: { mesesLibertad, fechaLibertad, capacidadPago },
+      fugasDetectadas,
+      totalFugasAhorro,
+      eventosFinancieros: eventosFinancieros.slice(0, 10),
+      indiceLibertas: indiceFinal,
+      requisitoLibertad,
+      suscripcionesOptimizables,
+      ahorroTotalOptimizable,
+      recomendaciones,
+      estrategia
+    };
+  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas, objetivoActual]);
+
+  const { 
+    kpis, arquetipo, vsPromedio, prediccion3Meses, prediccionLibertad,
+    fugasDetectadas, totalFugasAhorro, eventosFinancieros, 
+    indiceLibertas, requisitoLibertad, suscripcionesOptimizables, 
+    ahorroTotalOptimizable, recomendaciones, estrategia 
+  } = analisis;
+
+  // Función analizar
+  const analizar = () => {
+    if (navigator.vibrate) navigator.vibrate(50);
     
     setLoading(true);
     setShowAnalysisAnimation(true);
-    setAnalisisInsight(null);
-        // 🔧 Guardamos el ID del timeout en la ref para poder cancelarlo si es necesario
+    
     analysisTimeoutRef.current = setTimeout(() => {
-      try {
-        const result = runIntelligence({
-          ingresos,
-          gastosFijos,
-          gastosVariables,
-          suscripciones,
-          deudas,
-        });
-        
-        setOutput(result);
-        
-        // 📊 Generar insight principal
-        const insight = generarInsightPrincipal(result);
-        setAnalisisInsight(insight);
-        
-        // 🎉 Si hay buenas noticias, lanzar confetti
-        if (insight.tipo === 'positivo') {
-          lanzarConfetti();
-        }
-        
-        // ⏰ Guardar hora del análisis
-        setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }));
-        
-        // 🔔 Notificación (si existe la función)
-        if (typeof showLocalNotification === 'function') {
-          showLocalNotification('✨ Análisis actualizado', { 
-            body: insight.mensaje,
-            silent: true 
-          });
-        }
-        
-      } catch (error) {
-        console.error("Error corriendo inteligencia:", error);
-        setAnalisisInsight({
-          tipo: 'error',
-          icono: '⚠️',
-          mensaje: 'Hubo un error al analizar tus datos'
-        });
-      } finally {
-        setLoading(false);
-        setTimeout(() => setShowAnalysisAnimation(false), 2000);
+      setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }));
+      
+      if (showLocalNotification) {
+        showLocalNotification(`✨ Análisis actualizado - ${arquetipo.nombre}`, 'success');
       }
-    }, 500);
-  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas, showLocalNotification]);
+      
+      setLoading(false);
+      setTimeout(() => setShowAnalysisAnimation(false), 1000);
+    }, 800);
+  };
 
-  // Efecto para analizar automáticamente (se mantiene para la carga inicial)
+  // Auto-analizar en cambios
   useEffect(() => {
-    if (hasData && !output) {
+    if (ingresos.length || gastosFijos.length || gastosVariables.length) {
       analizar();
     }
     return () => {
-  const timeoutId = analysisTimeoutRef.current;
-  if (timeoutId) clearTimeout(timeoutId);
-};
-  }, [hasData, output, analizar]);
-
-  // --- MANEJO DE METAS ---
-  const handleGoalChange = (newGoal) => {
-    setGoalState(newGoal);
-    if (setGoal) setGoal(newGoal);
-    setShowMetaModal(false);
-    
-    const actions = {
-      'pagar_deudas': () => onOpenDebtPlanner && setTimeout(onOpenDebtPlanner, 100),
-      'ahorrar_mas': () => onOpenSavingsPlanner && setTimeout(onOpenSavingsPlanner, 100),
-      'recortar_subs': () => setShowSubscriptionOptimizer(true),
-      'controlar_gastos': () => onOpenSpendingControl && setTimeout(onOpenSpendingControl, 100),
+      if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
     };
+  }, [ingresos.length, gastosFijos.length, gastosVariables.length, suscripciones.length, deudas.length]);
 
-    if (actions[newGoal]) actions[newGoal]();
-  };
+  const objetivoConfig = OBJETIVOS.find(o => o.key === objetivoActual) || OBJETIVOS[0];
 
-  const currentMetaConfig = METAS.find(m => m.key === currentGoal) || METAS[0];
- 
-
-  // --- HELPER FUNCTIONS ---
-
-  // 🎯 Generar insight principal basado en análisis
-  const generarInsightPrincipal = (result) => {
-    const { kpis } = result;
-    
-    // Positivo: Superávit
-    if (kpis.saldo > 0) {
-      const porcentajeAhorro = (kpis.tasaAhorro * 100).toFixed(0);
-      return {
-        tipo: 'positivo',
-        icono: '🎉',
-        mensaje: `¡Excelente! Tienes ${formatMoney(kpis.saldo)} disponible (${porcentajeAhorro}% de ahorro)`,
-        color: 'from-green-500 to-emerald-500'
-      };
-    }
-    
-    // Negativo: Déficit
-    if (kpis.saldo < 0) {
-      return {
-        tipo: 'alerta',
-        icono: '⚠️',
-        mensaje: `Déficit de ${formatMoney(Math.abs(kpis.saldo))}. Revisa tus gastos variables.`,
-        color: 'from-red-500 to-orange-500'
-      };
-    }
-    
-    // Neutro: Balance exacto
-    return {
-      tipo: 'neutro',
-      icono: '⚖️',
-      mensaje: 'Estás en equilibrio perfecto. Considera ahorrar más.',
-      color: 'from-blue-500 to-cyan-500'
-    };
-  };
-
-  // 🎊 Lanzar confetti (simple CSS animation)
-  const lanzarConfetti = () => {
-    // Crear elementos de confetti
-    for (let i = 0; i < 50; i++) {
-      const confetti = document.createElement('div');
-      confetti.className = 'confetti-piece';
-      confetti.style.left = Math.random() * 100 + 'vw';
-      confetti.style.animationDelay = Math.random() * 2 + 's';
-      confetti.style.backgroundColor = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A'][Math.floor(Math.random() * 5)];
-      document.body.appendChild(confetti);
-      
-      setTimeout(() => confetti.remove(), 3000);
-    }
-  };
-
-  // --- ESTADO VACÍO ---
-  if (!hasData && !loading) {
+  // Estado vacío
+  if (ingresos.length === 0 && gastosFijos.length === 0 && gastosVariables.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-6">
-        <EmptyStateIllustration />
+        <div className="text-center max-w-sm">
+          <div className="relative w-32 h-32 mx-auto mb-6">
+            <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
+            <Brain className="w-full h-full text-purple-400 relative z-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">FinGuide AI</h2>
+          <p className="text-purple-300/70">
+            Tu asesor financiero personal está listo. Agrega tus movimientos para comenzar.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // --- RENDERIZADO ---
+  // RENDERIZADO PRINCIPAL
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white relative overflow-hidden selection:bg-purple-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white relative overflow-hidden pb-24">
       
-      {/* Fondo decorativo */}
+      {/* Decoración */}
       <div className="fixed top-0 left-0 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
       <div className="fixed bottom-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] translate-x-1/3 translate-y-1/3 pointer-events-none" />
 
-      <div className="relative z-10 p-4 pb-24 max-w-lg mx-auto space-y-6 pt-6">
+      <div className="relative z-10 p-4 max-w-lg mx-auto space-y-4 pt-6">
         
-        {/* 1. HEADER & ASESOR */}
-        <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-            
-            <div className="flex flex-col items-center text-center">
-              <div className="relative mb-4">
-                <div className="absolute inset-0 bg-purple-500 blur-xl opacity-40 animate-pulse" />
-                <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/20">
-                  {loading ? (
-                    <Loader className="w-10 h-10 text-white animate-spin" />
-                  ) : (
-                    <Sparkles className="w-10 h-10 text-white drop-shadow-md" />
-                  )}
-                </div>
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center border border-white/10">
-                  <Brain className="w-4 h-4 text-purple-400" />
-                </div>
-              </div>
-              
-              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-purple-200 mb-2">
-                Tu Asesor Financiero
-              </h1>
-              <p className="text-purple-200/80 text-sm leading-relaxed max-w-[90%]">
-                {getSmartTone(output, loading)}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. SELECTOR DE META */}
-        <section className="animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
-          <button
-            onClick={() => setShowMetaModal(true)}
-            className="w-full group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/30 rounded-2xl p-4 transition-all duration-300 active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${currentMetaConfig.color} flex items-center justify-center text-2xl shadow-inner border border-white/5`}>
-                  {currentMetaConfig.emoji}
-                </div>
-                <div className="text-left">
-                  <div className="text-purple-300/70 text-[10px] font-bold uppercase tracking-widest mb-0.5">Objetivo Actual</div>
-                  <div className="text-white font-semibold text-base flex items-center gap-2">
-                    {currentMetaConfig.label}
-                    {loading && <Loader className="w-3 h-3 text-purple-400 animate-spin" />}
-                  </div>
-                </div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                <ChevronRight className="w-4 h-4 text-purple-300 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </div>
-          </button>
-        </section>
-
-        {/* 3. DASHBOARD DE KPIs */}
-        <section className="animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="text-white/50 text-xs font-bold uppercase tracking-wider">Resumen Financiero</h3>
-            {output?.kpis && <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Actualizado</span>}
-          </div>
+        {/* 1. CABECERA DINÁMICA CON ARQUETIPO */}
+        <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${arquetipo.color} p-6 shadow-2xl`}>
+          {/* Pattern de fondo */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.3),transparent)]"></div>
           
-          <div className="grid grid-cols-2 gap-3">
-            {loading ? (
-              <><KPISkeleton /><KPISkeleton /><KPISkeleton /><KPISkeleton /></>
-            ) : (
-              output?.kpis && (
-                <>
-                  <KPICard 
-                    label="Ingresos" 
-                    value={formatMoney(output.kpis.totalIngresos)} 
-                    trend="+12%" 
-                    color="text-emerald-400"
-                    bg="from-emerald-500/10 to-emerald-500/5 border-emerald-500/20"
-                    icon={<TrendingUp className="w-4 h-4" />}
-                  />
-                  <KPICard 
-                    label="Gastos" 
-                    value={formatMoney(output.kpis.totalGastos)} 
-                    trend="-5%" 
-                    color="text-rose-400"
-                    bg="from-rose-500/10 to-rose-500/5 border-rose-500/20"
-                    icon={<TrendingDown className="w-4 h-4" />}
-                  />
-                  <KPICard 
-                    label="Saldo Neto" 
-                    value={formatMoney(output.kpis.saldo)} 
-                    isNegative={output.kpis.saldo < 0}
-                    color={output.kpis.saldo >= 0 ? "text-blue-300" : "text-rose-400"}
-                    bg={output.kpis.saldo >= 0 ? "from-blue-500/10 to-blue-500/5 border-blue-500/20" : "from-rose-500/10 to-rose-500/5 border-rose-500/20"}
-                    icon={output.kpis.saldo >= 0 ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                  />
-                  <KPICard 
-                    label="Tasa Ahorro" 
-                    value={formatPct(output.kpis.tasaAhorro)} 
-                    color="text-purple-300"
-                    bg="from-purple-500/10 to-purple-500/5 border-purple-500/20"
-                    icon={<Target className="w-4 h-4" />}
-                  />
-                </>
-              )
-            )}
-          </div>
-        </section>
-
-        {/* 4. CONTENIDO DINÁMICO */}
-        <div className="animate-in fade-in duration-1000 delay-300 pb-20">
-          {currentGoal === "general" ? (
-            loading ? <ContentSkeleton /> : 
-            <ReporteGeneralMobile 
-              report={output?.report} 
-              kpis={output?.kpis} 
-              onOpenDebtPlanner={onOpenDebtPlanner}
-              onOpenSavingsPlanner={onOpenSavingsPlanner}
-              onOpenSubscriptionOptimizer={() => setShowSubscriptionOptimizer(true)}
-              deudas={deudas}
-              suscripciones={suscripciones}
-            />
-          ) : (
-            loading ? <ContentSkeleton /> :
-            <MetaAutomaticaMobile 
-              autoGoal={output?.autoGoal} 
-              type={currentGoal}
-              onChangeMeta={() => setShowMetaModal(true)}
-              onOpenDebtPlanner={onOpenDebtPlanner}
-              onOpenSavingsPlanner={onOpenSavingsPlanner}
-              onOpenSubscriptionOptimizer={() => setShowSubscriptionOptimizer(true)}
-              onOpenSpendingControl={onOpenSpendingControl}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Botón flotante para re-analizar (Posición ajustada a bottom-24) */}
-      <div className="fixed bottom-24 md:bottom-6 right-6 z-40 group">
-        <button
-          onClick={analizar}
-          disabled={loading}
-          className={`
-            w-14 h-14 rounded-full bg-gradient-to-br from-white to-blue-50 text-indigo-900 
-            shadow-lg shadow-indigo-500/30 flex items-center justify-center 
-            transition-all duration-300 disabled:opacity-50 relative overflow-hidden
-            ${loading ? 'animate-pulse scale-110' : 'hover:scale-110 active:scale-95'}
-          `}
-          title="Re-analizar mis finanzas"
-        >
-          {/* Efecto de escaneo */}
-          {loading && (
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 to-transparent animate-scan" />
-          )}
-          
-          <Brain className={`w-6 h-6 relative z-10 ${loading ? 'animate-pulse' : ''}`} />
-          
-          {/* Badge de última actualización */}
-          {ultimoAnalisis && !loading && (
-            <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-bounce">
-              ✓
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-sm">
+                  FinGuide AI
+                </span>
+                <HeartPulse className="w-4 h-4 text-white/80 animate-pulse" />
+              </div>
+              {pilotoAutomatico && (
+                <div className="px-2 py-1 rounded-lg text-[10px] font-bold bg-green-500/30 text-white flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  Piloto
+                </div>
+              )}
             </div>
-          )}
-        </button>
-        
-        {/* Tooltip mejorado */}
-        <div className="absolute bottom-16 right-0 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700">
-          <div className="font-semibold">
-            {loading ? 'Analizando...' : ultimoAnalisis ? `✓ ${ultimoAnalisis}` : 'Actualizar análisis'}
-          </div>
-          {ultimoAnalisis && !loading && (
-            <div className="text-[10px] text-gray-400 mt-1">Toca para refrescar</div>
-          )}
-        </div>
-      </div>
 
-      {/* Toast de insight flotante */}
-      {analisisInsight && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-500">
-          <div className={`
-            bg-gradient-to-r ${analisisInsight.color} 
-            text-white px-6 py-4 rounded-2xl shadow-2xl 
-            max-w-sm mx-4 border-2 border-white/20
-            backdrop-blur-sm
-          `}>
-            <div className="flex items-start gap-3">
-              <span className="text-3xl">{analisisInsight.icono}</span>
+            <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-semibold leading-relaxed">
-                  {analisisInsight.mensaje}
+                <div className="text-5xl mb-2">{arquetipo.emoji}</div>
+                <h2 className="text-3xl font-black text-white mb-2">
+                  {arquetipo.nombre}
+                </h2>
+                <p className="text-white/90 text-sm max-w-sm font-medium leading-relaxed">
+                  {arquetipo.mensaje}
                 </p>
               </div>
-              <button 
-                onClick={() => setAnalisisInsight(null)}
-                className="text-white/80 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              
+              <div className="text-right hidden sm:block">
+                <div className="text-6xl font-black text-white/20 relative">
+                  {kpis.scoreHealth}
+                  <div className="absolute -bottom-2 right-0 text-xs text-white/60 font-normal">/ 100</div>
+                </div>
+              </div>
             </div>
+
+            {/* Selector de Objetivo */}
+            <button
+              onClick={() => setShowSelectorObjetivos(true)}
+              className="w-full mt-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 transition-all flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-xl`}>
+                  {objetivoConfig.emoji}
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] text-white/70 uppercase font-bold">Objetivo Activo</div>
+                  <div className="text-white font-semibold text-sm">{objetivoConfig.label}</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Animación de análisis en progreso */}
+        {/* 2. KPIs RÁPIDOS */}
+        <div className="grid grid-cols-2 gap-3">
+          <KPICard 
+            label="Ingresos" 
+            value={formatMoney(kpis.totalIngresos)} 
+            color="text-emerald-400"
+            bg="from-emerald-500/10 to-emerald-500/5 border-emerald-500/20"
+            icon={<TrendingUp className="w-4 h-4" />}
+          />
+          <KPICard 
+            label="Gastos" 
+            value={formatMoney(kpis.gastosTotales)} 
+            color="text-rose-400"
+            bg="from-rose-500/10 to-rose-500/5 border-rose-500/20"
+            icon={<TrendingDown className="w-4 h-4" />}
+          />
+          <KPICard 
+            label="Disponible" 
+            value={formatMoney(kpis.disponible)} 
+            color={kpis.disponible >= 0 ? "text-blue-300" : "text-rose-400"}
+            bg={kpis.disponible >= 0 ? "from-blue-500/10 to-blue-500/5 border-blue-500/20" : "from-rose-500/10 to-rose-500/5 border-rose-500/20"}
+            icon={kpis.disponible >= 0 ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+          />
+          <KPICard 
+            label="Ahorro" 
+            value={formatPct(kpis.tasaAhorro)} 
+            color="text-purple-300"
+            bg="from-purple-500/10 to-purple-500/5 border-purple-500/20"
+            icon={<PiggyBank className="w-4 h-4" />}
+          />
+        </div>
+
+        {/* 3. PREDICCIÓN LIBERTAD FINANCIERA */}
+        {prediccionLibertad.mesesLibertad > 0 && kpis.totalDeudas > 0 && (
+          <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="w-5 h-5 text-indigo-400" />
+              <h4 className="text-white font-bold text-sm">Proyección Libertad Financiera</h4>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] text-gray-400 uppercase mb-1">Libre en</div>
+                <div className={`text-xl font-bold ${prediccionLibertad.mesesLibertad === 999 ? 'text-red-400' : 'text-green-400'}`}>
+                  {prediccionLibertad.mesesLibertad === 999 ? '∞' : `${prediccionLibertad.mesesLibertad}m`}
+                </div>
+              </div>
+              <div className="bg-white/5 rounded-lg p-3">
+                <div className="text-[10px] text-gray-400 uppercase mb-1">Capacidad</div>
+                <div className="text-xl font-bold text-white">{formatMoney(prediccionLibertad.capacidadPago)}</div>
+              </div>
+            </div>
+
+            {prediccionLibertad.fechaLibertad && prediccionLibertad.mesesLibertad < 999 && (
+              <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                  style={{ width: `${Math.min(100, (12 / prediccionLibertad.mesesLibertad) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. CONTENIDO SEGÚN OBJETIVO */}
+        <ContenidoPorObjetivo 
+          objetivo={objetivoActual}
+          kpis={kpis}
+          recomendaciones={recomendaciones}
+          fugasDetectadas={fugasDetectadas}
+          totalFugasAhorro={totalFugasAhorro}
+          eventosFinancieros={eventosFinancieros}
+          indiceLibertas={indiceLibertas}
+          requisitoLibertad={requisitoLibertad}
+          prediccion3Meses={prediccion3Meses}
+          suscripcionesOptimizables={suscripcionesOptimizables}
+          deudas={deudas}
+          arquetipo={arquetipo}
+          onOpenDebtPlanner={onOpenDebtPlanner}
+          onOpenSavingsPlanner={onOpenSavingsPlanner}
+          onOpenSpendingControl={onOpenSpendingControl}
+          onOpenOptimizer={() => setShowOptimizer(true)}
+        />
+
+        {/* 5. ESTRATEGIA MAESTRA (PLAN INTELIGENTE) */}
+        {estrategia.length > 0 && (
+          <div className={`rounded-2xl border ${arquetipo.bg} ${arquetipo.border} overflow-hidden`}>
+            <button
+              onClick={() => setExpandedAdvanced(!expandedAdvanced)}
+              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className={`w-5 h-5 ${arquetipo.text}`} />
+                <h4 className="font-bold text-white text-sm">Plan Maestro Sugerido</h4>
+              </div>
+              {expandedAdvanced ? <ChevronUp className="w-4 h-4 text-gray-400"/> : <ChevronDown className="w-4 h-4 text-gray-400"/>}
+            </button>
+            
+            {expandedAdvanced && (
+              <div className="p-4 pt-0 space-y-3">
+                {estrategia.map((step, idx) => (
+                  <div key={idx} className="bg-slate-900/50 rounded-xl p-4 border border-white/5">
+                    <div className="flex justify-between items-start mb-2">
+                      <h5 className={`text-sm font-bold ${arquetipo.text}`}>{step.titulo}</h5>
+                      {step.tipo === 'critico' && <AlertTriangle className="w-4 h-4 text-red-400"/>}
+                    </div>
+                    <p className="text-xs text-gray-300 mb-3 leading-relaxed">{step.descripcion}</p>
+                    {step.accion && (
+                      <button 
+                        onClick={step.accion}
+                        className={`w-full py-2 rounded-lg ${arquetipo.bg} hover:bg-white/10 border ${arquetipo.border} text-xs font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-95`}
+                      >
+                        <Play className="w-3 h-3" fill="currentColor" />
+                        {step.botonTexto}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Botón flotante */}
+      <button
+        onClick={analizar}
+        disabled={loading}
+        className={`
+          fixed bottom-24 right-6 w-14 h-14 rounded-full 
+          bg-gradient-to-br ${arquetipo.color} 
+          text-white shadow-lg shadow-purple-500/30 
+          flex items-center justify-center z-40
+          transition-all duration-300 disabled:opacity-50
+          ${loading ? 'animate-pulse scale-110' : 'hover:scale-110 active:scale-95'}
+        `}
+      >
+        <Brain className={`w-6 h-6 ${loading ? 'animate-pulse' : ''}`} />
+        {ultimoAnalisis && !loading && (
+          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+            ✓
+          </div>
+        )}
+      </button>
+
+      {/* Animación análisis */}
       {showAnalysisAnimation && (
-        <div className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-slate-800 border border-white/10 rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
             <Brain className="w-16 h-16 text-purple-400 animate-bounce" />
-            <p className="text-white font-semibold text-lg">Procesando datos...</p>
-            <div className="flex gap-1">
-              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-            </div>
+            <p className="text-white font-semibold text-lg">Analizando tu situación...</p>
           </div>
         </div>
       )}
 
-      {/* MODALES (Mantenidos del código anterior) */}
-      {showMetaModal && (
-        <MetaModal
-          metas={METAS}
-          currentGoal={currentGoal}
-          onSelect={handleGoalChange}
-          onClose={() => setShowMetaModal(false)}
+      {/* MODALES */}
+      {showSelectorObjetivos && (
+        <SelectorObjetivosModal
+          objetivos={OBJETIVOS}
+          objetivoActual={objetivoActual}
+          kpis={kpis}
+          onSelect={(key) => {
+            setObjetivoActual(key);
+            setShowSelectorObjetivos(false);
+            
+            if (key === 'pagar_deudas' && onOpenDebtPlanner) {
+              setTimeout(onOpenDebtPlanner, 100);
+            } else if (key === 'ahorrar_mas' && onOpenSavingsPlanner) {
+              setTimeout(onOpenSavingsPlanner, 100);
+            } else if (key === 'optimizar_subs') {
+              setTimeout(() => setShowOptimizer(true), 100);
+            } else if (key === 'controlar_gastos' && onOpenSpendingControl) {
+              setTimeout(onOpenSpendingControl, 100);
+            }
+            
+            if (showLocalNotification) {
+              const obj = OBJETIVOS.find(o => o.key === key);
+              showLocalNotification(`🎯 Objetivo: ${obj.label}`, 'success');
+            }
+          }}
+          onClose={() => setShowSelectorObjetivos(false)}
         />
       )}
 
-      {showSubscriptionOptimizer && (
-        <SubscriptionOptimizerModal
+      {showOptimizer && (
+        <OptimizadorSuscripcionesReal
           suscripciones={suscripciones}
-          kpis={output?.kpis}
-          onClose={() => setShowSubscriptionOptimizer(false)}
+          suscripcionesOptimizables={suscripcionesOptimizables}
+          ahorroTotalOptimizable={ahorroTotalOptimizable}
+          onClose={() => setShowOptimizer(false)}
         />
       )}
-
-      {/* Estilos CSS necesarios para las animaciones */}
-      <style jsx>{`
-        /* Animación de escaneo */
-        @keyframes scan {
-          0% { transform: translateY(100%); }
-          100% { transform: translateY(-100%); }
-        }
-        
-        .animate-scan {
-          animation: scan 1.5s ease-in-out infinite;
-        }
-        
-        /* Confetti pieces */
-        .confetti-piece {
-          position: fixed;
-          width: 10px;
-          height: 10px;
-          top: -10px;
-          z-index: 9999;
-          animation: confetti-fall 3s linear forwards;
-        }
-        
-        @keyframes confetti-fall {
-          to {
-            transform: translateY(100vh) rotate(360deg);
-            opacity: 0;
-          }
-        }
-        
-        /* Animación de entrada */
-        @keyframes slide-in-from-top-4 {
-          from {
-            transform: translate(-50%, -1rem);
-            opacity: 0;
-          }
-          to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-          }
-        }
-        
-        .animate-in {
-          animation-duration: 0.5s;
-          animation-fill-mode: both;
-        }
-        
-        .slide-in-from-top-4 {
-          animation-name: slide-in-from-top-4;
-        }
-        
-        .fade-in {
-          animation-name: fadeIn;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
 
-// --- LÓGICA DE INTELIGENCIA ---
+// --- FUNCIONES AUXILIARES ---
+function generarRecomendacionesPorObjetivo(params) {
+  const { objetivoActual, kpis, fugasDetectadas, totalFugasAhorro, suscripcionesOptimizables, ahorroTotalOptimizable, deudas, arquetipo } = params;
+  const recomendaciones = [];
 
-function getSmartTone(output, isLoading) {
-  if (isLoading) return "Recalculando estrategia financiera...";
-  if (!output?.kpis) return "Hola, soy tu asesor IA. Esperando tus datos para comenzar 🌟";
-  
-  const { saldo, tasaAhorro } = output.kpis;
-  const { tone } = output.profile || {};
+  switch (objetivoActual) {
+    case 'controlar_gastos':
+      if (totalFugasAhorro > 500) {
+        recomendaciones.push({
+          titulo: '🔍 Fugas Detectadas',
+          descripcion: `Tienes ${fugasDetectadas.length} fugas de dinero activas`,
+          accion: `Ahorra ${formatMoney(totalFugasAhorro)}/mes optimizando hábitos`,
+          pasos: fugasDetectadas.slice(0, 3).map(f => `${f.emoji} ${f.tipo}: ${f.solucion}`)
+        });
+      }
+      if (kpis.totalGastosVariables > kpis.totalIngresos * 0.3) {
+        recomendaciones.push({
+          titulo: '📊 Gastos Variables Altos',
+          descripcion: `Tus gastos variables son ${formatPct(kpis.totalGastosVariables / kpis.totalIngresos)} (ideal: 30%)`,
+          accion: `Reduce ${formatMoney(kpis.totalGastosVariables - (kpis.totalIngresos * 0.3))}`,
+          pasos: ['Identifica gastos hormiga', 'Presupuesto semanal', 'Lista fija mensual']
+        });
+      }
+      break;
 
-  if (saldo < 0) {
-    if (tone === "estricto") return "Alerta: Déficit detectado. Necesitamos ajustar el rumbo inmediatamente.";
-    return "He detectado un desbalance negativo. No te preocupes, vamos a corregirlo juntos.";
+    case 'ahorrar_mas':
+      if (kpis.tasaAhorro < 0.20) {
+        const metaAhorro = kpis.totalIngresos * 0.20;
+        const diferencia = metaAhorro - kpis.disponible;
+        recomendaciones.push({
+          titulo: '💰 Aumenta tu Ahorro',
+          descripcion: `Ahorro actual: ${formatPct(kpis.tasaAhorro)} | Meta: 20%`,
+          accion: `Necesitas ahorrar ${formatMoney(diferencia)} más`,
+          pasos: ['Automatiza 20% a ahorro', 'Regla 50/30/20', 'Busca ingreso adicional']
+        });
+      }
+      break;
+
+    case 'pagar_deudas':
+      if (kpis.totalDeudas > 0) {
+        const pagoSugerido = kpis.disponible * 0.5;
+        const meses = pagoSugerido > 0 ? Math.ceil(kpis.totalDeudas / pagoSugerido) : 999;
+        recomendaciones.push({
+          titulo: '💳 Elimina Deudas',
+          descripcion: `Debes ${formatMoney(kpis.totalDeudas)} total`,
+          accion: `Paga ${formatMoney(pagoSugerido)}/mes → Libre en ~${meses}m`,
+          pasos: ['Método bola de nieve', 'Prioriza tasa alta', 'Congela nuevas']
+        });
+      }
+      break;
+
+    case 'optimizar_subs':
+      if (ahorroTotalOptimizable > 100) {
+        recomendaciones.push({
+          titulo: '✂️ Optimiza Suscripciones',
+          descripcion: `${suscripcionesOptimizables.length} suscripciones optimizables`,
+          accion: `Ahorra ${formatMoney(ahorroTotalOptimizable)}/mes`,
+          pasos: ['Cancela sin uso 30d', 'Downgrade Premium', 'Elimina duplicados']
+        });
+      }
+      break;
+
+    default:
+      if (kpis.disponible < 0) {
+        recomendaciones.push({
+          titulo: '⚠️ Déficit Detectado',
+          descripcion: `Gastas ${formatMoney(Math.abs(kpis.disponible))} más de lo que ingresas`,
+          accion: 'Ajusta presupuesto urgentemente',
+          pasos: ['Corta no esenciales', 'Busca ingresos extra', 'Revisa suscripciones']
+        });
+      }
+      break;
   }
-  
-  if (tasaAhorro > 0.2) return "¡Excelente salud financiera! Estás construyendo patrimonio con gran disciplina.";
-  if (tasaAhorro > 0.1) return "Buen progreso. Tu flujo de caja es positivo, podemos optimizar aún más.";
-  
-  return "Tus ingresos cubren tus gastos. Es el momento perfecto para comenzar a ahorrar.";
+
+  return recomendaciones;
 }
 
-// --- COMPONENTES UI (MANTENIDOS DEL CÓDIGO ANTERIOR) ---
+function generarEstrategiaMaestra(params) {
+  const { arquetipo, kpis, mesesLibertad, totalFugasAhorro } = params;
+  const estrategia = [];
 
-function KPICard({ label, value, trend, icon, color, bg, isNegative }) {
+  if (arquetipo.nombre === 'Modo Crisis' && kpis.totalDeudas > 0) {
+    estrategia.push({
+      tipo: 'critico',
+      titulo: 'Plan Choque: Detener Hemorragia',
+      descripcion: 'Tus gastos exceden tus ingresos. Acción inmediata necesaria.',
+      botonTexto: 'Congelar Gastos Variables',
+      accion: null
+    });
+  } else if (arquetipo.nombre === 'El Constructor' && kpis.totalDeudas > 0) {
+    estrategia.push({
+      tipo: 'acelerar',
+      titulo: 'Acelerador de Deuda (Bola de Nieve)',
+      descripcion: `Puedes estar libre de deudas en ${mesesLibertad < 12 ? 'menos de un año' : `${mesesLibertad} meses`} manteniendo disciplina.`,
+      botonTexto: 'Ver Plan de Pagos',
+      accion: null
+    });
+  } else if (arquetipo.nombre === 'El Visionario') {
+    estrategia.push({
+      tipo: 'crecimiento',
+      titulo: 'Maximizar Crecimiento',
+      descripcion: 'Tu flujo de caja es excelente. El dinero dormido pierde valor por inflación.',
+      botonTexto: 'Explorar Inversiones',
+      accion: null
+    });
+  }
+
+  if (totalFugasAhorro > 500 && arquetipo.nombre !== 'Modo Crisis') {
+    estrategia.push({
+      tipo: 'optimizar',
+      titulo: 'Optimización Avanzada',
+      descripcion: `Detecté ${formatMoney(totalFugasAhorro)}/mes en gastos optimizables. Son $${(totalFugasAhorro * 12).toLocaleString()} anuales.`,
+      botonTexto: 'Ver Oportunidades',
+      accion: null
+    });
+  }
+
+  return estrategia;
+}
+
+// --- COMPONENTES UI ---
+function ContenidoPorObjetivo(props) {
+  const { objetivo } = props;
+  
+  if (objetivo === 'diagnostico') return <DiagnosticoCompleto {...props} />;
+  if (objetivo === 'controlar_gastos') return <ControlGastosView {...props} />;
+  if (objetivo === 'ahorrar_mas') return <AhorroView {...props} />;
+  if (objetivo === 'pagar_deudas') return <DeudasView {...props} />;
+  if (objetivo === 'optimizar_subs') return <OptimizacionView {...props} />;
+  
+  return null;
+}
+
+function DiagnosticoCompleto({ kpis, recomendaciones, indiceLibertas, requisitoLibertad, prediccion3Meses, onOpenDebtPlanner, onOpenSavingsPlanner }) {
   return (
-    <div className={`bg-gradient-to-br ${bg} backdrop-blur-md rounded-2xl p-4 border shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300`}>
-      <div className="flex justify-between items-start mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{label}</span>
-        <div className={`p-1.5 rounded-lg bg-white/5 ${color} shadow-inner`}>
-          {icon}
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border border-emerald-500/20 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-5 h-5 text-emerald-400" />
+          <h4 className="text-white font-bold text-sm">Índice de Libertad</h4>
+        </div>
+        <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden mb-3">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000"
+            style={{ width: `${indiceLibertas}%` }}
+          />
+        </div>
+        <div className="text-center mb-3">
+          <span className="text-3xl font-bold text-white">{indiceLibertas.toFixed(0)}/100</span>
+        </div>
+        <div className="space-y-2">
+          {Object.entries(requisitoLibertad).slice(0, 3).map(([key, cumplido], idx) => {
+            const labels = {
+              fondoEmergencia: 'Fondo 6 meses',
+              sinDeudas: 'Sin deudas',
+              tasaAhorroSana: 'Ahorro 20%+'
+            };
+            return (
+              <div key={idx} className="flex items-center gap-2">
+                {cumplido ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-600" />
+                )}
+                <span className={`text-xs ${cumplido ? 'text-emerald-300' : 'text-gray-400'}`}>
+                  {labels[key]}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
-      <div className={`text-lg font-bold ${color} tracking-tight`}>{value}</div>
-      {trend && (
-        <div className={`text-[10px] mt-1 font-medium ${trend.includes('+') ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {trend} vs mes anterior
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+        <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-blue-400" />
+          Proyección 3 Meses
+        </h4>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-white/5 rounded-lg p-2">
+            <div className="text-[10px] text-gray-400 uppercase">Ahorrarás</div>
+            <div className="text-sm font-bold text-blue-400">{formatMoney(prediccion3Meses.ahorro)}</div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-2">
+            <div className="text-[10px] text-gray-400 uppercase">Deuda Rest.</div>
+            <div className="text-sm font-bold text-orange-400">{formatMoney(prediccion3Meses.deudaRestante)}</div>
+          </div>
         </div>
-      )}
+      </div>
+
+      {recomendaciones.map((rec, idx) => (
+        <RecomendacionCard key={idx} recomendacion={rec} />
+      ))}
+
+      <div className="grid gap-2">
+        {kpis.totalDeudas > 0 && (
+          <ActionButton emoji="💳" text="Plan de Deudas" onClick={onOpenDebtPlanner} />
+        )}
+        {kpis.tasaAhorro < 0.2 && (
+          <ActionButton emoji="💰" text="Plan de Ahorro" onClick={onOpenSavingsPlanner} />
+        )}
+      </div>
     </div>
   );
 }
 
-function ReporteGeneralMobile({ report, kpis, onOpenDebtPlanner, onOpenSavingsPlanner, onOpenSubscriptionOptimizer, deudas, suscripciones }) {
-  if (!report) return <div className="text-center text-white/20 mt-10">Esperando análisis...</div>;
+function ControlGastosView({ fugasDetectadas, totalFugasAhorro, recomendaciones, kpis, onOpenSpendingControl }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-red-900/30 to-orange-900/30 border border-red-500/20 rounded-2xl p-5">
+        <h4 className="text-white font-bold mb-2 flex items-center gap-2">
+          <TrendingDown className="w-5 h-5 text-red-400" />
+          Fugas Detectadas
+        </h4>
+        <div className="text-center mb-4">
+          <div className="text-3xl font-bold text-white">{formatMoney(totalFugasAhorro)}</div>
+          <div className="text-xs text-red-300">potencial de ahorro mensual</div>
+        </div>
+        
+        {fugasDetectadas.length === 0 ? (
+          <div className="text-center py-4">
+            <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <p className="text-sm text-white">¡Sin fugas!</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {fugasDetectadas.slice(0, 3).map((fuga, idx) => (
+              <FugaCardCompact key={idx} fuga={fuga} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+        <h4 className="text-white font-bold text-sm mb-3">Distribución</h4>
+        <div className="space-y-2">
+          <GastoBar label="Fijos" value={kpis.totalGastosFijos} total={kpis.gastosTotales} color="bg-blue-500" />
+          <GastoBar label="Variables" value={kpis.totalGastosVariables} total={kpis.gastosTotales} color="bg-orange-500" />
+          <GastoBar label="Suscripciones" value={kpis.totalSuscripciones} total={kpis.gastosTotales} color="bg-purple-500" />
+        </div>
+      </div>
+
+      {recomendaciones.map((rec, idx) => (
+        <RecomendacionCard key={idx} recomendacion={rec} />
+      ))}
+
+      <ActionButton emoji="📊" text="Ajustar Presupuesto" onClick={onOpenSpendingControl} />
+    </div>
+  );
+}
+
+function AhorroView({ kpis, recomendaciones, onOpenSavingsPlanner }) {
+  const metaAhorro = kpis.totalIngresos * 0.20;
+  const progreso = (kpis.disponible / metaAhorro) * 100;
 
   return (
     <div className="space-y-4">
-      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Brain className="w-5 h-5 text-purple-400" />
-          <h3 className="text-white font-semibold">Diagnóstico Inteligente</h3>
+      <div className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border border-emerald-500/20 rounded-2xl p-5">
+        <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+          <PiggyBank className="w-5 h-5 text-emerald-400" />
+          Tu Tasa de Ahorro
+        </h4>
+        <div className="text-center mb-4">
+          <div className="text-4xl font-bold text-white">{formatPct(kpis.tasaAhorro)}</div>
+          <div className="text-xs text-emerald-300">Meta: 20%</div>
         </div>
-        <p className="text-purple-100/80 text-sm leading-relaxed">{report.headline}</p>
+        <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all"
+            style={{ width: `${Math.min(progreso, 100)}%` }}
+          />
+        </div>
+        <div className="mt-3 text-center">
+          <span className="text-sm text-white">
+            {kpis.disponible < metaAhorro ? (
+              <>Faltan {formatMoney(metaAhorro - kpis.disponible)}</>
+            ) : (
+              <>¡Meta superada! +{formatMoney(kpis.disponible - metaAhorro)}</>
+            )}
+          </span>
+        </div>
       </div>
 
-      <div className="grid gap-3">
-        {deudas.length > 0 && (
-          <ActionCard 
-            emoji="💳" 
-            title="Plan Bola de Nieve" 
-            desc={`Paga ${deudas.length} deudas más rápido`}
-            color="border-rose-500/30 bg-rose-500/5"
-            onClick={onOpenDebtPlanner}
-          />
-        )}
-        {kpis?.tasaAhorro < 0.2 && (
-          <ActionCard 
-            emoji="💰" 
-            title="Regla 50/30/20" 
-            desc="Optimiza tu presupuesto para ahorrar"
-            color="border-emerald-500/30 bg-emerald-500/5"
-            onClick={onOpenSavingsPlanner}
-          />
-        )}
-        {suscripciones.length > 0 && (
-          <ActionCard 
-            emoji="✂️" 
-            title="Auditoría de Suscripciones" 
-            desc="Detecta servicios que no usas"
-            color="border-amber-500/30 bg-amber-500/5"
-            onClick={onOpenSubscriptionOptimizer}
-          />
-        )}
-      </div>
+      {recomendaciones.map((rec, idx) => (
+        <RecomendacionCard key={idx} recomendacion={rec} />
+      ))}
 
-      {report.problems?.length > 0 && (
-        <ExpandableSection title="Áreas de Atención" count={report.problems.length} type="alert">
-          <ul className="space-y-2">
-            {report.problems.map((p, i) => (
-              <li key={i} className="bg-white/5 rounded-xl p-3 text-sm text-red-200/80 border border-red-500/10 flex gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{p.title || p.detail}</span>
-              </li>
+      <ActionButton emoji="🎯" text="Crear Plan de Ahorro" onClick={onOpenSavingsPlanner} />
+    </div>
+  );
+}
+
+function DeudasView({ deudas, kpis, recomendaciones, onOpenDebtPlanner }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-red-900/30 to-rose-900/30 border border-red-500/20 rounded-2xl p-5">
+        <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-red-400" />
+          Panorama de Deudas
+        </h4>
+        <div className="text-center mb-4">
+          <div className="text-3xl font-bold text-white">{formatMoney(kpis.totalDeudas)}</div>
+          <div className="text-xs text-red-300">deuda total</div>
+        </div>
+
+        {deudas.length === 0 ? (
+          <div className="text-center py-4">
+            <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <p className="text-sm text-white">¡Sin deudas!</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {deudas.slice(0, 3).map((deuda, idx) => (
+              <DeudaCardCompact key={idx} deuda={deuda} />
             ))}
-          </ul>
-        </ExpandableSection>
+          </div>
+        )}
+      </div>
+
+      {recomendaciones.map((rec, idx) => (
+        <RecomendacionCard key={idx} recomendacion={rec} />
+      ))}
+
+      <ActionButton emoji="🎯" text="Simular Pagos" onClick={onOpenDebtPlanner} />
+    </div>
+  );
+}
+
+function OptimizacionView({ suscripcionesOptimizables, fugasDetectadas, recomendaciones, onOpenOptimizer }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-amber-900/30 to-yellow-900/30 border border-amber-500/20 rounded-2xl p-5">
+        <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-amber-400" />
+          Oportunidades
+        </h4>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white/5 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-white">{suscripcionesOptimizables.length}</div>
+            <div className="text-[10px] text-amber-300">Suscripciones</div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-white">{fugasDetectadas.length}</div>
+            <div className="text-[10px] text-amber-300">Fugas</div>
+          </div>
+        </div>
+      </div>
+
+      {recomendaciones.map((rec, idx) => (
+        <RecomendacionCard key={idx} recomendacion={rec} />
+      ))}
+
+      <ActionButton emoji="✂️" text="Optimizar Ahora" onClick={onOpenOptimizer} />
+    </div>
+  );
+}
+
+function KPICard({ label, value, icon, color, bg }) {
+  return (
+    <div className={`bg-gradient-to-br ${bg} backdrop-blur-md rounded-xl p-3 border`}>
+      <div className="flex justify-between items-start mb-1">
+        <span className="text-[10px] font-bold uppercase text-white/40">{label}</span>
+        <div className={`${color}`}>{icon}</div>
+      </div>
+      <div className={`text-base font-bold ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function RecomendacionCard({ recomendacion }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+      <h5 className="text-white font-bold text-sm mb-1">{recomendacion.titulo}</h5>
+      <p className="text-gray-300 text-xs mb-2">{recomendacion.descripcion}</p>
+      <div className="bg-white/10 rounded-lg p-2 mb-2">
+        <div className="text-white text-xs font-semibold">{recomendacion.accion}</div>
+      </div>
+      {recomendacion.pasos && (
+        <>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-purple-300 flex items-center gap-1"
+          >
+            {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+            {expanded ? 'Ocultar' : 'Ver'} pasos
+          </button>
+          {expanded && (
+            <div className="mt-2 space-y-1 pl-4">
+              {recomendacion.pasos.map((paso, idx) => (
+                <div key={idx} className="text-xs text-gray-300 flex items-start gap-2">
+                  <span className="text-purple-400">•</span>
+                  <span>{paso}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function MetaAutomaticaMobile({ autoGoal, type, onChangeMeta, onOpenDebtPlanner, onOpenSavingsPlanner, onOpenSubscriptionOptimizer, onOpenSpendingControl }) {
+function FugaCardCompact({ fuga }) {
   return (
-    <AutoGoalView 
-      goalType={type} 
-      data={autoGoal} 
-      actions={{
-        debt: onOpenDebtPlanner,
-        savings: onOpenSavingsPlanner,
-        subs: onOpenSubscriptionOptimizer,
-        expenses: onOpenSpendingControl,
-        change: onChangeMeta
-      }}
-    />
-  );
-}
-
-function AutoGoalView({ goalType, data, actions }) {
-  const config = {
-    controlar_gastos: {
-      title: "Control de Gastos",
-      emoji: "💸",
-      component: <ControlGastosView data={data} />,
-      action: { label: "Ajustar Presupuesto", handler: actions.expenses, color: "bg-orange-500/20 text-orange-300 border-orange-500/30" }
-    },
-    ahorrar_mas: {
-      title: "Potenciador de Ahorro",
-      emoji: "💰",
-      component: <SavingsView data={data} />,
-      action: { label: "Crear Plan de Ahorro", handler: actions.savings, color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" }
-    },
-    pagar_deudas: {
-      title: "Libertad Financiera",
-      emoji: "💳",
-      component: <DebtView data={data} />,
-      action: { label: "Simular Pagos", handler: actions.debt, color: "bg-rose-500/20 text-rose-300 border-rose-500/30" }
-    },
-    recortar_subs: {
-      title: "Optimizador",
-      emoji: "✂️",
-      component: <SubsView data={data} />,
-      action: { label: "Ver Suscripciones", handler: actions.subs, color: "bg-purple-500/20 text-purple-300 border-purple-500/30" }
-    }
-  };
-
-  const current = config[goalType] || config.general;
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center">
-        <span className="text-4xl mb-2 block filter drop-shadow-lg">{current.emoji}</span>
-        <h2 className="text-xl font-bold text-white mb-1">{current.title}</h2>
-        <p className="text-white/50 text-sm">Enfoque activo para este mes</p>
-      </div>
-      {current.component}
-      {actions.change && (
-        <button 
-          onClick={actions.change}
-          className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 text-sm transition-colors"
-        >
-          Cambiar enfoque estratégico
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ControlGastosView({ data }) {
-  return (
-    <div className="bg-white/5 rounded-2xl p-5 space-y-4">
-      <div>
-        <div className="flex justify-between text-xs text-purple-300 mb-2">
-          <span>Gasto Actual</span>
-          <span>Meta Límite</span>
-        </div>
-        <div className="h-2 bg-white/10 rounded-full overflow-hidden flex">
-          <div className="h-full bg-emerald-500 w-[70%]"></div>
-          <div className="h-full bg-rose-500 w-[30%]"></div> 
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <MiniStat label="Restante" val="$450" sub="Este mes" />
-        <MiniStat label="Diario" val="$45" sub="Promedio" />
-      </div>
-    </div>
-  );
-}
-
-function SavingsView({ data }) {
-  return (
-    <div className="bg-white/5 rounded-2xl p-5 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-xl">{fuga.emoji}</span>
         <div>
-          <div className="text-xs text-purple-300">Tasa Actual</div>
-          <div className="text-2xl font-bold text-white">4.5%</div>
+          <div className="text-white text-xs font-semibold">{fuga.tipo}</div>
+          <div className="text-gray-400 text-[10px]">{fuga.frecuencia}x • {formatMoney(fuga.gastoActual)}</div>
         </div>
-        <div className="h-12 w-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 rotate-45" />
       </div>
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
-        <span className="text-emerald-300 text-sm font-medium">¡Estás por encima del promedio!</span>
-      </div>
-    </div>
-  );
-}
-
-function DebtView({ data }) {
-  return (
-    <div className="bg-white/5 rounded-2xl p-5 space-y-4">
-       <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-300 font-bold text-lg">1</div>
-          <div>
-             <div className="text-white font-semibold">Tarjeta Crédito</div>
-             <div className="text-xs text-rose-300">Tasa 24% • Prioridad Alta</div>
-          </div>
-       </div>
-       <div className="pl-14 space-y-1">
-          <div className="flex justify-between text-sm text-white/70">
-             <span>Saldo actual</span>
-             <span>$1,200</span>
-          </div>
-          <div className="flex justify-between text-sm text-white/70">
-             <span>Pago mínimo</span>
-             <span>$45</span>
-          </div>
-       </div>
-    </div>
-  );
-}
-
-function SubsView({ data }) {
-  return (
-    <div className="bg-white/5 rounded-2xl p-5">
-      <div className="text-center mb-4">
-        <div className="text-3xl font-bold text-white">$320<span className="text-sm text-purple-400 font-normal">/mes</span></div>
-        <div className="text-xs text-white/40">Total en suscripciones activas</div>
-      </div>
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
-             <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-sm text-white/80">Netflix Premium</span>
-             </div>
-             <span className="text-sm font-bold">$15</span>
-          </div>
-        ))}
+      <div className="text-green-400 text-xs font-bold">
+        {formatMoney(fuga.ahorroEstimado)}
       </div>
     </div>
   );
 }
 
-function ActionCard({ emoji, title, desc, color, onClick }) {
+function DeudaCardCompact({ deuda }) {
   return (
-    <button 
+    <div className="bg-white/5 rounded-lg p-2">
+      <div className="flex justify-between items-center">
+        <span className="text-white text-xs font-semibold">{deuda.nombre || 'Deuda'}</span>
+        <span className="text-red-400 text-xs font-bold">{formatMoney(deuda.saldo)}</span>
+      </div>
+    </div>
+  );
+}
+
+function GastoBar({ label, value, total, color }) {
+  const percent = total > 0 ? (value / total) * 100 : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-xs text-gray-400 mb-1">
+        <span>{label}</span>
+        <span>{formatMoney(value)} ({percent.toFixed(0)}%)</span>
+      </div>
+      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className={`h-full ${color}`} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({ emoji, text, onClick }) {
+  return (
+    <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-2xl border backdrop-blur-sm transition-all active:scale-[0.98] hover:shadow-lg hover:shadow-purple-500/10 group ${color}`}
+      className="w-full bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-3 flex items-center justify-center gap-2 text-white font-semibold text-sm transition-all active:scale-95"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl filter drop-shadow-md">{emoji}</span>
-          <div>
-            <h4 className="font-bold text-white text-sm">{title}</h4>
-            <p className="text-xs text-white/60 mt-0.5">{desc}</p>
-          </div>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-          <ArrowRight className="w-4 h-4 text-white/70" />
-        </div>
-      </div>
+      <span className="text-xl">{emoji}</span>
+      {text}
     </button>
   );
 }
 
-function ExpandableSection({ title, count, children, type }) {
-  const [isOpen, setIsOpen] = useState(true);
-  return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          {type === 'alert' && <AlertCircle className="w-4 h-4 text-rose-400" />}
-          <span className="font-semibold text-sm text-white">{title}</span>
-          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-white/60">{count}</span>
-        </div>
-        <ChevronRight className={`w-4 h-4 text-white/50 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-      </button>
-      <div className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="p-4 pt-0">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
+function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onClose }) {
+  const recomendado = useMemo(() => {
+    if (kpis.disponible < 0) return 'controlar_gastos';
+    if (kpis.totalDeudas > kpis.totalIngresos * 2) return 'pagar_deudas';
+    if (kpis.tasaAhorro < 0.15) return 'ahorrar_mas';
+    return 'diagnostico';
+  }, [kpis]);
 
-function MiniStat({ label, val, sub }) {
   return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">{label}</div>
-      <div className="text-lg font-bold text-white">{val}</div>
-      <div className="text-[10px] text-white/50">{sub}</div>
-    </div>
-  );
-}
-
-function KPISkeleton() {
-  return (
-    <div className="bg-white/5 border border-white/5 rounded-2xl p-4 h-28 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
-      <div className="w-1/2 h-4 bg-white/10 rounded mb-4" />
-      <div className="w-3/4 h-6 bg-white/10 rounded" />
-    </div>
-  );
-}
-
-function ContentSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="h-20 bg-white/5 rounded-2xl animate-pulse" />
-      <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
-      <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
-    </div>
-  );
-}
-
-function EmptyStateIllustration() {
-  return (
-    <div className="text-center max-w-sm">
-      <div className="relative w-32 h-32 mx-auto mb-6">
-        <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
-        <Brain className="w-full h-full text-purple-400 relative z-10" />
-      </div>
-      <h2 className="text-2xl font-bold text-white mb-2">Sin datos financieros</h2>
-      <p className="text-purple-300/70">
-        Para activar la inteligencia artificial de tu asesor, necesito cargar tus movimientos primero.
-      </p>
-    </div>
-  );
-}
-
-// --- MODALES INTERNOS (MOCKS PARA EVITAR ERRORES) ---
-const MetaModal = ({ metas, currentGoal, onSelect, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-    <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-300">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">Selecciona tu Objetivo</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-white/50"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="space-y-3">
-          {metas.map((meta) => (
-            <button
-              key={meta.key}
-              onClick={() => onSelect(meta.key)}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border ${currentGoal === meta.key 
-                ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-900/50' 
-                : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/80'
-              }`}
-            >
-              <span className="text-2xl">{meta.emoji}</span>
-              <div className="text-left flex-1">
-                <div className="font-bold">{meta.label}</div>
-                <div className={`text-xs ${currentGoal === meta.key ? 'text-purple-200' : 'text-white/50'}`}>{meta.descripcion}</div>
-              </div>
-              {currentGoal === meta.key && <CheckCircle2 className="w-5 h-5" />}
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 border border-white/10 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        
+        <div className="p-6 border-b border-white/10">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-bold text-white">Selecciona tu Objetivo</h2>
+            <button onClick={onClose} className="text-white/50 hover:text-white">
+              <X className="w-6 h-6" />
             </button>
-          ))}
+          </div>
+          <p className="text-sm text-gray-400">
+            FinGuide ajustará sus recomendaciones
+          </p>
+        </div>
+
+        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+          {objetivos.map((obj) => {
+            const esRecomendado = obj.key === recomendado;
+            const esActual = obj.key === objetivoActual;
+
+            return (
+              <button
+                key={obj.key}
+                onClick={() => onSelect(obj.key)}
+                className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border-2 text-left ${
+                  esActual
+                    ? 'bg-purple-600 border-purple-500 shadow-lg'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${obj.color} flex items-center justify-center text-2xl`}>
+                  {obj.emoji}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`font-bold text-sm ${esActual ? 'text-white' : 'text-white/90'}`}>
+                      {obj.label}
+                    </span>
+                    {esRecomendado && !esActual && (
+                      <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold">
+                        ⭐ Recomendado
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-xs ${esActual ? 'text-purple-200' : 'text-white/50'}`}>
+                    {obj.descripcion}
+                  </p>
+                </div>
+                {esActual && <CheckCircle2 className="w-5 h-5 text-white" />}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+}
 
-const SubscriptionOptimizerModal = ({ suscripciones, kpis, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-    <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden">
-      <div className="p-6 border-b border-white/10 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-white">Optimizador de Suscripciones</h2>
-        <button onClick={onClose} className="text-white/50 hover:text-white"><X className="w-6 h-6" /></button>
-      </div>
-      <div className="p-8 text-center text-white/70">
-        <Zap className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-        <p>Este es el modal de optimización.</p>
-        <p className="text-sm mt-2">Aquí se cargarían tus {suscripciones.length} suscripciones.</p>
-        <button onClick={onClose} className="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm text-white transition-colors">Cerrar Demo</button>
+function OptimizadorSuscripcionesReal({ suscripciones, suscripcionesOptimizables, ahorroTotalOptimizable, onClose }) {
+  const [seleccionadas, setSeleccionadas] = useState([]);
+
+  const toggleSuscripcion = (e, id) => {
+    e.stopPropagation();
+    setSeleccionadas(prev => 
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+  const ahorroSeleccionado = suscripcionesOptimizables
+    .filter(s => seleccionadas.includes(s.id))
+    .reduce((sum, s) => sum + Number(s.costo), 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 border border-white/10 w-full sm:max-w-2xl h-[85vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        
+        <div className="p-6 border-b border-white/10">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Zap className="w-6 h-6 text-yellow-400" />
+                Optimizador
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">
+                {suscripcionesOptimizables.length} oportunidades
+              </p>
+            </div>
+            <button onClick={onClose} className="text-white/50 hover:text-white">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-green-300 mb-1">💰 Ahorro Potencial</div>
+                <div className="text-2xl font-bold text-white">
+                  {formatMoney(ahorroTotalOptimizable)}<span className="text-sm text-green-300">/mes</span>
+                </div>
+              </div>
+              {seleccionadas.length > 0 && (
+                <div className="text-right">
+                  <div className="text-sm text-white/70">Seleccionadas</div>
+                  <div className="text-xl font-bold text-yellow-400">
+                    {formatMoney(ahorroSeleccionado)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {suscripcionesOptimizables.length === 0 ? (
+            <div className="text-center py-10">
+              <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400" />
+              <p className="font-semibold text-white">¡Todo optimizado!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {suscripcionesOptimizables.map(sub => (
+                <div
+                  key={sub.id}
+                  onClick={(e) => toggleSuscripcion(e, sub.id)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    seleccionadas.includes(sub.id)
+                      ? 'bg-red-500/10 border-red-500/50'
+                      : 'bg-white/5 border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      seleccionadas.includes(sub.id)
+                        ? 'bg-red-500 border-red-400'
+                        : 'border-gray-500'
+                    }`}>
+                      {seleccionadas.includes(sub.id) && <Trash2 className="w-3 h-3 text-white" />}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-white font-bold text-sm">{sub.servicio}</h4>
+                        <div className="text-white font-bold text-sm">{formatMoney(sub.costo)}<span className="text-xs text-gray-400">/mes</span></div>
+                      </div>
+                      
+                      <div className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-1 rounded-full inline-flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {sub.razonOptimizar}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {seleccionadas.length > 0 && (
+          <div className="p-4 border-t border-white/10 bg-slate-800/50">
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+            >
+              <Shield className="w-5 h-5" />
+              Ahorrarás {formatMoney(ahorroSeleccionado)}/mes
+            </button>
+            <p className="text-[10px] text-gray-500 text-center mt-2">
+              * Simulación. Gestiona desde Suscripciones.
+            </p>
+          </div>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+}

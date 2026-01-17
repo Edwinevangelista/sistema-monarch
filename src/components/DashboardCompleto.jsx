@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, TrendingDown } from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity,} from 'lucide-react'
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
 import { useIngresos } from '../hooks/useIngresos'
@@ -32,7 +32,7 @@ import Footer from './Footer'
 import ListaIngresos from './ListaIngresos'
 import ModalDetalleUniversal from './ModalDetalleUniversal'
 import CalendarioPagos from './CalendarioPagos'
-
+import WidgetBalanceDual from './WidgetBalanceDual'
 // --- MODALES NUEVOS ---
 import DebtPlannerModal from './DebtPlannerModal'
 import SavingsPlannerModal from './SavingsPlannerModal'
@@ -734,62 +734,241 @@ export default function DashboardCompleto()  {
     }
   };
 
-  const validarMonto = (valor) => {
-    const num = Number(valor)
-    return isNaN(num) || num < 0 ? 0 : num
-  }
 
-  const totalIngresos = useMemo(() => ingresosInstant.reduce((sum, i) => sum + validarMonto(i.monto), 0), [ingresosInstant])
+
+const validarMonto = (valor) => {
+  const num = Number(valor)
+  return isNaN(num) || num < 0 ? 0 : num
+}
+
+// ============================================
+// 🎯 SISTEMA DUAL DE CÁLCULO: REAL vs PROYECTADO
+// ============================================
+
+// 📊 CÁLCULO REAL (Solo lo que ya pasó hasta hoy)
+const calculosReales = useMemo(() => {
+  console.log('💰 Calculando REAL (hasta hoy)...')
   
-  const overviewData = useMemo(() => ({
-    deudas: overviewMode === 'DEUDAS' || overviewMode === 'ALL' ? deudasInstant : [],
-    suscripciones: overviewMode === 'SUSCRIPCIONES' || overviewMode === 'ALL' ? suscripcionesInstant : [],
-    gastosFijos: overviewMode === 'FIJOS' || overviewMode === 'ALL' ? gastosFijosInstant : [],
-    gastosVariables: overviewMode === 'VARIABLES' || overviewMode === 'ALL' ? gastosInstant : [],
-  }), [overviewMode, deudasInstant, suscripcionesInstant, gastosFijosInstant, gastosInstant])
-
-  const deudaPagadaEsteMes = (deudaId) => {
-    return pagos?.some(p => {
-      const f = new Date(p.fecha)
-      return p.deuda_id === deudaId && f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear()
-    })
-  }
-
-  const totalGastosFijosReales = useMemo(() => 
-    gastosFijosInstant.reduce((sum, gf) => {
-      if (!gf.dia_venc) return sum
-      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-      if (diaVenc <= hoy) return sum + validarMonto(gf.monto)
+  // Ingresos que ya ocurrieron
+  const ingresos = ingresosInstant
+    .filter(i => new Date(i.fecha) <= hoy)
+    .reduce((sum, i) => sum + validarMonto(i.monto), 0)
+  
+  // Gastos variables que ya ocurrieron
+  const gastosVariables = gastosInstant
+    .filter(g => new Date(g.fecha) <= hoy)
+    .reduce((sum, g) => sum + validarMonto(g.monto), 0)
+  
+  // Gastos fijos cuya fecha de vencimiento ya pasó
+  const gastosFijos = gastosFijosInstant.reduce((sum, gf) => {
+    if (!gf.dia_venc) return sum
+    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+    if (diaVenc <= hoy) return sum + validarMonto(gf.monto)
+    return sum
+  }, 0)
+  
+  // Suscripciones que ya se cobraron este mes
+  const suscripciones = suscripcionesInstant
+    .filter(s => s.estado === 'Activo' && s.proximo_pago)
+    .reduce((sum, s) => {
+      const proxPago = new Date(s.proximo_pago)
+      const costo = validarMonto(s.costo)
+      if (proxPago <= hoy && proxPago.getMonth() === hoy.getMonth()) {
+        if (s.ciclo === 'Anual') return sum + (costo / 12)
+        return sum + costo
+      }
       return sum
-    }, 0), 
-    [gastosFijosInstant, hoy]
-  )
+    }, 0)
+  
+  const totalGastos = gastosFijos + gastosVariables + suscripciones
+  const saldo = ingresos - totalGastos
+  const tasaAhorro = ingresos > 0 ? ((ingresos - totalGastos) / ingresos) * 100 : 0
+  
+  console.log('✅ REAL:', { ingresos, totalGastos, saldo, tasaAhorro: `${tasaAhorro.toFixed(1)}%` })
+  
+ return {
+  totalIngresos: ingresos,  // ✅ NOMBRE CORRECTO
+  gastosFijos,
+  gastosVariables,
+  suscripciones,
+  totalGastos,
+  saldo,
+  tasaAhorro
+}
+}, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, hoy])
 
-  const totalGastosVariablesReales = useMemo(() => 
-    gastosInstant.filter(g => g.fecha <= hoyStr).reduce((sum, g) => sum + validarMonto(g.monto), 0), 
-    [gastosInstant, hoyStr]
-  )
-
-  const totalSuscripcionesReales = useMemo(() => 
-    suscripcionesInstant
-      .filter(s => s.estado === 'Activo' && s.proximo_pago)
-      .reduce((sum, s) => {
-        const proxPago = new Date(s.proximo_pago)
-        const costo = validarMonto(s.costo)
-        if (proxPago <= hoy && proxPago.getMonth() === hoy.getMonth()) {
-          if (s.ciclo === 'Anual') return sum + (costo / 12)
-          if (s.ciclo === 'Semanal') return sum + costo
-          return sum + costo
+// 📈 CÁLCULO PROYECTADO (Cómo terminará el mes completo)
+const calculosProyectados = useMemo(() => {
+  console.log('🔮 Calculando PROYECCIÓN del mes...')
+  
+  // INGRESOS PROYECTADOS
+  // 1. Sumar todos los ingresos ya registrados del mes
+  const ingresosRegistrados = ingresosInstant
+    .filter(i => {
+      const fecha = new Date(i.fecha)
+      return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear()
+    })
+    .reduce((sum, i) => sum + validarMonto(i.monto), 0)
+  
+  // 2. Proyectar ingresos futuros basados en recurrencia
+  let ingresosProyectados = ingresosRegistrados
+  
+  // Si hay ingresos con frecuencia definida, proyectar
+  ingresosInstant.forEach(ing => {
+    if (ing.frecuencia && ing.frecuencia !== 'Único') {
+      const fechaIngreso = new Date(ing.fecha)
+      const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()
+      const diasRestantes = ultimoDiaMes - hoy.getDate()
+      
+      if (ing.frecuencia === 'Semanal') {
+        // Calcular cuántos cobros semanales faltan
+        const cobrosRestantes = Math.floor(diasRestantes / 7)
+        ingresosProyectados += validarMonto(ing.monto) * cobrosRestantes
+      } else if (ing.frecuencia === 'Quincenal') {
+        const diaQuincena = 15
+        if (hoy.getDate() < diaQuincena && fechaIngreso.getDate() === diaQuincena) {
+          ingresosProyectados += validarMonto(ing.monto)
         }
-        return sum
-      }, 0), 
-    [suscripcionesInstant, hoy]
-  )
+      }
+      // Mensual ya está incluido en ingresosRegistrados
+    }
+  })
+  
+  // GASTOS PROYECTADOS
+  // Todos los gastos fijos del mes
+  const gastosFijos = gastosFijosInstant
+    .reduce((sum, gf) => sum + validarMonto(gf.monto), 0)
+  
+  // Gastos variables: actuales + estimación basada en promedio diario
+  const gastosVariablesActuales = gastosInstant
+    .filter(g => {
+      const fecha = new Date(g.fecha)
+      return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear()
+    })
+    .reduce((sum, g) => sum + validarMonto(g.monto), 0)
+  
+  const diasTranscurridos = hoy.getDate()
+  const promedioDiario = diasTranscurridos > 0 ? gastosVariablesActuales / diasTranscurridos : 0
+  const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()
+  const diasRestantes = ultimoDiaMes - hoy.getDate()
+  
+  const gastosVariablesProyectados = gastosVariablesActuales + (promedioDiario * diasRestantes)
+  
+  // Todas las suscripciones activas del mes
+  const suscripciones = suscripcionesInstant
+    .filter(s => s.estado === 'Activo')
+    .reduce((sum, s) => {
+      const costo = validarMonto(s.costo)
+      if (s.ciclo === 'Anual') return sum + (costo / 12)
+      if (s.ciclo === 'Semanal') return sum + (costo * 4) // Aproximación mensual
+      return sum + costo
+    }, 0)
+  
+  const totalGastos = gastosFijos + gastosVariablesProyectados + suscripciones
+  const saldo = ingresosProyectados - totalGastos
+  const tasaAhorro = ingresosProyectados > 0 ? ((ingresosProyectados - totalGastos) / ingresosProyectados) * 100 : 0
+  
+console.log('✅ PROYECTADO:', { 
+  ingresos: ingresosProyectados, 
+  totalGastos, 
+  saldo, 
+  tasaAhorro: `${tasaAhorro.toFixed(1)}%`,
+  desglose: {
+    ingresosRegistrados,
+    ingresosProyectados,
+    gastosFijos,
+    gastosVariablesActuales,
+    gastosVariablesProyectados,
+    promedioDiario,
+    diasRestantes
+  }
+})  // ← CIERRA EL console.log AQUÍ
 
-  const totalGastosReales = totalGastosFijosReales + totalGastosVariablesReales + totalSuscripcionesReales
-  const saldoReal = totalIngresos - totalGastosReales
-  const tasaAhorroReal = (totalIngresos > 0 ? ((totalIngresos - totalGastosReales) / totalIngresos) * 100 : 0)
+return {
+  totalIngresos: ingresosProyectados,  // ✅ NOMBRE CORRECTO
+  gastosFijos,
+  gastosVariables: gastosVariablesProyectados,
+  suscripciones,
+  totalGastos,
+  saldo,
+  tasaAhorro,
+  desglose: {
+    ingresosRegistrados,
+    promedioDiarioGastos: promedioDiario,
+    diasRestantes
+  }
+}
+}, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, hoy])
+// 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
+const overviewData = useMemo(() => {
+  // Estructura base vacía
+  const base = {
+    deudas: [],
+    gastosFijos: [],
+    gastosVariables: [],
+    suscripciones: []
+  }
+  
+  // Si está en modo "VER TODO", mostrar todas las categorías
+  if (overviewMode === 'ALL') {
+    return {
+      deudas: deudasInstant,
+      gastosFijos: gastosFijosInstant,
+      gastosVariables: gastosInstant,
+      suscripciones: suscripcionesInstant
+    }
+  }
+  
+  // Si está en modo "DEUDAS", solo mostrar deudas
+  if (overviewMode === 'DEUDAS') {
+    return { ...base, deudas: deudasInstant }
+  }
+  
+  // Si está en modo "FIJOS", solo mostrar gastos fijos
+  if (overviewMode === 'FIJOS') {
+    return { ...base, gastosFijos: gastosFijosInstant }
+  }
+  
+  // Si está en modo "VARIABLES", solo mostrar gastos variables
+  if (overviewMode === 'VARIABLES') {
+    return { ...base, gastosVariables: gastosInstant }
+  }
+  
+  // Si está en modo "SUSCRIPCIONES", solo mostrar suscripciones
+  if (overviewMode === 'SUSCRIPCIONES') {
+    return { ...base, suscripciones: suscripcionesInstant }
+  }
+  
+  // Por defecto, retornar estructura vacía
+  return base
+}, [overviewMode, deudasInstant, gastosFijosInstant, gastosInstant, suscripcionesInstant])
 
+// 💳 CALCULAR TOTAL PAGADO A TARJETAS DE CRÉDITO ESTE MES
+const deudaPagadaEsteMes = useMemo(() => {
+  // Filtrar solo los pagos del mes actual
+  return pagos
+    .filter(p => {
+      const fechaPago = new Date(p.fecha)
+      return fechaPago.getMonth() === hoy.getMonth() && 
+             fechaPago.getFullYear() === hoy.getFullYear()
+    })
+    // Sumar solo el capital pagado (no intereses)
+    .reduce((sum, p) => sum + Number(p.principal || 0), 0)
+}, [pagos, hoy])
+// Estado para toggle entre vista REAL y PROYECTADA
+const [vistaActiva, setVistaActiva] = useState('real') // 'real' o 'proyectado'
+
+// Datos activos según la vista seleccionada
+const datosActivos = vistaActiva === 'real' ? calculosReales : calculosProyectados
+
+// COMPATIBILIDAD: Mantener variables antiguas pero con nuevo sistema
+const totalIngresos = datosActivos.ingresos
+const totalGastosReales = datosActivos.totalGastos
+const totalGastosFijosReales = datosActivos.gastosFijos
+const totalGastosVariablesReales = datosActivos.gastosVariables
+const totalSuscripcionesReales = datosActivos.suscripciones
+const saldoReal = datosActivos.saldo
+const tasaAhorroReal = datosActivos.tasaAhorro
   useEffect(() => {
     let mounted = true
     const processAutopago = async () => {
@@ -1015,56 +1194,14 @@ export default function DashboardCompleto()  {
         </div>
       </div>
 
-      {/* WIDGET DE PRESUPUESTO INTELIGENTE */}
-      <div id="balance-widget" className="max-w-7xl mx-auto px-3 md:px-4 mb-6 animate-in fade-in slide-in-from-top-4 delay-100">
-        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 backdrop-blur-xl border border-white/10 rounded-3xl p-1">
-          <div className="bg-black/20 rounded-2xl p-4 md:p-5">
-            
-            {/* SALDO PRINCIPAL */}
-            <div className="mb-4 text-center">
-              <div className="text-xs md:text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Balance Neto</div>
-              <div className={`text-3xl md:text-5xl font-bold tracking-tight ${saldoReal >= 0 ? 'text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-300' : 'text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-red-300'}`}>
-                ${saldoReal.toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-400 mt-1">{hoy.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</div>
-            </div>
-
-            {/* BARRA DE PROGRESO INTELIGENTE */}
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-2">
-                <span>Gastos (${totalGastosReales.toLocaleString()})</span>
-                <span>Meta</span>
-              </div>
-              <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-1000 ${totalIngresos > 0 && totalGastosReales > totalIngresos ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-500'}`}
-                  style={{ width: `${Math.min(100, (totalGastosReales / (totalIngresos || 1)) * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {/* KPI GRID OPTIMIZADO */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors">
-                <div className="text-[10px] md:text-xs text-emerald-400 mb-1 font-medium">Ingresos</div>
-                <div className="text-sm md:text-lg font-bold text-white">${totalIngresos.toLocaleString()}</div>
-              </div>
-              <div className="bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors">
-                <div className="text-[10px] md:text-xs text-rose-400 mb-1 font-medium">Gastos</div>
-                <div className="text-sm md:text-lg font-bold text-white">${totalGastosReales.toLocaleString()}</div>
-              </div>
-              <div className={`bg-white/5 border border-white/5 rounded-xl p-2 md:p-3 text-center hover:bg-white/10 transition-colors ${dailyBudget < 0 ? 'bg-red-500/10' : ''}`}>
-                <div className="text-[10px] md:text-xs text-blue-400 mb-1 font-medium flex items-center justify-center gap-1">
-                  <TrendingDown className="w-3 h-3" /> Diario
-                </div>
-                <div className={`text-sm md:text-lg font-bold ${dailyBudget < 0 ? 'text-red-400' : 'text-white'}`}>
-                  ${dailyBudget}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+{/* WIDGET DE PRESUPUESTO INTELIGENTE CON VISTA DUAL */}
+<WidgetBalanceDual
+  calculosReales={calculosReales}
+  calculosProyectados={calculosProyectados}
+  vistaActiva={vistaActiva}
+  setVistaActiva={setVistaActiva}
+  hoy={hoy}
+/>
 
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">

@@ -1,18 +1,32 @@
+// src/components/ModalIngreso.jsx
+// 💰 VERSIÓN FINAL - Fusión de ambas versiones
+// Mantiene: Loading states, error handling, UX de tu versión
+// Agrega: Campo de frecuencia para proyecciones automáticas
+
 import React, { useState, useEffect } from 'react';
-import { DollarSign, X, Building2, Calendar, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { DollarSign, X, Building2, Calendar, FileText, Loader2, CheckCircle, AlertCircle, Repeat, Info } from 'lucide-react';
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
+
+const FRECUENCIAS = [
+  { value: 'Único', label: 'Único', icon: '📅', descripcion: 'Ingreso que ocurre una sola vez' },
+  { value: 'Semanal', label: 'Semanal', icon: '📆', descripcion: 'Se repite cada semana' },
+  { value: 'Quincenal', label: 'Quincenal', icon: '🗓️', descripcion: 'Se repite cada 15 días' },
+  { value: 'Mensual', label: 'Mensual', icon: '📊', descripcion: 'Se repite cada mes' }
+];
 
 export default function ModalIngreso({ onClose, onSave, ingresoInicial = null }) {
   const { cuentas } = useCuentasBancarias();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mostrarInfoFrecuencia, setMostrarInfoFrecuencia] = useState(false);
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     fuente: '',
     descripcion: '',
     monto: '',
-    cuenta_id: ''
+    cuenta_id: '',
+    frecuencia: 'Único' // NUEVO CAMPO
   });
 
   useEffect(() => {
@@ -22,7 +36,8 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
         fuente: ingresoInicial.fuente || '',
         descripcion: ingresoInicial.descripcion || '',
         monto: ingresoInicial.monto?.toString() || '',
-        cuenta_id: ingresoInicial.cuenta_id || ''
+        cuenta_id: ingresoInicial.cuenta_id || '',
+        frecuencia: ingresoInicial.frecuencia || 'Único' // NUEVO
       });
     }
   }, [ingresoInicial]);
@@ -42,7 +57,8 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
         fuente: formData.fuente,
         descripcion: formData.descripcion,
         monto: parseFloat(formData.monto),
-        cuenta_id: formData.cuenta_id || null
+        cuenta_id: formData.cuenta_id || null,
+        frecuencia: formData.frecuencia // NUEVO
       };
 
       if (ingresoInicial?.id) {
@@ -50,7 +66,14 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
       }
 
       await onSave(dataToSave);
-      alert(`✅ Ingreso guardado correctamente`);
+      
+      // Mensaje personalizado según frecuencia
+      if (formData.frecuencia !== 'Único') {
+        alert(`✅ Ingreso guardado como ${formData.frecuencia}.\n📊 Se proyectará automáticamente en el balance.`);
+      } else {
+        alert(`✅ Ingreso guardado correctamente`);
+      }
+      
       onClose();
     } catch (error) {
       console.error("Error guardando ingreso:", error);
@@ -59,6 +82,19 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
       setIsLoading(false);
     }
   };
+
+  // Calcular proyección para mostrar preview
+  const calcularProyeccionMensual = () => {
+    const monto = parseFloat(formData.monto);
+    if (!monto || formData.frecuencia === 'Único') return null;
+    
+    if (formData.frecuencia === 'Semanal') return monto * 4;
+    if (formData.frecuencia === 'Quincenal') return monto * 2;
+    if (formData.frecuencia === 'Mensual') return monto;
+    return null;
+  };
+
+  const proyeccionMensual = calcularProyeccionMensual();
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
@@ -123,7 +159,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
             </label>
             <input 
               type="text" 
-              placeholder="Ej: Salario, Freelance" 
+              placeholder="Ej: Salario, Freelance, Nómina..." 
               value={formData.fuente} 
               onChange={(e) => setFormData({ ...formData, fuente: e.target.value })} 
               disabled={isLoading}
@@ -152,6 +188,74 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
             </div>
           </div>
 
+          {/* FRECUENCIA (NUEVO) */}
+          <div className="bg-indigo-500/5 p-3 md:p-4 rounded-2xl border border-indigo-500/20">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-gray-300 flex items-center gap-2 text-sm md:text-base font-semibold">
+                <Repeat className="w-4 h-4 text-indigo-400" /> Frecuencia
+              </label>
+              <button
+                type="button"
+                onClick={() => setMostrarInfoFrecuencia(!mostrarInfoFrecuencia)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                disabled={isLoading}
+              >
+                <Info className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Tooltip informativo */}
+            {mostrarInfoFrecuencia && (
+              <div className="mb-3 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl">
+                <p className="text-xs text-indigo-200 leading-relaxed">
+                  💡 <strong>¿Para qué sirve esto?</strong><br/>
+                  Si marcas este ingreso como "Semanal" o "Mensual", FinGuide lo proyectará automáticamente en tu balance para darte una vista más realista del mes completo.
+                </p>
+              </div>
+            )}
+
+            {/* Grid de opciones */}
+            <div className="grid grid-cols-2 gap-2">
+              {FRECUENCIAS.map((frec) => (
+                <button
+                  key={frec.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, frecuencia: frec.value })}
+                  disabled={isLoading}
+                  className={`p-2.5 md:p-3 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                    formData.frecuencia === frec.value
+                      ? 'bg-indigo-500/20 border-indigo-500/50 ring-2 ring-indigo-500/30'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base md:text-lg">{frec.icon}</span>
+                    <span className={`text-xs md:text-sm font-semibold ${
+                      formData.frecuencia === frec.value ? 'text-indigo-200' : 'text-white'
+                    }`}>
+                      {frec.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-tight">
+                    {frec.descripcion}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {/* PREVIEW DE PROYECCIÓN */}
+            {proyeccionMensual && (
+              <div className="mt-3 p-2.5 md:p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center gap-2 text-xs text-emerald-300">
+                  <span className="font-bold">📊 Proyección mensual:</span>
+                  <span className="font-mono font-bold text-sm">
+                    ~${proyeccionMensual.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* CUENTA BANCARIA */}
           <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/10">
             <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-medium">
@@ -174,7 +278,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
           {/* DESCRIPCIÓN */}
           <div>
             <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-medium">
-              <FileText className="w-4 h-4 text-gray-400" /> Descripción
+              <FileText className="w-4 h-4 text-gray-400" /> Descripción (Opcional)
             </label>
             <textarea
               placeholder="Detalles adicionales..."
