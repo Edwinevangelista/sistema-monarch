@@ -31,7 +31,6 @@ export default function WidgetBalanceDual({
     : 0
 
   // Calcular progreso del mes (días transcurridos)
-  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
   const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
   const diasMes = ultimoDiaMes.getDate()
   const diaActual = hoy.getDate()
