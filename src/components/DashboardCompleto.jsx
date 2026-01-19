@@ -1420,23 +1420,16 @@ const tasaAhorroReal = datosActivos.tasaAhorro
         <ModalIngreso onClose={() => { setShowModal(null); setIngresoEditando(null) }} onSave={handleGuardarIngreso} ingresoInicial={ingresoEditando} />
       </ModalWrapper>
 
-      <ModalWrapper show={showModal === 'cuentas'} onClose={() => setShowModal(null)}>
-        <div className="bg-gray-900 rounded-t-3xl md:rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-white">Mis Cuentas</h2>
-            <button onClick={() => setShowModal(null)} className="p-2 bg-white/5 rounded-full"><X className="w-5 h-5" /></button>
-          </div>
-          <ModuloCuentasBancarias 
-            cuentas={cuentas} 
-            onAgregar={addCuenta} 
-            onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
-            onEliminar={deleteCuenta} 
-            balanceTotal={kpis.saldo}
-            listaMovimientosExternos={movimientosBancarios}
-            onTransferenciaExitosa={refreshCuentas}
-          />
-        </div>
-      </ModalWrapper>
+    {/* MODAL DE CUENTAS BANCARIAS - SIN ModalWrapper porque el componente ya es un modal completo */}
+{showModal === 'cuentas' && (
+  <ModuloCuentasBancarias 
+    onClose={() => setShowModal(null)}
+    onAgregar={addCuenta} 
+    onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
+    onEliminar={deleteCuenta} 
+    onTransferenciaExitosa={refreshCuentas}
+  />
+)}
 
       <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }}>
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
