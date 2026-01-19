@@ -452,12 +452,17 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     ahorroTotalOptimizable, recomendaciones, estrategia 
   } = analisis;
 
-  // Función analizar
+  // Función analizar - solo se ejecuta cuando el usuario presiona el botón
   const analizar = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     
     setLoading(true);
     setShowAnalysisAnimation(true);
+    
+    // Limpiar timeout anterior si existe
+    if (analysisTimeoutRef.current) {
+      clearTimeout(analysisTimeoutRef.current);
+    }
     
     analysisTimeoutRef.current = setTimeout(() => {
       setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { 
@@ -466,23 +471,30 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       }));
       
       if (showLocalNotification) {
-        showLocalNotification(`✨ Análisis actualizado - ${arquetipo.nombre}`, 'success');
+        showLocalNotification(`✨ Análisis actualizado`, 'success');
       }
       
       setLoading(false);
-      setTimeout(() => setShowAnalysisAnimation(false), 1000);
-    }, 800);
-  }, [showLocalNotification, arquetipo]); 
+      setTimeout(() => setShowAnalysisAnimation(false), 500);
+    }, 600);
+  }, [showLocalNotification]); 
 
-  // Auto-analizar en cambios
+  // Auto-analizar SOLO en el montaje inicial (una vez)
+  const hasInitialized = useRef(false);
+  
   useEffect(() => {
-    if (ingresos.length || gastosFijos.length || gastosVariables.length) {
-      analizar();
+    if (!hasInitialized.current && (ingresos.length || gastosFijos.length || gastosVariables.length)) {
+      hasInitialized.current = true;
+      // Pequeño delay para evitar flash inicial
+      const timer = setTimeout(() => {
+        setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }));
+      }, 500);
+      return () => clearTimeout(timer);
     }
-    return () => {
-      if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
-    };
-  }, [ingresos.length, gastosFijos.length, gastosVariables.length, suscripciones.length, deudas.length, analizar]);
+  }, [ingresos.length, gastosFijos.length, gastosVariables.length]);
 
   const objetivoConfig = OBJETIVOS.find(o => o.key === objetivoActual) || OBJETIVOS[0];
 
