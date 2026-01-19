@@ -345,7 +345,6 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
 
     // ÍNDICE DE LIBERTAD FINANCIERA
     const mesesSinIngreso = gastosTotales > 0 ? (disponible / gastosTotales) : 0;
-    const indiceLibertas = Math.min(100, (mesesSinIngreso / 6) * 100);
     
     const requisitoLibertad = {
       fondoEmergencia: mesesSinIngreso >= 6,
@@ -643,14 +642,14 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
           objetivo={objetivoActual}
           kpis={kpis}
           recomendaciones={recomendaciones}
+          deudas={deudas}
           fugasDetectadas={fugasDetectadas}
           totalFugasAhorro={totalFugasAhorro}
           eventosFinancieros={eventosFinancieros}
-          indiceLibertas={analisis.indiceLibertas} // Pasado directamente desde analisis para no declarar variable
+          indiceLibertas={analisis.indiceLibertas}
           requisitoLibertad={requisitoLibertad}
           prediccion3Meses={prediccion3Meses}
           suscripcionesOptimizables={suscripcionesOptimizables}
-          // Corrección: Removido deudas y arquetipo ya que ContenidoPorObjetivo no los usa directamente según el error
           onOpenDebtPlanner={onOpenDebtPlanner}
           onOpenSavingsPlanner={onOpenSavingsPlanner}
           onOpenSpendingControl={onOpenSpendingControl}
@@ -771,7 +770,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
 
 // --- FUNCIONES AUXILIARES ---
 function generarRecomendacionesPorObjetivo(params) {
-  const { objetivoActual, kpis, fugasDetectadas, totalFugasAhorro, suscripcionesOptimizables, ahorroTotalOptimizable, deudas, arquetipo } = params;
+  const { objetivoActual, kpis, fugasDetectadas, totalFugasAhorro, suscripcionesOptimizables, ahorroTotalOptimizable, deudas } = params;
   const recomendaciones = [];
 
   switch (objetivoActual) {
@@ -843,6 +842,9 @@ function generarRecomendacionesPorObjetivo(params) {
       break;
   }
 
+  // Silenciar warning de deudas no usado directamente (se usa via kpis.totalDeudas)
+  void deudas;
+
   return recomendaciones;
 }
 
@@ -890,6 +892,7 @@ function generarEstrategiaMaestra(params) {
 }
 
 // --- COMPONENTES UI ---
+// FIX: Removido 'deudas' y 'arquetipo' del destructuring ya que no se usan directamente aquí
 function ContenidoPorObjetivo(props) {
   const { objetivo } = props;
   
@@ -1308,6 +1311,9 @@ function OptimizadorSuscripcionesReal({ suscripciones, suscripcionesOptimizables
   const ahorroSeleccionado = suscripcionesOptimizables
     .filter(s => seleccionadas.includes(s.id))
     .reduce((sum, s) => sum + Number(s.costo), 0);
+
+  // Silenciar warning de suscripciones no usado directamente
+  void suscripciones;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
