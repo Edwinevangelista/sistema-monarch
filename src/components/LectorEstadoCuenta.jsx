@@ -293,8 +293,7 @@ function parseTransactionsSmart(rawText) {
   }
 
   // ---------- FALLBACK GENÉRICO ----------
-  // Corrección Regex: Eliminados escapes innecesarios en la clase de caracteres
-  const genericDate = /(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/;
+ const genericDate = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/;
   for (const line of lines) {
     const dm = line.match(genericDate);
     if (!dm) continue;
