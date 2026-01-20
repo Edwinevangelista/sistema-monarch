@@ -1,205 +1,199 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import { 
   Home, 
   DollarSign, 
   CreditCard, 
-  User, 
   Bell, 
   Repeat, 
-  Upload, 
-  Menu, 
-  Wallet 
-} from 'lucide-react'
+  MoreHorizontal,
+  Wallet,
+  ScanFace,
+  Sparkles,
+  User,
+  X
+} from 'lucide-react';
 
 export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsuario = 'Usuario', onLogout }) {
-  const [showMenu, setShowMenu] = useState(false)
+  const [showMenu, setShowMenu] = useState(false);
+
+  const handleOpenModal = (modalName) => {
+    setShowMenu(false);
+    // Pequeño delay para asegurar que el menú se cierre primero
+    setTimeout(() => {
+      onOpenModal(modalName);
+    }, 50);
+  };
 
   return (
     <>
-      {/* Menú Principal */}
-      {/* ✅ z-[60] asegura que el botón se vea por encima de los modales */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-lg border-t border-gray-800 z-[60]">
-        <div className="flex justify-around items-center h-16 px-2">
+      {/* Menú Principal (Bottom Bar) - 5 botones en línea */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-white/10 z-50 safe-area-bottom">
+        <div className="flex justify-around items-center h-16 px-1">
           
-          {/* ✅ INICIO (Cierra modales y sube arriba) */}
+          {/* INICIO */}
           <button
             onClick={() => {
-              setShowMenu(false)
-              // Cierra cualquier modal abierto
-              onOpenModal(null)
-              // Scroll arriba
-              window.scrollTo({ top: 0, behavior: 'smooth' })
+              setShowMenu(false);
+              onOpenModal(null);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors flex-1"
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-white active:text-white transition-colors flex-1 py-2"
           >
             <Home className="w-5 h-5" />
-            <span className="text-xs">Inicio</span>
+            <span className="text-[10px] font-medium">Inicio</span>
           </button>
 
           {/* INGRESOS */}
           <button
-            onClick={() => {
-              setShowMenu(false)
-              onOpenModal('ingreso')
-            }}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-green-400 transition-colors flex-1"
+            onClick={() => handleOpenModal('ingreso')}
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-emerald-400 active:text-emerald-400 transition-colors flex-1 py-2"
           >
             <DollarSign className="w-5 h-5" />
-            <span className="text-xs">Ingresos</span>
+            <span className="text-[10px] font-medium">Ingresos</span>
           </button>
 
           {/* GASTOS */}
           <button
-            onClick={() => {
-              setShowMenu(false)
-              onOpenModal('gastos')
-            }}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-red-400 transition-colors flex-1"
+            onClick={() => handleOpenModal('gastos')}
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-rose-400 active:text-rose-400 transition-colors flex-1 py-2"
           >
             <CreditCard className="w-5 h-5" />
-            <span className="text-xs">Gastos</span>
+            <span className="text-[10px] font-medium">Gastos</span>
           </button>
 
-          {/* ✅ ALERTAS (Lleva a la sección de Alertas en el Dashboard) */}
+          {/* ALERTAS */}
           <button
-            onClick={() => {
-              setShowMenu(false)
-              const element = document.getElementById('dashboard-alertas');
-              if (element) {
-                // Hacemos un pequeño offset para que la barra no tape el título
-                window.scrollTo({ top: element.offsetTop - 80, behavior: 'smooth' });
-              }
-            }}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-yellow-400 transition-colors flex-1 relative"
+            onClick={() => handleOpenModal('alertas')}
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-yellow-400 active:text-yellow-400 transition-colors flex-1 py-2 relative"
           >
-            <Bell className="w-5 h-5" />
-            {alertasCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                {alertasCount > 9 ? '9+' : alertasCount}
-              </span>
-            )}
-            {/* ✅ Texto cambiado de "Perfil" a "Alertas" */}
-            <span className="text-xs">Alertas</span>
+            <div className="relative">
+              <Bell className="w-5 h-5" />
+              {alertasCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full border border-gray-900 animate-pulse">
+                  {alertasCount > 9 ? '9+' : alertasCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-medium">Alertas</span>
           </button>
 
-          {/* MENÚ MÁS */}
+          {/* MÁS - Integrado en la barra */}
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-purple-400 transition-colors flex-1"
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors flex-1 py-2 ${
+              showMenu ? 'text-purple-400' : 'text-gray-400 hover:text-purple-400 active:text-purple-400'
+            }`}
           >
-            <Menu className="w-5 h-5" />
-            <span className="text-xs">Más</span>
+            <MoreHorizontal className={`w-5 h-5 transition-transform duration-200 ${showMenu ? 'rotate-90' : ''}`} />
+            <span className="text-[10px] font-medium">Más</span>
           </button>
+
         </div>
       </div>
 
-      {/* ✅ MENÚ EXPANDIDO (Accesos directos) */}
+      {/* MENÚ EXPANDIDO (Overlay Slide-Up) */}
       {showMenu && (
         <>
-          {/* Overlay */}
+          {/* Overlay Oscuro */}
           <div 
-            className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ zIndex: 40 }}
             onClick={() => setShowMenu(false)}
           />
           
-          {/* Panel de opciones */}
-          <div className="md:hidden fixed bottom-16 left-0 right-0 bg-gray-800 border-t border-gray-700 z-50 animate-in slide-in-from-bottom duration-200 shadow-2xl">
+          {/* Panel Deslizante */}
+          <div 
+            className="md:hidden fixed bottom-16 left-3 right-3 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
+            style={{ zIndex: 45 }}
+          >
             <div className="p-4">
-              <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-3 px-2">
-                Más Opciones
-              </h3>
-              
-              <div className="grid grid-cols-1 gap-2">
-                {/* Cuentas Bancarias */}
-                <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    onOpenModal('cuentas')
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-blue-600 rounded-xl transition-colors text-left w-full"
+              {/* Header del panel */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-purple-400" />
+                  Herramientas
+                </h3>
+                <button 
+                  onClick={() => setShowMenu(false)}
+                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
                 >
-                  <Wallet className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <div className="text-white font-semibold text-sm">Cuentas</div>
-                    <div className="text-gray-400 text-xs">Gestionar saldo y tarjetas</div>
-                  </div>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Grid de opciones */}
+              <div className="grid grid-cols-3 gap-2">
+                
+                {/* Cuentas */}
+                <button
+                  onClick={() => handleOpenModal('cuentas')}
+                  className="p-3 bg-white/5 hover:bg-blue-600/20 rounded-xl transition-all border border-white/5 hover:border-blue-500/30 flex flex-col items-center gap-2 group active:scale-95"
+                >
+                  <Wallet className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Cuentas</span>
                 </button>
 
                 {/* Suscripciones */}
                 <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    onOpenModal('suscripcion')
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-indigo-600 rounded-xl transition-colors text-left w-full"
+                  onClick={() => handleOpenModal('suscripcion')}
+                  className="p-3 bg-white/5 hover:bg-indigo-600/20 rounded-xl transition-all border border-white/5 hover:border-indigo-500/30 flex flex-col items-center gap-2 group active:scale-95"
                 >
-                  <Repeat className="w-5 h-5 text-indigo-400" />
-                  <div>
-                    <div className="text-white font-semibold text-sm">Suscripción</div>
-                    <div className="text-gray-400 text-xs">Servicios recurrentes</div>
-                  </div>
+                  <Repeat className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Suscrip.</span>
                 </button>
 
-                {/* Tarjetas */}
+                {/* Deudas/Tarjetas */}
                 <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    onOpenModal('tarjetas')
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-purple-600 rounded-xl transition-colors text-left w-full"
+                  onClick={() => handleOpenModal('tarjetas')}
+                  className="p-3 bg-white/5 hover:bg-purple-600/20 rounded-xl transition-all border border-white/5 hover:border-purple-500/30 flex flex-col items-center gap-2 group active:scale-95"
                 >
-                  <CreditCard className="w-5 h-5 text-purple-400" />
-                  <div>
-                    <div className="text-white font-semibold text-sm">Tarjetas</div>
-                    <div className="text-gray-400 text-xs">Gestionar deudas</div>
-                  </div>
+                  <CreditCard className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Tarjetas</span>
                 </button>
 
-                {/* Escáner Premium */}
+                {/* Escáner */}
                 <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    onOpenModal('lectorEstado')
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 rounded-xl transition-colors text-left w-full relative overflow-hidden"
+                  onClick={() => handleOpenModal('lectorEstado')}
+                  className="p-3 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 hover:from-yellow-500/20 hover:to-orange-600/20 rounded-xl transition-all border border-yellow-500/20 hover:border-yellow-500/40 flex flex-col items-center gap-2 group relative active:scale-95"
                 >
-                  <Upload className="w-5 h-5 text-white" />
-                  <div>
-                    <div className="text-white font-semibold text-sm flex items-center gap-1">
-                      Escáner
-                      <span className="text-[8px] bg-yellow-400 text-yellow-900 px-1.5 py-0.5 rounded-full font-bold">PRO</span>
-                    </div>
-                    <div className="text-yellow-100 text-xs">Analizar estados de cuenta</div>
+                  <div className="absolute top-1 right-1">
+                    <span className="text-[7px] font-bold bg-yellow-400 text-yellow-900 px-1 py-0.5 rounded">PRO</span>
                   </div>
+                  <ScanFace className="w-6 h-6 text-yellow-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Escáner</span>
                 </button>
 
-                {/* ✅ Configuración / Perfil */}
+                {/* Perfil */}
                 <button
-                  onClick={() => {
-                    setShowMenu(false)
-                    onOpenModal('usuario')
-                  }}
-                  className="flex items-center gap-3 p-3 bg-gray-700 hover:bg-green-600 rounded-xl transition-colors text-left w-full"
+                  onClick={() => handleOpenModal('usuario')}
+                  className="p-3 bg-white/5 hover:bg-emerald-600/20 rounded-xl transition-all border border-white/5 hover:border-emerald-500/30 flex flex-col items-center gap-2 group active:scale-95"
                 >
-                  <User className="w-5 h-5 text-green-400" />
-                  <div>
-                    <div className="text-white font-semibold text-sm">Mi Perfil</div>
-                    <div className="text-gray-400 text-xs">Hola, {nombreUsuario}</div>
-                  </div>
+                  <User className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Perfil</span>
                 </button>
+
+                {/* Asistente IA */}
+                <button
+                  onClick={() => handleOpenModal('asistente')}
+                  className="p-3 bg-white/5 hover:bg-pink-600/20 rounded-xl transition-all border border-white/5 hover:border-pink-500/30 flex flex-col items-center gap-2 group active:scale-95"
+                >
+                  <Sparkles className="w-6 h-6 text-pink-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">IA</span>
+                </button>
+
               </div>
 
-              {/* Botón cerrar */}
+              {/* Botón cerrar sesión */}
               <button
-                onClick={() => setShowMenu(false)}
-                className="w-full mt-2 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors text-sm"
+                onClick={onLogout}
+                className="w-full mt-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 border border-red-500/20 active:scale-[0.98]"
               >
-                Cerrar
+                Cerrar Sesión
               </button>
             </div>
           </div>
         </>
       )}
     </>
-  )
+  );
 }

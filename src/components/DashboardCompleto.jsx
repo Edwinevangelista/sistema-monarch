@@ -43,6 +43,7 @@ import SavedPlansList from './SavedPlansList'
 import ListaGastosCompleta from './ListaGastosCompleta'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
+import ModalAlertas from './ModalAlertas'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -1029,32 +1030,71 @@ const tasaAhorroReal = datosActivos.tasaAhorro
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
+  // --- REEMPLAZA ESTE BLOQUE EN DashboardCompleto.js ---
+  
   const alertas = useMemo(() => {
     const listaAlertas = []
     
+    // 1. Gastos Fijos
     gastosFijosInstant.forEach(gf => {
       if (gf.estado === 'Pagado' || !gf.dia_venc) return
       const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-      const diff = Math.round((diaVenc - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 0) listaAlertas.push({ tipo: 'critical', mensaje: `⚠️ ${gf.nombre} está vencido.`, mensajeCorto: `${gf.nombre} - VENCIDO`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
-      else if (diff <= 5) listaAlertas.push({ tipo: 'warning', mensaje: `📅 ${gf.nombre} vence ${diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${gf.nombre} - ${diff} días`, monto: gf.monto, tipoItem: ITEM_TYPES.FIJO, item: gf })
+      const diff = Math.ceil((diaVenc - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 5) {
+        listaAlertas.push({ 
+          tipo: diff <= 0 ? 'critical' : 'warning', 
+          mensaje: `⚠️ ${gf.nombre} está vencido.`, 
+          mensajeCorto: `${gf.nombre}`, 
+          monto: gf.monto, 
+          tipoItem: ITEM_TYPES.FIJO, 
+          item: gf,
+          dias: diff // ✅ CLAVE PARA EL ORDENAMIENTO
+        })
+      }
     })
     
+    // 2. Suscripciones
     suscripcionesInstant.forEach(sub => {
       if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
       const proxPago = new Date(sub.proximo_pago)
-      const diff = Math.round((proxPago - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 3 && diff >= 0) listaAlertas.push({ tipo: 'info', mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${sub.servicio} - Renueva`, monto: sub.costo, tipoItem: ITEM_TYPES.SUSCRIPCION, item: sub })
+      const diff = Math.ceil((proxPago - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 5) {
+        listaAlertas.push({ 
+          tipo: diff <= 0 ? 'critical' : 'info', 
+          mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : `en ${diff} días`}.`, 
+          mensajeCorto: `${sub.servicio}`, 
+          monto: sub.costo, 
+          tipoItem: ITEM_TYPES.SUSCRIPCION, 
+          item: sub,
+          dias: diff
+        })
+      }
     })
     
+    // 3. Deudas
     deudasInstant.forEach(d => {
       if (!d.vence) return
       const vence = new Date(d.vence)
-      const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24))
-      if (diff <= 5 && diff >= 0) listaAlertas.push({ tipo: 'warning', mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : diff === 1 ? 'mañana' : `en ${diff} días`}.`, mensajeCorto: `${d.cuenta} - ${diff}d`, monto: d.pago_minimo, tipoItem: ITEM_TYPES.DEUDA, item: d })
+      const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
+      
+      if (diff <= 5) {
+        listaAlertas.push({ 
+          tipo: diff <= 0 ? 'critical' : 'warning', 
+          mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : `en ${diff} días`}.`, 
+          mensajeCorto: `${d.cuenta}`, 
+          monto: d.pago_minimo, 
+          tipoItem: ITEM_TYPES.DEUDA, 
+          item: d,
+          dias: diff
+        })
+      }
     })
     
-    return listaAlertas
+    // ✅ ORDENAMIENTO: De Vencidos (negativo) a Por Vencer (positivo)
+    return listaAlertas.sort((a, b) => a.dias - b.dias)
+    
   }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
 
   useEffect(() => {
@@ -1420,7 +1460,7 @@ const tasaAhorroReal = datosActivos.tasaAhorro
         <ModalIngreso onClose={() => { setShowModal(null); setIngresoEditando(null) }} onSave={handleGuardarIngreso} ingresoInicial={ingresoEditando} />
       </ModalWrapper>
 
-    {/* MODAL DE CUENTAS BANCARIAS - SIN ModalWrapper porque el componente ya es un modal completo */}
+ {/* MODAL DE CUENTAS BANCARIAS - Fullscreen en mobile */}
 {showModal === 'cuentas' && (
   <ModuloCuentasBancarias 
     onClose={() => setShowModal(null)}
@@ -1428,6 +1468,16 @@ const tasaAhorroReal = datosActivos.tasaAhorro
     onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
     onEliminar={deleteCuenta} 
     onTransferenciaExitosa={refreshCuentas}
+  />
+)}
+{showModal === 'alertas' && (
+  <ModalAlertas
+    alertas={alertas}
+    onClose={() => setShowModal(null)}
+    onAlertClick={(alerta) => {
+      setShowModal(null)
+      handleOpenDetail(alerta.item, alerta.tipoItem)
+    }}
   />
 )}
 
