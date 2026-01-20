@@ -1,32 +1,40 @@
-// src/components/AuthGuard.js
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet } from 'lucide-react'
+import { Wallet, ShieldCheck, Loader2 } from 'lucide-react'
 
 function AuthGuard({ children }) {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
-    // Verificar sesión actual
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
-        
+
+        // 🔐 DETECTAR RECOVERY FLOW DE SUPABASE
+        const isRecoveryFlow =
+          location.pathname === '/reset' &&
+          window.location.hash.includes('type=recovery')
+
         if (error) {
           console.error('Error al verificar sesión:', error)
-          navigate('/auth')
+          if (!isRecoveryFlow) navigate('/auth')
           return
         }
 
         setSession(session)
         setLoading(false)
-        
-        if (!session) {
+
+        // ❌ SOLO REDIRIGIR SI:
+        // - NO hay sesión
+        // - NO estamos en recovery
+        if (!session && !isRecoveryFlow) {
           navigate('/auth')
         }
+
       } catch (error) {
         console.error('Error inesperado:', error)
         navigate('/auth')
@@ -35,16 +43,16 @@ function AuthGuard({ children }) {
 
     checkSession()
 
-    // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth event:', event)
         setSession(session)
-        
+
         if (event === 'SIGNED_OUT') {
+          setLoading(false)
           navigate('/auth')
         }
-        
+
         if (event === 'SIGNED_IN') {
           setLoading(false)
         }
@@ -52,28 +60,19 @@ function AuthGuard({ children }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [navigate])
+  }, [navigate, location.pathname])
 
-  // Pantalla de carga
+  // Loader
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <Wallet className="w-16 h-16 text-blue-400 mx-auto mb-4 animate-pulse" />
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white text-lg font-semibold">Sistema Monarch</p>
-          <p className="text-gray-400 text-sm mt-2">Verificando sesión...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
       </div>
     )
   }
 
-  // Si no hay sesión, no renderizar nada (se redirige automáticamente)
-  if (!session) {
-    return null
-  }
+  if (!session) return null
 
-  // Si hay sesión, renderizar el contenido protegido
   return children
 }
 

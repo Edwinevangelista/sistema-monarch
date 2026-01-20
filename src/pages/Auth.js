@@ -18,7 +18,7 @@ import {
 import Footer from '../components/Footer'
 
 function Auth() {
-  // MODO DE AUTENTICACIÓN: 'login' | 'signup' | 'forgot' | 'reset'
+  // MODO DE AUTENTICACIÓN: 'login' | 'signup' | 'forgot'
   const [mode, setMode] = useState('login')
   const navigate = useNavigate()
 
@@ -29,7 +29,7 @@ function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // ✅ NUEVOS ESTADOS PARA DATOS DEL CLIENTE (DEFINIDO UNA SOLA VEZ)
+  // NUEVOS ESTADOS PARA DATOS DEL CLIENTE
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
@@ -40,12 +40,7 @@ function Auth() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
 
- 
-
-  // ============================================
-  // FUNCIONES DE VALIDACIÓN
-  // ============================================
-
+  // FUNCIONES DE VALIDACIÓN (Sin cambios, lógica correcta)
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
@@ -86,9 +81,7 @@ function Auth() {
     return 'Muy Fuerte'
   }
 
-  // ============================================
   // MANEJADORES DE AUTENTICACIÓN
-  // ============================================
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -118,10 +111,9 @@ function Auth() {
       console.log("✅ Login correcto. Mostrando mensaje de éxito.")
       setMessage({ type: 'success', text: '✅ Inicio de sesión exitoso' })
       
-      console.log("⏱️ Esperando 1 segundo antes de navegar...")
       setTimeout(() => {
         console.log("🚀 Navegando a /loading...")
-        navigate('/loading') // ✅ REDIRIGIR A LA NUEVA PANTALLA DE CARGA
+        navigate('/loading')
       }, 1000)
 
     } catch (error) {
@@ -145,7 +137,6 @@ function Auth() {
     e.preventDefault()
     setMessage({ type: '', text: '' })
 
-    // ✅ Validaciones para campos nuevos
     if (!nombre.trim()) {
       setMessage({ type: 'error', text: '❌ El nombre es obligatorio' })
       return
@@ -185,7 +176,6 @@ function Auth() {
     setLoading(true)
 
     try {
-      // 1. Registro de Autenticación
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -204,12 +194,11 @@ function Auth() {
 
       if (error) throw error
 
-      // 2. Guardar datos adicionales en tabla 'perfiles'
       if (data.user) {
         const { error: profileError } = await supabase
           .from('perfiles')
           .insert({
-            id: data.user.id, // Crucial para conectar con auth.users
+            id: data.user.id,
             email: data.user.email,
             nombre: nombre,
             apellido: apellido,
@@ -219,7 +208,7 @@ function Auth() {
             avatar_url: `https://ui-avatars.com/api/?name=${nombre}+${apellido}&background=random`
           })
         
-        if (profileError) console.warn('No se pudo guardar perfil (tabla "perfiles" inexistente):', profileError)
+        if (profileError) console.warn('No se pudo guardar perfil:', profileError)
       }
 
       setMessage({ 
@@ -227,7 +216,6 @@ function Auth() {
         text: '✅ ¡Cuenta creada exitosamente! Bienvenido.' 
       })
       
-      // Limpiar campos y cambiar a modo login
       setTimeout(() => {
         setMode('login')
         setPassword('')
@@ -235,10 +223,7 @@ function Auth() {
         setNombre('')
         setApellido('')
         setTelefono('')
-        setMessage({ 
-          type: '', 
-          text: '' 
-        })
+        setMessage({ type: '', text: '' })
       }, 3000)
 
     } catch (error) {
@@ -257,6 +242,7 @@ function Auth() {
     }
   }
 
+  // ✅ MANEJADOR DE OLVIDÉ MI CONTRASEÑA CORREGIDO
   const handleForgotPassword = async (e) => {
     e.preventDefault()
     setMessage({ type: '', text: '' })
@@ -270,7 +256,8 @@ function Auth() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?mode=reset`,
+        // ✅ IMPORTANTE: Aquí apuntamos a la página de reset, NO a /auth
+        redirectTo: `${window.location.origin}/reset`
       })
 
       if (error) throw error
@@ -298,6 +285,7 @@ function Auth() {
   }
 
   const handleResetPassword = async (e) => {
+    // Este handler solo se usa si la página de reset está dentro de este componente
     e.preventDefault()
     setMessage({ type: '', text: '' })
 
@@ -348,10 +336,6 @@ function Auth() {
     }
   }
 
-  // ============================================
-  // FUNCIÓN PRINCIPAL DE SUBMIT
-  // ============================================
-
   const handleSubmit = (e) => {
     e.preventDefault()
     
@@ -373,10 +357,6 @@ function Auth() {
     }
   }
 
-  // ============================================
-  // FUNCIONES DE CAMBIO DE MODO
-  // ============================================
-
   const switchMode = (newMode) => {
     setMode(newMode)
     setMessage({ type: '', text: '' })
@@ -389,13 +369,8 @@ function Auth() {
     setMoneda('USD')
   }
 
-  // ============================================
-  // RENDER
-  // ============================================
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex flex-col">
-      {/* HEADER */}
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <Wallet className="w-10 h-10 text-blue-400" />
@@ -403,11 +378,9 @@ function Auth() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 w-full max-w-lg border border-gray-700 shadow-2xl">
           
-          {/* TÍTULO DINÁMICO */}
           <div className="mb-6">
             {mode !== 'login' && (
               <button
@@ -423,7 +396,6 @@ function Auth() {
               {mode === 'login' && 'Iniciar Sesión'}
               {mode === 'signup' && 'Crear Cuenta'}
               {mode === 'forgot' && 'Recuperar Contraseña'}
-              {mode === 'reset' && 'Nueva Contraseña'}
             </h2>
             
             {mode === 'forgot' && (
@@ -433,7 +405,6 @@ function Auth() {
             )}
           </div>
 
-          {/* MENSAJE DE FEEDBACK */}
           {message.text && (
             <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
               message.type === 'success' 
@@ -452,7 +423,6 @@ function Auth() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             {/* EMAIL INPUT */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -487,7 +457,7 @@ function Auth() {
               )}
             </div>
 
-            {/* PASSWORD INPUT (No mostrar en modo forgot) */}
+            {/* PASSWORD INPUT */}
             {mode !== 'forgot' && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -512,7 +482,6 @@ function Auth() {
                   </button>
                 </div>
 
-                {/* INDICADOR DE FORTALEZA (solo en signup y reset) */}
                 {(mode === 'signup' || mode === 'reset') && password && (
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center gap-2">
@@ -559,14 +528,12 @@ function Auth() {
               </div>
             )}
 
-            {/* ✅ NUEVO: DATOS PERSONALES (Solo en Signup) */}
+            {/* DATOS PERSONALES (Solo Signup) */}
             {mode === 'signup' && (
               <div className="space-y-4 pb-6 border-b border-gray-700 mb-6">
                 <h3 className="text-sm font-bold text-blue-300 mb-3 uppercase tracking-wider">
                   Información del Cliente
                 </h3>
-                
-                {/* Grid para Nombre y Apellido */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
@@ -595,8 +562,6 @@ function Auth() {
                     />
                   </div>
                 </div>
-
-                {/* Teléfono */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                     <Phone className="w-4 h-4 text-yellow-400" /> Teléfono
@@ -610,8 +575,6 @@ function Auth() {
                     required
                   />
                 </div>
-
-                {/* Grid para País y Divisa */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
@@ -653,7 +616,7 @@ function Auth() {
               </div>
             )}
 
-            {/* CONFIRM PASSWORD (solo en signup y reset) */}
+            {/* CONFIRM PASSWORD */}
             {(mode === 'signup' || mode === 'reset') && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -696,7 +659,6 @@ function Auth() {
               </div>
             )}
 
-            {/* BOTÓN SUBMIT */}
             <button
               type="submit"
               disabled={loading || ((mode === 'signup' || mode === 'reset') && passwordStrength.strength < 3)}
@@ -721,7 +683,6 @@ function Auth() {
             </button>
           </form>
 
-          {/* NAVEGACIÓN ENTRE MODOS */}
           <div className="mt-6 space-y-3">
             {mode === 'login' && (
               <>
@@ -757,8 +718,6 @@ function Auth() {
           </div>
         </div>
       </div>
-
-      {/* FOOTER */}
       <Footer />
     </div>
   )
