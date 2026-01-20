@@ -28,27 +28,12 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
     }
   }, [])
 
-  // Organizar alertas por urgencia
+  // ✅ SIMPLIFICADO: Las alertas ya vienen con 'dias' calculado desde el Dashboard
   const alertasOrganizadas = useMemo(() => {
     if (!alertas || alertas.length === 0) return []
     
-    return [...alertas].map(alerta => {
-      let dias = 5 // default
-      
-      // Extraer días del mensaje
-      if (alerta.tipo === 'critical' || alerta.mensaje?.toLowerCase().includes('vencido')) {
-        dias = -1
-      } else if (alerta.mensaje?.toLowerCase().includes('hoy')) {
-        dias = 0
-      } else if (alerta.mensaje?.toLowerCase().includes('mañana')) {
-        dias = 1
-      } else {
-        const match = alerta.mensaje?.match(/en\s*(\d+)\s*días?/i)
-        if (match) dias = parseInt(match[1])
-      }
-      
-      return { ...alerta, dias }
-    }).sort((a, b) => a.dias - b.dias) // Ordenar por urgencia
+    // Ya vienen ordenadas desde el Dashboard, pero por si acaso
+    return [...alertas].sort((a, b) => a.dias - b.dias)
   }, [alertas])
 
   const getAlertStyle = (dias) => {
@@ -227,7 +212,7 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                             {alerta.item?.nombre || alerta.item?.servicio || alerta.item?.cuenta || 'Pago pendiente'}
                           </h4>
                           
-                          {/* Mensaje */}
+                          {/* ✅ Mensaje - ya viene correcto desde Dashboard */}
                           <p className="text-gray-400 text-xs mt-0.5 line-clamp-1">
                             {alerta.mensaje}
                           </p>

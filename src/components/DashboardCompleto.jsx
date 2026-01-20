@@ -1030,73 +1030,89 @@ const tasaAhorroReal = datosActivos.tasaAhorro
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
-  // --- REEMPLAZA ESTE BLOQUE EN DashboardCompleto.js ---
+const alertas = useMemo(() => {
+  const listaAlertas = []
   
-  const alertas = useMemo(() => {
-    const listaAlertas = []
+  // 1. Gastos Fijos
+  gastosFijosInstant.forEach(gf => {
+    if (gf.estado === 'Pagado' || !gf.dia_venc) return
+    const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+    const diff = Math.ceil((diaVenc - hoy) / (1000 * 60 * 60 * 24))
     
-    // 1. Gastos Fijos
-    gastosFijosInstant.forEach(gf => {
-      if (gf.estado === 'Pagado' || !gf.dia_venc) return
-      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-      const diff = Math.ceil((diaVenc - hoy) / (1000 * 60 * 60 * 24))
+    if (diff <= 5) {
+      const mensaje = diff < 0 
+        ? `⚠️ ${gf.nombre} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
+        : diff === 0 
+        ? `⚠️ ${gf.nombre} vence hoy.`
+        : `⚠️ ${gf.nombre} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
       
-      if (diff <= 5) {
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje: `⚠️ ${gf.nombre} está vencido.`, 
-          mensajeCorto: `${gf.nombre}`, 
-          monto: gf.monto, 
-          tipoItem: ITEM_TYPES.FIJO, 
-          item: gf,
-          dias: diff // ✅ CLAVE PARA EL ORDENAMIENTO
-        })
-      }
-    })
+      listaAlertas.push({ 
+        tipo: diff <= 0 ? 'critical' : 'warning', 
+        mensaje, 
+        mensajeCorto: `${gf.nombre}`, 
+        monto: gf.monto, 
+        tipoItem: ITEM_TYPES.FIJO, 
+        item: gf,
+        dias: diff
+      })
+    }
+  })
+  
+  // 2. Suscripciones
+  suscripcionesInstant.forEach(sub => {
+    if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
+    const proxPago = new Date(sub.proximo_pago)
+    const diff = Math.ceil((proxPago - hoy) / (1000 * 60 * 60 * 24))
     
-    // 2. Suscripciones
-    suscripcionesInstant.forEach(sub => {
-      if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
-      const proxPago = new Date(sub.proximo_pago)
-      const diff = Math.ceil((proxPago - hoy) / (1000 * 60 * 60 * 24))
+    if (diff <= 5) {
+      const mensaje = diff < 0 
+        ? `🔄 ${sub.servicio} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
+        : diff === 0 
+        ? `🔄 ${sub.servicio} se renueva hoy.`
+        : `🔄 ${sub.servicio} se renovará en ${diff} día${diff !== 1 ? 's' : ''}.`
       
-      if (diff <= 5) {
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'info', 
-          mensaje: `🔄 ${sub.servicio} se renovará ${diff === 0 ? 'hoy' : `en ${diff} días`}.`, 
-          mensajeCorto: `${sub.servicio}`, 
-          monto: sub.costo, 
-          tipoItem: ITEM_TYPES.SUSCRIPCION, 
-          item: sub,
-          dias: diff
-        })
-      }
-    })
+      listaAlertas.push({ 
+        tipo: diff <= 0 ? 'critical' : 'info', 
+        mensaje, 
+        mensajeCorto: `${sub.servicio}`, 
+        monto: sub.costo, 
+        tipoItem: ITEM_TYPES.SUSCRIPCION, 
+        item: sub,
+        dias: diff
+      })
+    }
+  })
+  
+  // 3. Deudas
+  deudasInstant.forEach(d => {
+    if (!d.vence) return
+    const vence = new Date(d.vence)
+    const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
     
-    // 3. Deudas
-    deudasInstant.forEach(d => {
-      if (!d.vence) return
-      const vence = new Date(d.vence)
-      const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
+    if (diff <= 5) {
+      const mensaje = diff < 0 
+        ? `💳 Pago de ${d.cuenta} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
+        : diff === 0 
+        ? `💳 Pago de ${d.cuenta} vence hoy.`
+        : `💳 Pago de ${d.cuenta} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
       
-      if (diff <= 5) {
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje: `💳 Pago de ${d.cuenta} vence ${diff === 0 ? 'hoy' : `en ${diff} días`}.`, 
-          mensajeCorto: `${d.cuenta}`, 
-          monto: d.pago_minimo, 
-          tipoItem: ITEM_TYPES.DEUDA, 
-          item: d,
-          dias: diff
-        })
-      }
-    })
+      listaAlertas.push({ 
+        tipo: diff <= 0 ? 'critical' : 'warning', 
+        mensaje, 
+        mensajeCorto: `${d.cuenta}`, 
+        monto: d.pago_minimo, 
+        tipoItem: ITEM_TYPES.DEUDA, 
+        item: d,
+        dias: diff
+      })
+    }
+  })
+  
+  // ✅ ORDENAMIENTO: Vencidos primero (más negativos), luego por vencer
+  return listaAlertas.sort((a, b) => a.dias - b.dias)
+  
+}, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
     
-    // ✅ ORDENAMIENTO: De Vencidos (negativo) a Por Vencer (positivo)
-    return listaAlertas.sort((a, b) => a.dias - b.dias)
-    
-  }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
-
   useEffect(() => {
     if (permission === 'granted' && alertas.length > 0) {
       const hoyDateStr = hoy.toDateString()
