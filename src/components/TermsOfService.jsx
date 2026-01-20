@@ -180,7 +180,7 @@ export default function TermsOfService({ onClose }) {
           <section>
             <h3 className="text-xl font-bold text-white mb-4">Ausencia de Garantías</h3>
             <p className="text-gray-400 mb-3 text-sm">
-              El servicio se proporciona "tal cual", sin garantía de disponibilidad ininterrumpida, ni exención de fallos o errores técnicos.
+              El servicio se proporciona "tal cual", sin garantía de disponibilidad ininterrumbida, ni exención de fallos o errores técnicos.
             </p>
           </section>
 
