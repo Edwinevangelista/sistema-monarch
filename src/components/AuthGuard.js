@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet, ShieldCheck, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 function AuthGuard({ children }) {
   const [loading, setLoading] = useState(true)
