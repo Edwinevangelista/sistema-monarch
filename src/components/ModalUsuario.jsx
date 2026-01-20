@@ -4,7 +4,7 @@ import {
   Smartphone, CreditCard, Repeat, User, Mail, Phone, Globe,
   Edit2, Save, Camera, Loader2, Lock, Key, Trash2, Download,
   FileText, HelpCircle, MessageSquare, Star, ChevronRight,
-  Eye, EyeOff, CheckCircle2, XCircle, Info, ExternalLink,
+  Eye, EyeOff, CheckCircle2, XCircle, Info,
   ShieldCheck, History, Fingerprint, LogOut
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
