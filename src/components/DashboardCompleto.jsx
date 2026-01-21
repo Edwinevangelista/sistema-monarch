@@ -143,7 +143,7 @@ export default function DashboardCompleto()  {
   const { gastos, addGasto, updateGasto, deleteGasto } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
-  const { deudas, updateDebt, refresh: refreshDeudas, deleteDebt } = useDeudas()
+ const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
   const { refresh: refreshPlanes } = usePlanesGuardados()
   const { permission, showLocalNotification } = useNotifications()
@@ -945,17 +945,20 @@ const overviewData = useMemo(() => {
 }, [overviewMode, deudasInstant, gastosFijosInstant, gastosInstant, suscripcionesInstant])
 
 // 💳 CALCULAR TOTAL PAGADO A TARJETAS DE CRÉDITO ESTE MES
-const deudaPagadaEsteMes = useMemo(() => {
-  // Filtrar solo los pagos del mes actual
-  return pagos
-    .filter(p => {
-      const fechaPago = new Date(p.fecha)
-      return fechaPago.getMonth() === hoy.getMonth() && 
-             fechaPago.getFullYear() === hoy.getFullYear()
-    })
-    // Sumar solo el capital pagado (no intereses)
-    .reduce((sum, p) => sum + Number(p.principal || 0), 0)
+// SET de deudas con pagos este mes
+const deudasPagadasEsteMesSet = useMemo(() => {
+  const pagosDelMes = pagos.filter(p => {
+    const fechaPago = new Date(p.fecha)
+    return fechaPago.getMonth() === hoy.getMonth() && 
+           fechaPago.getFullYear() === hoy.getFullYear()
+  })
+  return new Set(pagosDelMes.map(p => p.deuda_id))
 }, [pagos, hoy])
+
+// FUNCIÓN para verificar si una deuda específica tiene pago este mes
+const deudaPagadaEsteMes = useMemo(() => {
+  return (deudaId) => deudasPagadasEsteMesSet.has(deudaId)
+}, [deudasPagadasEsteMesSet])
 // Estado para toggle entre vista REAL y PROYECTADA
 const [vistaActiva, setVistaActiva] = useState('real') // 'real' o 'proyectado'
 
