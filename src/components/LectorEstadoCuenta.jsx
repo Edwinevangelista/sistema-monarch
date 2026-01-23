@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from "react";
 import {
-  Upload,
   FileText,
   Image as ImageIcon,
   Loader2,
@@ -284,7 +283,7 @@ function parseUniversal(text) {
   console.log("🏦 Parsing con método universal...");
   
   const transactions = [];
-  const year = new Date().getFullYear();
+  
   const lines = text.split('\n');
   
   for (const line of lines) {
