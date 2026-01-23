@@ -1,12 +1,159 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  X, CreditCard, CheckCircle2, Zap, Snowflake, Scale, 
-  AlertTriangle, ChevronDown, ArrowRight, Clock
+  X, CreditCard, CheckCircle2, Zap, Snowflake,
+  AlertTriangle, ChevronDown, ArrowRight, Clock, Lock,
+  Shield, AlertCircle, Calendar, Target, TrendingUp
 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 // ==========================================
-// FUNCIONES DE CÁLCULO FINANCIERO (mejoradas)
+// SISTEMA DE APRENDIZAJE HISTÓRICO
+// ==========================================
+
+const BEHAVIOR_STORAGE_KEY = 'finguide_debt_behavior_profile';
+
+function getStoredBehaviorProfile() {
+  try {
+    const stored = localStorage.getItem(BEHAVIOR_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    console.warn('Error loading behavior profile:', e);
+  }
+  
+  return {
+    disciplineScore: 0.5,
+    paymentReliability: 'unknown',
+    prefersFlexibility: null,
+    resistsAggressivePlans: null,
+    overrideCount: 0,
+    acceptedRecommendations: 0,
+    totalInteractions: 0,
+    history: {
+      plansCreated: 0,
+      plansCompleted: 0,
+      plansAbandoned: 0,
+      paymentOverrides: 0,
+      strategyOverrides: 0,
+      emergencyModeTriggered: 0,
+      warningsIgnored: 0,
+      warningsHeeded: 0
+    },
+    lastUpdated: null
+  };
+}
+
+function saveBehaviorProfile(profile) {
+  try {
+    profile.lastUpdated = new Date().toISOString();
+    localStorage.setItem(BEHAVIOR_STORAGE_KEY, JSON.stringify(profile));
+  } catch (e) {
+    console.warn('Error saving behavior profile:', e);
+  }
+}
+
+function updateBehaviorProfile(action) {
+  const profile = getStoredBehaviorProfile();
+  
+  switch (action) {
+    case 'PLAN_CREATED':
+      profile.history.plansCreated++;
+      profile.totalInteractions++;
+      break;
+      
+    case 'STRATEGY_OVERRIDE':
+      profile.history.strategyOverrides++;
+      profile.overrideCount++;
+      profile.disciplineScore = Math.max(0, profile.disciplineScore - 0.05);
+      break;
+      
+    case 'ACCEPTED_RECOMMENDATION':
+      profile.acceptedRecommendations++;
+      profile.disciplineScore = Math.min(1, profile.disciplineScore + 0.03);
+      break;
+      
+    case 'PAYMENT_REDUCED':
+      profile.history.paymentOverrides++;
+      profile.prefersFlexibility = true;
+      profile.disciplineScore = Math.max(0, profile.disciplineScore - 0.03);
+      break;
+      
+    case 'PAYMENT_INCREASED':
+      profile.prefersFlexibility = false;
+      profile.resistsAggressivePlans = false;
+      profile.disciplineScore = Math.min(1, profile.disciplineScore + 0.05);
+      break;
+      
+    case 'WARNING_IGNORED':
+      profile.history.warningsIgnored++;
+      profile.disciplineScore = Math.max(0, profile.disciplineScore - 0.02);
+      break;
+      
+    case 'WARNING_HEEDED':
+      profile.history.warningsHeeded++;
+      profile.disciplineScore = Math.min(1, profile.disciplineScore + 0.02);
+      break;
+      
+    case 'EMERGENCY_MODE':
+      profile.history.emergencyModeTriggered++;
+      break;
+      
+    case 'PLAN_COMPLETED':
+      profile.history.plansCompleted++;
+      profile.disciplineScore = Math.min(1, profile.disciplineScore + 0.1);
+      profile.paymentReliability = profile.disciplineScore > 0.7 ? 'high' : 
+                                    profile.disciplineScore > 0.4 ? 'medium' : 'low';
+      break;
+      
+    default:
+      break;
+  }
+  
+  if (profile.history.plansCreated > 0) {
+    const completionRate = profile.history.plansCompleted / profile.history.plansCreated;
+    if (completionRate > 0.7) profile.paymentReliability = 'high';
+    else if (completionRate > 0.3) profile.paymentReliability = 'medium';
+    else profile.paymentReliability = 'low';
+  }
+  
+  saveBehaviorProfile(profile);
+  return profile;
+}
+
+function getPersonalizedRecommendations(profile, analysis) {
+  const recommendations = {
+    aggressivenessMultiplier: 1.0,
+    showExtraWarnings: false,
+    allowStrategyChange: true,
+    minPaymentFloor: 0,
+    suggestedCopy: null
+  };
+  
+  if (profile.disciplineScore < 0.4) {
+    recommendations.aggressivenessMultiplier = 0.8;
+    recommendations.showExtraWarnings = true;
+    recommendations.suggestedCopy = 'Esta vez vamos por consistencia, no velocidad.';
+  }
+  
+  if (profile.disciplineScore > 0.7) {
+    recommendations.aggressivenessMultiplier = 1.2;
+    recommendations.suggestedCopy = 'Tus números muestran que puedes ir más rápido.';
+  }
+  
+  if (profile.history.paymentOverrides > 2 && profile.prefersFlexibility) {
+    recommendations.minPaymentFloor = analysis?.capacidadPago * 0.7 || 0;
+    recommendations.showExtraWarnings = true;
+  }
+  
+  if (analysis?.crisisLevel === 'critical') {
+    recommendations.allowStrategyChange = false;
+    recommendations.aggressivenessMultiplier = 1.0;
+  }
+  
+  return recommendations;
+}
+
+// ==========================================
+// FUNCIONES DE CÁLCULO FINANCIERO
 // ==========================================
 
 function analyzeDebtSituation(deudas, kpis = {}) {
@@ -20,37 +167,38 @@ function analyzeDebtSituation(deudas, kpis = {}) {
   const maxInterest = Math.max(...cleanDebts.map(d => d.interes));
   const minBalance = Math.min(...cleanDebts.map(d => d.balance));
   
-  // Calcular interés mensual total
   const monthlyInterestCost = cleanDebts.reduce((sum, d) => {
     return sum + (d.balance * (d.interes / 100) / 12);
   }, 0);
   
-  // Identificar deudas problemáticas
   const highInterestDebts = cleanDebts.filter(d => d.interes > 20);
   const interestConcentration = highInterestDebts.length > 0 
     ? (highInterestDebts.reduce((sum, d) => sum + (d.balance * d.interes / 100 / 12), 0) / monthlyInterestCost) * 100
     : 0;
   
-  // Disponible para deudas
   const disponible = Math.max(0, (kpis.saldo || 0) + ((kpis.totalIngresos || 0) - (kpis.totalGastos || 0)));
   const capacidadPago = disponible * 0.5;
   
-  // Determinar nivel de crisis
   let crisisLevel = 'stable';
   let crisisMessage = '';
+  let isEmergencyMode = false;
   
   if (totalMinPayments > disponible) {
     crisisLevel = 'critical';
-    crisisMessage = 'Tus pagos mínimos superan tu disponible. Situación de emergencia.';
+    crisisMessage = 'Tus pagos mínimos superan tu disponible. MODO EMERGENCIA activado.';
+    isEmergencyMode = true;
   } else if (totalDebt > (kpis.totalIngresos || 1) * 12) {
     crisisLevel = 'high';
     crisisMessage = 'Tu deuda supera un año de ingresos. Requiere acción inmediata.';
   } else if (avgInterest > 25) {
     crisisLevel = 'warning';
     crisisMessage = 'Tus tasas de interés son muy altas. Estás perdiendo dinero cada mes.';
-  } else {
+  } else if (totalDebt < (kpis.totalIngresos || 1) * 3 && avgInterest < 20) {
     crisisLevel = 'manageable';
     crisisMessage = 'Tu situación es manejable con disciplina.';
+  } else {
+    crisisLevel = 'stable';
+    crisisMessage = 'Situación estable. Optimicemos tu camino a la libertad.';
   }
   
   return {
@@ -67,43 +215,50 @@ function analyzeDebtSituation(deudas, kpis = {}) {
     capacidadPago,
     crisisLevel,
     crisisMessage,
+    isEmergencyMode,
     debtCount: cleanDebts.length
   };
 }
 
-function determineOptimalStrategy(analysis) {
+function determineOptimalStrategy(analysis, behaviorProfile = null) {
   if (!analysis) return { strategy: 'avalancha', confidence: 0, reason: '' };
   
-  const { highInterestDebts, cleanDebts, avgInterest, minBalance, totalDebt } = analysis;
+  const { highInterestDebts, cleanDebts, avgInterest, minBalance, totalDebt, isEmergencyMode } = analysis;
   
-  // Lógica de decisión autoritativa
+  if (isEmergencyMode) {
+    return {
+      strategy: 'avalancha',
+      confidence: 100,
+      reason: 'En modo emergencia, la matemática manda. Cada peso cuenta.',
+      alternativeReason: 'Las alternativas están bloqueadas en modo emergencia.',
+      locked: true,
+      lockReason: 'Modo Emergencia: El sistema ha determinado la única estrategia viable.'
+    };
+  }
+  
   let strategy = 'avalancha';
   let confidence = 85;
   let reason = '';
   let alternativeReason = '';
   
-  // Si hay deudas con interés muy alto (>25%), definitivamente Avalancha
   if (highInterestDebts.length > 0 && avgInterest > 20) {
     strategy = 'avalancha';
     confidence = 95;
     reason = `Tienes ${highInterestDebts.length} deuda(s) con interés superior al 20%. Matemáticamente, atacar el interés primero te ahorra más dinero.`;
     alternativeReason = 'Bola de Nieve te daría victorias rápidas pero pagarías más intereses a largo plazo.';
   }
-  // Si la deuda más pequeña es menos del 10% del total, Bola de Nieve tiene sentido psicológico
   else if (minBalance < totalDebt * 0.10 && cleanDebts.length >= 3) {
     strategy = 'bola_nieve';
     confidence = 80;
     reason = `Tu deuda más pequeña ($${minBalance.toLocaleString()}) se puede eliminar rápido. Las victorias tempranas mantienen la motivación.`;
     alternativeReason = 'Avalancha ahorraría algo de interés pero tardarías más en ver progreso tangible.';
   }
-  // Si los intereses son similares (diferencia < 5%), Bola de Nieve
   else if (Math.max(...cleanDebts.map(d => d.interes)) - Math.min(...cleanDebts.map(d => d.interes)) < 5) {
     strategy = 'bola_nieve';
     confidence = 75;
     reason = 'Tus tasas de interés son similares. En este caso, la motivación psicológica de victorias rápidas es más valiosa.';
     alternativeReason = 'Avalancha tendría un impacto marginal en este escenario.';
   }
-  // Default: Avalancha (matemáticamente óptimo)
   else {
     strategy = 'avalancha';
     confidence = 85;
@@ -111,39 +266,60 @@ function determineOptimalStrategy(analysis) {
     alternativeReason = 'Bola de Nieve es válida si necesitas motivación extra, pero pagarás más a largo plazo.';
   }
   
-  return { strategy, confidence, reason, alternativeReason };
+  if (behaviorProfile && behaviorProfile.disciplineScore < 0.4 && strategy === 'avalancha') {
+    if (minBalance < totalDebt * 0.15) {
+      strategy = 'bola_nieve';
+      confidence = 70;
+      reason = 'Basado en tu historial, las victorias rápidas te ayudarán a mantener el impulso.';
+    }
+  }
+  
+  return { strategy, confidence, reason, alternativeReason, locked: false };
 }
 
-function generateStructuredPlan(analysis, strategy, customPayment = null) {
+function orderDebtsByStrategy(cleanDebts, strategy) {
+  const debtsCopy = [...cleanDebts];
+  
+  if (strategy === 'avalancha') {
+    return debtsCopy.sort((a, b) => b.interes - a.interes);
+  } else if (strategy === 'bola_nieve') {
+    return debtsCopy.sort((a, b) => a.balance - b.balance);
+  } else {
+    const avgInterest = debtsCopy.reduce((sum, d) => sum + d.interes, 0) / debtsCopy.length;
+    const avgBalance = debtsCopy.reduce((sum, d) => sum + d.balance, 0) / debtsCopy.length;
+    
+    return debtsCopy.sort((a, b) => {
+      const scoreA = (a.interes / avgInterest) + (1 - a.balance / avgBalance);
+      const scoreB = (b.interes / avgInterest) + (1 - b.balance / avgBalance);
+      return scoreB - scoreA;
+    });
+  }
+}
+
+function calculatePaymentOptions(analysis, behaviorProfile = null) {
   if (!analysis) return null;
   
-  const { cleanDebts, capacidadPago, totalMinPayments, disponible } = analysis;
+  const { totalMinPayments, capacidadPago, disponible, isEmergencyMode } = analysis;
+  const personalizedRecs = behaviorProfile ? 
+    getPersonalizedRecommendations(behaviorProfile, analysis) : 
+    { aggressivenessMultiplier: 1.0, minPaymentFloor: 0 };
   
-  // Ordenar deudas según estrategia
-  const orderedDebts = orderDebtsByStrategy([...cleanDebts], strategy);
-  
-  // Calcular pago mensual
   const minRequired = totalMinPayments;
-  const recommended = Math.max(minRequired, capacidadPago);
-  const aggressive = Math.max(minRequired, disponible * 0.7);
+  const baseRecommended = Math.max(minRequired * 1.5, capacidadPago);
+  const recommended = Math.round(baseRecommended * personalizedRecs.aggressivenessMultiplier);
+  const aggressive = Math.round(Math.max(minRequired, disponible * 0.7));
+  const conservative = Math.round(Math.max(minRequired * 1.1, capacidadPago * 0.7));
   
-  const monthlyPayment = customPayment || recommended;
-  
-  // Simular plan
-  const simulation = simulateFullPlan(orderedDebts, monthlyPayment);
-  
-  // Generar pasos estructurados
-  const steps = generateActionSteps(orderedDebts, analysis, monthlyPayment);
+  const minAllowed = isEmergencyMode ? recommended : 
+    Math.max(minRequired, personalizedRecs.minPaymentFloor);
   
   return {
-    orderedDebts,
-    monthlyPayment: Math.round(monthlyPayment),
     minRequired: Math.round(minRequired),
-    recommended: Math.round(recommended),
-    aggressive: Math.round(aggressive),
-    simulation,
-    steps,
-    timeline: simulation.schedule
+    conservative,
+    recommended,
+    aggressive,
+    minAllowed,
+    isEmergencyMode
   };
 }
 
@@ -151,20 +327,18 @@ function simulateFullPlan(orderedDebts, monthlyPayment) {
   const schedule = [];
   let month = 0;
   let totalInterest = 0;
-  let remainingDebts = orderedDebts.map(d => ({ ...d }));
+  let remainingDebts = orderedDebts.map(d => ({ ...d, originalBalance: d.balance }));
   
   while (remainingDebts.length > 0 && month < 360) {
     month++;
     let availableThisMonth = monthlyPayment;
     
-    // Aplicar intereses
     for (const debt of remainingDebts) {
       const monthlyInterest = (debt.balance * (debt.interes / 100)) / 12;
       debt.balance += monthlyInterest;
       totalInterest += monthlyInterest;
     }
     
-    // Pagar deudas
     for (let i = 0; i < remainingDebts.length; i++) {
       const debt = remainingDebts[i];
       const payment = i === 0 
@@ -179,7 +353,7 @@ function simulateFullPlan(orderedDebts, monthlyPayment) {
           month,
           debtId: debt.id,
           debtName: debt.nombre,
-          originalBalance: debt.originalBalance || debt.balance,
+          originalBalance: debt.originalBalance,
           paidOff: true
         });
       }
@@ -198,40 +372,61 @@ function simulateFullPlan(orderedDebts, monthlyPayment) {
   };
 }
 
-function generateActionSteps(orderedDebts, analysis, monthlyPayment) {
+function buildActionSteps(orderedDebts, analysis, monthlyPayment) {
   const steps = [];
   
-  // PASO 1: CONTENCIÓN
+  const contentionActions = [
+    {
+      id: 'freeze_cards',
+      text: 'Congela el uso de tarjetas con deuda',
+      detail: 'No uses tarjetas que tengan saldo. Cada compra nueva aumenta tu deuda.',
+      critical: analysis.isEmergencyMode,
+      immediate: true
+    },
+    {
+      id: 'min_payments',
+      text: 'Asegura todos los pagos mínimos',
+      detail: `Total de mínimos: $${analysis.totalMinPayments.toLocaleString()}/mes`,
+      critical: true,
+      immediate: true
+    }
+  ];
+  
+  if (!analysis.isEmergencyMode) {
+    contentionActions.push({
+      id: 'emergency_fund',
+      text: 'Mantén $500-1000 de emergencia',
+      detail: 'Sin colchón, cualquier imprevisto te regresa a la deuda.',
+      critical: false,
+      immediate: false
+    });
+  } else {
+    contentionActions.unshift({
+      id: 'emergency_mode',
+      text: '⚠️ MODO EMERGENCIA: Cortar todo gasto no esencial',
+      detail: 'Ahora no optimizamos. Evitamos colapso financiero.',
+      critical: true,
+      immediate: true
+    });
+  }
+  
   steps.push({
     phase: 'contention',
     title: '🔒 Contención',
-    subtitle: 'Detener el sangrado',
-    description: 'Antes de atacar, hay que dejar de empeorar la situación.',
-    actions: [
-      {
-        id: 'freeze_cards',
-        text: 'Congela el uso de tarjetas con deuda',
-        detail: 'No uses tarjetas que tengan saldo. Cada compra nueva aumenta tu deuda.',
-        critical: analysis.crisisLevel === 'critical'
-      },
-      {
-        id: 'min_payments',
-        text: 'Asegura todos los pagos mínimos',
-        detail: `Total de mínimos: $${analysis.totalMinPayments.toLocaleString()}/mes`,
-        critical: true
-      },
-      {
-        id: 'emergency_fund',
-        text: 'Mantén $500-1000 de emergencia',
-        detail: 'Sin colchón, cualquier imprevisto te regresa a la deuda.',
-        critical: false
-      }
-    ],
-    status: 'pending'
+    subtitle: analysis.isEmergencyMode ? 'MODO EMERGENCIA' : 'Detener el sangrado',
+    description: analysis.isEmergencyMode 
+      ? 'Situación crítica. Estas acciones son OBLIGATORIAS esta semana.'
+      : 'Antes de atacar, hay que dejar de empeorar la situación.',
+    actions: contentionActions,
+    status: 'pending',
+    isEmergency: analysis.isEmergencyMode
   });
   
-  // PASO 2: ATAQUE PRIMARIO
   const targetDebt = orderedDebts[0];
+  const extraPayment = Math.max(0, monthlyPayment - analysis.totalMinPayments);
+  const totalToTarget = extraPayment + targetDebt.pagoMinimo;
+  const estimatedMonths = totalToTarget > 0 ? Math.ceil(targetDebt.balance / totalToTarget) : 999;
+  
   steps.push({
     phase: 'attack',
     title: '🎯 Ataque Principal',
@@ -239,21 +434,22 @@ function generateActionSteps(orderedDebts, analysis, monthlyPayment) {
     description: 'Esta es la deuda que debes eliminar primero. Todo el dinero extra va aquí.',
     targetDebt: {
       ...targetDebt,
-      extraPayment: Math.round(monthlyPayment - analysis.totalMinPayments),
-      estimatedMonths: Math.ceil(targetDebt.balance / (monthlyPayment - analysis.totalMinPayments + targetDebt.pagoMinimo))
+      extraPayment,
+      totalPayment: totalToTarget,
+      estimatedMonths
     },
     actions: [
       {
         id: 'extra_payment',
-        text: `Paga $${Math.round(monthlyPayment - analysis.totalMinPayments + targetDebt.pagoMinimo).toLocaleString()} a ${targetDebt.nombre}`,
-        detail: `Mínimo ($${targetDebt.pagoMinimo}) + Extra ($${Math.round(monthlyPayment - analysis.totalMinPayments).toLocaleString()})`,
-        critical: true
+        text: `Paga $${totalToTarget.toLocaleString()} a ${targetDebt.nombre}`,
+        detail: `Mínimo ($${targetDebt.pagoMinimo.toLocaleString()}) + Extra ($${extraPayment.toLocaleString()})`,
+        critical: true,
+        immediate: false
       }
     ],
     status: 'pending'
   });
   
-  // PASO 3: DEFENSA
   const otherDebts = orderedDebts.slice(1);
   if (otherDebts.length > 0) {
     steps.push({
@@ -263,24 +459,25 @@ function generateActionSteps(orderedDebts, analysis, monthlyPayment) {
       description: 'Mientras atacas la primera, las demás solo reciben el pago mínimo.',
       actions: otherDebts.map(debt => ({
         id: `min_${debt.id}`,
-        text: `${debt.nombre}: Pago mínimo $${debt.pagoMinimo.toLocaleString()}`,
+        text: `${debt.nombre}: Solo pago mínimo $${debt.pagoMinimo.toLocaleString()}`,
         detail: `Saldo: $${debt.balance.toLocaleString()} | Interés: ${debt.interes}%`,
-        critical: false
+        critical: false,
+        immediate: false
       })),
       status: 'pending'
     });
   }
   
-  // PASO 4: LIBERACIÓN (efecto cascada)
   steps.push({
     phase: 'liberation',
     title: '🚀 Liberación',
-    subtitle: 'El efecto bola de nieve',
-    description: 'Cuando elimines la primera deuda, ese dinero se redirige automáticamente a la siguiente.',
+    subtitle: 'El efecto cascada',
+    description: 'Cuando elimines la primera deuda, ese dinero ($' + totalToTarget.toLocaleString() + ') se redirige automáticamente a la siguiente.',
     cascade: orderedDebts.map((debt, idx) => ({
       order: idx + 1,
       name: debt.nombre,
-      balance: debt.balance
+      balance: debt.balance,
+      interes: debt.interes
     })),
     status: 'future'
   });
@@ -288,71 +485,134 @@ function generateActionSteps(orderedDebts, analysis, monthlyPayment) {
   return steps;
 }
 
-function calculatePaymentImpact(analysis, currentPayment, newPayment) {
+function generateImmediateActions(plan, analysis) {
+  const actions = {
+    thisWeek: [],
+    thisMonth: [],
+    habits: []
+  };
+  
+  if (analysis.isEmergencyMode) {
+    actions.thisWeek.push({
+      id: 'cut_expenses',
+      text: 'Identificar y cortar 3 gastos no esenciales',
+      priority: 'critical'
+    });
+  }
+  
+  actions.thisWeek.push({
+    id: 'freeze_first',
+    text: `Congelar/guardar tarjeta: ${plan.orderedDebts[0]?.nombre || 'principal'}`,
+    priority: 'high'
+  });
+  
+  if (plan.orderedDebts[0]) {
+    actions.thisWeek.push({
+      id: 'setup_payment',
+      text: `Programar pago de $${plan.monthlyPayment.toLocaleString()} para el día 1`,
+      priority: 'high'
+    });
+  }
+  
+  actions.thisMonth.push({
+    id: 'first_extra_payment',
+    text: `Hacer primer pago extra a ${plan.orderedDebts[0]?.nombre || 'deuda principal'}`,
+    priority: 'high'
+  });
+  
+  actions.thisMonth.push({
+    id: 'review_subscriptions',
+    text: 'Revisar y cancelar suscripciones innecesarias',
+    priority: 'medium'
+  });
+  
+  if (!analysis.isEmergencyMode) {
+    actions.thisMonth.push({
+      id: 'emergency_fund',
+      text: 'Apartar $200-500 para fondo de emergencia',
+      priority: 'medium'
+    });
+  }
+  
+  actions.habits.push({
+    id: 'no_new_debt',
+    text: 'NO usar tarjetas de crédito para compras nuevas',
+    frequency: 'diario'
+  });
+  
+  actions.habits.push({
+    id: 'check_balance',
+    text: 'Revisar saldos cada domingo',
+    frequency: 'semanal'
+  });
+  
+  actions.habits.push({
+    id: 'track_progress',
+    text: 'Registrar pagos realizados en la app',
+    frequency: 'mensual'
+  });
+  
+  return actions;
+}
+
+function calculatePaymentImpact(analysis, recommendedPayment, newPayment, paymentOptions) {
   if (!analysis) return null;
   
-  const currentPlan = simulateFullPlan([...analysis.cleanDebts], currentPayment);
-  const newPlan = simulateFullPlan([...analysis.cleanDebts], newPayment);
+  const { isEmergencyMode } = analysis;
+  const orderedDebts = orderDebtsByStrategy([...analysis.cleanDebts], 'avalancha');
   
-  const monthsDiff = currentPlan.months - newPlan.months;
-  const interestDiff = currentPlan.totalInterest - newPlan.totalInterest;
+  const recommendedPlan = simulateFullPlan(orderedDebts, recommendedPayment);
+  const newPlan = simulateFullPlan(orderedDebts, newPayment);
+  
+  const monthsDiff = newPlan.months - recommendedPlan.months;
+  const interestDiff = newPlan.totalInterest - recommendedPlan.totalInterest;
   
   let warningLevel = 'safe';
   let warningMessage = '';
+  let blocked = false;
   
-  if (newPayment < analysis.totalMinPayments) {
+  if (newPayment < paymentOptions.minRequired) {
     warningLevel = 'danger';
     warningMessage = '⛔ Este monto no cubre los pagos mínimos. Acumularás más deuda.';
-  } else if (newPayment < analysis.totalMinPayments * 1.1) {
+    blocked = true;
+  } else if (isEmergencyMode && newPayment < paymentOptions.recommended) {
+    warningLevel = 'blocked';
+    warningMessage = '🔒 En Modo Emergencia no puedes reducir el pago recomendado.';
+    blocked = true;
+  } else if (newPayment < paymentOptions.minRequired * 1.1) {
     warningLevel = 'critical';
     warningMessage = '🚨 Solo pagas mínimos. La deuda tardará décadas en desaparecer.';
-  } else if (newPayment < analysis.capacidadPago * 0.5) {
+  } else if (newPayment < recommendedPayment * 0.8) {
     warningLevel = 'warning';
-    warningMessage = `⚠️ Pago bajo. Esto alarga el plan ${Math.abs(monthsDiff)} meses y cuesta $${Math.abs(interestDiff).toLocaleString()} extra en intereses.`;
+    warningMessage = `⚠️ Esto alarga el plan ${monthsDiff} meses y cuesta $${interestDiff.toLocaleString()} extra en intereses.`;
+  } else if (newPayment > recommendedPayment) {
+    warningLevel = 'excellent';
+    warningMessage = `🚀 ¡Excelente! Ahorras ${Math.abs(monthsDiff)} meses y $${Math.abs(interestDiff).toLocaleString()} en intereses.`;
   } else {
     warningLevel = 'safe';
     warningMessage = '✅ Pago dentro del rango saludable.';
   }
   
   return {
-    currentMonths: currentPlan.months,
+    recommendedMonths: recommendedPlan.months,
     newMonths: newPlan.months,
     monthsDiff,
-    currentInterest: currentPlan.totalInterest,
+    recommendedInterest: recommendedPlan.totalInterest,
     newInterest: newPlan.totalInterest,
     interestDiff,
     warningLevel,
-    warningMessage
+    warningMessage,
+    blocked
   };
 }
 
 function normalizeDebt(deuda) {
   const balance = Number(deuda.balance || deuda.monto || deuda.amount || deuda.saldo || 0);
-  const interes = Number(deuda.interes || deuda.interest || deuda.tasa || deuda.rate || deuda.apr * 100 || 0);
+  const interes = Number(deuda.interes || deuda.interest || deuda.tasa || deuda.rate || (deuda.apr ? deuda.apr * 100 : 0) || 0);
   const pagoMinimo = Number(deuda.pagoMinimo || deuda.pago_minimo || deuda.pago_min || deuda.minPayment || Math.max(25, balance * 0.03));
   const nombre = deuda.nombre || deuda.cuenta || deuda.name || deuda.descripcion || 'Deuda sin nombre';
   
   return { ...deuda, balance, interes, pagoMinimo, nombre, originalBalance: balance };
-}
-
-function orderDebtsByStrategy(cleanDebts, strategy) {
-  const debtsCopy = [...cleanDebts];
-  
-  if (strategy === 'avalancha') {
-    return debtsCopy.sort((a, b) => b.interes - a.interes);
-  } else if (strategy === 'bola_nieve') {
-    return debtsCopy.sort((a, b) => a.balance - b.balance);
-  } else {
-    // Balanceada
-    const avgInterest = debtsCopy.reduce((sum, d) => sum + d.interes, 0) / debtsCopy.length;
-    const avgBalance = debtsCopy.reduce((sum, d) => sum + d.balance, 0) / debtsCopy.length;
-    
-    return debtsCopy.sort((a, b) => {
-      const scoreA = (a.interes / avgInterest) + (1 - a.balance / avgBalance);
-      const scoreB = (b.interes / avgInterest) + (1 - b.balance / avgBalance);
-      return scoreB - scoreA;
-    });
-  }
 }
 
 function getStrategyInfo(strategy) {
@@ -372,14 +632,6 @@ function getStrategyInfo(strategy) {
       icon: Snowflake,
       emoji: '⛄',
       color: 'from-blue-500 to-cyan-600'
-    },
-    balanceada: {
-      name: 'Balanceada',
-      description: 'Combina interés alto y saldo bajo.',
-      benefit: 'Un punto medio entre ahorro e impacto psicológico.',
-      icon: Scale,
-      emoji: '⚖️',
-      color: 'from-purple-500 to-indigo-600'
     }
   };
   
@@ -391,66 +643,110 @@ function getStrategyInfo(strategy) {
 // ==========================================
 
 export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPlanGuardado }) {
-  const [phase, setPhase] = useState(1); // 1-6 fases
+  const [phase, setPhase] = useState(1);
   const [analysis, setAnalysis] = useState(null);
   const [optimalStrategy, setOptimalStrategy] = useState(null);
   const [selectedStrategy, setSelectedStrategy] = useState(null);
+  const [paymentOptions, setPaymentOptions] = useState(null);
   const [customPayment, setCustomPayment] = useState(null);
   const [plan, setPlan] = useState(null);
+  const [immediateActions, setImmediateActions] = useState(null);
   const [showConfirmacion, setShowConfirmacion] = useState(false);
   const [hasOverridden, setHasOverridden] = useState(false);
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [simulatedPayment, setSimulatedPayment] = useState(null);
+  const [behaviorProfile, setBehaviorProfile] = useState(null);
   
   const { addPlan } = usePlanesGuardados();
 
-  // Analizar deudas al montar
+  useEffect(() => {
+    const profile = getStoredBehaviorProfile();
+    setBehaviorProfile(profile);
+  }, []);
+
   useEffect(() => {
     if (deudas && deudas.length > 0) {
       const situationAnalysis = analyzeDebtSituation(deudas, kpis);
       setAnalysis(situationAnalysis);
       
       if (situationAnalysis) {
-        const optimal = determineOptimalStrategy(situationAnalysis);
+        const profile = getStoredBehaviorProfile();
+        const optimal = determineOptimalStrategy(situationAnalysis, profile);
         setOptimalStrategy(optimal);
         setSelectedStrategy(optimal.strategy);
-        setCustomPayment(situationAnalysis.capacidadPago);
+        
+        const options = calculatePaymentOptions(situationAnalysis, profile);
+        setPaymentOptions(options);
+        setCustomPayment(options.recommended);
+        setSimulatedPayment(options.recommended);
+        
+        if (situationAnalysis.isEmergencyMode) {
+          updateBehaviorProfile('EMERGENCY_MODE');
+        }
       }
     }
   }, [deudas, kpis]);
 
-  // Generar plan cuando cambia estrategia o pago
   useEffect(() => {
-    if (analysis && selectedStrategy) {
-      const newPlan = generateStructuredPlan(analysis, selectedStrategy, customPayment);
+    if (analysis && selectedStrategy && customPayment && !isSimulationMode) {
+      const orderedDebts = orderDebtsByStrategy([...analysis.cleanDebts], selectedStrategy);
+      const simulation = simulateFullPlan(orderedDebts, customPayment);
+      const steps = buildActionSteps(orderedDebts, analysis, customPayment);
+      
+      const newPlan = {
+        orderedDebts,
+        monthlyPayment: customPayment,
+        simulation,
+        steps,
+        timeline: simulation.schedule,
+        sealedAt: null,
+        reviewDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      };
+      
       setPlan(newPlan);
+      setImmediateActions(generateImmediateActions(newPlan, analysis));
     }
-  }, [analysis, selectedStrategy, customPayment]);
+  }, [analysis, selectedStrategy, customPayment, isSimulationMode]);
 
-  // Calcular impacto del ajuste de pago
-  const paymentImpact = useMemo(() => {
-    if (!analysis || !plan) return null;
-    return calculatePaymentImpact(analysis, plan.recommended, customPayment);
-  }, [analysis, plan, customPayment]);
+  const simulationImpact = useMemo(() => {
+    if (!analysis || !paymentOptions || !simulatedPayment) return null;
+    return calculatePaymentImpact(analysis, paymentOptions.recommended, simulatedPayment, paymentOptions);
+  }, [analysis, paymentOptions, simulatedPayment]);
 
-  // Sin deudas
-  if (!deudas || deudas.length === 0) {
-    return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-          <div className="text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">¡Sin deudas!</h3>
-            <p className="text-gray-400 mb-4">No tienes deudas registradas. ¡Excelente!</p>
-            <button onClick={onClose} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleStrategyChange = useCallback((newStrategy) => {
+    if (optimalStrategy?.locked) return;
+    
+    if (newStrategy !== optimalStrategy?.strategy) {
+      setHasOverridden(true);
+      updateBehaviorProfile('STRATEGY_OVERRIDE');
+    }
+    setSelectedStrategy(newStrategy);
+  }, [optimalStrategy]);
+
+  const handleAdoptSimulatedPayment = useCallback(() => {
+    if (simulationImpact?.blocked) return;
+    
+    if (simulatedPayment < paymentOptions?.recommended) {
+      updateBehaviorProfile('PAYMENT_REDUCED');
+      updateBehaviorProfile('WARNING_IGNORED');
+    } else if (simulatedPayment > paymentOptions?.recommended) {
+      updateBehaviorProfile('PAYMENT_INCREASED');
+    } else {
+      updateBehaviorProfile('ACCEPTED_RECOMMENDATION');
+    }
+    
+    setCustomPayment(simulatedPayment);
+    setIsSimulationMode(false);
+  }, [simulatedPayment, paymentOptions, simulationImpact]);
 
   const handleSavePlan = async (nombre) => {
     try {
+      updateBehaviorProfile('PLAN_CREATED');
+      
+      if (!hasOverridden && customPayment === paymentOptions?.recommended) {
+        updateBehaviorProfile('ACCEPTED_RECOMMENDATION');
+      }
+      
       await addPlan({
         tipo: 'deudas',
         nombre: nombre,
@@ -459,7 +755,10 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
           strategy: selectedStrategy,
           monthlyPayment: customPayment,
           plan: plan,
-          analysis: analysis
+          analysis: analysis,
+          immediateActions: immediateActions,
+          sealedAt: new Date().toISOString(),
+          reviewDate: plan.reviewDate.toISOString()
         },
         meta_principal: `Eliminar $${analysis.totalDebt.toLocaleString()} en deudas`,
         monto_objetivo: analysis.totalDebt,
@@ -481,21 +780,41 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
     }
   };
 
+  if (!deudas || deudas.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="text-center">
+            <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">¡Sin deudas!</h3>
+            <p className="text-gray-400 mb-4">No tienes deudas registradas. ¡Excelente!</p>
+            <button onClick={onClose} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       <div className="bg-gray-900 w-full md:max-w-4xl md:h-auto md:max-h-[90vh] h-[95vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden">
         
-        {/* Header Dinámico */}
-        <Header phase={phase} analysis={analysis} onClose={onClose} />
+        <Header 
+          phase={phase} 
+          analysis={analysis} 
+          onClose={onClose} 
+          isEmergencyMode={analysis?.isEmergencyMode}
+        />
         
-        {/* Progress Bar */}
         <ProgressBar phase={phase} />
         
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {phase === 1 && analysis && (
             <Phase1Confrontation 
-              analysis={analysis} 
+              analysis={analysis}
+              behaviorProfile={behaviorProfile}
               onNext={() => setPhase(2)} 
             />
           )}
@@ -511,10 +830,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
             <Phase3Strategy 
               optimalStrategy={optimalStrategy}
               selectedStrategy={selectedStrategy}
-              onSelectStrategy={(s) => {
-                setSelectedStrategy(s);
-                if (s !== optimalStrategy.strategy) setHasOverridden(true);
-              }}
+              onSelectStrategy={handleStrategyChange}
               hasOverridden={hasOverridden}
               onNext={() => setPhase(4)}
               onBack={() => setPhase(2)}
@@ -525,29 +841,34 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
             <Phase4Plan 
               plan={plan}
               analysis={analysis}
-              strategy={selectedStrategy}
               onNext={() => setPhase(5)}
               onBack={() => setPhase(3)}
             />
           )}
           
-          {phase === 5 && plan && (
+          {phase === 5 && plan && paymentOptions && (
             <Phase5Adjustment
               plan={plan}
               analysis={analysis}
+              paymentOptions={paymentOptions}
               customPayment={customPayment}
-              setCustomPayment={setCustomPayment}
-              paymentImpact={paymentImpact}
+              isSimulationMode={isSimulationMode}
+              setIsSimulationMode={setIsSimulationMode}
+              simulatedPayment={simulatedPayment}
+              setSimulatedPayment={setSimulatedPayment}
+              simulationImpact={simulationImpact}
+              onAdoptSimulation={handleAdoptSimulatedPayment}
               onNext={() => setPhase(6)}
               onBack={() => setPhase(4)}
             />
           )}
           
-          {phase === 6 && plan && (
+          {phase === 6 && plan && immediateActions && (
             <Phase6Commitment
               plan={plan}
               analysis={analysis}
               strategy={selectedStrategy}
+              immediateActions={immediateActions}
               onSave={() => setShowConfirmacion(true)}
               onBack={() => setPhase(5)}
             />
@@ -555,7 +876,6 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
         </div>
       </div>
 
-      {/* Modal Confirmación */}
       {showConfirmacion && (
         <ConfirmModal
           plan={plan}
@@ -569,10 +889,10 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
 }
 
 // ==========================================
-// COMPONENTES DE CADA FASE
+// COMPONENTES DE UI
 // ==========================================
 
-function Header({ phase, analysis, onClose }) {
+function Header({ phase, onClose, isEmergencyMode }) {
   const titles = {
     1: { title: 'La Verdad', subtitle: 'Tu situación actual' },
     2: { title: 'Educación', subtitle: 'Cómo funcionan las deudas' },
@@ -585,7 +905,7 @@ function Header({ phase, analysis, onClose }) {
   const { title, subtitle } = titles[phase] || titles[1];
   
   const bgColors = {
-    1: 'from-red-900/80 to-rose-900/80',
+    1: isEmergencyMode ? 'from-red-800 to-red-900' : 'from-red-900/80 to-rose-900/80',
     2: 'from-blue-900/80 to-indigo-900/80',
     3: 'from-purple-900/80 to-violet-900/80',
     4: 'from-emerald-900/80 to-teal-900/80',
@@ -596,11 +916,22 @@ function Header({ phase, analysis, onClose }) {
   return (
     <div className={`bg-gradient-to-r ${bgColors[phase]} backdrop-blur-md p-4 md:p-6 border-b border-white/10 flex items-center justify-between shrink-0`}>
       <div className="flex items-center gap-3">
-        <div className="bg-white/10 p-2 rounded-lg border border-white/20">
-          <CreditCard className="w-6 h-6 md:w-8 md:h-8 text-white" />
+        <div className={`p-2 rounded-lg border ${isEmergencyMode ? 'bg-red-500/30 border-red-400' : 'bg-white/10 border-white/20'}`}>
+          {isEmergencyMode ? (
+            <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-300" />
+          ) : (
+            <CreditCard className="w-6 h-6 md:w-8 md:h-8 text-white" />
+          )}
         </div>
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl md:text-2xl font-bold text-white">{title}</h2>
+            {isEmergencyMode && (
+              <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                EMERGENCIA
+              </span>
+            )}
+          </div>
           <p className="text-white/70 text-xs md:text-sm">{subtitle}</p>
         </div>
       </div>
@@ -625,7 +956,7 @@ function ProgressBar({ phase }) {
     <div className="flex items-center justify-between px-4 py-3 bg-gray-900/50 border-b border-white/5 overflow-x-auto">
       {phases.map((p, idx) => (
         <div key={p.num} className="flex items-center">
-          <div className={`flex flex-col items-center ${idx > 0 ? 'ml-2' : ''}`}>
+          <div className="flex flex-col items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
               phase === p.num 
                 ? 'bg-white text-gray-900 scale-110' 
@@ -648,24 +979,54 @@ function ProgressBar({ phase }) {
   );
 }
 
-// FASE 1: CONFRONTACIÓN
-function Phase1Confrontation({ analysis, onNext }) {
+function Phase1Confrontation({ analysis, behaviorProfile, onNext }) {
   const { 
     totalDebt, monthlyInterestCost, interestConcentration, 
-    highInterestDebts, crisisLevel, crisisMessage, debtCount 
+    highInterestDebts, crisisLevel, crisisMessage, debtCount, isEmergencyMode 
   } = analysis;
 
   const crisisColors = {
-    critical: 'from-red-500 to-rose-600',
+    critical: 'from-red-600 to-red-700',
     high: 'from-orange-500 to-red-500',
     warning: 'from-yellow-500 to-orange-500',
     manageable: 'from-blue-500 to-indigo-500',
     stable: 'from-green-500 to-emerald-500'
   };
 
+  const getPersonalizedMessage = () => {
+    if (!behaviorProfile || behaviorProfile.totalInteractions === 0) return null;
+    
+    if (behaviorProfile.history.plansAbandoned > behaviorProfile.history.plansCompleted) {
+      return {
+        text: 'Has creado planes antes sin completarlos. Esta vez, vamos paso a paso.',
+        type: 'warning'
+      };
+    }
+    
+    if (behaviorProfile.disciplineScore > 0.7) {
+      return {
+        text: 'Tu historial muestra disciplina. Puedes con un plan agresivo.',
+        type: 'success'
+      };
+    }
+    
+    return null;
+  };
+  
+  const personalizedMessage = getPersonalizedMessage();
+
   return (
     <div className="p-4 md:p-6 space-y-6 animate-in fade-in">
-      {/* Mensaje Principal de Confrontación */}
+      {isEmergencyMode && (
+        <div className="bg-red-600 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+          <AlertTriangle className="w-8 h-8 text-white shrink-0" />
+          <div>
+            <div className="text-white font-bold">MODO EMERGENCIA ACTIVADO</div>
+            <div className="text-red-100 text-sm">El sistema tomará decisiones más estrictas para proteger tu estabilidad.</div>
+          </div>
+        </div>
+      )}
+
       <div className={`bg-gradient-to-r ${crisisColors[crisisLevel]} rounded-2xl p-6 text-center`}>
         <div className="text-5xl mb-4">
           {crisisLevel === 'critical' ? '🚨' : crisisLevel === 'high' ? '⚠️' : crisisLevel === 'warning' ? '📊' : '💪'}
@@ -680,7 +1041,21 @@ function Phase1Confrontation({ analysis, onNext }) {
         </p>
       </div>
 
-      {/* Estadísticas Impactantes */}
+      {personalizedMessage && (
+        <div className={`rounded-xl p-4 border ${
+          personalizedMessage.type === 'warning' 
+            ? 'bg-yellow-500/10 border-yellow-500/30' 
+            : 'bg-green-500/10 border-green-500/30'
+        }`}>
+          <div className="flex items-center gap-2">
+            <TrendingUp className={`w-5 h-5 ${personalizedMessage.type === 'warning' ? 'text-yellow-400' : 'text-green-400'}`} />
+            <span className={personalizedMessage.type === 'warning' ? 'text-yellow-300' : 'text-green-300'}>
+              {personalizedMessage.text}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-center">
           <div className="text-3xl md:text-4xl font-black text-red-400">
@@ -696,7 +1071,6 @@ function Phase1Confrontation({ analysis, onNext }) {
         </div>
       </div>
 
-      {/* Insights Específicos */}
       <div className="space-y-3">
         <h4 className="text-white font-bold flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-yellow-400" />
@@ -726,7 +1100,7 @@ function Phase1Confrontation({ analysis, onNext }) {
                   {highInterestDebts.length} deuda(s) con interés tóxico (+20%)
                 </div>
                 <div className="text-red-300 text-sm">
-                  Estas deudas generan el {interestConcentration.toFixed(0)}% de tus intereses mensuales.
+                  Generan el {interestConcentration.toFixed(0)}% de tus intereses mensuales.
                 </div>
               </div>
             </div>
@@ -738,7 +1112,7 @@ function Phase1Confrontation({ analysis, onNext }) {
             <div className="text-2xl">📅</div>
             <div>
               <div className="text-white font-semibold">
-                En 1 año sin cambios, habrás pagado ~${Math.round(monthlyInterestCost * 12).toLocaleString()} solo en intereses
+                En 1 año sin cambios: ~${Math.round(monthlyInterestCost * 12).toLocaleString()} perdidos en intereses
               </div>
               <div className="text-purple-300 text-sm">
                 Ese dinero podría ser tuyo. Vamos a recuperarlo.
@@ -748,7 +1122,13 @@ function Phase1Confrontation({ analysis, onNext }) {
         </div>
       </div>
 
-      {/* CTA */}
+      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="flex items-center gap-2 text-gray-400 text-xs">
+          <Shield className="w-4 h-4" />
+          <span>Este plan se basa en matemáticas financieras, no motivación.</span>
+        </div>
+      </div>
+
       <button
         onClick={onNext}
         className="w-full bg-gradient-to-r from-white to-gray-200 text-gray-900 py-4 rounded-xl font-bold text-lg hover:from-gray-100 hover:to-white transition-all flex items-center justify-center gap-3 shadow-lg"
@@ -760,7 +1140,6 @@ function Phase1Confrontation({ analysis, onNext }) {
   );
 }
 
-// FASE 2: EDUCACIÓN
 function Phase2Education({ onNext, onBack }) {
   const [activeCard, setActiveCard] = useState(null);
 
@@ -775,16 +1154,16 @@ function Phase2Education({ onNext, onBack }) {
     {
       id: 'methods',
       emoji: '⚔️',
-      title: 'Avalancha vs Bola de Nieve',
-      content: 'Avalancha: Pagas primero la deuda con mayor interés. Matemáticamente óptimo.\n\nBola de Nieve: Pagas primero la deuda más pequeña. Psicológicamente poderoso.',
-      takeaway: 'Ambos funcionan. La mejor es la que puedas mantener.'
+      title: 'Dos estrategias probadas',
+      content: `🏔️ Avalancha: Pagas primero la deuda con mayor interés. Matemáticamente óptimo, ahorras más dinero.\n\n⛄ Bola de Nieve: Pagas primero la deuda más pequeña. Psicológicamente poderoso, victorias rápidas.`,
+      takeaway: 'Ambas funcionan. El sistema elegirá la mejor para TU situación.'
     },
     {
       id: 'mistake',
       emoji: '❌',
-      title: 'El error más común',
-      content: 'Pagar todas las deudas "un poquito extra" se siente bien pero es ineficiente. El dinero extra debe concentrarse en UNA sola deuda mientras las demás reciben el mínimo.',
-      takeaway: 'Enfoque láser > dispersión.'
+      title: 'El error que todos cometen',
+      content: 'Pagar todas las deudas "un poquito extra" se siente bien pero es ineficiente. El dinero extra debe concentrarse en UNA sola deuda mientras las demás reciben solo el mínimo.',
+      takeaway: 'Enfoque láser > dispersión. Una deuda a la vez.'
     }
   ];
 
@@ -795,7 +1174,7 @@ function Phase2Education({ onNext, onBack }) {
           90 segundos que cambiarán tu perspectiva
         </h3>
         <p className="text-gray-400 text-sm">
-          Toca cada tarjeta para entender la mecánica de las deudas
+          Toca cada tarjeta para entender la mecánica
         </p>
       </div>
 
@@ -831,7 +1210,6 @@ function Phase2Education({ onNext, onBack }) {
         ))}
       </div>
 
-      {/* Navegación */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
@@ -851,15 +1229,23 @@ function Phase2Education({ onNext, onBack }) {
   );
 }
 
-// FASE 3: ESTRATEGIA (AUTORITATIVA)
 function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, hasOverridden, onNext, onBack }) {
-  const [showAlternatives, setShowAlternatives] = useState(false);
+  const [showAlternative, setShowAlternative] = useState(false);
   
   const optimal = getStrategyInfo(optimalStrategy.strategy);
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-in fade-in">
-      {/* Recomendación Principal */}
+      {optimalStrategy.locked && (
+        <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+          <Lock className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="text-red-300 font-semibold">Estrategia bloqueada</div>
+            <div className="text-red-200/70 text-sm">{optimalStrategy.lockReason}</div>
+          </div>
+        </div>
+      )}
+
       <div className={`bg-gradient-to-br ${optimal.color} rounded-2xl p-6 text-center relative overflow-hidden`}>
         <div className="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded-full text-xs font-bold text-white">
           {optimalStrategy.confidence}% confianza
@@ -879,7 +1265,6 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
         </div>
       </div>
 
-      {/* Advertencia si cambió */}
       {hasOverridden && selectedStrategy !== optimalStrategy.strategy && (
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
@@ -890,51 +1275,51 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
         </div>
       )}
 
-      {/* Botón para ver alternativas */}
-      <button
-        onClick={() => setShowAlternatives(!showAlternatives)}
-        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-gray-300 text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition"
-      >
-        {showAlternatives ? 'Ocultar' : 'Ver'} otras estrategias
-        <ChevronDown className={`w-4 h-4 transition-transform ${showAlternatives ? 'rotate-180' : ''}`} />
-      </button>
+      {!optimalStrategy.locked && (
+        <>
+          <button
+            onClick={() => setShowAlternative(!showAlternative)}
+            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-gray-300 text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition"
+          >
+            {showAlternative ? 'Ocultar' : 'Ver'} alternativa (no recomendado)
+            <ChevronDown className={`w-4 h-4 transition-transform ${showAlternative ? 'rotate-180' : ''}`} />
+          </button>
 
-      {/* Alternativas */}
-      {showAlternatives && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2">
-          {['avalancha', 'bola_nieve', 'balanceada'].map(strat => {
-            const info = getStrategyInfo(strat);
-            const Icon = info.icon;
-            const isSelected = selectedStrategy === strat;
-            const isOptimal = optimalStrategy.strategy === strat;
-            
-            return (
-              <button
-                key={strat}
-                onClick={() => onSelectStrategy(strat)}
-                className={`p-4 rounded-xl text-left transition-all border-2 ${
-                  isSelected 
-                    ? 'bg-white/10 border-white/50 ring-2 ring-white/20' 
-                    : 'bg-white/5 border-white/10 hover:border-white/30'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Icon className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                  {isOptimal && (
-                    <span className="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full">
-                      Recomendada
-                    </span>
-                  )}
-                </div>
-                <div className={`font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{info.name}</div>
-                <div className="text-gray-500 text-xs mt-1">{info.description}</div>
-              </button>
-            );
-          })}
-        </div>
+          {showAlternative && (
+            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+              {['avalancha', 'bola_nieve'].map(strat => {
+                const info = getStrategyInfo(strat);
+                const isSelected = selectedStrategy === strat;
+                const isOptimal = optimalStrategy.strategy === strat;
+                
+                return (
+                  <button
+                    key={strat}
+                    onClick={() => onSelectStrategy(strat)}
+                    className={`p-4 rounded-xl text-left transition-all border-2 ${
+                      isSelected 
+                        ? 'bg-white/10 border-white/50 ring-2 ring-white/20' 
+                        : 'bg-white/5 border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl">{info.emoji}</span>
+                      {isOptimal && (
+                        <span className="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full">
+                          ✓ Recomendada
+                        </span>
+                      )}
+                    </div>
+                    <div className={`font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{info.name}</div>
+                    <div className="text-gray-500 text-xs mt-1">{info.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Navegación */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
@@ -954,15 +1339,13 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
   );
 }
 
-// FASE 4: PLAN ESTRUCTURADO
-function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
+function Phase4Plan({ plan, analysis, onNext, onBack }) {
   const [expandedStep, setExpandedStep] = useState('attack');
   
   if (!plan) return null;
 
   return (
     <div className="p-4 md:p-6 space-y-4 animate-in fade-in">
-      {/* Resumen Rápido */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="bg-white/5 rounded-xl p-3 text-center">
           <div className="text-xl md:text-2xl font-bold text-white">{plan.simulation.months}</div>
@@ -978,12 +1361,11 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
         </div>
       </div>
 
-      {/* Pasos del Plan */}
       <div className="space-y-3">
         {plan.steps.map((step) => {
           const isExpanded = expandedStep === step.phase;
           const phaseColors = {
-            contention: 'border-red-500/30 bg-red-500/5',
+            contention: step.isEmergency ? 'border-red-500/50 bg-red-500/10' : 'border-red-500/30 bg-red-500/5',
             attack: 'border-orange-500/30 bg-orange-500/5',
             defense: 'border-blue-500/30 bg-blue-500/5',
             liberation: 'border-green-500/30 bg-green-500/5'
@@ -999,7 +1381,10 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
                 className="w-full p-4 flex items-center justify-between text-left"
               >
                 <div>
-                  <div className="text-white font-bold text-sm md:text-base">{step.title}</div>
+                  <div className="text-white font-bold text-sm md:text-base flex items-center gap-2">
+                    {step.title}
+                    {step.isEmergency && <span className="text-red-400 text-xs">(URGENTE)</span>}
+                  </div>
                   <div className="text-gray-400 text-xs">{step.subtitle}</div>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -1022,6 +1407,7 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
                         >
                           <div className="flex items-start gap-2">
                             {action.critical && <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />}
+                            {action.immediate && !action.critical && <Clock className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />}
                             <div>
                               <div className="text-white text-sm font-medium">{action.text}</div>
                               {action.detail && (
@@ -1041,16 +1427,17 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
                         <span className="text-orange-300 font-bold">${step.targetDebt.balance.toLocaleString()}</span>
                       </div>
                       <div className="text-gray-300 text-xs">
-                        Interés: {step.targetDebt.interes}% • Pago sugerido: ${(step.targetDebt.extraPayment + step.targetDebt.pagoMinimo).toLocaleString()}/mes
+                        Interés: {step.targetDebt.interes}% • Pago: ${step.targetDebt.totalPayment.toLocaleString()}/mes
                       </div>
                       <div className="text-green-400 text-xs mt-1">
-                        Estimado: eliminada en ~{step.targetDebt.estimatedMonths} meses
+                        ✓ Estimado: eliminada en ~{step.targetDebt.estimatedMonths} meses
                       </div>
                     </div>
                   )}
                   
                   {step.cascade && (
                     <div className="space-y-2">
+                      <div className="text-xs text-gray-500 uppercase font-bold">Orden de eliminación:</div>
                       {step.cascade.map((debt, idx) => (
                         <div key={idx} className="flex items-center gap-3 text-sm">
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -1058,8 +1445,9 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
                           }`}>
                             {debt.order}
                           </div>
-                          <span className="text-white">{debt.name}</span>
-                          <span className="text-gray-500 ml-auto">${debt.balance.toLocaleString()}</span>
+                          <span className="text-white flex-1">{debt.name}</span>
+                          <span className="text-gray-500">${debt.balance.toLocaleString()}</span>
+                          <span className="text-orange-400 text-xs">{debt.interes}%</span>
                         </div>
                       ))}
                     </div>
@@ -1071,7 +1459,6 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
         })}
       </div>
 
-      {/* Timeline Visual */}
       {plan.timeline && plan.timeline.length > 0 && (
         <div className="bg-white/5 rounded-xl p-4 border border-white/10">
           <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
@@ -1089,7 +1476,6 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
         </div>
       )}
 
-      {/* Navegación */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
@@ -1101,7 +1487,7 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
           onClick={onNext}
           className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 text-white py-3 rounded-xl font-bold hover:from-amber-500 hover:to-orange-500 transition flex items-center justify-center gap-2"
         >
-          Ajustar mi pago
+          Ajustar pago
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>
@@ -1109,101 +1495,120 @@ function Phase4Plan({ plan, analysis, strategy, onNext, onBack }) {
   );
 }
 
-// FASE 5: AJUSTE CON FRICCIÓN
-function Phase5Adjustment({ plan, analysis, customPayment, setCustomPayment, paymentImpact, onNext, onBack }) {
-  const [showSlider, setShowSlider] = useState(false);
-  
-  if (!plan || !analysis) return null;
-
-  const handlePaymentChange = (value) => {
-    setCustomPayment(Number(value));
-  };
+function Phase5Adjustment({ 
+  plan, analysis, paymentOptions, customPayment,
+  isSimulationMode, setIsSimulationMode,
+  simulatedPayment, setSimulatedPayment, simulationImpact,
+  onAdoptSimulation, onNext, onBack 
+}) {
+  if (!plan || !analysis || !paymentOptions) return null;
 
   const warningColors = {
     safe: 'bg-green-500/10 border-green-500/30 text-green-300',
+    excellent: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
     warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300',
     critical: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
-    danger: 'bg-red-500/10 border-red-500/30 text-red-300'
+    danger: 'bg-red-500/10 border-red-500/30 text-red-300',
+    blocked: 'bg-red-500/20 border-red-500/50 text-red-300'
   };
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-in fade-in">
       <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-white mb-2">¿Cuánto puedes pagar al mes?</h3>
+        <h3 className="text-xl font-bold text-white mb-2">
+          {analysis.isEmergencyMode ? '🔒 Pago Fijado (Modo Emergencia)' : '¿Cuánto puedes pagar al mes?'}
+        </h3>
         <p className="text-gray-400 text-sm">
-          El sistema recomienda <span className="text-green-400 font-bold">${plan.recommended.toLocaleString()}</span>.
-          Puedes ajustarlo, pero verás las consecuencias.
+          {analysis.isEmergencyMode 
+            ? 'En modo emergencia, el pago recomendado es obligatorio.'
+            : <>Recomendado: <span className="text-green-400 font-bold">${paymentOptions.recommended.toLocaleString()}</span></>
+          }
         </p>
       </div>
 
-      {/* Pago Recomendado (Destacado) */}
       <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500/50 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-green-400" />
+            <span className="text-green-300 text-xs uppercase font-bold">Plan Activo</span>
+          </div>
+          <span className="text-gray-400 text-xs">Sellado al guardar</span>
+        </div>
+        <div className="flex items-center justify-between">
           <div>
-            <div className="text-green-300 text-xs uppercase font-bold">Pago Recomendado</div>
-            <div className="text-3xl font-black text-white">${plan.recommended.toLocaleString()}</div>
+            <div className="text-3xl font-black text-white">${customPayment.toLocaleString()}</div>
+            <div className="text-green-300 text-sm">por mes</div>
           </div>
           <div className="text-right">
             <div className="text-gray-400 text-xs">Libre en</div>
-            <div className="text-white font-bold">{plan.simulation.months} meses</div>
+            <div className="text-white font-bold text-xl">{plan.simulation.months} meses</div>
           </div>
         </div>
-        
-        {!showSlider && customPayment === plan.recommended && (
-          <button
-            onClick={() => setShowSlider(true)}
-            className="w-full bg-white/10 text-white py-2 rounded-lg text-sm hover:bg-white/20 transition"
-          >
-            Quiero ajustar el monto →
-          </button>
-        )}
       </div>
 
-      {/* Slider de Ajuste */}
-      {(showSlider || customPayment !== plan.recommended) && (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4 animate-in fade-in">
+      {!isSimulationMode && !analysis.isEmergencyMode && (
+        <button
+          onClick={() => setIsSimulationMode(true)}
+          className="w-full bg-white/5 border border-white/20 rounded-xl p-3 text-gray-300 text-sm hover:bg-white/10 transition flex items-center justify-center gap-2"
+        >
+          <Target className="w-4 h-4" />
+          Simular otro monto (sin cambiar el plan)
+        </button>
+      )}
+
+      {isSimulationMode && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 space-y-4 animate-in fade-in">
           <div className="flex items-center justify-between">
-            <span className="text-white font-semibold">Tu pago personalizado:</span>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-white">${customPayment?.toLocaleString()}</span>
-              <span className="text-gray-500">/mes</span>
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-300 text-xs uppercase font-bold">Modo Simulación</span>
             </div>
+            <button 
+              onClick={() => {
+                setIsSimulationMode(false);
+                setSimulatedPayment(customPayment);
+              }}
+              className="text-gray-400 hover:text-white text-xs"
+            >
+              Cancelar
+            </button>
           </div>
           
-          {/* Slider */}
-          <div className="space-y-2">
-            <input
-              type="range"
-              min={Math.max(plan.minRequired * 0.8, 50)}
-              max={plan.aggressive * 1.2}
-              step={10}
-              value={customPayment}
-              onChange={(e) => handlePaymentChange(e.target.value)}
-              className="w-full h-3 bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-500"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Mínimo: ${plan.minRequired.toLocaleString()}</span>
-              <span>Agresivo: ${plan.aggressive.toLocaleString()}</span>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-white font-semibold">Monto simulado:</span>
+            <span className="text-2xl font-bold text-amber-300">${simulatedPayment?.toLocaleString()}</span>
+          </div>
+          
+          <input
+            type="range"
+            min={paymentOptions.minRequired}
+            max={paymentOptions.aggressive * 1.3}
+            step={10}
+            value={simulatedPayment}
+            onChange={(e) => setSimulatedPayment(Number(e.target.value))}
+            className="w-full h-3 bg-gray-700 rounded-full appearance-none cursor-pointer accent-amber-500"
+          />
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>Mínimo: ${paymentOptions.minRequired.toLocaleString()}</span>
+            <span>Agresivo: ${paymentOptions.aggressive.toLocaleString()}</span>
           </div>
 
-          {/* Impacto en Tiempo Real */}
-          {paymentImpact && (
-            <div className={`rounded-xl p-4 border ${warningColors[paymentImpact.warningLevel]}`}>
-              <div className="font-semibold mb-2">{paymentImpact.warningMessage}</div>
+          {simulationImpact && (
+            <div className={`rounded-xl p-4 border ${warningColors[simulationImpact.warningLevel]}`}>
+              <div className="font-semibold mb-2">{simulationImpact.warningMessage}</div>
               
-              {paymentImpact.warningLevel !== 'safe' && (
+              {simulationImpact.warningLevel !== 'safe' && simulationImpact.warningLevel !== 'excellent' && (
                 <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
                   <div className="bg-black/20 rounded-lg p-2">
-                    <div className="text-gray-400 text-xs">Tiempo extra</div>
+                    <div className="text-gray-400 text-xs">vs Recomendado</div>
                     <div className="text-white font-bold">
-                      {paymentImpact.monthsDiff > 0 ? '+' : ''}{paymentImpact.monthsDiff} meses
+                      {simulationImpact.monthsDiff > 0 ? '+' : ''}{simulationImpact.monthsDiff} meses
                     </div>
                   </div>
                   <div className="bg-black/20 rounded-lg p-2">
                     <div className="text-gray-400 text-xs">Intereses extra</div>
                     <div className="text-white font-bold">
-                      {paymentImpact.interestDiff > 0 ? '+' : ''}${Math.abs(paymentImpact.interestDiff).toLocaleString()}
+                      {simulationImpact.interestDiff > 0 ? '+' : ''}${Math.abs(simulationImpact.interestDiff).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -1211,19 +1616,37 @@ function Phase5Adjustment({ plan, analysis, customPayment, setCustomPayment, pay
             </div>
           )}
 
-          {/* Botón para volver al recomendado */}
-          {customPayment !== plan.recommended && (
+          <div className="flex gap-3">
             <button
-              onClick={() => setCustomPayment(plan.recommended)}
-              className="w-full bg-green-500/20 text-green-300 py-2 rounded-lg text-sm hover:bg-green-500/30 transition border border-green-500/30"
+              onClick={() => setSimulatedPayment(paymentOptions.recommended)}
+              className="flex-1 bg-white/10 text-white py-2 rounded-lg text-sm hover:bg-white/20 transition"
             >
-              ↩ Volver al recomendado (${plan.recommended.toLocaleString()})
+              Volver a recomendado
             </button>
-          )}
+            <button
+              onClick={onAdoptSimulation}
+              disabled={simulationImpact?.blocked}
+              className="flex-1 bg-amber-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-amber-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Adoptar este monto
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Navegación */}
+      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="flex items-start gap-3">
+          <Calendar className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="text-white font-semibold text-sm">Plan sellado por 30 días</div>
+            <div className="text-gray-400 text-xs mt-1">
+              Una vez guardado, el plan no cambiará hasta la fecha de revisión. 
+              Esto te protege de la tentación de modificarlo por ansiedad.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
@@ -1233,8 +1656,8 @@ function Phase5Adjustment({ plan, analysis, customPayment, setCustomPayment, pay
         </button>
         <button
           onClick={onNext}
-          disabled={customPayment < plan.minRequired}
-          className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold hover:from-green-500 hover:to-emerald-500 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isSimulationMode}
+          className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold hover:from-green-500 hover:to-emerald-500 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
           Confirmar plan
           <ArrowRight className="w-5 h-5" />
@@ -1244,21 +1667,19 @@ function Phase5Adjustment({ plan, analysis, customPayment, setCustomPayment, pay
   );
 }
 
-// FASE 6: COMPROMISO
-function Phase6Commitment({ plan, analysis, strategy, onSave, onBack }) {
+function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, onBack }) {
   const [accepted, setAccepted] = useState(false);
+  const [expandedSection, setExpandedSection] = useState('week');
   const strategyInfo = getStrategyInfo(strategy);
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-in fade-in">
-      {/* Resumen Final */}
       <div className={`bg-gradient-to-br ${strategyInfo.color} rounded-2xl p-6 text-center`}>
         <div className="text-5xl mb-4">{strategyInfo.emoji}</div>
         <h3 className="text-2xl font-black text-white mb-2">Tu Plan de Libertad</h3>
         <p className="text-white/80 text-sm">Estrategia: {strategyInfo.name}</p>
       </div>
 
-      {/* Métricas Finales */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
           <div className="text-3xl font-black text-white">{plan.simulation.months}</div>
@@ -1268,25 +1689,103 @@ function Phase6Commitment({ plan, analysis, strategy, onSave, onBack }) {
           <div className="text-3xl font-black text-green-400">${plan.monthlyPayment.toLocaleString()}</div>
           <div className="text-xs text-gray-400">pago mensual</div>
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-          <div className="text-3xl font-black text-red-400">${analysis.totalDebt.toLocaleString()}</div>
-          <div className="text-xs text-gray-400">deuda a eliminar</div>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-          <div className="text-3xl font-black text-orange-400">${plan.simulation.totalInterest.toLocaleString()}</div>
-          <div className="text-xs text-gray-400">intereses totales</div>
-        </div>
       </div>
 
-      {/* Fecha de Libertad */}
       <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4 text-center">
-        <div className="text-green-300 text-xs uppercase font-bold mb-1">Fecha estimada de libertad</div>
+        <div className="text-green-300 text-xs uppercase font-bold mb-1">Fecha de libertad</div>
         <div className="text-2xl font-black text-white">
           {plan.simulation.freedomDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
         </div>
       </div>
 
-      {/* Checkbox de Compromiso */}
+      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <h4 className="text-white font-bold flex items-center gap-2">
+            <Target className="w-5 h-5 text-purple-400" />
+            Tus Próximas Acciones
+          </h4>
+          <p className="text-gray-400 text-xs mt-1">El plan funciona si ejecutas estas acciones</p>
+        </div>
+        
+        <div className="border-b border-white/10">
+          <button 
+            onClick={() => setExpandedSection(expandedSection === 'week' ? null : 'week')}
+            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+          >
+            <span className="text-white font-semibold flex items-center gap-2">
+              <span className="text-red-400">🔥</span> Esta Semana
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'week' ? 'rotate-180' : ''}`} />
+          </button>
+          {expandedSection === 'week' && (
+            <div className="px-4 pb-4 space-y-2">
+              {immediateActions?.thisWeek.map((action, idx) => (
+                <div key={idx} className={`p-3 rounded-lg border ${
+                  action.priority === 'critical' ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded border border-gray-500 flex items-center justify-center text-xs">
+                      {idx + 1}
+                    </div>
+                    <span className="text-white text-sm">{action.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-b border-white/10">
+          <button 
+            onClick={() => setExpandedSection(expandedSection === 'month' ? null : 'month')}
+            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+          >
+            <span className="text-white font-semibold flex items-center gap-2">
+              <span className="text-yellow-400">📅</span> Este Mes
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'month' ? 'rotate-180' : ''}`} />
+          </button>
+          {expandedSection === 'month' && (
+            <div className="px-4 pb-4 space-y-2">
+              {immediateActions?.thisMonth.map((action, idx) => (
+                <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded border border-gray-500 flex items-center justify-center text-xs">
+                      {idx + 1}
+                    </div>
+                    <span className="text-white text-sm">{action.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <button 
+            onClick={() => setExpandedSection(expandedSection === 'habits' ? null : 'habits')}
+            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+          >
+            <span className="text-white font-semibold flex items-center gap-2">
+              <span className="text-green-400">🔁</span> Hábitos Clave
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'habits' ? 'rotate-180' : ''}`} />
+          </button>
+          {expandedSection === 'habits' && (
+            <div className="px-4 pb-4 space-y-2">
+              {immediateActions?.habits.map((habit, idx) => (
+                <div key={idx} className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white text-sm">{habit.text}</span>
+                    <span className="text-green-400 text-xs uppercase">{habit.frequency}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div 
         onClick={() => setAccepted(!accepted)}
         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -1304,14 +1803,13 @@ function Phase6Commitment({ plan, analysis, strategy, onSave, onBack }) {
           <div>
             <div className="text-white font-semibold">Me comprometo con este plan</div>
             <div className="text-gray-400 text-sm mt-1">
-              Entiendo que el éxito depende de mi disciplina. Pagaré ${plan.monthlyPayment.toLocaleString()} cada mes 
-              y no usaré las tarjetas con deuda hasta eliminarla.
+              Pagaré ${plan.monthlyPayment.toLocaleString()} cada mes, ejecutaré las acciones listadas, 
+              y no usaré las tarjetas con deuda. Revisión: {plan.reviewDate?.toLocaleDateString('es-ES')}.
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navegación */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
@@ -1325,14 +1823,13 @@ function Phase6Commitment({ plan, analysis, strategy, onSave, onBack }) {
           className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:from-green-500 hover:to-emerald-500 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-900/30"
         >
           <CheckCircle2 className="w-6 h-6" />
-          Guardar Mi Plan
+          Guardar Plan
         </button>
       </div>
     </div>
   );
 }
 
-// MODAL DE CONFIRMACIÓN
 function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
   const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -1363,7 +1860,7 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
             <span className="text-4xl">{strategyInfo.emoji}</span>
           </div>
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">¡Último paso!</h3>
-          <p className="text-white/80 text-sm mb-6">Dale un nombre a tu plan de libertad financiera</p>
+          <p className="text-white/80 text-sm mb-6">Dale un nombre a tu plan de libertad</p>
 
           <div className="mb-6 text-left">
             <input 
@@ -1374,6 +1871,12 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
               className="w-full bg-white/10 border border-white/20 rounded-xl px-4 md:px-5 py-4 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur text-base md:text-lg font-medium"
               autoFocus
             />
+          </div>
+
+          <div className="bg-white/10 rounded-xl p-3 mb-6 text-left">
+            <div className="text-white/70 text-xs">
+              🔒 Este plan quedará sellado hasta: <span className="text-white font-bold">{plan.reviewDate?.toLocaleDateString('es-ES')}</span>
+            </div>
           </div>
 
           <div className="flex gap-3">
@@ -1390,7 +1893,7 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
               className="flex-1 bg-white text-gray-900 py-3.5 rounded-xl font-bold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-3 shadow-lg"
             >
               {guardando ? <span className="animate-spin text-2xl">⏳</span> : <CheckCircle2 className="w-6 h-6" />}
-              {guardando ? 'Guardando...' : 'Guardar'}
+              {guardando ? 'Guardando...' : 'Sellar Plan'}
             </button>
           </div>
         </div>
