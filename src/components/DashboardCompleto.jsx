@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity,} from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Clock, Target } from 'lucide-react'
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
 import { useIngresos } from '../hooks/useIngresos'
@@ -44,6 +44,9 @@ import ListaGastosCompleta from './ListaGastosCompleta'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
+import { usePlanExecution } from '../hooks/usePlanExecution';
+import PlanExecutionWidget from './PlanExecutionWidget';
+import PlanCheckInModal from './PlanCheckInModal';
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -146,7 +149,24 @@ export default function DashboardCompleto()  {
  const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
   const { refresh: refreshPlanes } = usePlanesGuardados()
+  const { planes, planesActivos } = usePlanesGuardados();
+
+// Y obtén el plan de deudas activo:
+const planDeudaActivo = useMemo(() => {
+  if (!planesActivos || planesActivos.length === 0) return null;
+  
+  // Buscar un plan de tipo 'deudas' que esté activo
+  const planDeuda = planesActivos.find(p => 
+    p.tipo === 'deudas' && 
+    p.activo && 
+    !p.completado
+  );
+  
+  return planDeuda || null;
+}, [planesActivos]);
   const { permission, showLocalNotification } = useNotifications()
+  // Hook de ejecución de plan de deudas
+
 
   // PUENTE DE ESTADO INSTANTÁNEO
   const [ingresosInstant, setIngresosInstant] = useState(() => {
@@ -1239,16 +1259,17 @@ const alertas = useMemo(() => {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
-                className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
-                title="Repetir Tutorial"
-              >
-                <HelpCircle className="w-5 h-5" />
-              </button>
-              <div className="hidden md:block"><LogoutButton /></div>
-            </div>
+       <div className="flex items-center gap-3">
+
+  <button 
+    onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
+    className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
+    title="Repetir Tutorial"
+  >
+    <HelpCircle className="w-5 h-5" />
+  </button>
+  <div className="hidden md:block"><LogoutButton /></div>
+</div>
           </div>
         </div>
       </div>
@@ -1261,6 +1282,53 @@ const alertas = useMemo(() => {
   setVistaActiva={setVistaActiva}
   hoy={hoy}
 />
+{/* WIDGET DE EJECUCIÓN DE PLAN DE DEUDAS */}
+<div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
+  {planDeudaActivo ? (
+    <div className="animate-in fade-in slide-in-from-top-4">
+      <PlanExecutionWidget
+        activePlan={planDeudaActivo}
+        // ✅ NUEVO: Pasar datos financieros reales para la IA
+        realFinancialData={{
+          gastos: gastosInstant,
+          gastosFijos: gastosFijosInstant,
+          deudas: deudasInstant,
+          ingresos: ingresosInstant
+        }}
+        showLocalNotification={showLocalNotification}
+        onOpenPlanDetails={() => setShowDebtPlanner(true)}
+        onRegisterPayment={() => {
+          const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
+          if (targetDebt) {
+            const deudaReal = deudasInstant.find(d => 
+              d.cuenta === targetDebt.nombre || d.id === targetDebt.id
+            );
+            setDeudaEditando(deudaReal || null);
+            setShowModal('pagoTarjeta');
+          }
+        }}
+      />
+    </div>
+  ) : deudasInstant.length > 0 && (
+    <button
+      onClick={() => setShowDebtPlanner(true)}
+      className="w-full bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-purple-600/30 hover:to-indigo-600/30 transition-all"
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-purple-500/30 rounded-xl">
+          <Target className="w-6 h-6 text-purple-400" />
+        </div>
+        <div className="text-left">
+          <div className="text-white font-semibold">Crea tu plan de eliminación de deudas</div>
+          <div className="text-gray-400 text-sm">
+            Tienes {deudasInstant.length} deuda{deudasInstant.length > 1 ? 's' : ''} - El sistema te guiará paso a paso
+          </div>
+        </div>
+      </div>
+      <ChevronRight className="w-5 h-5 text-purple-400" />
+    </button>
+  )}
+</div>
 
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">
@@ -1568,6 +1636,8 @@ const alertas = useMemo(() => {
       <ModalWrapper show={showSpendingControl} onClose={() => setShowSpendingControl(false)}>
         <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       </ModalWrapper>
+
+
 
       {/* --- TUTORIAL OVERLAY --- */}
       {tutorialActivo && (
