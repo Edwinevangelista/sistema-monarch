@@ -1,7 +1,7 @@
 // src/hooks/usePlanExecution.js
 // ============================================
-// VERSIÓN HÍBRIDA FINAL
-// Combina: IA Financiera en Tiempo Real + Estructura de Plan de Deuda
+// VERSIÓN HÍBRIDA FINAL CON INTEGRACIÓN IA
+// Combina: IA Financiera en Tiempo Real + Estructura de Plan de Deuda + Notificaciones Smart
 // ============================================
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -14,7 +14,8 @@ const STORAGE_KEYS = {
   TASKS_COMPLETED: 'finguide_plan_tasks_completed',
   LAST_CHECKIN: 'finguide_plan_last_checkin',
   STREAK_DATA: 'finguide_plan_streak',
-  PAYMENTS_LOGGED: 'finguide_plan_payments_logged'
+  PAYMENTS_LOGGED: 'finguide_plan_payments_logged',
+  NOTIFICATIONS_SENT: 'finguide_smart_notifications_sent'
 };
 
 // ==========================================
@@ -97,14 +98,14 @@ function calculateRealFinancialHealth(realData, today) {
 function generateHybridTasks(activePlan, realData, completedTaskIds) {
   if (!activePlan) return [];
   
-  // ✅ CORRECCIÓN: Definimos 'today' localmente aquí para evitar referencias a 'hoy'
+  // ✅ Definimos 'today' localmente aquí
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const dayOfWeek = today.getDay();
   const dayOfMonth = today.getDate();
   
   const config = activePlan.configuracion || {};
-  const health = calculateRealFinancialHealth(realData, today); // ✅ Pasamos 'today' explícito
+  const health = calculateRealFinancialHealth(realData, today); // Pasamos 'today' explícito
   const tasks = [];
 
   // ==========================================
@@ -228,6 +229,89 @@ function generateHybridTasks(activePlan, realData, completedTaskIds) {
 
   // Filtrar completadas
   return tasks.filter(task => !completedTaskIds.includes(task.id));
+}
+
+// ==========================================
+// GENERADOR DE NOTIFICACIONES INTELIGENTES (IA)
+// ==========================================
+
+function getSmartNotifications(plan, financialHealth, showLocalNotification, getStoredData, setStoredData) {
+  if (!plan || !showLocalNotification) return [];
+  
+  const notifications = [];
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const hour = today.getHours();
+  const isMorning = hour >= 8 && hour < 11;
+  const isEvening = hour >= 18 && hour < 21;
+  
+  // Verificar si ya enviamos notificaciones hoy (Spam Guard)
+  const notifId = `${todayStr}_${hour < 12 ? 'AM' : 'PM'}`;
+  const alreadySentNotifs = getStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, []);
+  
+  if (alreadySentNotifs.includes(notifId)) return []; // Ya notificamos este periodo
+
+  // ==========================================
+  // 1. NOTIFICACIÓN MAÑANA: Presupuesto del Día
+  // ==========================================
+  if (isMorning && financialHealth) {
+    let title = "☀️ Buenos días, FinGuider";
+    let body = "Tu presupuesto diario está listo.";
+    let urgent = false;
+
+    // Lógica IA Basada en Salud Financiera Real
+    if (financialHealth.esCrisis) {
+      title = "🚨 ¡ALERTA FINANCIERA!";
+      body = "Estás en números rojos hoy. Gasto objetivo: $0. Prioriza emergencias.";
+      urgent = true;
+    } else if (financialHealth.presupuestoDiario < 10) {
+      title = "⚠️ Presupuesto Crítico";
+      body = `Solo te quedan $${financialHealth.presupuestoDiario.toFixed(0)} hoy. Evita gastos hormiga.`;
+    } else {
+      body = `Tu límite hoy es $${financialHealth.presupuestoDiario.toFixed(0)}. ¡Vamos por más!`;
+    }
+
+    notifications.push({
+      title,
+      body,
+      urgent,
+      type: 'daily_budget'
+    });
+  }
+
+  // ==========================================
+  // 2. NOTIFICACIÓN TARDE: Recordatorio de Disciplina
+  // ==========================================
+  if (isEvening) {
+    notifications.push({
+      title: "🌙 Buenas noches",
+      body: "¿Usaste tus tarjetas hoy? Revisa tu progreso antes de dormir.",
+      type: 'daily_review'
+    });
+  }
+
+  // ==========================================
+  // 3. NOTIFICACIÓN SEMANAL: Check-in (Viernes Mañana)
+  // ==========================================
+  if (today.getDay() === 5 && isMorning) {
+    notifications.push({
+      title: "📋 ¡Es Viernes de Check-in!",
+      body: "¿Cumpliste tus metas esta semana? Abre la app para reportar tu progreso.",
+      type: 'checkin'
+    });
+  }
+
+  // Ejecutar inmediatamente si hay notificaciones
+  if (notifications.length > 0) {
+    notifications.forEach(notif => {
+      showLocalNotification(notif.title, { body: notif.body, tag: notif.type });
+    });
+    
+    // Marcar como enviadas
+    setStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, [...alreadySentNotifs, notifId]);
+  }
+
+  return notifications;
 }
 
 // ==========================================
@@ -369,6 +453,29 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
     return diffDays >= 7;
   }, [lastCheckIn]);
 
+  // ==========================================
+  // EFECTO: PROGRAMADOR INTELIGENTE
+  // ==========================================
+  useEffect(() => {
+    if (!activePlan || !showLocalNotification) return;
+    
+    // Ejecutar el cerebro de notificaciones
+    // Pasamos 'financialHealth' que calculamos en el useMemo anterior
+    getSmartNotifications(
+      activePlan, 
+      financialHealth, 
+      showLocalNotification, 
+      getStoredData, 
+      setStoredData
+    );
+  // ✅ CORRECCIÓN: Eliminamos getStoredData y setStoredData de las dependencias
+  // porque son funciones constantes definidas fuera del componente.
+  }, [activePlan, financialHealth, showLocalNotification]);
+
+  // ==========================================
+  // RETURN
+  // ==========================================
+  
   return {
     // IA y Datos Reales
     financialHealth, // { presupuestoDiario, margenTotal, esCrisis }
