@@ -89,7 +89,8 @@ export default function PlanExecutionWidget({
                   {financialHealth.esCrisis ? '🚨 Modo Crisis' : financialHealth.esEmergencia ? '⚠️ Presupuesto Bajo' : '💰 Tu Límite Hoy'}
                 </div>
                 <div className="text-3xl font-black text-white">
-                  ${financialHealth.presupuestoDiario.toFixed(0)}
+                  ${(financialHealth.presupuestoDiario ?? 0).toFixed(0)}
+
                 </div>
               </div>
               
@@ -118,7 +119,8 @@ export default function PlanExecutionWidget({
             {/* Barra de gasto del día */}
             <div className="mb-3">
               <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                <span>Gastado hoy: ${financialHealth.gastosHoy.toFixed(0)}</span>
+                <span>Gastado hoy: ${(financialHealth.gastosHoy ?? 0).toFixed(0)}</span>
+
                 <span>{financialHealth.diasRestantes} días restantes</span>
               </div>
               <div className="h-2 bg-black/30 rounded-full overflow-hidden">
@@ -159,7 +161,8 @@ export default function PlanExecutionWidget({
             <div>
               <div className="text-sm font-semibold text-white">{targetDebt?.nombre || 'Plan Activo'}</div>
               <div className="text-[10px] text-gray-400">
-                {isAvalancha ? '🏔️ Avalancha' : '⛄ Bola de Nieve'} • ${config.monthlyPayment?.toLocaleString()}/mes
+                {isAvalancha ? '🏔️ Avalancha' : '⛄ Bola de Nieve'} • ${(config.monthlyPayment ?? 0).toLocaleString()}/mes
+
               </div>
             </div>
           </div>
@@ -178,8 +181,10 @@ export default function PlanExecutionWidget({
         </div>
         
         <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-          <span>${progress.amountPaid.toLocaleString()} pagado</span>
-          <span>${progress.remaining.toLocaleString()} restante</span>
+          <span>${(progress.amountPaid ?? 0).toLocaleString()} pagado</span>
+
+          <span>${(progress.remaining ?? 0).toLocaleString()} restante</span>
+
         </div>
       </div>
 
