@@ -1,10 +1,14 @@
 // src/components/PlanCheckInModal.jsx
+// ============================================
+// MODAL DE CHECK-IN SEMANAL MEJORADO
+// Flujo simple con estrategias personalizadas
+// ============================================
+
 import React, { useState, useMemo } from 'react';
 import { 
-  X, CheckCircle2, AlertTriangle, TrendingUp, 
-  Meh, ThumbsUp, ThumbsDown,
-  MessageSquare, DollarSign, Calendar, Sparkles,
-  Trophy, Target, ChevronRight, Zap
+  X, CheckCircle2, AlertTriangle, ThumbsUp, ThumbsDown,
+  DollarSign, Calendar, Sparkles, Trophy, Target, 
+  ChevronRight, Zap, TrendingUp, Meh
 } from 'lucide-react';
 
 export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
@@ -14,8 +18,6 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
     amountPaid: '',
     usedCreditCards: null,
     followedBudget: null,
-    biggestChallenge: '',
-    nextWeekCommitment: '',
     mood: null,
     notes: ''
   });
@@ -24,12 +26,20 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
   const targetDebt = config.plan?.orderedDebts?.[0];
   const expectedPayment = config.monthlyPayment || 0;
   
-  const handleOptionSelect = (field, value) => {
+  const totalSteps = 5;
+  const isLastStep = step === totalSteps;
+  const isSummary = step > totalSteps;
+
+  // ==========================================
+  // HANDLERS
+  // ==========================================
+  
+  const handleSelect = (field, value) => {
     setResponses(prev => ({ ...prev, [field]: value }));
   };
   
-  // Navegación inteligente
-  const handleNextStep = () => {
+  const handleNext = () => {
+    // Si no pagó, saltar paso de monto
     if (step === 1 && responses.paidOnTime === false) {
       setStep(3);
     } else if (isLastStep) {
@@ -38,8 +48,8 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
       setStep(s => s + 1);
     }
   };
-
-  const handlePreviousStep = () => {
+  
+  const handleBack = () => {
     if (step === 3 && responses.paidOnTime === false) {
       setStep(1);
     } else {
@@ -50,7 +60,7 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
   const canProceed = () => {
     switch (step) {
       case 1: return responses.paidOnTime !== null;
-      case 2: return responses.amountPaid !== ''; 
+      case 2: return responses.amountPaid !== '';
       case 3: return responses.usedCreditCards !== null;
       case 4: return responses.followedBudget !== null;
       case 5: return responses.mood !== null;
@@ -58,417 +68,423 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
     }
   };
 
-  // Generador de Estrategia
-  const weeklyStrategy = useMemo(() => {
-    const paid = (responses.paidOnTime === true ? parseFloat(responses.amountPaid) : 0) || 0;
+  const handleSubmit = () => {
+    const data = {
+      ...responses,
+      amountPaid: responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0,
+      expectedPayment,
+      completedAt: new Date().toISOString(),
+      planId: plan.id
+    };
+    onSubmit(data);
+    onClose();
+  };
+
+  // ==========================================
+  // ESTRATEGIA GENERADA POR IA
+  // ==========================================
+  
+  const strategy = useMemo(() => {
+    const paid = responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0;
+    const percentage = expectedPayment > 0 ? (paid / expectedPayment) * 100 : 0;
     const mood = responses.mood || 3;
     const usedCards = responses.usedCreditCards;
-    const percentagePaid = expectedPayment > 0 ? (paid / expectedPayment) * 100 : 0;
+    
 
+    // Caso crítico: Ánimo bajo + usó tarjetas
     if (mood <= 2 && usedCards) {
       return {
         type: 'rescue',
-        title: 'Plan de Rescate Semanal',
-        advice: 'Esta semana prioriza tu estabilidad mental. Congela las tarjetas y enfócate solo en cubrir tus necesidades básicas. No te juzgues, recupérate.',
+        title: '🆘 Plan de Rescate',
+        advice: 'Esta semana prioriza tu bienestar. Congela físicamente las tarjetas y enfócate solo en lo esencial. No te juzgues.',
         color: 'purple'
       };
     }
     
-    if (percentagePaid >= 100 && mood >= 4) {
+    // Excelente: Pagó todo + buen ánimo
+    if (percentage >= 100 && mood >= 4 && !usedCards) {
       return {
-        type: 'acceleration',
-        title: 'Modo Aceleración',
-        advice: '¡Tienes el viento a favor! Considera aplicar cualquier extra ingreso directamente a la deuda principal para cortar meses de intereses.',
+        type: 'accelerate',
+        title: '🚀 Modo Aceleración',
+        advice: '¡Semana perfecta! Si tienes ingresos extra, considera aplicarlos directamente a la deuda para terminar antes.',
         color: 'emerald'
       };
     }
     
-    if (percentagePaid < 50 && mood >= 3) {
+    // Alerta: No cumplió pero tiene buen ánimo
+    if (percentage < 50 && mood >= 3) {
       return {
-        type: 'adjustment',
-        title: 'Ajuste de Ruta',
-        advice: 'Detectamos un desvío en el flujo de caja. Revisa tus gastos variables este fin de semana y categoriza: "Necesario" vs "Deseable".',
+        type: 'adjust',
+        title: '🔧 Ajuste de Ruta',
+        advice: 'Revisa tus gastos variables. Identifica 2-3 gastos "hormiga" que puedas eliminar esta semana.',
         color: 'orange'
       };
     }
 
+    // Usó tarjetas
+    if (usedCards) {
+      return {
+        type: 'discipline',
+        title: '🎯 Disciplina Reforzada',
+        advice: 'Aplica la "Regla 24h": antes de comprar algo, espera un día. Si aún lo necesitas, usa débito.',
+        color: 'yellow'
+      };
+    }
+
+    // Default: Mantenimiento
     return {
-      type: 'maintenance',
-      title: 'Ritmo Constante',
-      advice: 'Vas por buen camino. Mantén el hábito de revisar tus finanzas cada 48 horas. La consistencia es clave para ganar.',
+      type: 'maintain',
+      title: '✅ Ritmo Constante',
+      advice: 'Vas por buen camino. Mantén el hábito de revisar tus finanzas cada 2 días. La consistencia gana.',
       color: 'blue'
     };
   }, [responses, expectedPayment]);
+
+  // ==========================================
+  // RENDER DE PASOS
+  // ==========================================
   
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
-          <StepContainer
+          <StepLayout
             icon={<DollarSign className="w-8 h-8 text-green-400" />}
             title="¿Hiciste tu pago esta semana?"
-            subtitle={`Meta programada: $${expectedPayment.toLocaleString()} a ${targetDebt?.nombre || 'tu deuda'}`}
+            subtitle={`Meta: $${expectedPayment.toLocaleString()} a ${targetDebt?.nombre || 'tu deuda'}`}
           >
-            <div className="grid grid-cols-2 gap-4">
-              <OptionButton
+            <div className="grid grid-cols-2 gap-3">
+              <SelectButton
                 selected={responses.paidOnTime === true}
-                onClick={() => handleOptionSelect('paidOnTime', true)}
-                icon={<ThumbsUp className="w-6 h-6" />}
-                label="Sí, cumplí"
+                onClick={() => handleSelect('paidOnTime', true)}
+                icon={<ThumbsUp className="w-5 h-5" />}
+                label="Sí, pagué"
                 color="green"
               />
-              <OptionButton
+              <SelectButton
                 selected={responses.paidOnTime === false}
-                onClick={() => handleOptionSelect('paidOnTime', false)}
-                icon={<ThumbsDown className="w-6 h-6" />}
+                onClick={() => handleSelect('paidOnTime', false)}
+                icon={<ThumbsDown className="w-5 h-5" />}
                 label="No pude"
                 color="red"
               />
             </div>
-            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-200">
-              <span className="font-bold">💡 IA Tip:</span> Si pagaste menos de la meta, no te preocupes. Lo importante es mantener el ritmo.
-            </div>
-          </StepContainer>
+          </StepLayout>
         );
         
       case 2:
-        const currentAmount = parseFloat(responses.amountPaid) || 0;
-        const percentage = expectedPayment > 0 ? (currentAmount / expectedPayment) * 100 : 0;
+        const amount = parseFloat(responses.amountPaid) || 0;
+        const pct = expectedPayment > 0 ? (amount / expectedPayment) * 100 : 0;
         
         return (
-          <StepContainer
+          <StepLayout
             icon={<TrendingUp className="w-8 h-8 text-blue-400" />}
-            title="¿Cuánto pagaste exactamente?"
-            subtitle="Registra el monto total (capital + intereses)"
+            title="¿Cuánto pagaste?"
+            subtitle="Incluye capital e intereses"
           >
             <div className="space-y-4">
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl font-bold">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">$</span>
                 <input
                   type="number"
                   value={responses.amountPaid}
-                  onChange={(e) => setResponses(prev => ({ ...prev, amountPaid: e.target.value }))}
-                  placeholder="0.00"
-                  className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-4 text-2xl font-bold text-white text-center focus:outline-none focus:border-blue-500 transition-colors"
+                  onChange={(e) => handleSelect('amountPaid', e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl pl-9 pr-4 py-3 text-xl font-bold text-white text-center focus:outline-none focus:border-blue-500"
+                  autoFocus
                 />
               </div>
               
-              <div className="flex gap-2 justify-center flex-wrap">
-                {[
-                  { label: '50%', val: expectedPayment * 0.5 },
-                  { label: 'Meta', val: expectedPayment },
-                  { label: 'Extra', val: expectedPayment * 1.2 }
-                ].map((opt, idx) => (
+              {/* Botones rápidos */}
+              <div className="flex gap-2 justify-center">
+                {[0.5, 1, 1.2].map((mult) => (
                   <button
-                    key={idx}
-                    onClick={() => setResponses(prev => ({ ...prev, amountPaid: opt.val.toString() }))}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      Math.abs(currentAmount - opt.val) < 1
-                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                    key={mult}
+                    onClick={() => handleSelect('amountPaid', (expectedPayment * mult).toString())}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      Math.abs(amount - expectedPayment * mult) < 1
+                        ? 'bg-blue-500 text-white'
                         : 'bg-white/10 text-gray-300 hover:bg-white/20'
                     }`}
                   >
-                    {opt.label}
+                    {mult === 1 ? 'Meta' : mult < 1 ? '50%' : 'Extra'}
                   </button>
                 ))}
               </div>
-
-              {currentAmount > 0 && (
-                <div className={`p-3 rounded-xl border transition-all animate-in fade-in slide-in-from-bottom-2 ${
-                  percentage >= 100 
-                    ? 'bg-green-500/20 border-green-500/30' 
-                    : percentage >= 70 
-                    ? 'bg-yellow-500/20 border-yellow-500/30' 
-                    : 'bg-orange-500/20 border-orange-500/30'
+              
+              {/* Feedback */}
+              {amount > 0 && (
+                <div className={`p-3 rounded-lg text-center text-sm ${
+                  pct >= 100 ? 'bg-green-500/20 text-green-300' :
+                  pct >= 70 ? 'bg-yellow-500/20 text-yellow-300' :
+                  'bg-orange-500/20 text-orange-300'
                 }`}>
-                  <div className="text-center">
-                    <div className="text-lg font-bold mb-1">
-                      {percentage >= 100 
-                        ? '🚀 ¡Sobrepasaste la meta!' 
-                        : percentage >= 70 
-                        ? '👍 Buena aportación' 
-                        : '⚠️ Por debajo de la meta'}
-                    </div>
-                    <div className="text-xs text-gray-300">
-                      {percentage >= 100 
-                        ? 'Estás semanas por delante de tu plan. ¡Sigue así!' 
-                        : `Has pagado el ${percentage.toFixed(0)}% de lo necesario.`}
-                    </div>
-                  </div>
+                  {pct >= 100 ? '🎉 ¡Sobrepasaste la meta!' :
+                   pct >= 70 ? `👍 Pagaste ${pct.toFixed(0)}% de la meta` :
+                   `⚠️ ${pct.toFixed(0)}% de la meta`}
                 </div>
               )}
             </div>
-          </StepContainer>
+          </StepLayout>
         );
         
       case 3:
         return (
-          <StepContainer
+          <StepLayout
             icon={<AlertTriangle className="w-8 h-8 text-orange-400" />}
             title="¿Usaste tarjetas de crédito?"
             subtitle="Cualquier compra nueva afecta tu progreso"
           >
-            <div className="grid grid-cols-2 gap-4">
-              <OptionButton
+            <div className="grid grid-cols-2 gap-3">
+              <SelectButton
                 selected={responses.usedCreditCards === false}
-                onClick={() => handleOptionSelect('usedCreditCards', false)}
-                icon={<CheckCircle2 className="w-6 h-6" />}
+                onClick={() => handleSelect('usedCreditCards', false)}
+                icon={<CheckCircle2 className="w-5 h-5" />}
                 label="No, me abstuve"
                 color="green"
               />
-              <OptionButton
+              <SelectButton
                 selected={responses.usedCreditCards === true}
-                onClick={() => handleOptionSelect('usedCreditCards', true)}
-                icon={<AlertTriangle className="w-6 h-6" />}
+                onClick={() => handleSelect('usedCreditCards', true)}
+                icon={<AlertTriangle className="w-5 h-5" />}
                 label="Sí, las usé"
                 color="red"
               />
             </div>
             
-            {responses.usedCreditCards === true && (
-              <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-in fade-in">
-                <div className="flex gap-2 text-red-200 text-sm">
-                  <Zap className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Estrategia de Corrección:</strong><br/>
-                    No te castigues, pero aplica la <strong>"Regla de las 24 Horas"</strong> la próxima semana. 
-                    Si quieres comprar algo, espera 24h. Si aún lo necesitas, usa dinero (débito).
-                  </div>
-                </div>
+            {responses.usedCreditCards === false && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-200 text-sm">
+                <strong>🔥 ¡Victoria!</strong> Este hábito es el más importante.
               </div>
             )}
             
-            {responses.usedCreditCards === false && (
-              <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-xl animate-in fade-in">
-                <div className="flex gap-2 text-green-200 text-sm">
-                  <Sparkles className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong>¡Victoria silenciosa!</strong><br/>
-                    No usar tarjetas es el hábito más difícil de romper. Acabas de ganar la semana solo con esta decisión.
-                  </div>
-                </div>
+            {responses.usedCreditCards === true && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-sm">
+                <strong>💡 Tip:</strong> La próxima semana, deja las tarjetas en casa.
               </div>
             )}
-          </StepContainer>
+          </StepLayout>
         );
         
       case 4:
         return (
-          <StepContainer
+          <StepLayout
             icon={<Target className="w-8 h-8 text-purple-400" />}
-            title="Control de Gastos Variables"
+            title="Control de gastos"
             subtitle="¿Respetaste tu presupuesto de gastos variables?"
           >
-            <div className="grid grid-cols-3 gap-3">
-              <OptionButton
+            <div className="grid grid-cols-3 gap-2">
+              <SelectButton
                 selected={responses.followedBudget === 'yes'}
-                onClick={() => handleOptionSelect('followedBudget', 'yes')}
-                icon={<ThumbsUp className="w-5 h-5" />}
-                label="Sí, todo"
+                onClick={() => handleSelect('followedBudget', 'yes')}
+                icon={<ThumbsUp className="w-4 h-4" />}
+                label="Sí"
                 color="green"
                 compact
               />
-              <OptionButton
+              <SelectButton
                 selected={responses.followedBudget === 'mostly'}
-                onClick={() => handleOptionSelect('followedBudget', 'mostly')}
-                icon={<Meh className="w-5 h-5" />}
-                label="Casi todo"
+                onClick={() => handleSelect('followedBudget', 'mostly')}
+                icon={<Meh className="w-4 h-4" />}
+                label="Casi"
                 color="yellow"
                 compact
               />
-              <OptionButton
+              <SelectButton
                 selected={responses.followedBudget === 'no'}
-                onClick={() => handleOptionSelect('followedBudget', 'no')}
-                icon={<ThumbsDown className="w-5 h-5" />}
-                label="Me excedí"
+                onClick={() => handleSelect('followedBudget', 'no')}
+                icon={<ThumbsDown className="w-4 h-4" />}
+                label="No"
                 color="red"
                 compact
               />
             </div>
-          </StepContainer>
+          </StepLayout>
         );
         
       case 5:
         return (
-          <StepContainer
+          <StepLayout
             icon={<Sparkles className="w-8 h-8 text-pink-400" />}
-            title="¿Cómo te sientes emocionalmente?"
-            subtitle="Tu salud mental es parte de la fórmula"
+            title="¿Cómo te sientes?"
+            subtitle="Tu bienestar también importa"
           >
             <div className="grid grid-cols-5 gap-2">
               {[
-                { value: 5, emoji: '😁', label: 'Genial' },
-                { value: 4, emoji: '🙂', label: 'Bien' },
-                { value: 3, emoji: '😐', label: 'Normal' },
-                { value: 2, emoji: '😟', label: 'Difícil' },
-                { value: 1, emoji: '😫', label: 'Agotado' }
-              ].map(mood => (
+                { value: 5, emoji: '😁' },
+                { value: 4, emoji: '🙂' },
+                { value: 3, emoji: '😐' },
+                { value: 2, emoji: '😟' },
+                { value: 1, emoji: '😫' }
+              ].map(m => (
                 <button
-                  key={mood.value}
-                  onClick={() => handleOptionSelect('mood', mood.value)}
-                  className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${
-                    responses.mood === mood.value
-                      ? 'bg-pink-500/30 border-2 border-pink-400 scale-105 shadow-lg shadow-pink-500/20'
+                  key={m.value}
+                  onClick={() => handleSelect('mood', m.value)}
+                  className={`p-3 rounded-xl text-2xl transition-all ${
+                    responses.mood === m.value
+                      ? 'bg-pink-500/30 border-2 border-pink-400 scale-110'
                       : 'bg-white/10 border border-white/10 hover:bg-white/20'
                   }`}
                 >
-                  <span className="text-2xl">{mood.emoji}</span>
-                  <span className="text-[10px] text-gray-300">{mood.label}</span>
+                  {m.emoji}
                 </button>
               ))}
             </div>
-          </StepContainer>
-        );
-        
-      case 6:
-        return (
-          <StepContainer
-            icon={<MessageSquare className="w-8 h-8 text-cyan-400" />}
-            title="Notas para tu futuro yo"
-            subtitle="¿Hay algo que debas recordar para la próxima semana?"
-          >
-            <textarea
-              value={responses.notes}
-              onChange={(e) => setResponses(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Ej: Gasto inesperado en dentista... Tengo que reducir salidas..."
-              className="w-full h-32 bg-white/10 border border-white/20 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
-            />
-          </StepContainer>
+          </StepLayout>
         );
         
       default:
         return null;
     }
   };
+
+  // ==========================================
+  // RENDER DE RESUMEN
+  // ==========================================
   
   const renderSummary = () => {
-    const paid = (responses.paidOnTime === true ? parseFloat(responses.amountPaid) : 0) || 0;
-    const achievement = expectedPayment > 0 ? (paid / expectedPayment) * 100 : 0;
+    const paid = responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0;
+    const pct = expectedPayment > 0 ? Math.min(100, (paid / expectedPayment) * 100) : 0;
     
     return (
-      <div className="space-y-6">
-        <div className="text-center animate-in fade-in zoom-in-95 duration-500">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4 shadow-xl shadow-green-500/30 animate-bounce">
-            <Trophy className="w-10 h-10 text-white" />
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-500/30">
+            <Trophy className="w-8 h-8 text-white" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-1">Check-in Completado</h3>
-          <p className="text-gray-400 text-sm">Tu perfil financiero de esta semana</p>
+          <h3 className="text-xl font-bold text-white">Check-in Completado</h3>
         </div>
         
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-white/10 relative overflow-hidden">
-          <div className="flex justify-between items-end mb-2 relative z-10">
+        {/* Score */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border border-white/10">
+          <div className="flex justify-between items-end mb-2">
             <div>
-              <div className="text-4xl font-black text-white">
-                {Math.min(100, Math.round(achievement))}%
-              </div>
-              <div className="text-xs text-gray-400 uppercase tracking-widest">Meta Cumplida</div>
+              <div className="text-3xl font-black text-white">{Math.round(pct)}%</div>
+              <div className="text-[10px] text-gray-400 uppercase">Meta cumplida</div>
             </div>
             <div className="text-right">
-              <div className="text-xl font-bold text-green-400">${paid.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">Pagado</div>
+              <div className="text-lg font-bold text-green-400">${paid.toLocaleString()}</div>
+              <div className="text-[10px] text-gray-500">pagado</div>
             </div>
           </div>
           
-          <div className="h-3 bg-black/50 rounded-full overflow-hidden relative z-10">
+          <div className="h-2 bg-black/40 rounded-full overflow-hidden">
             <div 
-              className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                achievement >= 100 ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-[0_0_10px_rgba(74,222,128,0.5)]' :
-                achievement >= 70 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+              className={`h-full rounded-full transition-all duration-1000 ${
+                pct >= 100 ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
+                pct >= 70 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
                 'bg-gradient-to-r from-red-400 to-rose-500'
               }`}
-              style={{ width: `${Math.min(100, achievement)}%` }}
+              style={{ width: `${pct}%` }}
             />
           </div>
-          
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
         </div>
         
-        <div className="grid grid-cols-2 gap-3">
-          <SummaryItem
-            label="Tarjetas"
-            value={responses.usedCreditCards ? 'Uso Detectado' : 'Sin Uso'}
-            icon={<AlertTriangle className="w-4 h-4" />}
-            positive={!responses.usedCreditCards}
-          />
-          <SummaryItem
-            label="Ánimo"
-            value={['😫', '😟', '😐', '🙂', '😁'][responses.mood - 1] || '---'}
-            icon={<Sparkles className="w-4 h-4" />}
-            positive={responses.mood >= 3}
-          />
+        {/* Indicadores rápidos */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className={`p-3 rounded-lg border ${
+            !responses.usedCreditCards 
+              ? 'bg-green-500/10 border-green-500/20' 
+              : 'bg-red-500/10 border-red-500/20'
+          }`}>
+            <div className="text-[10px] text-gray-400 mb-1">Tarjetas</div>
+            <div className={`text-sm font-semibold ${
+              !responses.usedCreditCards ? 'text-green-300' : 'text-red-300'
+            }`}>
+              {responses.usedCreditCards ? '⚠️ Usadas' : '✅ Sin uso'}
+            </div>
+          </div>
+          <div className={`p-3 rounded-lg border ${
+            responses.mood >= 3 
+              ? 'bg-green-500/10 border-green-500/20' 
+              : 'bg-yellow-500/10 border-yellow-500/20'
+          }`}>
+            <div className="text-[10px] text-gray-400 mb-1">Ánimo</div>
+            <div className="text-lg">
+              {['😫', '😟', '😐', '🙂', '😁'][responses.mood - 1]}
+            </div>
+          </div>
         </div>
         
-        <div className={`p-4 rounded-xl border animate-in slide-in-from-bottom-4 ${
-          weeklyStrategy.type === 'acceleration' ? 'bg-emerald-500/10 border-emerald-500/30' :
-          weeklyStrategy.type === 'rescue' ? 'bg-purple-500/10 border-purple-500/30' :
-          'bg-blue-500/10 border-blue-500/30'
+        {/* Estrategia IA */}
+        <div className={`p-4 rounded-xl border ${
+          strategy.color === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/20' :
+          strategy.color === 'purple' ? 'bg-purple-500/10 border-purple-500/20' :
+          strategy.color === 'orange' ? 'bg-orange-500/10 border-orange-500/20' :
+          strategy.color === 'yellow' ? 'bg-yellow-500/10 border-yellow-500/20' :
+          'bg-blue-500/10 border-blue-500/20'
         }`}>
           <div className="flex items-start gap-3">
             <div className={`p-2 rounded-lg ${
-              weeklyStrategy.type === 'acceleration' ? 'bg-emerald-500/20 text-emerald-300' :
-              weeklyStrategy.type === 'rescue' ? 'bg-purple-500/20 text-purple-300' :
+              strategy.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-300' :
+              strategy.color === 'purple' ? 'bg-purple-500/20 text-purple-300' :
+              strategy.color === 'orange' ? 'bg-orange-500/20 text-orange-300' :
+              strategy.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-300' :
               'bg-blue-500/20 text-blue-300'
             }`}>
-              <Target className="w-5 h-5" />
+              <Zap className="w-4 h-4" />
             </div>
-            <div className="flex-1">
-              <h4 className="text-white font-bold text-sm mb-1">{weeklyStrategy.title}</h4>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                {weeklyStrategy.advice}
-              </p>
+            <div>
+              <h4 className="text-white font-bold text-sm">{strategy.title}</h4>
+              <p className="text-gray-300 text-xs mt-1 leading-relaxed">{strategy.advice}</p>
             </div>
           </div>
         </div>
       </div>
     );
   };
-  
-  const totalSteps = 6;
-  const isLastStep = step === totalSteps;
-  const isSummary = step > totalSteps;
+
+  // ==========================================
+  // RENDER PRINCIPAL
+  // ==========================================
   
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-      <div className="bg-gray-900 w-full md:max-w-lg h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden relative">
+      <div className="bg-gray-900 w-full md:max-w-md h-[85vh] md:h-auto md:max-h-[85vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden">
         
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-purple-900/50 to-indigo-900/50 z-10">
+        {/* Header */}
+        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-purple-900/40 to-indigo-900/40">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/30 rounded-xl shadow-inner">
+            <div className="p-2 bg-purple-500/30 rounded-xl">
               <Calendar className="w-5 h-5 text-purple-300" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Análisis Semanal</h2>
-              <p className="text-xs text-gray-400">
-                {isSummary ? 'Resumen Estratégico' : `Paso ${step} de ${totalSteps}`}
+              <h2 className="text-lg font-bold text-white">Check-in Semanal</h2>
+              <p className="text-[10px] text-gray-400">
+                {isSummary ? 'Resumen' : `${step} de ${totalSteps}`}
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition z-10"
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
+        {/* Progress bar */}
         {!isSummary && (
-          <div className="h-1 bg-gray-800 relative z-10">
+          <div className="h-1 bg-gray-800">
             <div 
-              className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 transition-all duration-300 ease-out"
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
               style={{ width: `${(step / totalSteps) * 100}%` }}
             />
           </div>
         )}
         
-        <div className="flex-1 overflow-y-auto p-6 relative">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-5">
           {isSummary ? renderSummary() : renderStep()}
         </div>
         
-        <div className="p-4 border-t border-white/10 flex gap-3 bg-gray-900 z-10">
+        {/* Footer */}
+        <div className="p-4 border-t border-white/10 flex gap-3">
           {!isSummary && step > 1 && (
             <button
-              onClick={handlePreviousStep}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-semibold transition border border-white/5 active:scale-95"
+              onClick={handleBack}
+              className="flex-1 bg-white/5 text-white py-3 rounded-xl font-semibold hover:bg-white/10 transition"
             >
               Atrás
             </button>
@@ -476,31 +492,19 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
           
           {isSummary ? (
             <button
-              onClick={() => {
-                // ✅ LÓGICA INLINE DE ENVÍO PARA EVITAR VARIABLES SIN USAR
-                const checkInData = {
-                  ...responses,
-                  amountPaid: (responses.paidOnTime === true ? parseFloat(responses.amountPaid) : 0) || 0,
-                  expectedPayment,
-                  completedAt: new Date().toISOString(),
-                  weekNumber: getWeekNumber(new Date()),
-                  planId: plan.id
-                };
-                onSubmit(checkInData);
-                onClose();
-              }}
-              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-500 hover:to-emerald-500 transition flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 active:scale-95"
+              onClick={handleSubmit}
+              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-500 hover:to-emerald-500 transition flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-5 h-5" />
               Finalizar
             </button>
           ) : (
             <button
-              onClick={handleNextStep}
+              onClick={handleNext}
               disabled={!canProceed()}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-purple-500 hover:to-indigo-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20 active:scale-95"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-purple-500 hover:to-indigo-500 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLastStep ? 'Ver Análisis' : 'Siguiente'}
+              {isLastStep ? 'Ver Resumen' : 'Siguiente'}
               <ChevronRight className="w-5 h-5" />
             </button>
           )}
@@ -514,68 +518,43 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
 // COMPONENTES AUXILIARES
 // ==========================================
 
-function StepContainer({ icon, title, subtitle, children }) {
+function StepLayout({ icon, title, subtitle, children }) {
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+    <div className="space-y-5">
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-4 ring-1 ring-white/5 shadow-sm">
+        <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
           {icon}
         </div>
-        <h3 className="text-xl font-bold text-white mb-1">{title}</h3>
-        <p className="text-gray-400 text-sm font-medium">{subtitle}</p>
+        <h3 className="text-lg font-bold text-white">{title}</h3>
+        <p className="text-gray-400 text-sm">{subtitle}</p>
       </div>
       {children}
     </div>
   );
 }
 
-function OptionButton({ selected, onClick, icon, label, color, compact }) {
+function SelectButton({ selected, onClick, icon, label, color, compact }) {
   const colors = {
     green: selected 
-      ? 'bg-green-500/20 border-green-400 text-green-300 shadow-[0_0_15px_rgba(74,222,128,0.3)]' 
-      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-green-500/5 hover:text-green-200',
+      ? 'bg-green-500/20 border-green-400 text-green-300' 
+      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-green-500/10',
     red: selected 
-      ? 'bg-red-500/20 border-red-400 text-red-300 shadow-[0_0_15px_rgba(248,113,113,0.3)]' 
-      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-red-500/5 hover:text-red-200',
+      ? 'bg-red-500/20 border-red-400 text-red-300' 
+      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-red-500/10',
     yellow: selected 
-      ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.3)]' 
-      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-yellow-500/5 hover:text-yellow-200'
+      ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300' 
+      : 'bg-white/5 border-white/10 text-gray-400 hover:bg-yellow-500/10'
   };
   
   return (
     <button
       onClick={onClick}
-      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 group ${colors[color]} ${
-        selected ? 'scale-105' : 'active:scale-95'
-      } ${compact ? 'p-3' : ''}`}
+      className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${colors[color]} ${
+        selected ? 'scale-105' : ''
+      } ${compact ? 'p-2' : ''}`}
     >
       {icon}
-      <span className={`font-semibold transition-colors ${compact ? 'text-xs' : 'text-sm'}`}>{label}</span>
+      <span className={`font-semibold ${compact ? 'text-xs' : 'text-sm'}`}>{label}</span>
     </button>
   );
-}
-
-function SummaryItem({ label, value, icon, positive }) {
-  return (
-    <div className={`p-3 rounded-xl border flex items-center justify-between ${
-      positive 
-        ? 'bg-green-500/5 border-green-500/20' 
-        : 'bg-red-500/5 border-red-500/20'
-    }`}>
-      <div className="flex items-center gap-2">
-        <span className={positive ? 'text-green-400' : 'text-red-400'}>{icon}</span>
-        <span className="text-xs font-medium text-gray-400">{label}</span>
-      </div>
-      <div className={`text-sm font-bold ${positive ? 'text-green-300' : 'text-red-300'}`}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function getWeekNumber(date) {
-  const start = new Date(date.getFullYear(), 0, 1);
-  const diff = date - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000;
-  const oneWeek = 7 * 24 * 60 * 60 * 1000;
-  return Math.ceil((diff / oneWeek) + start.getDay() / 7);
 }

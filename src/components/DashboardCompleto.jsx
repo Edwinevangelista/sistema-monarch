@@ -44,9 +44,9 @@ import ListaGastosCompleta from './ListaGastosCompleta'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
-import { usePlanExecution } from '../hooks/usePlanExecution';
+
 import PlanExecutionWidget from './PlanExecutionWidget';
-import PlanCheckInModal from './PlanCheckInModal';
+
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -148,22 +148,16 @@ export default function DashboardCompleto()  {
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
  const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
-  const { refresh: refreshPlanes } = usePlanesGuardados()
-  const { planes, planesActivos } = usePlanesGuardados();
+  const { planes, planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
 
-// Y obtén el plan de deudas activo:
+// Y AGREGA después:
 const planDeudaActivo = useMemo(() => {
   if (!planesActivos || planesActivos.length === 0) return null;
-  
-  // Buscar un plan de tipo 'deudas' que esté activo
-  const planDeuda = planesActivos.find(p => 
-    p.tipo === 'deudas' && 
-    p.activo && 
-    !p.completado
-  );
-  
-  return planDeuda || null;
+  return planesActivos.find(p => 
+    p.tipo === 'deudas' && p.activo && !p.completado
+  ) || null;
 }, [planesActivos]);
+
   const { permission, showLocalNotification } = useNotifications()
   // Hook de ejecución de plan de deudas
 
@@ -1282,33 +1276,29 @@ const alertas = useMemo(() => {
   setVistaActiva={setVistaActiva}
   hoy={hoy}
 />
-{/* WIDGET DE EJECUCIÓN DE PLAN DE DEUDAS */}
 <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
   {planDeudaActivo ? (
-    <div className="animate-in fade-in slide-in-from-top-4">
-      <PlanExecutionWidget
-        activePlan={planDeudaActivo}
-        // ✅ NUEVO: Pasar datos financieros reales para la IA
-        realFinancialData={{
-          gastos: gastosInstant,
-          gastosFijos: gastosFijosInstant,
-          deudas: deudasInstant,
-          ingresos: ingresosInstant
-        }}
-        showLocalNotification={showLocalNotification}
-        onOpenPlanDetails={() => setShowDebtPlanner(true)}
-        onRegisterPayment={() => {
-          const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
-          if (targetDebt) {
-            const deudaReal = deudasInstant.find(d => 
-              d.cuenta === targetDebt.nombre || d.id === targetDebt.id
-            );
-            setDeudaEditando(deudaReal || null);
-            setShowModal('pagoTarjeta');
-          }
-        }}
-      />
-    </div>
+    <PlanExecutionWidget
+      activePlan={planDeudaActivo}
+      realFinancialData={{
+        ingresos: ingresosInstant,
+        gastos: gastosInstant,
+        gastosFijos: gastosFijosInstant,
+        deudas: deudasInstant
+      }}
+      showLocalNotification={showLocalNotification}
+      onOpenPlanDetails={() => setShowDebtPlanner(true)}
+      onRegisterPayment={() => {
+        const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
+        if (targetDebt) {
+          const deudaReal = deudasInstant.find(d => 
+            d.cuenta === targetDebt.nombre || d.id === targetDebt.id
+          );
+          setDeudaEditando(deudaReal || null);
+          setShowModal('pagoTarjeta');
+        }
+      }}
+    />
   ) : deudasInstant.length > 0 && (
     <button
       onClick={() => setShowDebtPlanner(true)}
@@ -1321,7 +1311,7 @@ const alertas = useMemo(() => {
         <div className="text-left">
           <div className="text-white font-semibold">Crea tu plan de eliminación de deudas</div>
           <div className="text-gray-400 text-sm">
-            Tienes {deudasInstant.length} deuda{deudasInstant.length > 1 ? 's' : ''} - El sistema te guiará paso a paso
+            Tienes {deudasInstant.length} deuda{deudasInstant.length > 1 ? 's' : ''} registrada{deudasInstant.length > 1 ? 's' : ''}
           </div>
         </div>
       </div>
@@ -1329,6 +1319,8 @@ const alertas = useMemo(() => {
     </button>
   )}
 </div>
+*/
+
 
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">
