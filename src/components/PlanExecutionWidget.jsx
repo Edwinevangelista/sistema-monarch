@@ -6,11 +6,12 @@
 
 import React, { useState } from 'react';
 import { 
-  Target, CheckCircle2, Circle, AlertTriangle, 
-  Zap, TrendingUp, TrendingDown, Wallet, ChevronRight,
+  Target, CheckCircle2, Circle,
+  Zap, TrendingUp, ChevronRight,
   ChevronDown, Trophy, Sparkles, Calendar,
   Flame
 } from 'lucide-react';
+
 
 import { usePlanExecution } from '../hooks/usePlanExecution';
 import PlanCheckInModal from './PlanCheckInModal';
@@ -22,20 +23,19 @@ export default function PlanExecutionWidget({
   onOpenPlanDetails,
   onRegisterPayment
 }) {
-  const {
-    financialHealth,
-    dailyTasks,
-    progress,
-    stats,
-    streakData,
-    needsCheckIn,
-    showCheckInModal,
-    setShowCheckInModal,
-    performCheckIn,
-    completeTask,
-    isTaskCompleted,
-    logPayment
-  } = usePlanExecution(activePlan, realFinancialData, showLocalNotification);
+ const {
+  financialHealth,
+  dailyTasks,
+  progress,
+  stats,
+  needsCheckIn,
+  showCheckInModal,
+  setShowCheckInModal,
+  performCheckIn,
+  completeTask,
+  isTaskCompleted,
+  logPayment
+} = usePlanExecution(activePlan, realFinancialData, showLocalNotification);
 
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [celebratingTask, setCelebratingTask] = useState(null);
