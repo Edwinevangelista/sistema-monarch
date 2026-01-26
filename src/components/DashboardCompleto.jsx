@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Clock, Target } from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target } from 'lucide-react'
+
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
 import { useIngresos } from '../hooks/useIngresos'
@@ -148,7 +149,8 @@ export default function DashboardCompleto()  {
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
  const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
-  const { planes, planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
+ const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
+
 
 // Y AGREGA después:
 const planDeudaActivo = useMemo(() => {
