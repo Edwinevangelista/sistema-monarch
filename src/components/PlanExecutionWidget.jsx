@@ -96,7 +96,7 @@ export default function PlanExecutionWidget({
               
               <div className="flex items-center gap-2">
                 {/* Racha */}
-                {stats.streak > 0 && (
+                {(stats.streak ?? 0) > 0 && (
                   <div className="flex items-center gap-1 bg-orange-500/20 px-2 py-1 rounded-full border border-orange-500/30">
                     <Flame className="w-3 h-3 text-orange-400" />
                     <span className="text-xs font-bold text-orange-300">{stats.streak}</span>
@@ -167,7 +167,7 @@ export default function PlanExecutionWidget({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold text-white">{progress.percentage.toFixed(0)}%</div>
+            <div className="text-lg font-bold text-white">{(progress.percentage ?? 0).toFixed(0)}%</div>
             <div className="text-[10px] text-gray-500">completado</div>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function PlanExecutionWidget({
         <div className="h-2 bg-black/30 rounded-full overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000"
-            style={{ width: `${Math.max(2, progress.percentage)}%` }}
+            style={{ width: `${Math.max(2, progress.percentage ?? 0)}%` }}
           />
         </div>
         
