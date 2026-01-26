@@ -8,8 +8,10 @@ import React, { useState } from 'react';
 import { 
   Target, CheckCircle2, Circle, AlertTriangle, 
   Zap, TrendingUp, TrendingDown, Wallet, ChevronRight,
-  ChevronDown, Trophy, Sparkles, Calendar
+  ChevronDown, Trophy, Sparkles, Calendar,
+  Flame
 } from 'lucide-react';
+
 import { usePlanExecution } from '../hooks/usePlanExecution';
 import PlanCheckInModal from './PlanCheckInModal';
 
