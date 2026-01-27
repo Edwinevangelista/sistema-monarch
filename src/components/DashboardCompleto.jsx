@@ -982,7 +982,8 @@ const [vistaActiva, setVistaActiva] = useState('real') // 'real' o 'proyectado'
 const datosActivos = vistaActiva === 'real' ? calculosReales : calculosProyectados
 
 // COMPATIBILIDAD: Mantener variables antiguas pero con nuevo sistema
-const totalIngresos = datosActivos.ingresos
+const totalIngresos = datosActivos.totalIngresos
+
 const totalGastosReales = datosActivos.totalGastos
 const totalGastosFijosReales = datosActivos.gastosFijos
 const totalGastosVariablesReales = datosActivos.gastosVariables
@@ -1212,7 +1213,7 @@ const alertas = useMemo(() => {
     totalSuscripciones: totalSuscripcionesReales,
     saldo: saldoReal,
     tasaAhorro: parseFloat(tasaAhorroReal || 0) / 100,
-    totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.balance), 0),
+    totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.saldo), 0),
     financialHealth,
     dailyBudget
   }
@@ -1321,7 +1322,7 @@ const alertas = useMemo(() => {
     </button>
   )}
 </div>
-*/
+
 
 
       {/* CONTENIDO PRINCIPAL */}

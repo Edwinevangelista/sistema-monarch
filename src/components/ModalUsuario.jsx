@@ -10,8 +10,8 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
-// IMPORTA EL NUEVO COMPONENTE FAQ
 import FAQ from './FAQ';
+import { subscribeToPush } from '../lib/push';
 
 export default function ModalUsuario({ 
   onClose, 
@@ -63,7 +63,6 @@ export default function ModalUsuario({
   // Estados para Modales
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  // NUEVO ESTADO PARA FAQ
   const [showFAQModal, setShowFAQModal] = useState(false);
 
   // Estado de preferencias
@@ -99,7 +98,6 @@ export default function ModalUsuario({
   useEffect(() => {
     cargarDatosUsuario();
   }, []);
-
   const cargarDatosUsuario = async () => {
     try {
       setLoading(true);
@@ -118,11 +116,13 @@ export default function ModalUsuario({
 
       let perfilCompleto = null;
       try {
+        // --- CORRECCIÓN AQUÍ: Usar 'user_id' en lugar de 'id' ---
         const { data: perfil, error: perfilError } = await supabase
           .from('perfiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('user_id', user.id) // <--- CAMBIO CLAVE
           .single();
+        // ---------------------------------------------------
         
         if (!perfilError && perfil) {
           perfilCompleto = perfil;
@@ -132,8 +132,9 @@ export default function ModalUsuario({
       }
 
       const datosUsuario = {
-        id: user.id,
+        id: user.id, // El ID de la app sigue siendo el ID de Auth
         email: user.email,
+        // ... resto del código igual
         nombre: perfilCompleto?.nombre || user.user_metadata?.nombre || user.email?.split('@')[0] || 'Usuario',
         apellido: perfilCompleto?.apellido || user.user_metadata?.apellido || '',
         telefono: perfilCompleto?.telefono || user.user_metadata?.telefono || '',
@@ -401,20 +402,19 @@ export default function ModalUsuario({
   // =========================
   // NOTIFICACIONES
   // =========================
-  const solicitarPermisoNotificacion = async () => {
-    if (!("Notification" in window)) {
-      alert("Tu navegador no soporta notificaciones nativas.");
-      return;
-    }
-    if (Notification.permission === "granted") {
-      if(showLocalNotification) showLocalNotification('🔔 Test de notificación', { body: 'Las notificaciones están funcionando.' });
-      alert("Ya tienes los permisos activados.");
-      return;
-    }
+  const handleActivarPushReal = async () => {
+    console.log('VAPID:', process.env.REACT_APP_VAPID_PUBLIC_KEY);
 
-    const permiso = await Notification.requestPermission();
-    if (permiso === "granted") {
-      alert("✅ Notificaciones activadas correctamente.");
+    try {
+      const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+
+      if (!vapidKey) {
+        throw new Error('VAPID public key no configurada en archivo .env');
+      }
+
+      // Esta función debe ser exportada como named export en ../lib/push/index.js
+      await subscribeToPush(vapidKey);
+
       setPreferencias(prev => ({
         ...prev,
         notificaciones: {
@@ -422,8 +422,11 @@ export default function ModalUsuario({
           alertasPush: true
         }
       }));
-    } else {
-      alert("❌ Permiso denegado.");
+
+      alert('🔔 Notificaciones push activadas correctamente');
+    } catch (error) {
+      console.error('Error activando push:', error);
+      alert(error.message || 'No se pudieron activar las notificaciones push');
     }
   };
 
@@ -878,10 +881,10 @@ export default function ModalUsuario({
                         </div>
                       </div>
                       <button
-                        onClick={solicitarPermisoNotificacion}
+                        onClick={handleActivarPushReal}
                         className="text-blue-400 text-sm font-bold hover:underline"
                       >
-                        {permission === 'granted' ? 'Configurar' : 'Activar'}
+                        {prefsNotificaciones.alertasPush ? 'Configurado' : 'Activar'}
                       </button>
                     </div>
 
@@ -1059,7 +1062,6 @@ export default function ModalUsuario({
                   
                   <div className="space-y-2">
                     <button
-                      // ACTUALIZACIÓN AQUÍ: Abre el nuevo Modal FAQ
                       onClick={() => setShowFAQModal(true)}
                       className="w-full flex items-center justify-between p-4 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors text-left"
                     >

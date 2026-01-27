@@ -26,7 +26,7 @@ self.addEventListener('activate', (event) => {
       )
     )
   );
-  return self.clients.claim();
+  self.clients.claim();
 });
 
 // ==============================
@@ -71,18 +71,38 @@ self.addEventListener('fetch', (event) => {
 // PUSH NOTIFICATIONS
 // ==============================
 self.addEventListener('push', (event) => {
-  console.log('Push recibido:', event);
+  console.log('Push recibido');
 
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+
+  if (event.data) {
+    try {
+      // ✔ Producción real (Supabase / backend)
+      data = event.data.json();
+    } catch {
+      // ✔ Fallback seguro (Chrome DevTools / texto plano)
+      console.warn('Push payload no es JSON válido');
+      data = {
+        title: 'FinGuide (Test)',
+        body: event.data.text(),
+      };
+    }
+  }
 
   const title = data.title || 'FinGuide';
+
   const options = {
     body: data.body || 'Tienes una nueva notificación',
     icon: '/branding/app/FinGuide_AppIcon_192.png',
     badge: '/branding/app/FinGuide_AppIcon_192.png',
     vibrate: [200, 100, 200],
-    tag: 'finguide-notification',
-    requireInteraction: false,
+
+    // 🔐 TAG dinámico → evita reemplazos silenciosos
+    tag: data.tag || `finguide-${Date.now()}`,
+
+    // 🔔 Mantener visible (ideal para alertas financieras)
+    requireInteraction: true,
+
     data: data.data || {}
   };
 
@@ -98,8 +118,18 @@ self.addEventListener('notificationclick', (event) => {
   console.log('Notificación clickeada');
   event.notification.close();
 
+  const url = event.notification.data?.url || '/';
+
   event.waitUntil(
-    clients.openWindow(event.notification.data?.url || '/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes(url) && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        return clients.openWindow(url);
+      })
   );
 });
 
