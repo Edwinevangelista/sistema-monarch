@@ -12,6 +12,8 @@ import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
 import { subscribeToPush } from '../lib/push';
+import { unsubscribeFromPush } from '../lib/unsubscribeFromPush';
+
 
 export default function ModalUsuario({ 
   onClose, 
@@ -28,6 +30,10 @@ export default function ModalUsuario({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('perfil'); // perfil, seguridad, preferencias, privacidad, ayuda
   
+  // MEJORA: Estados reales para Push
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [loadingPush, setLoadingPush] = useState(false);
+
   // Estado de edición
   const [modoEdicion, setModoEdicion] = useState(false);
   const [datosEdicion, setDatosEdicion] = useState({
@@ -98,6 +104,22 @@ export default function ModalUsuario({
   useEffect(() => {
     cargarDatosUsuario();
   }, []);
+
+  // MEJORA: Detectar estado real de Push al montar el componente
+  useEffect(() => {
+    (async () => {
+      if (!('serviceWorker' in navigator)) return;
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      } catch (e) {
+        console.warn('No se pudo verificar estado del SW', e);
+      }
+    })();
+  }, []);
+
   const cargarDatosUsuario = async () => {
     try {
       setLoading(true);
@@ -116,13 +138,12 @@ export default function ModalUsuario({
 
       let perfilCompleto = null;
       try {
-        // --- CORRECCIÓN AQUÍ: Usar 'user_id' en lugar de 'id' ---
+        // CORRECCIÓN: Usar 'user_id' en lugar de 'id'
         const { data: perfil, error: perfilError } = await supabase
           .from('perfiles')
           .select('*')
-          .eq('user_id', user.id) // <--- CAMBIO CLAVE
+          .eq('user_id', user.id)
           .single();
-        // ---------------------------------------------------
         
         if (!perfilError && perfil) {
           perfilCompleto = perfil;
@@ -132,9 +153,8 @@ export default function ModalUsuario({
       }
 
       const datosUsuario = {
-        id: user.id, // El ID de la app sigue siendo el ID de Auth
+        id: user.id,
         email: user.email,
-        // ... resto del código igual
         nombre: perfilCompleto?.nombre || user.user_metadata?.nombre || user.email?.split('@')[0] || 'Usuario',
         apellido: perfilCompleto?.apellido || user.user_metadata?.apellido || '',
         telefono: perfilCompleto?.telefono || user.user_metadata?.telefono || '',
@@ -190,15 +210,16 @@ export default function ModalUsuario({
 
       if (updateError) throw updateError;
 
-      // Intentar actualizar tabla de perfiles (si existe)
+      // Intentar actualizar tabla de perfiles
       try {
+        // MEJORA: Usar 'user_id' para el upsert para asegurar integridad referencial
         const { error: perfilError } = await supabase
           .from('perfiles')
           .upsert({ 
-            id: user.id, 
+            user_id: user.id, 
             ...datosEdicion, 
             updated_at: new Date().toISOString() 
-          }, { onConflict: 'id' });
+          }, { onConflict: 'user_id' }); // Conflicto por user_id, no por id autogenerado
 
         if (perfilError) console.warn('No se pudo actualizar perfil:', perfilError);
       } catch (e) {
@@ -400,21 +421,20 @@ export default function ModalUsuario({
   };
 
   // =========================
-  // NOTIFICACIONES
+  // NOTIFICACIONES (MEJORADO)
   // =========================
   const handleActivarPushReal = async () => {
-    console.log('VAPID:', process.env.REACT_APP_VAPID_PUBLIC_KEY);
-
     try {
+      setLoadingPush(true);
       const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
 
       if (!vapidKey) {
         throw new Error('VAPID public key no configurada en archivo .env');
       }
 
-      // Esta función debe ser exportada como named export en ../lib/push/index.js
       await subscribeToPush(vapidKey);
 
+      setPushEnabled(true);
       setPreferencias(prev => ({
         ...prev,
         notificaciones: {
@@ -427,6 +447,32 @@ export default function ModalUsuario({
     } catch (error) {
       console.error('Error activando push:', error);
       alert(error.message || 'No se pudieron activar las notificaciones push');
+    } finally {
+      setLoadingPush(false);
+    }
+  };
+
+  const handleDesactivarPushReal = async () => {
+    try {
+      setLoadingPush(true);
+
+      await unsubscribeFromPush();
+
+      setPushEnabled(false);
+      setPreferencias(prev => ({
+        ...prev,
+        notificaciones: {
+          ...prev.notificaciones,
+          alertasPush: false
+        }
+      }));
+
+      alert('🔕 Notificaciones push desactivadas correctamente');
+    } catch (error) {
+      console.error('Error desactivando push:', error);
+      alert('Error al desactivar las notificaciones');
+    } finally {
+      setLoadingPush(false);
     }
   };
 
@@ -877,14 +923,21 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Notificaciones Push</p>
-                          <p className="text-gray-500 text-xs">{permission === 'granted' ? 'Activadas' : 'Desactivadas'}</p>
+                          <p className="text-gray-500 text-xs">{pushEnabled ? 'Activadas' : 'Desactivadas'}</p>
                         </div>
                       </div>
+                      
+                      {/* MEJORA: Botón Toggle Inteligente */}
                       <button
-                        onClick={handleActivarPushReal}
-                        className="text-blue-400 text-sm font-bold hover:underline"
+                        onClick={pushEnabled ? handleDesactivarPushReal : handleActivarPushReal}
+                        disabled={loadingPush}
+                        className="text-blue-400 text-sm font-bold hover:underline disabled:opacity-50"
                       >
-                        {prefsNotificaciones.alertasPush ? 'Configurado' : 'Activar'}
+                        {loadingPush 
+                          ? 'Procesando...' 
+                          : pushEnabled 
+                            ? 'Desactivar' 
+                            : 'Activar'}
                       </button>
                     </div>
 
