@@ -420,39 +420,52 @@ export default function ModalUsuario({
     }
   };
 
-  // =========================
-  // NOTIFICACIONES (MEJORADO)
-  // =========================
-  const handleActivarPushReal = async () => {
-    try {
-      setLoadingPush(true);
-      const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
+// =========================
+// NOTIFICACIONES (MEJORADO)
+// =========================
+const handleActivarPushReal = async () => {
+  try {
+    setLoadingPush(true);
+    
+    // 🔍 DIAGNÓSTICO - AQUÍ DENTRO DE LA FUNCIÓN
+    console.log('🔍 DEBUG PRODUCCIÓN:', {
+      vapidKey: process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED',
+      vapidLength: process.env.REACT_APP_VAPID_PUBLIC_KEY?.length,
+      allEnvVars: Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')),
+      isProduction: process.env.NODE_ENV === 'production',
+      hostname: window.location.hostname
+    });
 
-      if (!vapidKey) {
-        throw new Error('VAPID public key no configurada en archivo .env');
-      }
+    const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
 
-      await subscribeToPush(vapidKey);
-
-      setPushEnabled(true);
-      setPreferencias(prev => ({
-        ...prev,
-        notificaciones: {
-          ...prev.notificaciones,
-          alertasPush: true
-        }
-      }));
-
-      alert('🔔 Notificaciones push activadas correctamente');
-    } catch (error) {
-      console.error('Error activando push:', error);
-      alert(error.message || 'No se pudieron activar las notificaciones push');
-    } finally {
-      setLoadingPush(false);
+    if (!vapidKey) {
+      alert('❌ ERROR: VAPID key no encontrada en producción');
+      throw new Error('VAPID public key no configurada en archivo .env');
     }
-  };
 
-  const handleDesactivarPushReal = async () => {
+    await subscribeToPush(vapidKey);
+
+    setPushEnabled(true);
+    setPreferencias(prev => ({
+      ...prev,
+      notificaciones: {
+        ...prev.notificaciones,
+        alertasPush: true
+      }
+    }));
+
+    alert('🔔 Notificaciones push activadas correctamente');
+  } catch (error) {
+    console.error('Error activando push:', error);
+    alert(error.message || 'No se pudieron activar las notificaciones push');
+  } finally {
+    setLoadingPush(false);
+  }
+};
+
+const handleDesactivarPushReal = async () => {
+
+};
     try {
       setLoadingPush(true);
 
