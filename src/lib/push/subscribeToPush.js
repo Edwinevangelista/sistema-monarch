@@ -1,44 +1,22 @@
+// subscribeToPushFCM.js - Nueva implementación con Firebase
 import { supabase } from '../supabaseClient';
+import { getFCMToken } from './firebase';
 
-function urlBase64ToUint8Array(base64String) {
-  console.log('🔧 urlBase64ToUint8Array iniciada');
-  alert('🔧 Conversión VAPID iniciada');
-  
-  let cleaned = base64String.replace(/^["']|["']$/g, '').trim();
-  const padding = '='.repeat((4 - (cleaned.length % 4)) % 4);
-  const base64 = (cleaned + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  const raw = atob(base64);
-  const result = Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-  
-  console.log('✅ urlBase64ToUint8Array completada');
-  alert('✅ Conversión VAPID completada');
-  
-  return result;
-}
-
-export async function subscribeToPush(VAPID_PUBLIC_KEY) {
-  // 🚨 LOGGING EXTREMO
-  console.log('🔔 subscribeToPush INICIADA');
-  console.log('🔔 VAPID recibida:', VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED');
-  alert('🔔 subscribeToPush INICIADA - ¿VES ESTE ALERT?');
-  alert(`🔔 VAPID recibida: ${VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED'}`);
+export async function subscribeToPushFCM() {
+  console.log('🔥 subscribeToPushFCM INICIADA');
+  alert('🔥 FCM: Iniciando suscripción Firebase');
 
   try {
     // PASO 1: Verificar soporte
-    console.log('📱 PASO 1: Verificando soporte del navegador');
-    alert('📱 PASO 1: Verificando soporte del navegador');
+    console.log('📱 PASO 1: Verificando soporte FCM');
+    alert('📱 PASO 1: Verificando soporte FCM');
     
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.error('❌ Push no soportado');
-      alert('❌ Push no soportado en este navegador');
-      throw new Error('Push no soportado en este navegador');
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+      throw new Error('FCM no soportado en este navegador');
     }
     
-    console.log('✅ Soporte confirmado');
-    alert('✅ Soporte confirmado');
+    console.log('✅ Soporte FCM confirmado');
+    alert('✅ Soporte FCM confirmado');
 
     // PASO 2: Solicitar permisos
     console.log('📱 PASO 2: Solicitando permisos');
@@ -49,199 +27,157 @@ export async function subscribeToPush(VAPID_PUBLIC_KEY) {
     alert(`📱 Permission result: ${permission}`);
     
     if (permission !== 'granted') {
-      console.error('❌ Permisos denegados');
-      alert('❌ Permisos denegados');
       throw new Error('Permiso de notificaciones denegado');
     }
     
     console.log('✅ Permisos concedidos');
     alert('✅ Permisos concedidos');
 
-    // 🔍 DIAGNÓSTICO SERVICE WORKER ESPECÍFICO
-    console.log('🔍 PASO 2.5: DIAGNÓSTICO SW DETALLADO');
-    alert('🔍 PASO 2.5: DIAGNÓSTICO SW DETALLADO');
-
-    // Verificar registrations existentes
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    console.log('📊 SW Registrations encontrados:', registrations.length);
-    alert(`📊 SW Registrations: ${registrations.length}`);
-
-    if (registrations.length > 0) {
-      for (let i = 0; i < registrations.length; i++) {
-        const reg = registrations[i];
-        console.log(`📊 SW ${i}:`, {
-          scope: reg.scope,
-          active: !!reg.active,
-          installing: !!reg.installing,
-          waiting: !!reg.waiting,
-          activeState: reg.active?.state,
-          url: reg.active?.scriptURL
-        });
-        alert(`📊 SW ${i}: Active=${!!reg.active}, State=${reg.active?.state || 'none'}, Scope=${reg.scope}`);
-      }
-    } else {
-      console.log('❌ No hay service workers registrados');
-      alert('❌ No hay SWs registrados - REGISTRANDO MANUALMENTE');
-      
-      try {
-        console.log('🔧 Registrando SW manualmente...');
-        alert('🔧 Registrando SW manualmente...');
-        
-        const registration = await navigator.serviceWorker.register('/service-worker.js', {
-          scope: '/',
-          updateViaCache: 'none'
-        });
-        
-        console.log('✅ SW registrado manualmente:', registration.scope);
-        alert(`✅ SW registrado: ${registration.scope}`);
-        
-        // Forzar actualización
-        await registration.update();
-        console.log('✅ SW actualizado');
-        alert('✅ SW actualizado');
-        
-      } catch (regError) {
-        console.error('❌ Error registrando SW:', regError);
-        alert(`❌ Error registrando SW: ${regError.message}`);
-        throw regError;
-      }
-    }
-
-    // PASO 3: Service Worker con TIMEOUT
-    console.log('📱 PASO 3: Obteniendo service worker CON TIMEOUT');
-    alert('📱 PASO 3: Obteniendo SW con timeout de 15s');
+    // PASO 3: Registrar Service Worker FCM
+    console.log('📱 PASO 3: Registrando SW FCM');
+    alert('📱 PASO 3: Registrando SW FCM');
     
-    let registration;
-    try {
-      // TIMEOUT de 15 segundos
-      registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Service Worker timeout después de 15 segundos')), 15000)
-        )
-      ]);
-      
-      console.log('✅ Service worker ready:', {
-        scope: registration.scope,
-        state: registration.active?.state,
-        scriptURL: registration.active?.scriptURL
-      });
-      alert(`✅ SW ready! Scope: ${registration.scope}`);
-      
-    } catch (swError) {
-      console.error('❌ SW Ready falló:', swError);
-      alert(`❌ SW Ready falló: ${swError.message}`);
-      
-      // FALLBACK: Usar el primer registration disponible
-      const fallbackRegs = await navigator.serviceWorker.getRegistrations();
-      if (fallbackRegs.length > 0 && fallbackRegs[0].active) {
-        console.log('🔄 Usando registration fallback');
-        alert('🔄 Usando registration fallback');
-        registration = fallbackRegs[0];
-      } else {
-        throw swError;
-      }
-    }
-
-    // PASO 4: Verificar suscripción existente
-    console.log('📱 PASO 4: Verificando suscripción existente');
-    alert('📱 PASO 4: Verificando suscripción existente');
-    
-    const existingSubscription = await registration.pushManager.getSubscription();
-    
-    if (existingSubscription) {
-      console.log('🔁 Suscripción previa encontrada, eliminando...');
-      alert('🔁 Suscripción previa encontrada, eliminando...');
-      
-      await existingSubscription.unsubscribe();
-      
-      console.log('✅ Suscripción previa eliminada');
-      alert('✅ Suscripción previa eliminada');
-    } else {
-      console.log('ℹ️ No hay suscripción previa');
-      alert('ℹ️ No hay suscripción previa');
-    }
-
-    // PASO 5: Conversión VAPID
-    console.log('📱 PASO 5: Convirtiendo VAPID key');
-    alert('📱 PASO 5: Convirtiendo VAPID key');
-    
-    const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-    
-    console.log('✅ VAPID key convertida');
-    alert('✅ VAPID key convertida');
-
-    // PASO 6: Crear nueva suscripción - AQUÍ SE PUEDE COLGAR
-    console.log('📱 PASO 6: Creando push subscription');
-    alert('📱 PASO 6: Creando push subscription - CRÍTICO');
-    
-    console.log('🚨 PUNTO CRÍTICO: Llamando pushManager.subscribe()');
-    alert('🚨 PUNTO CRÍTICO: Llamando pushManager.subscribe()');
-    
-    const newSubscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      scope: '/firebase-cloud-messaging-push-scope'
     });
     
-    console.log('🎉 Push subscription creada exitosamente');
-    alert('🎉 Push subscription creada exitosamente');
+    console.log('✅ Service Worker FCM registrado:', registration.scope);
+    alert(`✅ SW FCM registrado: ${registration.scope.substring(0, 50)}...`);
     
-    console.log('📊 Subscription details:', {
-      endpoint: newSubscription.endpoint.substring(0, 50) + '...',
-      keys: Object.keys(newSubscription.toJSON().keys || {})
-    });
+    // Esperar a que esté activo
+    await navigator.serviceWorker.ready;
+    console.log('✅ Service Worker FCM ready');
+    alert('✅ Service Worker FCM ready');
 
-    // PASO 7: Obtener usuario
-    console.log('📱 PASO 7: Obteniendo usuario de Supabase');
-    alert('📱 PASO 7: Obteniendo usuario de Supabase');
+    // PASO 4: Obtener token FCM
+    console.log('📱 PASO 4: Obteniendo token FCM');
+    alert('📱 PASO 4: Obteniendo token FCM - SIN VAPID KEYS');
+    
+    const token = await getFCMToken();
+    
+    if (!token) {
+      throw new Error('No se pudo obtener token FCM');
+    }
+    
+    console.log('🎉 Token FCM obtenido:', token.substring(0, 20) + '...');
+    alert(`🎉 Token FCM obtenido: ${token.substring(0, 20)}...`);
+
+    // PASO 5: Obtener usuario
+    console.log('📱 PASO 5: Obteniendo usuario Supabase');
+    alert('📱 PASO 5: Obteniendo usuario Supabase');
     
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('❌ Error obteniendo usuario:', userError);
-      alert('❌ Error obteniendo usuario');
+      console.error('❌ Error usuario:', userError);
       throw new Error('Usuario no autenticado');
     }
     
     console.log('✅ Usuario obtenido:', user.id);
-    alert(`✅ Usuario obtenido: ${user.id.substring(0, 8)}...`);
+    alert(`✅ Usuario: ${user.id.substring(0, 8)}...`);
 
-    // PASO 8: Guardar en base de datos
-    console.log('📱 PASO 8: Guardando subscription en DB');
-    alert('📱 PASO 8: Guardando subscription en DB');
+    // PASO 6: Guardar en base de datos (estructura FCM)
+    console.log('📱 PASO 6: Guardando token FCM en DB');
+    alert('📱 PASO 6: Guardando token FCM en DB');
     
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
-        subscription: newSubscription,
-        endpoint: newSubscription.endpoint,
+        subscription: {
+          fcm_token: token,
+          type: 'fcm',
+          endpoint: `https://fcm.googleapis.com/fcm/send/${token}`,
+          created_via: 'firebase'
+        },
+        endpoint: `https://fcm.googleapis.com/fcm/send/${token}`,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
 
     if (error) {
-      console.error('❌ Error guardando suscripción:', error);
+      console.error('❌ Error guardando:', error);
       alert(`❌ Error DB: ${error.message}`);
       throw error;
     }
     
-    console.log('✅ Subscription guardada en DB');
-    alert('✅ Subscription guardada en DB');
+    console.log('✅ Token FCM guardado en DB');
+    alert('✅ Token FCM guardado en DB');
 
-    // PASO 9: Finalización
-    console.log('🎉 subscribeToPush COMPLETADA EXITOSAMENTE');
-    alert('🎉 subscribeToPush COMPLETADA EXITOSAMENTE');
+    // PASO 7: Configurar listener de mensajes
+    console.log('📱 PASO 7: Configurando listeners FCM');
+    alert('📱 PASO 7: Configurando listeners FCM');
     
-    return newSubscription;
+    // Importar dinámicamente el listener
+    const { onMessageListener } = await import('./firebase');
+    
+    // Configurar listener para mensajes en foreground
+    onMessageListener()
+      .then((payload) => {
+        console.log('📨 Mensaje en foreground:', payload);
+        
+        // Mostrar notificación local si la app está abierta
+        if (Notification.permission === 'granted') {
+          new Notification(
+            payload.notification?.title || 'FinGuide',
+            {
+              body: payload.notification?.body || 'Nueva notificación',
+              icon: '/favicon-192x192.png'
+            }
+          );
+        }
+      })
+      .catch((err) => console.log('❌ Error listener:', err));
+    
+    console.log('✅ Listeners configurados');
+    alert('✅ Listeners configurados');
+
+    // PASO 8: Finalización
+    console.log('🎉 subscribeToPushFCM COMPLETADA EXITOSAMENTE');
+    alert('🎉 FCM: ¡Suscripción completada exitosamente!');
+    
+    return {
+      token,
+      type: 'fcm',
+      success: true
+    };
 
   } catch (error) {
-    console.error('❌ ERROR EN subscribeToPush:', error);
+    console.error('❌ ERROR EN subscribeToPushFCM:', error);
     console.error('❌ Error stack:', error.stack);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
     
-    alert(`❌ ERROR EN subscribeToPush: ${error.message}`);
+    alert(`❌ ERROR FCM: ${error.message}`);
     
+    throw error;
+  }
+}
+
+// 🗑️ Función para desuscribir FCM
+export async function unsubscribeFromPushFCM() {
+  console.log('🗑️ Desuscribiendo FCM...');
+  
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Eliminar de la base de datos
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('❌ Error eliminando suscripción FCM:', error);
+      throw error;
+    }
+
+    console.log('✅ Suscripción FCM eliminada');
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error desuscribiendo FCM:', error);
     throw error;
   }
 }

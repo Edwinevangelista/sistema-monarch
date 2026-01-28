@@ -11,8 +11,11 @@ import { supabase } from '../lib/supabaseClient';
 import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
-import { subscribeToPush } from '../lib/push';
-import { unsubscribeFromPush } from '../lib/unsubscribeFromPush';
+import { subscribeToPushFCM, unsubscribeFromPushFCM } from '../lib/subscribeToPushFCM';
+
+
+import { subscribeToPushFCM, unsubscribeFromPushFCM } from '../lib/subscribeToPushFCM';
+
 
 
 export default function ModalUsuario({ 
@@ -462,7 +465,7 @@ const handleActivarPushReal = async () => {
     console.log('🔔 Paso 4: Llamando subscribeToPush');
     alert('🔔 Intentando subscribeToPush...');
     
-    await subscribeToPush(vapidKey);
+  await subscribeToPushFCM();
     
     console.log('✅ subscribeToPush completado');
     alert('✅ subscribeToPush exitoso');
@@ -493,7 +496,7 @@ const handleActivarPushReal = async () => {
 const handleDesactivarPushReal = async () => {
   try {
     setLoadingPush(true);
-    await unsubscribeFromPush();
+ await unsubscribeFromPushFCM();
     setPushEnabled(false);
     setPreferencias(prev => ({
       ...prev,
