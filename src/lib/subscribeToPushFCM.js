@@ -37,9 +37,9 @@ export async function subscribeToPushFCM() {
     console.log('📱 PASO 3: Registrando SW FCM');
     alert('📱 PASO 3: Registrando SW FCM');
     
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-      scope: '/firebase-cloud-messaging-push-scope'
-    });
+    const registration = await navigator.serviceWorker.register('/service-worker.js', {
+  scope: '/'
+});
     
     console.log('✅ Service Worker FCM registrado:', registration.scope);
     alert(`✅ SW FCM registrado: ${registration.scope.substring(0, 50)}...`);
