@@ -57,16 +57,91 @@ export async function subscribeToPush(VAPID_PUBLIC_KEY) {
     console.log('✅ Permisos concedidos');
     alert('✅ Permisos concedidos');
 
-    // PASO 3: Service Worker
-    console.log('📱 PASO 3: Obteniendo service worker');
-    alert('📱 PASO 3: Obteniendo service worker');
+    // 🔍 DIAGNÓSTICO SERVICE WORKER ESPECÍFICO
+    console.log('🔍 PASO 2.5: DIAGNÓSTICO SW DETALLADO');
+    alert('🔍 PASO 2.5: DIAGNÓSTICO SW DETALLADO');
+
+    // Verificar registrations existentes
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    console.log('📊 SW Registrations encontrados:', registrations.length);
+    alert(`📊 SW Registrations: ${registrations.length}`);
+
+    if (registrations.length > 0) {
+      for (let i = 0; i < registrations.length; i++) {
+        const reg = registrations[i];
+        console.log(`📊 SW ${i}:`, {
+          scope: reg.scope,
+          active: !!reg.active,
+          installing: !!reg.installing,
+          waiting: !!reg.waiting,
+          activeState: reg.active?.state,
+          url: reg.active?.scriptURL
+        });
+        alert(`📊 SW ${i}: Active=${!!reg.active}, State=${reg.active?.state || 'none'}, Scope=${reg.scope}`);
+      }
+    } else {
+      console.log('❌ No hay service workers registrados');
+      alert('❌ No hay SWs registrados - REGISTRANDO MANUALMENTE');
+      
+      try {
+        console.log('🔧 Registrando SW manualmente...');
+        alert('🔧 Registrando SW manualmente...');
+        
+        const registration = await navigator.serviceWorker.register('/service-worker.js', {
+          scope: '/',
+          updateViaCache: 'none'
+        });
+        
+        console.log('✅ SW registrado manualmente:', registration.scope);
+        alert(`✅ SW registrado: ${registration.scope}`);
+        
+        // Forzar actualización
+        await registration.update();
+        console.log('✅ SW actualizado');
+        alert('✅ SW actualizado');
+        
+      } catch (regError) {
+        console.error('❌ Error registrando SW:', regError);
+        alert(`❌ Error registrando SW: ${regError.message}`);
+        throw regError;
+      }
+    }
+
+    // PASO 3: Service Worker con TIMEOUT
+    console.log('📱 PASO 3: Obteniendo service worker CON TIMEOUT');
+    alert('📱 PASO 3: Obteniendo SW con timeout de 15s');
     
-    const registration = await navigator.serviceWorker.ready;
-    console.log('✅ Service worker ready:', {
-      scope: registration.scope,
-      state: registration.active?.state
-    });
-    alert(`✅ Service worker ready. Scope: ${registration.scope}`);
+    let registration;
+    try {
+      // TIMEOUT de 15 segundos
+      registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Service Worker timeout después de 15 segundos')), 15000)
+        )
+      ]);
+      
+      console.log('✅ Service worker ready:', {
+        scope: registration.scope,
+        state: registration.active?.state,
+        scriptURL: registration.active?.scriptURL
+      });
+      alert(`✅ SW ready! Scope: ${registration.scope}`);
+      
+    } catch (swError) {
+      console.error('❌ SW Ready falló:', swError);
+      alert(`❌ SW Ready falló: ${swError.message}`);
+      
+      // FALLBACK: Usar el primer registration disponible
+      const fallbackRegs = await navigator.serviceWorker.getRegistrations();
+      if (fallbackRegs.length > 0 && fallbackRegs[0].active) {
+        console.log('🔄 Usando registration fallback');
+        alert('🔄 Usando registration fallback');
+        registration = fallbackRegs[0];
+      } else {
+        throw swError;
+      }
+    }
 
     // PASO 4: Verificar suscripción existente
     console.log('📱 PASO 4: Verificando suscripción existente');
