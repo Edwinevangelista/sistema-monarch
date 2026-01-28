@@ -11,10 +11,10 @@ import { supabase } from '../lib/supabaseClient';
 import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
+
 import { subscribeToPushFCM, unsubscribeFromPushFCM } from '../lib/subscribeToPushFCM';
 
 
-import { subscribeToPushFCM, unsubscribeFromPushFCM } from '../lib/subscribeToPushFCM';
 
 
 
