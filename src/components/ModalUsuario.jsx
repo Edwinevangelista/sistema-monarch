@@ -427,7 +427,7 @@ const handleActivarPushReal = async () => {
   try {
     setLoadingPush(true);
     
-    // 🔍 DIAGNÓSTICO - AQUÍ DENTRO DE LA FUNCIÓN
+    // 🔍 DIAGNÓSTICO
     console.log('🔍 DEBUG PRODUCCIÓN:', {
       vapidKey: process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED',
       vapidLength: process.env.REACT_APP_VAPID_PUBLIC_KEY?.length,
@@ -464,40 +464,35 @@ const handleActivarPushReal = async () => {
 };
 
 const handleDesactivarPushReal = async () => {
-
-};
-    try {
-      setLoadingPush(true);
-
-      await unsubscribeFromPush();
-
-      setPushEnabled(false);
-      setPreferencias(prev => ({
-        ...prev,
-        notificaciones: {
-          ...prev.notificaciones,
-          alertasPush: false
-        }
-      }));
-
-      alert('🔕 Notificaciones push desactivadas correctamente');
-    } catch (error) {
-      console.error('Error desactivando push:', error);
-      alert('Error al desactivar las notificaciones');
-    } finally {
-      setLoadingPush(false);
-    }
-  };
-
-  const toggleNotificacion = (tipo) => {
+  try {
+    setLoadingPush(true);
+    await unsubscribeFromPush();
+    setPushEnabled(false);
     setPreferencias(prev => ({
       ...prev,
       notificaciones: {
         ...prev.notificaciones,
-        [tipo]: !prev.notificaciones[tipo]
+        alertasPush: false
       }
     }));
-  };
+    alert('🔕 Notificaciones push desactivadas correctamente');
+  } catch (error) {
+    console.error('Error desactivando push:', error);
+    alert('Error al desactivar las notificaciones');
+  } finally {
+    setLoadingPush(false);
+  }
+};
+
+const toggleNotificacion = (tipo) => {
+  setPreferencias(prev => ({
+    ...prev,
+    notificaciones: {
+      ...prev.notificaciones,
+      [tipo]: !prev.notificaciones[tipo]
+    }
+  }));
+};
 
   const handleLogout = async () => {
     if(window.confirm("¿Estás seguro de cerrar sesión?")) {
