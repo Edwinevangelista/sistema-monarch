@@ -1,5 +1,5 @@
 // subscribeToPushFCM.js - Nueva implementación con Firebase
-import { supabase } from '../supabaseClient';
+import { supabase } from './supabaseClient';
 import { getFCMToken } from './firebase';
 
 export async function subscribeToPushFCM() {
