@@ -424,26 +424,48 @@ export default function ModalUsuario({
 // NOTIFICACIONES (MEJORADO)
 // =========================
 const handleActivarPushReal = async () => {
+  // ⚠️ DIAGNÓSTICO EXTREMO - LOGGING PASO A PASO
+  console.log('🚀 INICIANDO handleActivarPushReal');
+  alert('🚀 Función iniciada - ¿Ves este alert?');
+  
   try {
+    console.log('📱 Paso 1: setLoadingPush(true)');
     setLoadingPush(true);
+    alert('📱 Loading activado');
     
-    // 🔍 DIAGNÓSTICO
-    console.log('🔍 DEBUG PRODUCCIÓN:', {
+    console.log('🔍 Paso 2: Verificando VAPID');
+    console.log('VAPID KEY:', process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED');
+    alert(`🔍 VAPID: ${process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED'}`);
+    
+    console.log('🌍 Paso 3: Info ambiente');
+    const debugInfo = {
       vapidKey: process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED',
-      vapidLength: process.env.REACT_APP_VAPID_PUBLIC_KEY?.length,
-      allEnvVars: Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')),
+      vapidLength: process.env.REACT_APP_VAPID_PUBLIC_KEY?.length || 0,
       isProduction: process.env.NODE_ENV === 'production',
-      hostname: window.location.hostname
-    });
+      hostname: window.location.hostname,
+      userAgent: navigator.userAgent.substring(0, 50)
+    };
+    console.log('DEBUG INFO:', debugInfo);
+    alert(`🌍 Production: ${debugInfo.isProduction}, Host: ${debugInfo.hostname}`);
 
     const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
 
     if (!vapidKey) {
-      alert('❌ ERROR: VAPID key no encontrada en producción');
-      throw new Error('VAPID public key no configurada en archivo .env');
+      console.error('❌ VAPID key no encontrada');
+      alert('❌ ERROR: VAPID key UNDEFINED');
+      throw new Error('VAPID key no configurada en build de producción');
     }
 
+    console.log('✅ VAPID key encontrada, longitud:', vapidKey.length);
+    alert(`✅ VAPID encontrada, longitud: ${vapidKey.length}`);
+
+    console.log('🔔 Paso 4: Llamando subscribeToPush');
+    alert('🔔 Intentando subscribeToPush...');
+    
     await subscribeToPush(vapidKey);
+    
+    console.log('✅ subscribeToPush completado');
+    alert('✅ subscribeToPush exitoso');
 
     setPushEnabled(true);
     setPreferencias(prev => ({
@@ -454,12 +476,17 @@ const handleActivarPushReal = async () => {
       }
     }));
 
+    console.log('🎉 TODO COMPLETADO');
     alert('🔔 Notificaciones push activadas correctamente');
+    
   } catch (error) {
-    console.error('Error activando push:', error);
-    alert(error.message || 'No se pudieron activar las notificaciones push');
+    console.error('❌ ERROR CAPTURADO:', error);
+    console.error('Error stack:', error.stack);
+    alert(`❌ ERROR: ${error.message}`);
   } finally {
+    console.log('🏁 setLoadingPush(false)');
     setLoadingPush(false);
+    alert('🏁 Loading terminado');
   }
 };
 
