@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 
+// 🔔 NOTIFICACIONES - NUEVA INTEGRACIÓN
+import { initializeNotificationsOnLoad } from './lib/subscribeToPushFCM'
+
 // AUTENTICACIÓN
 import Auth from './pages/Auth'
 import AuthGuard from './components/AuthGuard'
@@ -125,9 +128,50 @@ function AppRoutes() {
   )
 }
 
+// ============================================
+// 🔔 COMPONENTE DE INICIALIZACIÓN DE NOTIFICACIONES
+// ============================================
+function NotificationInitializer() {
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      try {
+        // Esperar un poco para que auth esté completamente listo
+        setTimeout(async () => {
+          try {
+            const notificationsReactivated = await initializeNotificationsOnLoad()
+            
+            if (notificationsReactivated) {
+              console.log('🔔 Sistema de notificaciones reactivado automáticamente')
+            }
+          } catch (error) {
+            // Silencioso - no mostrar errores de notificaciones al usuario
+            console.warn('Info: No se pudieron reactivar notificaciones automáticamente')
+          }
+        }, 2000) // 2 segundos después de que la app esté lista
+        
+      } catch (error) {
+        // Completamente silencioso - las notificaciones son feature opcional
+        console.warn('Info: Inicialización de notificaciones omitida')
+      }
+    }
+
+    // Solo intentar si estamos en un navegador compatible
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      initializeNotifications()
+    }
+  }, [])
+
+  // Este componente no renderiza nada, solo maneja la inicialización
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      {/* 🔔 INICIALIZAR NOTIFICACIONES (No interfiere con nada) */}
+      <NotificationInitializer />
+      
+      {/* APP PRINCIPAL (Sin cambios) */}
       <AppRoutes />
     </BrowserRouter>
   )
