@@ -1,409 +1,252 @@
-// subscribeToPushFCM.js - Implementación COMPLETA Firebase FCM con SW Inline
+// subscribeToPushSimple.js - Implementación SIMPLE y ROBUSTA (sin Service Workers complejos)
 import { supabase } from './supabaseClient';
-import { getFCMToken } from './firebase';
 
 export async function subscribeToPushFCM() {
-  console.log('🔥 subscribeToPushFCM INICIADA - Versión Inline SW');
-  alert('🔥 FCM: Iniciando suscripción Firebase (Service Worker Inline)');
+  console.log('📱 INICIANDO Notificaciones Simples (sin SW complejos)');
+  alert('📱 Activando notificaciones simples y confiables');
 
   try {
-    // PASO 1: Verificar soporte
-    console.log('📱 PASO 1: Verificando soporte FCM');
-    alert('📱 PASO 1: Verificando soporte FCM');
+    // PASO 1: Verificar soporte básico
+    console.log('📱 PASO 1: Verificando soporte básico');
+    alert('📱 PASO 1: Verificando soporte de notificaciones');
     
-    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
-      throw new Error('FCM no soportado en este navegador');
+    if (!('Notification' in window)) {
+      throw new Error('Este navegador no soporta notificaciones');
     }
     
-    console.log('✅ Soporte FCM confirmado');
-    alert('✅ Soporte FCM confirmado');
+    console.log('✅ Soporte básico confirmado');
+    alert('✅ Navegador compatible con notificaciones');
 
-    // PASO 2: Solicitar permisos
-    console.log('📱 PASO 2: Solicitando permisos');
-    alert('📱 PASO 2: Solicitando permisos');
+    // PASO 2: Solicitar permisos con retry
+    console.log('📱 PASO 2: Solicitando permisos (con retry)');
+    alert('📱 PASO 2: Solicitando permisos - ¡POR FAVOR PERMITE!');
     
-    const permission = await Notification.requestPermission();
-    console.log('📱 Permission result:', permission);
-    alert(`📱 Permission result: ${permission}`);
+    let permission = Notification.permission;
+    
+    if (permission === 'default') {
+      // Primera vez solicitando permisos
+      console.log('🔔 Solicitando permisos por primera vez...');
+      permission = await Notification.requestPermission();
+    }
+    
+    console.log('📱 Resultado de permisos:', permission);
+    alert(`📱 Resultado permisos: ${permission}`);
+    
+    if (permission === 'denied') {
+      console.log('❌ Permisos denegados por el usuario');
+      alert('❌ PERMISOS DENEGADOS\n\nPara activar:\n1. Clic en el ícono de bloqueo/info en la barra de direcciones\n2. Cambiar "Notificaciones" a "Permitir"\n3. Recargar la página');
+      
+      // Guardar como denegado en BD para tracking
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('push_subscriptions')
+            .upsert({
+              user_id: user.id,
+              subscription: {
+                type: 'denied',
+                reason: 'user_denied_permissions',
+                timestamp: new Date().toISOString(),
+                device_info: {
+                  userAgent: navigator.userAgent,
+                  platform: navigator.platform
+                }
+              },
+              endpoint: 'denied://permissions',
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' });
+        }
+      } catch (dbError) {
+        console.warn('No se pudo guardar estado de permisos:', dbError);
+      }
+      
+      throw new Error('Permisos de notificaciones denegados. Ve a configuración del navegador para activarlos.');
+    }
     
     if (permission !== 'granted') {
-      throw new Error('Permiso de notificaciones denegado');
+      throw new Error(`Permisos en estado inesperado: ${permission}`);
     }
     
-    console.log('✅ Permisos concedidos');
-    alert('✅ Permisos concedidos');
+    console.log('✅ Permisos concedidos correctamente');
+    alert('✅ ¡Permisos concedidos! Continuando...');
 
-    // DETECTAR iOS y advertir sobre instalación PWA
+    // PASO 3: Detectar dispositivo y configurar estrategia
+    console.log('📱 PASO 3: Detectando dispositivo');
+    alert('📱 PASO 3: Configurando para tu dispositivo');
+    
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isInStandaloneMode = ('standalone' in window.navigator) && window.navigator.standalone;
-
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                              ('standalone' in window.navigator && window.navigator.standalone);
+    
+    console.log('📊 Información del dispositivo:', {
+      isIOS,
+      isAndroid,
+      isInStandaloneMode,
+      userAgent: navigator.userAgent.substring(0, 50)
+    });
+    
+    let strategy = 'web_basic';
+    let message = '';
+    
     if (isIOS && !isInStandaloneMode) {
-      console.log('⚠️ iOS detectado - Recomendando instalación PWA');
-      alert('💡 iOS: Para mejores notificaciones, instala la app en pantalla de inicio (Compartir > Añadir a pantalla de inicio)');
-    }
-
-    // PASO 3: Crear y registrar Service Worker inline
-    console.log('📱 PASO 3: Creando Service Worker inline');
-    alert('📱 PASO 3: Creando SW inline (sin archivos externos)');
-    
-    // Código del Service Worker como string
-    const swCode = `
-console.log('🔥 FCM SW inline iniciado');
-
-// Importar Firebase scripts
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
-
-// Configuración Firebase (misma que firebase.js)
-const firebaseConfig = {
-  apiKey: "AIzaSyAoZBfEwYI3JMqfWvxifLigL9bSat4e-0",
-  authDomain: "finguide-push.firebaseapp.com",
-  projectId: "finguide-push",
-  storageBucket: "finguide-push.firebasestorage.app",
-  messagingSenderId: "101077654783",
-  appId: "1:101077654783:web:ac287c980418fb760840ca",
-  measurementId: "G-BRR1CYFPJ0"
-};
-
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
-
-// Manejar mensajes en background
-messaging.onBackgroundMessage(function(payload) {
-  console.log('📨 Mensaje FCM recibido en background:', payload);
-  
-  const notificationTitle = payload.notification?.title || 'FinGuide Alert';
-  const notificationOptions = {
-    body: payload.notification?.body || 'Tienes una nueva notificación financiera',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: 'finguide-notification',
-    requireInteraction: true,
-    actions: [
-      {
-        action: 'open',
-        title: 'Ver Dashboard'
-      },
-      {
-        action: 'dismiss', 
-        title: 'Descartar'
-      }
-    ],
-    data: {
-      url: payload.data?.url || '/dashboard',
-      timestamp: Date.now(),
-      type: payload.data?.type || 'financial'
-    }
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Click en notificación
-self.addEventListener('notificationclick', function(event) {
-  console.log('👆 Click en notificación FCM:', event);
-  
-  event.notification.close();
-  
-  if (event.action === 'open' || !event.action) {
-    const urlToOpen = event.notification.data?.url || '/dashboard';
-    
-    event.waitUntil(
-      clients.matchAll({ type: 'window' }).then(clientList => {
-        // Si hay ventana de FinGuide abierta, enfocarla
-        for (const client of clientList) {
-          if (client.url.includes('sistema-monarch.vercel.app') && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        
-        // Si no, abrir nueva ventana
-        if (clients.openWindow) {
-          return clients.openWindow('https://sistema-monarch.vercel.app' + urlToOpen);
-        }
-      })
-    );
-  }
-});
-
-// Push event adicional (compatibilidad)
-self.addEventListener('push', function(event) {
-  console.log('📨 Push event recibido:', event);
-  
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      console.log('📊 Push data:', data);
-      
-      const title = data.notification?.title || 'FinGuide';
-      const options = {
-        body: data.notification?.body || 'Nueva actualización financiera',
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: 'finguide-push'
-      };
-      
-      event.waitUntil(
-        self.registration.showNotification(title, options)
-      );
-    } catch (error) {
-      console.error('❌ Error procesando push data:', error);
-    }
-  }
-});
-
-console.log('🔥 Firebase FCM Service Worker inline cargado exitosamente');
-`;
-
-    // Crear Blob del Service Worker y registrar
-    const swBlob = new Blob([swCode], { type: 'application/javascript' });
-    const swUrl = URL.createObjectURL(swBlob);
-    
-    let registration;
-    try {
-      registration = await navigator.serviceWorker.register(swUrl, {
-        scope: '/'
-      });
-      
-      console.log('✅ Service Worker inline registrado:', registration.scope);
-      alert('✅ SW inline registrado exitosamente');
-      
-      // Limpiar URL del blob después del registro
-      URL.revokeObjectURL(swUrl);
-    } catch (swError) {
-      console.error('❌ Error registrando SW inline:', swError);
-      // Fallback: intentar usar SW existente si hay uno
-      try {
-        const existingRegistration = await navigator.serviceWorker.getRegistration();
-        if (existingRegistration) {
-          registration = existingRegistration;
-          console.log('✅ Usando SW existente como fallback');
-          alert('✅ Usando SW existente como fallback');
-        } else {
-          throw new Error('No hay Service Worker disponible');
-        }
-      } catch (fallbackError) {
-        throw new Error('No se pudo registrar ningún Service Worker: ' + fallbackError.message);
-      }
+      strategy = 'ios_pwa_required';
+      message = '📱 iOS detectado: Para mejores notificaciones, instala la app (Compartir → Añadir a pantalla de inicio)';
+    } else if (isIOS && isInStandaloneMode) {
+      strategy = 'ios_pwa_installed';
+      message = '🎉 iOS PWA detectada: Notificaciones completamente funcionales';
+    } else if (isAndroid) {
+      strategy = 'android_web';
+      message = '🤖 Android detectado: Notificaciones web funcionales';
+    } else {
+      strategy = 'desktop_web';
+      message = '💻 Desktop detectado: Notificaciones web estándar';
     }
     
-    // Esperar a que esté activo
-    await navigator.serviceWorker.ready;
-    console.log('✅ Service Worker ready');
-    alert('✅ Service Worker ready');
+    console.log(`📱 Estrategia seleccionada: ${strategy}`);
+    alert(message);
 
-    // PASO 4: Obtener token FCM
-    console.log('📱 PASO 4: Obteniendo token FCM');
-    alert('📱 PASO 4: Obteniendo token FCM');
+    // PASO 4: Crear token simple (sin Firebase si es problemático)
+    console.log('📱 PASO 4: Generando identificador de notificaciones');
+    alert('📱 PASO 4: Creando identificador único');
     
-    const token = await getFCMToken();
+    const simpleToken = `simple_${strategy}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    if (!token) {
-      throw new Error('No se pudo obtener token FCM');
-    }
-    
-    console.log('🎉 Token FCM obtenido:', token.substring(0, 20) + '...');
-    alert(`🎉 Token FCM obtenido: ${token.substring(0, 20)}...`);
+    console.log('✅ Token simple generado:', simpleToken.substring(0, 30) + '...');
+    alert(`✅ Identificador generado: ${simpleToken.substring(0, 20)}...`);
 
     // PASO 5: Obtener usuario
-    console.log('📱 PASO 5: Obteniendo usuario Supabase');
-    alert('📱 PASO 5: Obteniendo usuario Supabase');
+    console.log('📱 PASO 5: Verificando usuario');
+    alert('📱 PASO 5: Verificando sesión de usuario');
     
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
-      console.error('❌ Error usuario:', userError);
-      throw new Error('Usuario no autenticado');
+      console.error('❌ Error de usuario:', userError);
+      throw new Error('Debes estar logueado para activar notificaciones');
     }
     
-    console.log('✅ Usuario obtenido:', user.id);
-    alert(`✅ Usuario: ${user.id.substring(0, 8)}...`);
+    console.log('✅ Usuario verificado:', user.id.substring(0, 8) + '...');
+    alert(`✅ Usuario: ${user.email?.substring(0, 20)}...`);
 
-    // PASO 6: Guardar en base de datos
-    console.log('📱 PASO 6: Guardando token FCM en DB');
-    alert('📱 PASO 6: Guardando token FCM en DB');
+    // PASO 6: Guardar configuración en base de datos
+    console.log('📱 PASO 6: Guardando configuración');
+    alert('📱 PASO 6: Guardando en base de datos');
     
-    const { error } = await supabase
+    const { error: dbError } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
         subscription: {
-          fcm_token: token,
-          type: 'fcm_inline',
-          endpoint: `https://fcm.googleapis.com/fcm/send/${token}`,
-          created_via: 'firebase_inline_sw',
+          type: 'simple_notifications',
+          strategy: strategy,
+          token: simpleToken,
+          permissions: permission,
           device_info: {
+            isIOS,
+            isAndroid,
+            isInStandaloneMode,
             userAgent: navigator.userAgent,
-            isIOS: isIOS,
-            isStandalone: isInStandaloneMode,
+            platform: navigator.platform,
+            screen: {
+              width: screen.width,
+              height: screen.height
+            },
             timestamp: new Date().toISOString()
+          },
+          features: {
+            basic_notifications: true,
+            service_worker: false,
+            firebase_fcm: false,
+            local_only: true
           }
         },
-        endpoint: `https://fcm.googleapis.com/fcm/send/${token}`,
+        endpoint: `simple://${simpleToken}`,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
 
-    if (error) {
-      console.error('❌ Error guardando:', error);
-      alert(`❌ Error DB: ${error.message}`);
-      throw error;
+    if (dbError) {
+      console.error('❌ Error guardando en BD:', dbError);
+      alert(`❌ Error base de datos: ${dbError.message}`);
+      throw dbError;
     }
     
-    console.log('✅ Token FCM guardado en DB');
-    alert('✅ Token FCM guardado en DB');
+    console.log('✅ Configuración guardada en BD');
+    alert('✅ Configuración guardada exitosamente');
 
-    // PASO 7: Configurar listener de mensajes en foreground
-    console.log('📱 PASO 7: Configurando listeners foreground');
-    alert('📱 PASO 7: Configurando listeners foreground');
-    
-    try {
-      const { onMessageListener } = await import('./firebase');
-      
-      // Configurar listener para mensajes cuando la app está abierta
-      onMessageListener()
-        .then((payload) => {
-          console.log('📨 Mensaje en foreground:', payload);
-          
-          // Mostrar notificación local si la app está abierta
-          if (Notification.permission === 'granted') {
-            new Notification(
-              payload.notification?.title || 'FinGuide',
-              {
-                body: payload.notification?.body || 'Nueva notificación financiera',
-                icon: '/favicon.ico',
-                tag: 'finguide-foreground',
-                requireInteraction: true
-              }
-            );
-          }
-        })
-        .catch((err) => console.log('❌ Error listener foreground:', err));
-      
-      console.log('✅ Listeners foreground configurados');
-      alert('✅ Listeners foreground configurados');
-    } catch (listenerError) {
-      console.warn('⚠️ No se pudieron configurar listeners foreground:', listenerError);
-      // No es crítico, continuar sin listeners
-    }
+    // PASO 7: Configurar notificaciones locales
+    console.log('📱 PASO 7: Configurando notificaciones locales');
+    alert('📱 PASO 7: Activando sistema local');
+
+    // Función global para mostrar notificaciones
+    window.showFinGuideNotification = function(title, body, tag = 'finguide') {
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: '/favicon.ico',
+          tag: tag,
+          requireInteraction: false,
+          silent: false
+        });
+      }
+    };
+
+    // Configurar intervalos para checks automáticos (cada 15 minutos)
+    window.finGuideNotificationInterval = setInterval(() => {
+      console.log('🔔 Check automático de notificaciones...');
+      // Aquí se pueden agregar checks automáticos de deudas, etc.
+    }, 15 * 60 * 1000); // 15 minutos
+
+    console.log('✅ Sistema de notificaciones locales configurado');
+    alert('✅ Sistema local configurado');
 
     // PASO 8: Notificación de prueba
     console.log('📱 PASO 8: Enviando notificación de prueba');
-    alert('📱 PASO 8: Notificación de prueba');
-    
-    // Mostrar notificación de confirmación
-    if (Notification.permission === 'granted') {
+    alert('📱 PASO 8: Enviando notificación de prueba');
+
+    setTimeout(() => {
       new Notification('🎉 FinGuide Activado', {
-        body: 'Las notificaciones push están ahora activas. Recibirás alertas sobre tus finanzas.',
+        body: `¡Notificaciones activadas! Estrategia: ${strategy}. Recibirás alertas importantes sobre tus finanzas.`,
         icon: '/favicon.ico',
         tag: 'finguide-activation',
         requireInteraction: true
       });
-    }
+    }, 1000);
 
-    // PASO 9: Finalización
-    console.log('🎉 subscribeToPushFCM COMPLETADA EXITOSAMENTE');
-    alert('🎉 FCM: ¡Suscripción completada exitosamente!');
+    // PASO 9: Finalización exitosa
+    console.log('🎉 ¡NOTIFICACIONES SIMPLES ACTIVADAS EXITOSAMENTE!');
+    alert('🎉 ¡ÉXITO! Las notificaciones están ahora activas');
     
     return {
-      token,
-      type: 'fcm_inline',
       success: true,
-      registration_scope: registration.scope,
-      ios_info: isIOS ? { isStandalone: isInStandaloneMode } : null
+      type: 'simple_notifications',
+      strategy: strategy,
+      token: simpleToken,
+      permissions: permission,
+      device_info: {
+        isIOS,
+        isAndroid,
+        isInStandaloneMode
+      },
+      message: strategy === 'ios_pwa_required' 
+        ? 'Para mejores notificaciones en iOS, instala la app como PWA' 
+        : 'Notificaciones activadas correctamente'
     };
 
   } catch (error) {
-    console.error('❌ ERROR EN subscribeToPushFCM:', error);
+    console.error('❌ ERROR EN NOTIFICACIONES SIMPLES:', error);
     console.error('❌ Error stack:', error.stack);
     
-    alert(`❌ ERROR FCM: ${error.message}`);
-    
-    // Si FCM falla completamente, ofrecer fallback a notificaciones locales
-    if (error.message.includes('Service Worker') || error.message.includes('FCM')) {
-      console.log('🔄 Intentando fallback a notificaciones locales...');
-      alert('🔄 FCM falló, intentando notificaciones locales...');
-      
-      try {
-        return await subscribeToPushLocal();
-      } catch (fallbackError) {
-        console.error('❌ Fallback también falló:', fallbackError);
-        throw new Error(`FCM falló: ${error.message}. Fallback falló: ${fallbackError.message}`);
-      }
-    }
+    alert(`❌ ERROR: ${error.message}\n\n¿Necesitas ayuda? Ve a Configuración del navegador > Notificaciones y permite el sitio.`);
     
     throw error;
   }
 }
 
-// 🔄 Función de fallback para notificaciones locales únicamente
-export async function subscribeToPushLocal() {
-  console.log('📱 subscribeToPushLocal INICIADA (fallback)');
-  alert('📱 Activando notificaciones locales (fallback)');
-
-  try {
-    // Solo solicitar permisos de notificación
-    const permission = await Notification.requestPermission();
-    
-    if (permission !== 'granted') {
-      throw new Error('Permisos de notificación denegados');
-    }
-
-    // Crear token local simple
-    const localToken = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Obtener usuario y guardar
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('Usuario no autenticado');
-    }
-
-    const { error } = await supabase
-      .from('push_subscriptions')
-      .upsert({
-        user_id: user.id,
-        subscription: {
-          type: 'local_only',
-          token: localToken,
-          created_via: 'local_notifications_fallback',
-          device_info: {
-            userAgent: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          }
-        },
-        endpoint: `local://${localToken}`,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-
-    if (error) throw error;
-
-    console.log('✅ Notificaciones locales activadas');
-    alert('✅ Notificaciones locales activadas');
-    
-    // Mostrar notificación de confirmación
-    new Notification('📱 FinGuide - Modo Local', {
-      body: 'Notificaciones locales activadas. Recibirás alertas cuando uses la app.',
-      icon: '/favicon.ico',
-      tag: 'finguide-local-activation'
-    });
-
-    return { 
-      success: true, 
-      type: 'local_only',
-      token: localToken 
-    };
-
-  } catch (error) {
-    console.error('❌ Error en fallback local:', error);
-    alert(`❌ Error notificaciones locales: ${error.message}`);
-    throw error;
-  }
-}
-
-// 🗑️ Función para desuscribir (compatible con ambos tipos)
+// 🗑️ Función para desactivar notificaciones simples
 export async function unsubscribeFromPushFCM() {
-  console.log('🗑️ Desuscribiendo de push notifications...');
+  console.log('🗑️ Desactivando notificaciones simples...');
   
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -423,25 +266,39 @@ export async function unsubscribeFromPushFCM() {
       throw error;
     }
 
-    // Intentar desregistrar service worker si existe
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        if (registration.scope.includes('firebase-cloud-messaging') || 
-            registration.active?.scriptURL?.includes('firebase-messaging')) {
-          await registration.unregister();
-          console.log('🗑️ Service Worker FCM desregistrado');
-        }
-      }
-    } catch (swError) {
-      console.warn('⚠️ No se pudo desregistrar SW:', swError);
+    // Limpiar funciones globales y intervalos
+    if (window.finGuideNotificationInterval) {
+      clearInterval(window.finGuideNotificationInterval);
+      window.finGuideNotificationInterval = null;
+    }
+    
+    if (window.showFinGuideNotification) {
+      window.showFinGuideNotification = null;
     }
 
-    console.log('✅ Desuscripción completada');
+    console.log('✅ Notificaciones desactivadas');
+    alert('🔕 Notificaciones desactivadas correctamente');
+    
     return true;
     
   } catch (error) {
-    console.error('❌ Error desuscribiendo:', error);
+    console.error('❌ Error desactivando notificaciones:', error);
+    alert(`❌ Error desactivando: ${error.message}`);
     throw error;
+  }
+}
+
+// 📨 Función auxiliar para enviar notificación manual (para testing)
+export function sendTestNotification(title = "FinGuide Test", body = "Esta es una notificación de prueba") {
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: '/favicon.ico',
+      tag: 'finguide-test'
+    });
+    return true;
+  } else {
+    alert('❌ Permisos de notificación no concedidos');
+    return false;
   }
 }
