@@ -12,11 +12,7 @@ import TermsOfService from './TermsOfService';
 import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
 
-import { subscribeToPushFCM, unsubscribeFromPushFCM } from '../lib/subscribeToPushFCM';
-
-
-
-
+import { subscribeToPushFCM, unsubscribeFromPushFCM, sendTestNotification } from '../lib/subscribeToPushFCM';
 
 export default function ModalUsuario({ 
   onClose, 
@@ -33,7 +29,7 @@ export default function ModalUsuario({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('perfil'); // perfil, seguridad, preferencias, privacidad, ayuda
   
-  // MEJORA: Estados reales para Push
+  // Estados para Push (LIMPIO)
   const [pushEnabled, setPushEnabled] = useState(false);
   const [loadingPush, setLoadingPush] = useState(false);
 
@@ -108,19 +104,29 @@ export default function ModalUsuario({
     cargarDatosUsuario();
   }, []);
 
-  // MEJORA: Detectar estado real de Push al montar el componente
+  // Detectar estado real de Push al montar
   useEffect(() => {
-    (async () => {
-      if (!('serviceWorker' in navigator)) return;
-
+    const checkPushStatus = async () => {
       try {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        setPushEnabled(!!sub);
-      } catch (e) {
-        console.warn('No se pudo verificar estado del SW', e);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Verificar en BD si las notificaciones están activadas
+        const { data: subscription } = await supabase
+          .from('push_subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (subscription && Notification.permission === 'granted') {
+          setPushEnabled(true);
+        }
+      } catch (error) {
+        // Silencioso
       }
-    })();
+    };
+
+    checkPushStatus();
   }, []);
 
   const cargarDatosUsuario = async () => {
@@ -141,7 +147,6 @@ export default function ModalUsuario({
 
       let perfilCompleto = null;
       try {
-        // CORRECCIÓN: Usar 'user_id' en lugar de 'id'
         const { data: perfil, error: perfilError } = await supabase
           .from('perfiles')
           .select('*')
@@ -215,14 +220,13 @@ export default function ModalUsuario({
 
       // Intentar actualizar tabla de perfiles
       try {
-        // MEJORA: Usar 'user_id' para el upsert para asegurar integridad referencial
         const { error: perfilError } = await supabase
           .from('perfiles')
           .upsert({ 
             user_id: user.id, 
             ...datosEdicion, 
             updated_at: new Date().toISOString() 
-          }, { onConflict: 'user_id' }); // Conflicto por user_id, no por id autogenerado
+          }, { onConflict: 'user_id' });
 
         if (perfilError) console.warn('No se pudo actualizar perfil:', perfilError);
       } catch (e) {
@@ -335,11 +339,10 @@ export default function ModalUsuario({
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Lista unificada de tablas para eliminar datos
         const tablasAEliminar = [
           'ingresos', 'gastos', 'gastos_fijos', 'suscripciones', 'deudas', 
           'pagos_tarjeta', 'planes_guardados', 'cuentas_bancarias', 
-          'movimientos_bancarios', 'perfiles'
+          'movimientos_bancarios', 'perfiles', 'push_subscriptions'
         ];
         
         for (const tabla of tablasAEliminar) {
@@ -351,12 +354,9 @@ export default function ModalUsuario({
         }
       }
 
-      // Limpiar localStorage
       localStorage.clear();
-
       alert('✅ Tu cuenta ha sido eliminada. Serás redirigido al inicio.');
       
-      // Cerrar sesión y redirigir
       await supabase.auth.signOut();
       if (onLogout) onLogout();
 
@@ -389,7 +389,6 @@ export default function ModalUsuario({
         preferencias: preferencias
       };
 
-      // Intentar obtener datos de cada tabla
       const tablas = ['ingresos', 'gastos', 'gastos_fijos', 'suscripciones', 'deudas', 'pagos_tarjeta', 'planes_guardados', 'cuentas_bancarias'];
       
       for (const tabla of tablas) {
@@ -402,7 +401,6 @@ export default function ModalUsuario({
         }
       }
 
-      // Crear archivo JSON y descargar
       const blob = new Blob([JSON.stringify(datosExportados, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -423,106 +421,74 @@ export default function ModalUsuario({
     }
   };
 
-// =========================
-// NOTIFICACIONES (MEJORADO)
-// =========================
-const handleActivarPushReal = async () => {
-  // ⚠️ DIAGNÓSTICO EXTREMO - LOGGING PASO A PASO
-  console.log('🚀 INICIANDO handleActivarPushReal');
-  alert('🚀 Función iniciada - ¿Ves este alert?');
-  
-  try {
-    console.log('📱 Paso 1: setLoadingPush(true)');
-    setLoadingPush(true);
-    alert('📱 Loading activado');
-    
-    console.log('🔍 Paso 2: Verificando VAPID');
-    console.log('VAPID KEY:', process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED');
-    alert(`🔍 VAPID: ${process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED'}`);
-    
-    console.log('🌍 Paso 3: Info ambiente');
-    const debugInfo = {
-      vapidKey: process.env.REACT_APP_VAPID_PUBLIC_KEY ? 'EXISTE' : 'UNDEFINED',
-      vapidLength: process.env.REACT_APP_VAPID_PUBLIC_KEY?.length || 0,
-      isProduction: process.env.NODE_ENV === 'production',
-      hostname: window.location.hostname,
-      userAgent: navigator.userAgent.substring(0, 50)
-    };
-    console.log('DEBUG INFO:', debugInfo);
-    alert(`🌍 Production: ${debugInfo.isProduction}, Host: ${debugInfo.hostname}`);
+  // =========================
+  // NOTIFICACIONES (LIMPIO - SIN DEBUG)
+  // =========================
+  const handleActivarPush = async () => {
+    try {
+      setLoadingPush(true);
+      
+      await subscribeToPushFCM();
+      
+      setPushEnabled(true);
+      setPreferencias(prev => ({
+        ...prev,
+        notificaciones: {
+          ...prev.notificaciones,
+          alertasPush: true
+        }
+      }));
 
-    const vapidKey = process.env.REACT_APP_VAPID_PUBLIC_KEY;
-
-    if (!vapidKey) {
-      console.error('❌ VAPID key no encontrada');
-      alert('❌ ERROR: VAPID key UNDEFINED');
-      throw new Error('VAPID key no configurada en build de producción');
+      // Mostrar notificación de prueba
+      setTimeout(() => {
+        sendTestNotification(
+          '🎉 Notificaciones Activadas',
+          'FinGuide te enviará alertas importantes sobre tus finanzas'
+        );
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error activando notificaciones:', error);
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setLoadingPush(false);
     }
+  };
 
-    console.log('✅ VAPID key encontrada, longitud:', vapidKey.length);
-    alert(`✅ VAPID encontrada, longitud: ${vapidKey.length}`);
+  const handleDesactivarPush = async () => {
+    try {
+      setLoadingPush(true);
+      
+      await unsubscribeFromPushFCM();
+      
+      setPushEnabled(false);
+      setPreferencias(prev => ({
+        ...prev,
+        notificaciones: {
+          ...prev.notificaciones,
+          alertasPush: false
+        }
+      }));
+      
+      alert('🔕 Notificaciones desactivadas correctamente');
+      
+    } catch (error) {
+      console.error('Error desactivando push:', error);
+      alert('Error al desactivar las notificaciones');
+    } finally {
+      setLoadingPush(false);
+    }
+  };
 
-    console.log('🔔 Paso 4: Llamando subscribeToPush');
-    alert('🔔 Intentando subscribeToPush...');
-    
-  await subscribeToPushFCM();
-    
-    console.log('✅ subscribeToPush completado');
-    alert('✅ subscribeToPush exitoso');
-
-    setPushEnabled(true);
+  const toggleNotificacion = (tipo) => {
     setPreferencias(prev => ({
       ...prev,
       notificaciones: {
         ...prev.notificaciones,
-        alertasPush: true
+        [tipo]: !prev.notificaciones[tipo]
       }
     }));
-
-    console.log('🎉 TODO COMPLETADO');
-    alert('🔔 Notificaciones push activadas correctamente');
-    
-  } catch (error) {
-    console.error('❌ ERROR CAPTURADO:', error);
-    console.error('Error stack:', error.stack);
-    alert(`❌ ERROR: ${error.message}`);
-  } finally {
-    console.log('🏁 setLoadingPush(false)');
-    setLoadingPush(false);
-    alert('🏁 Loading terminado');
-  }
-};
-
-const handleDesactivarPushReal = async () => {
-  try {
-    setLoadingPush(true);
- await unsubscribeFromPushFCM();
-    setPushEnabled(false);
-    setPreferencias(prev => ({
-      ...prev,
-      notificaciones: {
-        ...prev.notificaciones,
-        alertasPush: false
-      }
-    }));
-    alert('🔕 Notificaciones push desactivadas correctamente');
-  } catch (error) {
-    console.error('Error desactivando push:', error);
-    alert('Error al desactivar las notificaciones');
-  } finally {
-    setLoadingPush(false);
-  }
-};
-
-const toggleNotificacion = (tipo) => {
-  setPreferencias(prev => ({
-    ...prev,
-    notificaciones: {
-      ...prev.notificaciones,
-      [tipo]: !prev.notificaciones[tipo]
-    }
-  }));
-};
+  };
 
   const handleLogout = async () => {
     if(window.confirm("¿Estás seguro de cerrar sesión?")) {
@@ -961,13 +927,12 @@ const toggleNotificacion = (tipo) => {
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Notificaciones Push</p>
-                          <p className="text-gray-500 text-xs">{pushEnabled ? 'Activadas' : 'Desactivadas'}</p>
+                          <p className="text-gray-500 text-xs">{pushEnabled ? 'Activadas - Se reactivarán automáticamente' : 'Desactivadas'}</p>
                         </div>
                       </div>
                       
-                      {/* MEJORA: Botón Toggle Inteligente */}
                       <button
-                        onClick={pushEnabled ? handleDesactivarPushReal : handleActivarPushReal}
+                        onClick={pushEnabled ? handleDesactivarPush : handleActivarPush}
                         disabled={loadingPush}
                         className="text-blue-400 text-sm font-bold hover:underline disabled:opacity-50"
                       >
