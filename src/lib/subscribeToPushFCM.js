@@ -150,7 +150,8 @@ export async function subscribeToPushFCM() {
             userAgent: navigator.userAgent,
             platform: navigator.platform,
             screen: {
-
+            screen: {
+ 
 }
             timestamp: new Date().toISOString()
           },
