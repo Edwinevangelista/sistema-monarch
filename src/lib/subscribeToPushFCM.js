@@ -1,76 +1,57 @@
-// subscribeToPushFCM.js - Versión ULTRA SIMPLE (sin errores de sintaxis)
+// subscribeToPushFCM.js - VERSIÓN PRODUCCIÓN (Sin debug)
 import { supabase } from './supabaseClient';
 
 export async function subscribeToPushFCM() {
-  console.log('📱 INICIANDO Notificaciones Ultra Simples');
-  alert('📱 Activando notificaciones...');
-
   try {
-    // PASO 1: Verificar soporte
+    // Verificar soporte
     if (!('Notification' in window)) {
       throw new Error('Navegador no soporta notificaciones');
     }
-    
-    alert('✅ Navegador compatible');
 
-    // PASO 2: Solicitar permisos
+    // Solicitar permisos
     let permission = Notification.permission;
     
     if (permission === 'default') {
       permission = await Notification.requestPermission();
     }
     
-    alert(`📱 Permisos: ${permission}`);
-    
     if (permission === 'denied') {
-      alert('❌ PERMISOS DENEGADOS\n\nPara activar:\n1. Clic ícono de candado en barra de direcciones\n2. Cambiar "Notificaciones" a "Permitir"\n3. Recargar página');
-      throw new Error('Permisos denegados');
+      throw new Error('Permisos de notificaciones denegados. Ve a configuración del navegador para activarlos.');
     }
     
     if (permission !== 'granted') {
-      throw new Error('Permisos no concedidos');
+      throw new Error('Permisos de notificaciones no concedidos');
     }
-    
-    alert('✅ Permisos concedidos');
 
-    // PASO 3: Detectar dispositivo
+    // Detectar dispositivo
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
     
     let strategy = 'web';
-    let message = '💻 Notificaciones web estándar';
     
     if (isIOS) {
       strategy = 'ios';
-      message = '📱 iOS: Para mejores notificaciones, instala como PWA (Compartir → Añadir a inicio)';
     } else if (isAndroid) {
       strategy = 'android';
-      message = '🤖 Android: Notificaciones web funcionales';
     }
-    
-    alert(message);
 
-    // PASO 4: Generar token simple
+    // Generar token
     const token = 'simple_' + strategy + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    alert('✅ Token generado');
 
-    // PASO 5: Verificar usuario
+    // Verificar usuario
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
       throw new Error('Usuario no autenticado');
     }
-    
-    alert('✅ Usuario verificado');
 
-    // PASO 6: Guardar en BD (estructura simple)
+    // Guardar en base de datos
     const { error: dbError } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
         subscription: {
-          type: 'simple',
+          type: 'browser_local',
           strategy: strategy,
           token: token,
           permissions: permission,
@@ -78,49 +59,121 @@ export async function subscribeToPushFCM() {
           isAndroid: isAndroid,
           timestamp: new Date().toISOString()
         },
-        endpoint: 'simple://' + token,
+        endpoint: 'local://' + token,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
 
     if (dbError) {
-      alert('❌ Error BD: ' + dbError.message);
       throw dbError;
     }
-    
-    alert('✅ Guardado en BD');
 
-    // PASO 7: Configurar sistema local
-    window.showFinGuideNotification = function(title, body) {
+    // Configurar sistema de notificaciones locales
+    window.showFinGuideNotification = function(title, body, options = {}) {
       if (Notification.permission === 'granted') {
         new Notification(title, {
           body: body,
-          icon: '/favicon.ico'
+          icon: options.icon || '/favicon.ico',
+          tag: options.tag || 'finguide',
+          requireInteraction: options.requireInteraction || false,
+          silent: options.silent || false
         });
       }
     };
 
-    alert('✅ Sistema configurado');
+    // Configurar checks automáticos para deudas y gastos (cada 30 minutos)
+    if (window.finGuideNotificationInterval) {
+      clearInterval(window.finGuideNotificationInterval);
+    }
+    
+    window.finGuideNotificationInterval = setInterval(async () => {
+      try {
+        // Aquí se pueden agregar checks automáticos
+        await checkFinancialAlerts();
+      } catch (error) {
+        console.warn('Error en check automático:', error);
+      }
+    }, 30 * 60 * 1000); // 30 minutos
 
-    // PASO 8: Notificación de prueba
+    // Notificación de confirmación
     setTimeout(() => {
-      new Notification('🎉 FinGuide Activado', {
-        body: 'Notificaciones activadas. Estrategia: ' + strategy,
-        icon: '/favicon.ico'
-      });
+      if (window.showFinGuideNotification) {
+        window.showFinGuideNotification(
+          '🎉 FinGuide Activado',
+          'Las notificaciones están ahora activas. Recibirás alertas sobre tus finanzas.',
+          { requireInteraction: true }
+        );
+      }
     }, 1000);
-
-    alert('🎉 ¡ÉXITO! Notificaciones activas');
     
     return {
       success: true,
-      type: 'simple',
+      type: 'browser_local',
       strategy: strategy,
-      token: token
+      token: token,
+      message: isIOS && !window.matchMedia('(display-mode: standalone)').matches 
+        ? 'Para mejores notificaciones en iOS, instala la app como PWA' 
+        : 'Notificaciones activadas correctamente'
     };
 
   } catch (error) {
-    alert('❌ ERROR: ' + error.message);
+    console.error('Error activando notificaciones:', error);
     throw error;
+  }
+}
+
+// Función para checks automáticos de alertas financieras
+async function checkFinancialAlerts() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Check deudas próximas a vencer (próximos 3 días)
+    const { data: deudas } = await supabase
+      .from('deudas')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('estado', 'Activa')
+      .gte('fecha_corte', new Date().toISOString().split('T')[0])
+      .lte('fecha_corte', new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+    if (deudas && deudas.length > 0) {
+      const deuda = deudas[0];
+      const diasRestantes = Math.ceil((new Date(deuda.fecha_corte) - new Date()) / (1000 * 60 * 60 * 24));
+      
+      if (window.showFinGuideNotification) {
+        window.showFinGuideNotification(
+          '💳 Recordatorio de Pago',
+          `${deuda.nombre}: $${deuda.saldo_actual} vence en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
+          { tag: 'debt-reminder', requireInteraction: true }
+        );
+      }
+    }
+
+    // Check gastos excesivos del mes
+    const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+    const { data: gastos } = await supabase
+      .from('gastos')
+      .select('monto')
+      .eq('user_id', user.id)
+      .gte('fecha', inicioMes);
+
+    if (gastos && gastos.length > 0) {
+      const totalGastos = gastos.reduce((sum, gasto) => sum + gasto.monto, 0);
+      
+      // Si gastos superan $2000 USD (o equivalente)
+      if (totalGastos > 2000) {
+        if (window.showFinGuideNotification) {
+          window.showFinGuideNotification(
+            '📊 Alerta de Gastos',
+            `Has gastado $${totalGastos.toFixed(2)} este mes. Considera revisar tu presupuesto.`,
+            { tag: 'expense-alert', requireInteraction: true }
+          );
+        }
+      }
+    }
+
+  } catch (error) {
+    console.warn('Error en check de alertas financieras:', error);
   }
 }
 
@@ -141,28 +194,41 @@ export async function unsubscribeFromPushFCM() {
       throw error;
     }
 
+    // Limpiar sistema local
+    if (window.finGuideNotificationInterval) {
+      clearInterval(window.finGuideNotificationInterval);
+      window.finGuideNotificationInterval = null;
+    }
+    
     if (window.showFinGuideNotification) {
       window.showFinGuideNotification = null;
     }
 
-    alert('🔕 Notificaciones desactivadas');
     return true;
     
   } catch (error) {
-    alert('❌ Error: ' + error.message);
+    console.error('Error desactivando notificaciones:', error);
     throw error;
   }
 }
 
 export function sendTestNotification(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title || 'FinGuide Test', {
-      body: body || 'Prueba de notificación',
-      icon: '/favicon.ico'
-    });
+  if (Notification.permission === 'granted' && window.showFinGuideNotification) {
+    window.showFinGuideNotification(
+      title || 'FinGuide Test',
+      body || 'Esta es una notificación de prueba',
+      { tag: 'test' }
+    );
     return true;
-  } else {
-    alert('❌ Sin permisos');
-    return false;
   }
+  return false;
+}
+
+// Función para mostrar notificación manual desde cualquier parte de la app
+export function showNotification(title, body, options = {}) {
+  if (window.showFinGuideNotification) {
+    window.showFinGuideNotification(title, body, options);
+    return true;
+  }
+  return false;
 }
