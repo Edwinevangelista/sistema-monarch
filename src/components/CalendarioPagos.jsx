@@ -1,8 +1,8 @@
-// CalendarioPagos.jsx - VERSIÓN LIMPIA CORREGIDA
-// Fix para error de build: 'esDiaSeleccionado' is not defined
+// CalendarioPagos.jsx - VERSIÓN FINAL CORREGIDA
+// Fix todos los errores de ESLint
 
-import React, { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, X, Calendar as CalIcon, CreditCard, ShoppingCart, Repeat, Wallet } from 'lucide-react'
+import React, { useState, useMemo, useCallback } from 'react'
+import { ChevronLeft, ChevronRight, X, Calendar as CalIcon, CreditCard, Repeat, Wallet } from 'lucide-react'
 
 const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
   const [mesActual, setMesActual] = useState(new Date())
@@ -34,7 +34,8 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     return dias
   }
   
-  const obtenerEventosDelDia = (dia) => {
+  // ✅ USAR useCallback PARA EVITAR WARNINGS DE DEPENDENCY
+  const obtenerEventosDelDia = useCallback((dia) => {
     if (!dia) return { ingresos: 0, gastos: 0, eventos: [] }
     
     const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
@@ -142,7 +143,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Gastos Variables (sin cambios)
+    // Gastos Variables
     gastos?.forEach(g => {
       if (g.fecha === fechaStr) {
         totalGastos += Number(g.monto || 0)
@@ -158,7 +159,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Gastos Fijos (sin cambios)
+    // Gastos Fijos
     gastosFijos?.forEach(gf => {
       if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
         totalGastos += Number(gf.monto || 0)
@@ -173,7 +174,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Suscripciones (sin cambios)
+    // Suscripciones
     suscripciones?.forEach(sub => {
       if (sub.estado === 'Activo' && sub.proximo_pago) {
         const proxPago = new Date(sub.proximo_pago + 'T00:00:00')
@@ -193,7 +194,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
       }
     })
     
-    // Deudas (sin cambios)
+    // Deudas
     deudas?.forEach(d => {
       if (d.vence) {
         const vence = new Date(d.vence + 'T00:00:00')
@@ -214,7 +215,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     })
     
     return { ingresos: totalIngresos, gastos: totalGastos, eventos }
-  }
+  }, [mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos]) // ✅ DEPENDENCIAS COMPLETAS
   
   const cambiarMes = (direccion) => {
     const nuevaFecha = new Date(mesActual)
@@ -236,11 +237,11 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
            mesActual.getFullYear() === hoy.getFullYear()
   }
   
-  // Solo calculamos eventos si el modal está abierto
+  // ✅ CORREGIDO: Incluir obtenerEventosDelDia en dependencias
   const eventosDelDia = useMemo(() => {
     if (!diaSeleccionado) return null;
     return obtenerEventosDelDia(diaSeleccionado);
-  }, [diaSeleccionado, mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos])
+  }, [diaSeleccionado, obtenerEventosDelDia]) // ✅ DEPENDENCIA AGREGADA
   
   const netoDia = eventosDelDia ? eventosDelDia.ingresos - eventosDelDia.gastos : 0
   
@@ -357,7 +358,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
             onClick={() => setDiaSeleccionado(null)}
           />
           
-          {/* ✅ CORREGIDO: Contenedor del Modal sin referencias problemáticas */}
+          {/* Contenedor del Modal */}
           <div 
             className="fixed z-50 bg-gray-900 border-t border-white/10 md:border md:border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 md:inset-0 md:flex md:items-center md:justify-center"
             style={{ 
@@ -449,7 +450,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                 )}
               </div>
 
-              {/* Botón Cerrar (Visible solo en desktop o flotante) */}
+              {/* Botón Cerrar */}
               <button 
                 onClick={() => setDiaSeleccionado(null)}
                 className="md:hidden absolute top-3 right-3 p-2 text-gray-400 hover:text-white"
