@@ -1,110 +1,8 @@
-// CalendarioPagos-HÍBRIDO.jsx
-// Mantiene tu interfaz excelente + Agrega soporte para ingresos recurrentes
+// CalendarioPagos.jsx - VERSIÓN LIMPIA CORREGIDA
+// Fix para error de build: 'esDiaSeleccionado' is not defined
 
 import React, { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, X, Calendar as CalIcon, CreditCard, ShoppingCart, Repeat, Wallet } from 'lucide-react'
-
-// 🔄 FUNCIÓN PARA GENERAR INGRESOS RECURRENTES
-const generateRecurringIncomeEvents = (ingresos, mesActual) => {
-  const eventosRecurrentes = [];
-  const primerDia = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
-  const ultimoDia = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
-  
-  ingresos?.forEach(ingreso => {
-    if (!ingreso.frecuencia || ingreso.frecuencia === 'Único') return;
-
-    const fechaBase = new Date(ingreso.fecha);
-    
-    if (ingreso.frecuencia === 'Semanal') {
-      // Generar eventos semanales
-      let fechaEvento = new Date(fechaBase);
-      
-      // Buscar el primer evento del mes
-      while (fechaEvento < primerDia) {
-        fechaEvento.setDate(fechaEvento.getDate() + 7);
-      }
-      
-      // Generar todos los eventos semanales del mes
-      while (fechaEvento <= ultimoDia) {
-        eventosRecurrentes.push({
-          ...ingreso,
-          id: `semanal-${ingreso.id}-${fechaEvento.getDate()}`,
-          fecha: fechaEvento.toISOString().split('T')[0],
-          esRecurrente: true,
-          tipoRecurrencia: 'semanal'
-        });
-        
-        fechaEvento = new Date(fechaEvento);
-        fechaEvento.setDate(fechaEvento.getDate() + 7);
-      }
-    }
-    
-    else if (ingreso.frecuencia === 'Quincenal') {
-      const diaOriginal = fechaBase.getDate();
-      
-      // Si el día original es <= 15, generar en día original y día original + 15
-      if (diaOriginal <= 15) {
-        // Primer pago del mes
-        const fecha1 = new Date(mesActual.getFullYear(), mesActual.getMonth(), diaOriginal);
-        if (fecha1 >= primerDia && fecha1 <= ultimoDia) {
-          eventosRecurrentes.push({
-            ...ingreso,
-            id: `quincenal-${ingreso.id}-1`,
-            fecha: fecha1.toISOString().split('T')[0],
-            esRecurrente: true,
-            tipoRecurrencia: 'quincenal'
-          });
-        }
-        
-        // Segundo pago del mes  
-        const fecha2 = new Date(mesActual.getFullYear(), mesActual.getMonth(), Math.min(diaOriginal + 15, ultimoDia.getDate()));
-        if (fecha2 >= primerDia && fecha2 <= ultimoDia) {
-          eventosRecurrentes.push({
-            ...ingreso,
-            id: `quincenal-${ingreso.id}-2`,
-            fecha: fecha2.toISOString().split('T')[0],
-            esRecurrente: true,
-            tipoRecurrencia: 'quincenal'
-          });
-        }
-      } else {
-        // Si el día original es > 15, generar solo en día original
-        const fechaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), Math.min(diaOriginal, ultimoDia.getDate()));
-        if (fechaMes >= primerDia && fechaMes <= ultimoDia) {
-          eventosRecurrentes.push({
-            ...ingreso,
-            id: `quincenal-${ingreso.id}`,
-            fecha: fechaMes.toISOString().split('T')[0],
-            esRecurrente: true,
-            tipoRecurrencia: 'quincenal'
-          });
-        }
-      }
-    }
-    
-    else if (ingreso.frecuencia === 'Mensual') {
-      // Generar evento mensual en el mismo día
-      const diaOriginal = fechaBase.getDate();
-      const fechaEvento = new Date(
-        mesActual.getFullYear(), 
-        mesActual.getMonth(), 
-        Math.min(diaOriginal, ultimoDia.getDate())
-      );
-      
-      if (fechaEvento >= primerDia && fechaEvento <= ultimoDia) {
-        eventosRecurrentes.push({
-          ...ingreso,
-          id: `mensual-${ingreso.id}`,
-          fecha: fechaEvento.toISOString().split('T')[0],
-          esRecurrente: true,
-          tipoRecurrencia: 'mensual'
-        });
-      }
-    }
-  });
-  
-  return eventosRecurrentes;
-};
 
 const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
   const [mesActual, setMesActual] = useState(new Date())
@@ -115,13 +13,6 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
   const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
-  
-  // 🔄 GENERAR INGRESOS RECURRENTES
-  const ingresosConRecurrencia = useMemo(() => {
-    const ingresosReales = ingresos?.filter(ing => !ing.frecuencia || ing.frecuencia === 'Único') || [];
-    const ingresosRecurrentes = generateRecurringIncomeEvents(ingresos, mesActual);
-    return [...ingresosReales, ...ingresosRecurrentes];
-  }, [ingresos, mesActual]);
   
   const obtenerDiasDelMes = (fecha) => {
     const año = fecha.getFullYear()
@@ -153,37 +44,101 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     let totalGastos = 0
     const eventos = []
     
-    // 🔄 INGRESOS (AHORA CON RECURRENCIA)
-    ingresosConRecurrencia?.forEach(ing => {
+    // 🔄 INGRESOS CON SOPORTE PARA RECURRENCIA
+    ingresos?.forEach(ing => {
       if (ing.fecha === fechaStr) {
         totalIngresos += Number(ing.monto || 0)
         
-        // Determinar estilo basado en si es recurrente
-        const esRecurrente = ing.esRecurrente;
-        const tipoRecurrencia = ing.tipoRecurrencia;
-        
+        // Determinar si es recurrente y generar nombre apropiado
         let nombreIngreso = ing.fuente || 'Ingreso';
-        if (esRecurrente) {
+        let esRecurrente = false;
+        
+        if (ing.frecuencia && ing.frecuencia !== 'Único') {
           const sufijos = {
-            'semanal': '(Semanal)',
-            'quincenal': '(Quincenal)', 
-            'mensual': '(Mensual)'
+            'Semanal': '(Semanal)',
+            'Quincenal': '(Quincenal)', 
+            'Mensual': '(Mensual)'
           };
-          nombreIngreso += ' ' + (sufijos[tipoRecurrencia] || '');
+          nombreIngreso += ' ' + (sufijos[ing.frecuencia] || '');
+          esRecurrente = true;
         }
         
         eventos.push({ 
           id: ing.id,
           tipo: 'ingreso', 
-          nombre: nombreIngreso,
+          nombre: nombreIngreso, 
           monto: ing.monto,
           icono: <Wallet className="w-4 h-4" />,
           color: esRecurrente 
             ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed' // Proyectado
             : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', // Real
-          esRecurrente,
-          tipoRecurrencia
+          esRecurrente
         })
+      }
+      
+      // 🔄 GENERAR EVENTOS RECURRENTES ADICIONALES
+      if (ing.frecuencia && ing.frecuencia !== 'Único') {
+        const fechaBase = new Date(ing.fecha);
+        const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
+        const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
+        
+        if (ing.frecuencia === 'Semanal') {
+          // Generar eventos semanales adicionales
+          let fechaEvento = new Date(fechaBase);
+          while (fechaEvento <= ultimoDiaMes) {
+            fechaEvento.setDate(fechaEvento.getDate() + 7);
+            if (fechaEvento >= primerDiaMes && fechaEvento <= ultimoDiaMes) {
+              if (fechaEvento.getDate() === dia && fechaEvento.getMonth() === mesActual.getMonth()) {
+                totalIngresos += Number(ing.monto || 0);
+                eventos.push({
+                  id: `semanal-${ing.id}-${dia}`,
+                  tipo: 'ingreso',
+                  nombre: `${ing.fuente || 'Ingreso'} (Semanal)`,
+                  monto: ing.monto,
+                  icono: <Wallet className="w-4 h-4" />,
+                  color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
+                  esRecurrente: true
+                });
+              }
+            }
+          }
+        }
+        
+        else if (ing.frecuencia === 'Mensual') {
+          // Evento mensual en el mismo día
+          const diaOriginal = fechaBase.getDate();
+          if (dia === Math.min(diaOriginal, ultimoDiaMes.getDate()) && ing.fecha !== fechaStr) {
+            totalIngresos += Number(ing.monto || 0);
+            eventos.push({
+              id: `mensual-${ing.id}`,
+              tipo: 'ingreso',
+              nombre: `${ing.fuente || 'Ingreso'} (Mensual)`,
+              monto: ing.monto,
+              icono: <Wallet className="w-4 h-4" />,
+              color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
+              esRecurrente: true
+            });
+          }
+        }
+        
+        else if (ing.frecuencia === 'Quincenal') {
+          const diaOriginal = fechaBase.getDate();
+          // Generar dos pagos por mes: original y +15 días
+          if (diaOriginal <= 15) {
+            if (dia === diaOriginal + 15 && dia <= ultimoDiaMes.getDate()) {
+              totalIngresos += Number(ing.monto || 0);
+              eventos.push({
+                id: `quincenal-${ing.id}-2`,
+                tipo: 'ingreso',
+                nombre: `${ing.fuente || 'Ingreso'} (Quincenal)`,
+                monto: ing.monto,
+                icono: <Wallet className="w-4 h-4" />,
+                color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
+                esRecurrente: true
+              });
+            }
+          }
+        }
       }
     })
     
@@ -285,13 +240,13 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
   const eventosDelDia = useMemo(() => {
     if (!diaSeleccionado) return null;
     return obtenerEventosDelDia(diaSeleccionado);
-  }, [diaSeleccionado, mesActual, gastosFijos, suscripciones, deudas, ingresosConRecurrencia, gastos])
+  }, [diaSeleccionado, mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos])
   
   const netoDia = eventosDelDia ? eventosDelDia.ingresos - eventosDelDia.gastos : 0
   
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden">
-      {/* Header - MANTIENE TU DISEÑO ORIGINAL */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button 
           onClick={() => cambiarMes(-1)}
@@ -312,7 +267,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         </button>
       </div>
       
-      {/* Días de la semana - MANTIENE TU DISEÑO */}
+      {/* Días de la semana */}
       <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3">
         {diasSemana.map(dia => (
           <div key={dia} className="text-center text-xs md:text-sm font-bold text-gray-500 uppercase py-2">
@@ -321,7 +276,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         ))}
       </div>
       
-      {/* Grid de días - MANTIENE TU DISEÑO */}
+      {/* Grid de días */}
       <div className="grid grid-cols-7 gap-1 md:gap-2">
         {dias.map((dia, index) => {
           if (!dia) return <div key={`empty-${index}`} className="aspect-square" />
@@ -351,12 +306,12 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
             >
               <span className="text-sm md:text-base z-10">{dia}</span>
               
-              {/* Indicador de Hoy - MANTIENE TU DISEÑO */}
+              {/* Indicador de Hoy */}
               {esHoy(dia) && !tieneEventos && (
                 <span className="absolute bottom-1 w-1 h-1 bg-blue-400 rounded-full shadow-[0_0_5px_rgba(96,165,250,0.8)]" />
               )}
 
-              {/* 🔄 PUNTITOS MEJORADOS - Diferencia ingresos reales vs proyectados */}
+              {/* Puntitos de Eventos */}
               {tieneEventos && (
                 <div className="flex gap-0.5 mt-1 z-10">
                   {eventos.slice(0, 3).map((ev, i) => {
@@ -393,7 +348,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         })}
       </div>
       
-      {/* DETALLE DEL DÍA: MODAL RESPONSIVE - MANTIENE TU DISEÑO PERFECTO */}
+      {/* DETALLE DEL DÍA: MODAL RESPONSIVE (BOTTOM SHEET) */}
       {diaSeleccionado && eventosDelDia && (
         <>
           {/* Overlay oscuro */}
@@ -402,14 +357,9 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
             onClick={() => setDiaSeleccionado(null)}
           />
           
-          {/* Contenedor del Modal */}
+          {/* ✅ CORREGIDO: Contenedor del Modal sin referencias problemáticas */}
           <div 
-            className={`
-              fixed z-50 bg-gray-900 border-t border-white/10 md:border md:border-white/10
-              shadow-2xl animate-in slide-in-from-bottom-10 duration-300
-              ${esDiaSeleccionado ? 'flex' : 'hidden'}
-              md:inset-0 md:flex md:items-center md:justify-center md:top-auto md:bottom-auto md:fixed
-            `}
+            className="fixed z-50 bg-gray-900 border-t border-white/10 md:border md:border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 md:inset-0 md:flex md:items-center md:justify-center"
             style={{ 
               top: 'auto',
               bottom: 0,
@@ -464,7 +414,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                 </div>
               </div>
               
-              {/* 🔄 LISTA DE EVENTOS - Agrega indicadores de recurrencia */}
+              {/* Lista de Eventos Scrollable */}
               <div className="p-4 overflow-y-auto space-y-3 flex-1">
                 {eventosDelDia.eventos.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
@@ -482,7 +432,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="text-sm font-semibold text-white truncate">{evento.nombre}</div>
-                          {/* 🔄 INDICADOR DE PROYECCIÓN */}
+                          {/* Indicador de proyección */}
                           {evento.esRecurrente && (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
                               📊 Proyectado
