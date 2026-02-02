@@ -144,8 +144,14 @@ export default function DashboardCompleto()  {
         };
   });
 
-  const hoy = useMemo(() => new Date(), [])
-  const hoyStr = hoy.toISOString().split('T')[0]
+// Usamos estado para 'hoy' para que no cambie en cada render (evita warnings de ESLint)
+// Se actualiza automáticamente cada minuto para mantener el tiempo actual
+const [hoy, setHoy] = useState(() => new Date())
+useEffect(() => {
+  const interval = setInterval(() => setHoy(new Date()), 60000) // Actualiza cada 60 segundos
+  return () => clearInterval(interval)
+}, [])
+const hoyStr = hoy.toISOString().split('T')[0]
 
   useInactivityTimeout(15)
   
@@ -828,6 +834,32 @@ export default function DashboardCompleto()  {
     return isNaN(num) || num < 0 ? 0 : num
   }
 
+    // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
+  // Esto hace que la lista y gráficas muestren solo febrero, aunque la BD tenga enero.
+
+
+
+const ingresosDelMes = useMemo(() => {
+  // Definimos las fechas dentro del useMemo para que no cambien de referencia
+  const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  
+  return ingresosInstant.filter(i => {
+    const fecha = i.fecha ? new Date(i.fecha) : null
+    return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
+  })
+}, [ingresosInstant, hoy]) // Solo depende de la lista y la fecha 'hoy' (que ahora es estable)
+const gastosDelMes = useMemo(() => {
+  // Definimos las fechas dentro del useMemo
+  const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+  
+  return gastosInstant.filter(g => {
+    const fecha = g.fecha ? new Date(g.fecha) : null
+    return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
+  })
+}, [gastosInstant, hoy])
+
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
   const overviewData = useMemo(() => {
     const base = {
@@ -1367,12 +1399,12 @@ export default function DashboardCompleto()  {
 
         {/* ASISTENTE FINANCIERO */}
         <div className="animate-in fade-in delay-300">
-          <AsistenteFinancieroV2
-            ingresos={ingresosInstant}
-            gastosFijos={gastosFijosInstant}
-            gastosVariables={gastosInstant}
-            suscripciones={suscripcionesInstant}
-            deudas={deudasInstant}
+        <AsistenteFinancieroV2
+  ingresos={ingresosDelMes}
+  gastos={gastosDelMes}
+  gastosFijos={gastosFijosInstant}
+  suscripciones={suscripcionesInstant}
+  deudas={deudasInstant}
             showLocalNotification={showLocalNotification}
             onOpenDebtPlanner={() => setShowDebtPlanner(true)}
             onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
@@ -1395,19 +1427,19 @@ export default function DashboardCompleto()  {
             <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-            <GraficaBarras 
-              ingresos={ingresosInstant}
-              gastos={gastosInstant}
-              gastosFijos={gastosFijosInstant}
-              suscripciones={suscripcionesInstant}
-            />
+           <GraficaBarras 
+  ingresos={ingresosDelMes}
+  gastos={gastosDelMes}
+  gastosFijos={gastosFijosInstant}
+  suscripciones={suscripcionesInstant}
+/>
           </div>
         </div>
 
         {/* INGRESOS */}
         <div className="animate-in fade-in delay-500">
           <ListaIngresos 
-            ingresos={ingresosInstant}
+  ingresos={ingresosDelMes}
             onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
             onEliminar={handleEliminarIngreso}
           />

@@ -254,8 +254,7 @@ const WidgetBalanceDual = ({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500 text-[10px]">Promedio diario gastos:</span>
-                    <span className="text-gray-300 text-[10px]">${calculosProyectados.desglose.promedioDiarioGastos.toFixed(0)}</span>
-                  </div>
+<span className="text-gray-300 text-[10px]">${calculosProyectados.desglose.promedioDiario.toFixed(0)}</span>                  </div>
                 </div>
               )}
             </div>

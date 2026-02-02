@@ -1,7 +1,10 @@
 // Sistema inteligente de cálculos financieros con manejo temporal
 
 // Función auxiliar segura para calcular montos
-const safeNumber = (val) => (val ? Number(val) : 0)
+const safeNumber = (val) => {
+  const num = Number(val)
+  return isNaN(num) ? 0 : num
+}
 
 /**
  * Calcula balances financieros con vista real vs proyectada
@@ -134,11 +137,16 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
     })
     .reduce((sum, g) => sum + safeNumber(g.monto), 0)
   
-  // Proyección de gastos variables basada en promedio diario
-  const diasTranscurridos = Math.max(1, Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24)))
+  // 🔒 CÁLCULO SEGURO DEL PROMEDIO DIARIO
+  const msPerDay = 1000 * 60 * 60 * 24
+  const diasTranscurridos = Math.max(1, Math.floor((hoy - inicio) / msPerDay))
   const promedioDiario = gastosVariablesActuales / diasTranscurridos
-  const diasRestantes = Math.floor((fin - hoy) / (1000 * 60 * 60 * 24))
-  const gastosVariablesProyectados = gastosVariablesActuales + (promedioDiario * Math.max(0, diasRestantes))
+  const diasRestantes = Math.max(0, Math.floor((fin - hoy) / msPerDay))
+  
+  // Si el promedio no es válido, asumimos 0
+  const promedioDiarioSeguro = Number.isFinite(promedioDiario) ? promedioDiario : 0
+  
+  const gastosVariablesProyectados = gastosVariablesActuales + (promedioDiarioSeguro * diasRestantes)
   
   // Todas las suscripciones activas del mes
   const suscripcionesProyectadas = suscripciones
@@ -146,13 +154,22 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
     .reduce((sum, s) => {
       const costo = safeNumber(s.costo)
       if (s.ciclo === 'Anual') return sum + (costo / 12)
-      if (s.ciclo === 'Semanal') return sum + (costo * 4.33) // Promedio mensual
+      if (s.ciclo === 'Semanal') return sum + (costo * 4.33)
       return sum + costo
     }, 0)
   
   const totalGastos = gastosFijosProyectados + gastosVariablesProyectados + suscripcionesProyectadas
   const saldo = totalIngresosProyectados - totalGastos
   const tasaAhorro = totalIngresosProyectados > 0 ? ((totalIngresosProyectados - totalGastos) / totalIngresosProyectados) * 100 : 0
+  
+  // Objeto de desglose
+  const desglose = {
+    ingresosDelMes,
+    ingresosRecurrentesProyectados,
+    gastosVariablesActuales,
+    promedioDiario: promedioDiarioSeguro, 
+    diasRestantes
+  }
   
   return {
     totalIngresos: totalIngresosProyectados,
@@ -163,14 +180,13 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
     saldo,
     tasaAhorro,
     tipo: 'proyectado',
-    // Exponemos 'promedioDiario' a la raíz por si el widget lo busca directo
-    promedioDiario, 
-    desglose: {
-      ingresosDelMes,
-      ingresosRecurrentesProyectados,
-      gastosVariablesActuales,
-      diasRestantes
-    }
+    desglose,
+    // ✅ APALANAR PROPIEDADES PARA EVITAR "UNDEFINED" EN WIDGET
+    promedioDiario: promedioDiarioSeguro,
+    diasRestantes,
+    ingresosDelMes,
+    ingresosRecurrentes: ingresosRecurrentesProyectados,
+    gastosVariablesActuales
   }
 }
 
@@ -189,19 +205,16 @@ const calcularIngresosRecurrentes = (ingresos, inicio, fin, hoy) => {
     const monto = safeNumber(ing.monto)
     
     if (ing.frecuencia === 'Semanal') {
-      // Calcular cuántos cobros semanales faltan en el mes
       const diasRestantes = Math.floor((fin - hoy) / (1000 * 60 * 60 * 24))
       const cobrosRestantes = Math.floor(diasRestantes / 7)
       proyeccion += monto * cobrosRestantes
     }
     
     else if (ing.frecuencia === 'Quincenal') {
-      // Si es día 1-15, proyectar el cobro del 15
       const diaHoy = hoy.getDate()
       if (diaHoy < 15 && fechaIngreso.getDate() === 15) {
         proyeccion += monto
       }
-      // Si es quincena 1, proyectar quincena 2
       else if (diaHoy <= 15 && fechaIngreso.getDate() === 1) {
         const proximaQuincena = new Date(hoy.getFullYear(), hoy.getMonth(), 15)
         if (proximaQuincena <= fin) {
@@ -211,7 +224,6 @@ const calcularIngresosRecurrentes = (ingresos, inicio, fin, hoy) => {
     }
     
     else if (ing.frecuencia === 'Mensual') {
-      // Si el ingreso mensual aún no llegó este mes
       const diaIngreso = fechaIngreso.getDate()
       const ingresoEsteMes = new Date(hoy.getFullYear(), hoy.getMonth(), diaIngreso)
       if (ingresoEsteMes > hoy && ingresoEsteMes <= fin) {
@@ -238,7 +250,6 @@ export const generarFechasRecurrentes = (ingreso, año, mes) => {
   }
   
   else if (ingreso.frecuencia === 'Quincenal') {
-    // Dos fechas: día 1 y día 15
     fechas.push(new Date(año, mes, 1).toISOString().split('T')[0])
     if (ultimoDiaMes >= 15) {
       fechas.push(new Date(año, mes, 15).toISOString().split('T')[0])
@@ -246,8 +257,7 @@ export const generarFechasRecurrentes = (ingreso, año, mes) => {
   }
   
   else if (ingreso.frecuencia === 'Semanal') {
-    // Generar fechas semanales del mes
-    const primerLunes = encontrarPrimerDiaSemana(año, mes, 1) // 1 = Lunes
+    const primerLunes = encontrarPrimerDiaSemana(año, mes, 1) 
     for (let semana = 0; semana < 5; semana++) {
       const fecha = new Date(primerLunes)
       fecha.setDate(fecha.getDate() + (semana * 7))
