@@ -1,5 +1,8 @@
 // Sistema inteligente de cálculos financieros con manejo temporal
 
+// Función auxiliar segura para calcular montos
+const safeNumber = (val) => (val ? Number(val) : 0)
+
 /**
  * Calcula balances financieros con vista real vs proyectada
  * REAL: Solo hasta hoy (lo que realmente ha pasado)
@@ -51,18 +54,18 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
   // Ingresos que ya llegaron
   const ingresosReales = ingresos
     .filter(i => {
-      const fecha = new Date(i.fecha)
-      return fecha >= inicio && fecha <= fin
+      const fecha = i.fecha ? new Date(i.fecha) : null
+      return fecha && fecha >= inicio && fecha <= fin
     })
-    .reduce((sum, i) => sum + Number(i.monto || 0), 0)
+    .reduce((sum, i) => sum + safeNumber(i.monto), 0)
   
   // Gastos variables que ya ocurrieron
   const gastosVariablesReales = gastos
     .filter(g => {
-      const fecha = new Date(g.fecha)
-      return fecha >= inicio && fecha <= fin
+      const fecha = g.fecha ? new Date(g.fecha) : null
+      return fecha && fecha >= inicio && fecha <= fin
     })
-    .reduce((sum, g) => sum + Number(g.monto || 0), 0)
+    .reduce((sum, g) => sum + safeNumber(g.monto), 0)
   
   // Gastos fijos que ya vencieron
   const gastosFijosReales = gastosFijos
@@ -71,7 +74,7 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
       const vencimiento = new Date(fin.getFullYear(), fin.getMonth(), gf.dia_venc)
       return vencimiento <= fin && gf.estado !== 'Pagado'
     })
-    .reduce((sum, gf) => sum + Number(gf.monto || 0), 0)
+    .reduce((sum, gf) => sum + safeNumber(gf.monto), 0)
   
   // Suscripciones que ya se cobraron este mes
   const suscripcionesReales = suscripciones
@@ -81,7 +84,7 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
       return proxPago >= inicio && proxPago <= fin
     })
     .reduce((sum, s) => {
-      const costo = Number(s.costo || 0)
+      const costo = safeNumber(s.costo)
       if (s.ciclo === 'Anual') return sum + (costo / 12)
       return sum + costo
     }, 0)
@@ -109,10 +112,10 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
   // Ingresos del mes + proyección de recurrentes
   const ingresosDelMes = ingresos
     .filter(i => {
-      const fecha = new Date(i.fecha)
-      return fecha >= inicio && fecha <= fin
+      const fecha = i.fecha ? new Date(i.fecha) : null
+      return fecha && fecha >= inicio && fecha <= fin
     })
-    .reduce((sum, i) => sum + Number(i.monto || 0), 0)
+    .reduce((sum, i) => sum + safeNumber(i.monto), 0)
   
   // Proyectar ingresos futuros basados en recurrencia
   const ingresosRecurrentesProyectados = calcularIngresosRecurrentes(ingresos, inicio, fin, hoy)
@@ -121,15 +124,15 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
   
   // Todos los gastos fijos del mes
   const gastosFijosProyectados = gastosFijos
-    .reduce((sum, gf) => sum + Number(gf.monto || 0), 0)
+    .reduce((sum, gf) => sum + safeNumber(gf.monto), 0)
   
   // Gastos variables: actuales + proyección
   const gastosVariablesActuales = gastos
     .filter(g => {
-      const fecha = new Date(g.fecha)
-      return fecha >= inicio && fecha <= fin
+      const fecha = g.fecha ? new Date(g.fecha) : null
+      return fecha && fecha >= inicio && fecha <= fin
     })
-    .reduce((sum, g) => sum + Number(g.monto || 0), 0)
+    .reduce((sum, g) => sum + safeNumber(g.monto), 0)
   
   // Proyección de gastos variables basada en promedio diario
   const diasTranscurridos = Math.max(1, Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24)))
@@ -141,7 +144,7 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
   const suscripcionesProyectadas = suscripciones
     .filter(s => s.estado === 'Activo')
     .reduce((sum, s) => {
-      const costo = Number(s.costo || 0)
+      const costo = safeNumber(s.costo)
       if (s.ciclo === 'Anual') return sum + (costo / 12)
       if (s.ciclo === 'Semanal') return sum + (costo * 4.33) // Promedio mensual
       return sum + costo
@@ -160,11 +163,12 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
     saldo,
     tasaAhorro,
     tipo: 'proyectado',
+    // Exponemos 'promedioDiario' a la raíz por si el widget lo busca directo
+    promedioDiario, 
     desglose: {
       ingresosDelMes,
       ingresosRecurrentesProyectados,
       gastosVariablesActuales,
-      promedioDiario,
       diasRestantes
     }
   }
@@ -179,8 +183,10 @@ const calcularIngresosRecurrentes = (ingresos, inicio, fin, hoy) => {
   ingresos.forEach(ing => {
     if (!ing.frecuencia || ing.frecuencia === 'Único') return
     
-    const fechaIngreso = new Date(ing.fecha)
-    const monto = Number(ing.monto || 0)
+    const fechaIngreso = ing.fecha ? new Date(ing.fecha) : null
+    if (!fechaIngreso) return
+    
+    const monto = safeNumber(ing.monto)
     
     if (ing.frecuencia === 'Semanal') {
       // Calcular cuántos cobros semanales faltan en el mes

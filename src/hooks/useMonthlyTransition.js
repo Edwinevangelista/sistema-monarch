@@ -161,29 +161,13 @@ export const useMonthlyTransition = () => {
   const archivarMesAnterior = useCallback(async (fecha) => {
     try {
       console.log('🗄️ Archivando datos del mes anterior...')
-      
-      const user = await obtenerUsuarioActual()
-      const mesAnterior = fecha.getMonth() === 0 ? 11 : fecha.getMonth() - 1
-      const añoAnterior = fecha.getMonth() === 0 ? fecha.getFullYear() - 1 : fecha.getFullYear()
-      
-      // Crear resumen del mes anterior (opcional, para estadísticas)
-      const resumenMes = {
-        user_id: user.id,
-        año: añoAnterior,
-        mes: mesAnterior + 1, // JS usa 0-11, BD usa 1-12
-        fecha_creacion: fecha.toISOString(),
-        // Aquí podrías calcular totales del mes anterior
-        // total_ingresos, total_gastos, etc.
-      }
-      
-      // Opcional: Guardar resumen en tabla "resumenes_mensuales"
-      // const { error } = await supabase.from('resumenes_mensuales').insert([resumenMes])
+      // Lógica futura de archivo va aquí
       
       console.log('✅ Archivado completado')
     } catch (error) {
       console.error('❌ Error en archivarMesAnterior:', error)
     }
-  }, [obtenerUsuarioActual])
+  }, [])
 
   const ejecutarTransicionMensual = useCallback(async () => {
     try {
