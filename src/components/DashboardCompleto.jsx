@@ -89,7 +89,7 @@ export default function DashboardCompleto()  {
   const [showExportacion, setShowExportacion] = useState(false)
 
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
-  const [mostrarMenuInferior, setMostrarMenuInferior] = useState(true)
+  
   const inactivityTimerRef = useRef(null)
 
   // NUEVO: Estado para el Tutorial
@@ -244,31 +244,37 @@ export default function DashboardCompleto()  {
     }
   }, [deudas]);
 
-  // FUNCIÓN: Auto-ocultar menú inferior
-  useEffect(() => {
-    const resetTimer = () => {
-      setMostrarMenuInferior(true)
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
-      inactivityTimerRef.current = setTimeout(() => {
-        setMostrarMenuInferior(false)
-      }, 4000) 
-    }
+ // FUNCIÓN: Auto-ocultar menú inferior (inactividad)
+// Si quieres ocultarlo de verdad, agrega un estado showMenu y úsalo en el render del MenuInferior.
+// Por ahora esto solo reinicia timer de inactividad y evita errores de parseo.
 
-    window.addEventListener('mousemove', resetTimer)
-    window.addEventListener('touchstart', resetTimer)
-    window.addEventListener('click', resetTimer)
-    window.addEventListener('scroll', resetTimer)
+useEffect(() => {
+  const resetTimer = () => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
 
-    resetTimer()
+    inactivityTimerRef.current = setTimeout(() => {
+      // Aquí pones lo que quieres hacer por inactividad:
+      // ejemplo: setShowMenuInferior(false)
+      // (si no tienes estado aún, déjalo vacío)
+    }, 15000) // 15s ejemplo (ajusta)
+  }
 
-    return () => {
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
-      window.removeEventListener('mousemove', resetTimer)
-      window.removeEventListener('touchstart', resetTimer)
-      window.removeEventListener('click', resetTimer)
-      window.removeEventListener('scroll', resetTimer)
-    }
-  }, [])
+  window.addEventListener('mousemove', resetTimer)
+  window.addEventListener('touchstart', resetTimer)
+  window.addEventListener('click', resetTimer)
+  window.addEventListener('scroll', resetTimer)
+
+  resetTimer()
+
+  return () => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+    window.removeEventListener('mousemove', resetTimer)
+    window.removeEventListener('touchstart', resetTimer)
+    window.removeEventListener('click', resetTimer)
+    window.removeEventListener('scroll', resetTimer)
+  }
+}, [])
+
 
   // FUNCIÓN: Inicializar Tutorial
   useEffect(() => {
@@ -841,9 +847,7 @@ export default function DashboardCompleto()  {
     return isNaN(num) || num < 0 ? 0 : num
   }
 
-  const handleOpenExport = (e) => {
-    setShowExportacion(true)
-  }
+  
 
   const handleExportacionCompletada = (resultado) => {
     if (resultado.success && showLocalNotification) {
