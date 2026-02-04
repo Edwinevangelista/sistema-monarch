@@ -12,6 +12,7 @@
   "@testing-library/user-event": "^13.5.0",
   "firebase": "^12.8.0",
   "framer-motion": "^12.23.26",
+  "jspdf": "^4.1.0",
   "lucide-react": "^0.562.0",
   "pdf-parse": "^2.4.5",
   "pdf-to-png-converter": "^3.11.0",

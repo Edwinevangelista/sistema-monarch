@@ -10,10 +10,11 @@ import {
   ScanFace,
   Sparkles,
   User,
-  X
+  X,
+  Download
 } from 'lucide-react';
 
-export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsuario = 'Usuario', onLogout }) {
+export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, nombreUsuario = 'Usuario', onLogout }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const handleOpenModal = (modalName) => {
@@ -21,6 +22,16 @@ export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsua
     // Pequeño delay para asegurar que el menú se cierre primero
     setTimeout(() => {
       onOpenModal(modalName);
+    }, 50);
+  };
+
+  const handleExportAction = () => {
+    setShowMenu(false);
+    // Pequeño delay para asegurar que el menú se cierre primero
+    setTimeout(() => {
+      if (onOpenExport) {
+        onOpenExport();
+      }
     }, 50);
   };
 
@@ -121,8 +132,8 @@ export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsua
                 </button>
               </div>
               
-              {/* Grid de opciones */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Grid de opciones - NUEVA DISPOSICIÓN CON EXPORTACIÓN */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 
                 {/* Cuentas */}
                 <button
@@ -151,6 +162,18 @@ export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsua
                   <span className="text-[11px] font-medium text-white">Tarjetas</span>
                 </button>
 
+                {/* NUEVO: Exportar Datos */}
+                <button
+                  onClick={handleExportAction}
+                  className="p-3 bg-gradient-to-br from-green-500/10 to-emerald-600/10 hover:from-green-500/20 hover:to-emerald-600/20 rounded-xl transition-all border border-green-500/20 hover:border-green-500/40 flex flex-col items-center gap-2 group relative active:scale-95"
+                >
+                  <div className="absolute top-1 right-1">
+                    <span className="text-[7px] font-bold bg-green-400 text-green-900 px-1 py-0.5 rounded">NUEVO</span>
+                  </div>
+                  <Download className="w-6 h-6 text-green-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-medium text-white">Exportar</span>
+                </button>
+
                 {/* Escáner */}
                 <button
                   onClick={() => handleOpenModal('lectorEstado')}
@@ -172,15 +195,20 @@ export default function MenuInferior({ onOpenModal, alertasCount = 0, nombreUsua
                   <span className="text-[11px] font-medium text-white">Perfil</span>
                 </button>
 
-                {/* Asistente IA */}
-                <button
-                  onClick={() => handleOpenModal('asistente')}
-                  className="p-3 bg-white/5 hover:bg-pink-600/20 rounded-xl transition-all border border-white/5 hover:border-pink-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                >
-                  <Sparkles className="w-6 h-6 text-pink-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">IA</span>
-                </button>
+              </div>
 
+              {/* Segunda fila para asistente IA */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* Asistente IA - Centrado */}
+                <div className="col-start-2">
+                  <button
+                    onClick={() => handleOpenModal('asistente')}
+                    className="w-full p-3 bg-white/5 hover:bg-pink-600/20 rounded-xl transition-all border border-white/5 hover:border-pink-500/30 flex flex-col items-center gap-2 group active:scale-95"
+                  >
+                    <Sparkles className="w-6 h-6 text-pink-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-[11px] font-medium text-white">IA</span>
+                  </button>
+                </div>
               </div>
 
               {/* Botón cerrar sesión */}

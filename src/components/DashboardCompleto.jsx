@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target } from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target, Download } from 'lucide-react'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -38,10 +38,12 @@ import Footer from './Footer'
 import ListaIngresos from './ListaIngresos'
 import ModalDetalleUniversal from './ModalDetalleUniversal'
 import CalendarioPagos from './CalendarioPagos'
+
+// --- MODALES Y WIDGETS (Default Imports corregidos) ---
 import WidgetBalanceDual from './WidgetBalanceDual'
 import PlanExecutionWidget from './PlanExecutionWidget'
 
-// --- MODALES NUEVOS ---
+// --- MODALES NUEVOS (Default Imports corregidos) ---
 import DebtPlannerModal from './DebtPlannerModal'
 import SavingsPlannerModal from './SavingsPlannerModal'
 import SpendingControlModal from './SpendingControlModal'
@@ -51,6 +53,8 @@ import ListaGastosCompleta from './ListaGastosCompleta'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
+
+import VisualizacionDatos from './VisualizacionDatos'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -80,6 +84,9 @@ export default function DashboardCompleto()  {
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
+  
+  // NUEVO: Estado de exportación
+  const [showExportacion, setShowExportacion] = useState(false)
 
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   const [mostrarMenuInferior, setMostrarMenuInferior] = useState(true)
@@ -137,21 +144,21 @@ export default function DashboardCompleto()  {
       ? JSON.parse(guardadas)
       : {
           moneda: "USD",
-          inicioMes: 1,
+          inicioMes:1,
           objetivo: "Reducir deudas",
           riesgo: "Conservador",
           iaActiva: true,
         };
   });
 
-// Usamos estado para 'hoy' para que no cambie en cada render (evita warnings de ESLint)
-// Se actualiza automáticamente cada minuto para mantener el tiempo actual
-const [hoy, setHoy] = useState(() => new Date())
-useEffect(() => {
-  const interval = setInterval(() => setHoy(new Date()), 60000) // Actualiza cada 60 segundos
-  return () => clearInterval(interval)
-}, [])
-const hoyStr = hoy.toISOString().split('T')[0]
+  // Usamos estado para 'hoy' para que no cambie en cada render (evita warnings de ESLint)
+  // Se actualiza automáticamente cada minuto para mantener el tiempo actual
+  const [hoy, setHoy] = useState(() => new Date())
+  useEffect(() => {
+    const interval = setInterval(() => setHoy(new Date()), 60000) // Actualiza cada 60 segundos
+    return () => clearInterval(interval)
+  }, [])
+  const hoyStr = hoy.toISOString().split('T')[0]
 
   useInactivityTimeout(15)
   
@@ -795,7 +802,7 @@ const hoyStr = hoy.toISOString().split('T')[0]
     }
   };
 
-  // 📋 PASO 5: FUNCIONES DE DEBUGGING
+  // 📋 PASO 5: FUNCIONES DE DEBUGGING Y EXPORTACIÓN
   const handleForzarTransicionMensual = async () => {
     if (window.confirm('¿Forzar transición mensual? (Solo para testing)')) {
       try {
@@ -834,31 +841,55 @@ const hoyStr = hoy.toISOString().split('T')[0]
     return isNaN(num) || num < 0 ? 0 : num
   }
 
-    // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
-  // Esto hace que la lista y gráficas muestren solo febrero, aunque la BD tenga enero.
+  const handleOpenExport = (e) => {
+    setShowExportacion(true)
+  }
 
+  const handleExportacionCompletada = (resultado) => {
+    if (resultado.success && showLocalNotification) {
+      showLocalNotification('📊 Exportación completada', {
+        body: `Archivo ${resultado.nombreArchivo} descargado exitosamente`,
+        icon: '/favicon.ico'
+      })
+    }
+    setShowExportacion(false)
+  }
 
+  useEffect(() => {
+    const handleOpenExportEvent = (e) => {
+      setShowExportacion(true)
+      // Opcional: Pre-seleccionar tipo basado en el evento si se disparó desde el widget
+      if (e.detail?.tipo) {
+        console.log('Solicitando exportación tipo:', e.detail.tipo)
+      }
+    }
 
-const ingresosDelMes = useMemo(() => {
-  // Definimos las fechas dentro del useMemo para que no cambien de referencia
-  const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-  const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+    window.addEventListener('openExport', handleOpenExportEvent)
+    return () => window.removeEventListener('openExport', handleOpenExportEvent)
+  }, [])
+
+  // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
+  const ingresosDelMes = useMemo(() => {
+    // Definimos las fechas dentro del useMemo para que no cambien de referencia
+    const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
   
-  return ingresosInstant.filter(i => {
-    const fecha = i.fecha ? new Date(i.fecha) : null
-    return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
-  })
-}, [ingresosInstant, hoy]) // Solo depende de la lista y la fecha 'hoy' (que ahora es estable)
-const gastosDelMes = useMemo(() => {
-  // Definimos las fechas dentro del useMemo
-  const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-  const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+    return ingresosInstant.filter(i => {
+      const fecha = i.fecha ? new Date(i.fecha) : null
+      return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
+    })
+  }, [ingresosInstant, hoy])
+
+  const gastosDelMes = useMemo(() => {
+    // Definimos las fechas dentro del useMemo
+    const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
   
-  return gastosInstant.filter(g => {
-    const fecha = g.fecha ? new Date(g.fecha) : null
-    return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
-  })
-}, [gastosInstant, hoy])
+    return gastosInstant.filter(g => {
+      const fecha = g.fecha ? new Date(g.fecha) : null
+      return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
+    })
+  }, [gastosInstant, hoy])
 
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
   const overviewData = useMemo(() => {
@@ -899,15 +930,15 @@ const gastosDelMes = useMemo(() => {
   const deudaPagadaEsteMes = useMemo(() => {
     return (deudaId) => deudasPagadasEsteMesSet.has(deudaId)
   }, [deudasPagadasEsteMesSet])
-
-    const diaDeHoy = hoy.getDate()
+  
+  const diaDeHoy = hoy.getDate()
 
   useEffect(() => {
     let mounted = true
     const processAutopago = async () => {
       if (!mounted) return
 
-      // --- 1. PROCESAR AUTOPAGO DE SUSCRIPCIONES ---
+      // ---1. PROCESAR AUTOPAGO DE SUSCRIPCIONES ---
       if (suscripcionesInstant.length > 0) {
         for (const sub of suscripcionesInstant) {
           // Solo si coincide la fecha exacta, está activo, tiene cuenta asignada y activo el autopago
@@ -955,7 +986,7 @@ const gastosDelMes = useMemo(() => {
         }
       }
 
-      // --- 2. PROCESAR AUTOPAGO DE GASTOS FIJOS ---
+      // ---2. PROCESAR AUTOPAGO DE GASTOS FIJOS ---
       if (gastosFijosInstant.length > 0) {
         for (const gf of gastosFijosInstant) {
           // Verificar: Día de vencimiento coincide HOY, tiene autopago, cuenta asignada y está Pendiente
@@ -1001,7 +1032,6 @@ const gastosDelMes = useMemo(() => {
       }
     }
 
-    // Ejecutar 1.5 segundos después de montar para asegurar que los datos estén cargados
     const timeoutId = setTimeout(processAutopago, 1500)
     
     return () => {
@@ -1210,57 +1240,72 @@ const gastosDelMes = useMemo(() => {
       </div>
 
       {/* HEADER INTELIGENTE */}
-      <div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-4 md:pt-6 animate-in fade-in slide-in-from-top-4">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
+  {/* HEADER INTELIGENTE */}
+<div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-4 md:pt-6 animate-in fade-in slide-in-from-top-4">
+  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
+    
+    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 relative z-10">
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30">
+          <Wallet className="w-6 h-6 md:w-8 md:h-8 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+            {textoHora}, {usuario.nombre}
+          </h1>
+          <div className="flex items-center gap-2 text-sm md:text-base text-gray-400 mt-1">
+            {icono}
+            <span className="italic text-gray-300">{frase}</span>
+            <span className="hidden md:inline mx-2 text-white/20">|</span>
+            <span className="hidden md:inline-flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full border border-white/5">
+              <Activity className="w-3 h-3 text-green-400" />
+              Score: {kpis.financialHealth}/100
+            </span>
+          </div>
           
-          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30">
-                <Wallet className="w-6 h-6 md:w-8 md:h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                  {textoHora}, {usuario.nombre}
-                </h1>
-                <div className="flex items-center gap-2 text-sm md:text-base text-gray-400 mt-1">
-                  {icono}
-                  <span className="italic text-gray-300">{frase}</span>
-                  <span className="hidden md:inline mx-2 text-white/20">|</span>
-                  <span className="hidden md:inline-flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full border border-white/5">
-                    <Activity className="w-3 h-3 text-green-400" />
-                    Score: {kpis.financialHealth}/100
-                  </span>
-                  {/* PASO 7: Mejoras Header */}
-                  <div className="hidden md:flex items-center gap-4 ml-4">
-                    <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
-                      <span className="text-white/70">Vista:</span>
-                      <span className={`font-bold ${vistaActiva === 'real' ? 'text-blue-400' : 'text-purple-400'}`}>
-                        {vistaActiva === 'real' ? '📊 Real' : '🔮 Proyectado'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
-                      <span className="text-white/70">Día:</span>
-                      <span className="text-white font-bold">{hoy.getDate()}/{new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* INFORMACIÓN DEL MES */}
+          <div className="hidden md:flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
+              <span className="text-white/70">Vista:</span>
+              <span className={`font-bold ${vistaActiva === 'real' ? 'text-blue-400' : 'text-purple-400'}`}>
+                {vistaActiva === 'real' ? '📊 Real' : '🔮 Proyectado'}
+              </span>
             </div>
-            
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
-                className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
-                title="Repetir Tutorial"
-              >
-                <HelpCircle className="w-5 h-5" />
-              </button>
-              <div className="hidden md:block"><LogoutButton /></div>
+            <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
+              <span className="text-white/70">Día:</span>
+              <span className="text-white font-bold">{hoy.getDate()}/{new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()}</span>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* CONTROLES DEL HEADER */}
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={() => setShowExportacion(true)}
+          className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full border border-green-500/30 text-emerald-300 hover:text-emerald-200 transition-all group relative"
+          title="Exportar Datos Financieros"
+        >
+          <Download className="w-5 h-5" />
+          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Exportar datos
+          </div>
+        </button>
+        
+        <button 
+          onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
+          className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
+          title="Repetir Tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+        
+        <div className="hidden md:block"><LogoutButton /></div>
+      </div>
+    </div>
+  </div>
+</div>
 
       {/* WIDGET DE PRESUPUESTO INTELIGENTE CON VISTA DUAL */}
       <WidgetBalanceDual
@@ -1330,26 +1375,34 @@ const gastosDelMes = useMemo(() => {
           />
         </div>
 
-        {/* BOTONES DE ACCIÓN (Solo Desktop) + PASO 6: Debug Buttons */}
+        {/* BOTONES DE ACCIÓN (Solo Desktop) + PASO 6: Debug Buttons + Exportación */}
         <div className="hidden md:flex flex-wrap gap-3 justify-center bg-white/5 backdrop-blur-sm p-4 rounded-2xl border border-white/10 animate-in fade-in delay-300">
           <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-green-500/50 shadow-lg shadow-green-900/20"><Plus className="w-4 h-4" /> Ingreso</button>
           <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-red-500/50 shadow-lg shadow-red-900/20"><Plus className="w-4 h-4" /> Gasto</button>
           <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-indigo-500/50 shadow-lg shadow-indigo-900/20"><Repeat className="w-4 h-4" /> Suscripción</button>
-          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-purple-500/50 shadow-lg shadow-purple-900/20"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-gray-500/50 shadow-lg shadow-gray-900/20"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
+          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-purple-500/50 shadow-lg shadow-purple-900/20"><CreditCard className="w-4 h-4" /> Tarjetas</button>
+          {/* NUEVO: Botón Exportar */}
+          <button 
+            onClick={() => setShowExportacion(true)} 
+            className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-green-500/50 shadow-lg shadow-green-900/20"
+          >
+            <Download className="w-4 h-4" /> Exportar
+          </button>
+          
+          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-gray-500/50 shadow-lg shadow-gray-900/20"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
           
           {/* Debug Buttons */}
           {process.env.NODE_ENV === 'development' && (
             <>
               <button 
                 onClick={handleForzarTransicionMensual} 
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-purple-500/50 shadow-lg shadow-purple-900/20"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-purple-500/50 shadow-lg shadow-purple-900/20"
               >
                 🔄 Forzar Transición
               </button>
               <button 
                 onClick={mostrarEstadisticasDetalladas} 
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600/80 hover:bg-cyan-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-cyan-500/50 shadow-lg shadow-cyan-900/20"
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600/80 hover:bg-cyan-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-cyan-500/50 shadow-lg shadow-cyan-900/20"
               >
                 📊 Stats
               </button>
@@ -1399,12 +1452,12 @@ const gastosDelMes = useMemo(() => {
 
         {/* ASISTENTE FINANCIERO */}
         <div className="animate-in fade-in delay-300">
-        <AsistenteFinancieroV2
-  ingresos={ingresosDelMes}
-  gastos={gastosDelMes}
-  gastosFijos={gastosFijosInstant}
-  suscripciones={suscripcionesInstant}
-  deudas={deudasInstant}
+          <AsistenteFinancieroV2
+            ingresos={ingresosDelMes}
+            gastos={gastosDelMes}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
+            deudas={deudasInstant}
             showLocalNotification={showLocalNotification}
             onOpenDebtPlanner={() => setShowDebtPlanner(true)}
             onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
@@ -1416,7 +1469,9 @@ const gastosDelMes = useMemo(() => {
         <div className="animate-in fade-in delay-400">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h2 className="text-xl md:text-2xl font-bold text-white">Mis Planes</h2>
-            <button onClick={() => setShowSavingsPlanner(true)} className="text-xs md:text-sm bg-purple-600/20 text-purple-300 px-3 py-1.5 rounded-lg hover:bg-purple-600/30 transition flex items-center gap-2 touch-manipulation border border-purple-500/20"><Plus className="w-3 h-3 md:w-4 md:h-4"/> Nuevo Plan</button>
+            <button onClick={() => setShowSavingsPlanner(true)} className="text-xs md:text-sm bg-purple-600/20 text-purple-300 px-3 py-1.5 rounded-lg hover:bg-purple-600/30 transition flex items-center gap-2 touch-manipulation border border-purple-500/20">
+              <Plus className="w-3 h-3 md:w-4 md:h-4" /> Nuevo Plan
+            </button>
           </div>
           <SavedPlansList refreshSignal={planUpdateCounter} />
         </div>
@@ -1427,43 +1482,43 @@ const gastosDelMes = useMemo(() => {
             <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-           <GraficaBarras 
-  ingresos={ingresosDelMes}
-  gastos={gastosDelMes}
-  gastosFijos={gastosFijosInstant}
-  suscripciones={suscripcionesInstant}
-/>
+            <GraficaBarras 
+              ingresos={ingresosDelMes}
+              gastos={gastosDelMes}
+              gastosFijos={gastosFijosInstant}
+              suscripciones={suscripcionesInstant}
+            />
           </div>
         </div>
 
         {/* INGRESOS */}
         <div className="animate-in fade-in delay-500">
           <ListaIngresos 
-  ingresos={ingresosDelMes}
+            ingresos={ingresosDelMes}
             onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
             onEliminar={handleEliminarIngreso}
           />
         </div>
 
         {/* FINANZAS (QUICK ACCESS) */}
-        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-white/10 animate-in fade-in delay-500">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 md:p-6 border-white/10 animate-in fade-in delay-500">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg md:text-xl font-bold text-white">Finanzas</h3>
               <p className="text-xs md:text-sm text-gray-400">Gestiona tus gastos y deudas</p>
             </div>
-            <button onClick={() => { setOverviewMode('ALL'); setShowModal('gastosOverview') }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs md:text-sm font-semibold transition-all shadow-lg shadow-blue-900/20 border border-blue-400/20 touch-manipulation">Ver Todo</button>
+            <button onClick={() => { setOverviewMode('ALL'); setShowModal('gastosOverview') }} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs md:text-sm font-semibold transition-all shadow-lg shadow-blue-900/20 border-blue-400/20 touch-manipulation">Ver Todo</button>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div onClick={() => { setOverviewMode('DEUDAS'); setShowModal('gastosOverview') }} className="group bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{deudasInstant.length}</div>
               <div className="text-[10px] md:text-xs text-purple-300 font-medium uppercase tracking-wide">Deudas</div>
             </div>
-            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border-yellow-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosFijosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
-            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
             </div>
@@ -1571,7 +1626,7 @@ const gastosDelMes = useMemo(() => {
         />
       )}
 
-      <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }}>
+      <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null); }}>        
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
       </ModalWrapper>
 
@@ -1587,6 +1642,7 @@ const gastosDelMes = useMemo(() => {
         />
       </ModalWrapper>
 
+      {/* CORRECCIÓN APLICADA AQUÍ: Cierre de función añadido */}
       <ModalWrapper show={showModal === 'suscripcion'} onClose={() => { setShowModal(null); setSuscripcionEditando(null) }}>
         <ModalSuscripcion key={suscripcionEditando?.id} onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} onSave={handleGuardarSuscripcion} suscripcionInicial={suscripcionEditando} />
       </ModalWrapper>
@@ -1599,7 +1655,7 @@ const gastosDelMes = useMemo(() => {
           </div>
           <div className="space-y-3">
             <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-4 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">📝 Registrar Tarjeta</button>
-            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
+            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
           </div>
         </div>
       </ModalWrapper>
@@ -1616,7 +1672,9 @@ const gastosDelMes = useMemo(() => {
         />
       </ModalWrapper>
       
-      <ModalWrapper show={showModal === 'agregarDeuda'} onClose={() => { setShowModal(null); setDeudaEditando(null) }}>
+      <ModalWrapper show={showModal === 'agregarDeuda'} onClose={() => { setShowModal(null); setDeudaEditando(null); }}>
+
+        {/* CORRECCIÓN APLICADA AQUÍ: Llave de apertura añadida */}
         <ModalAgregarDeuda onClose={() => { setShowModal(null); setDeudaEditando(null) }} onSave={handleGuardarDeuda} deudaInicial={deudaEditando} />
       </ModalWrapper>
 
@@ -1625,7 +1683,7 @@ const gastosDelMes = useMemo(() => {
       </ModalWrapper>
 
       <ModalWrapper show={showDetallesCategorias} onClose={() => setShowDetallesCategorias(false)}>
-        <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} onClose={() => setShowDetallesCategorias(false)} />
+        <ModalDetallesCategorias gastosPorCategoria={gastosPorCategoria} gastosFijos={gastosFijosInstant} gastosVariables={gastosDelMes} suscripciones={suscripcionesInstant} onClose={() => setShowDetallesCategorias(false)} />
       </ModalWrapper>
 
       <ModalWrapper show={showDebtPlanner} onClose={() => setShowDebtPlanner(false)}>
@@ -1637,10 +1695,30 @@ const gastosDelMes = useMemo(() => {
       </ModalWrapper>
 
       <ModalWrapper show={showSpendingControl} onClose={() => setShowSpendingControl(false)}>
-        <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosInstant} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
+        <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosDelMes} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       </ModalWrapper>
 
-
+      {/* MODAL DE EXPORTACIÓN */}
+      {showExportacion && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+          <div className="bg-gray-900 w-full md:max-w-4xl h-[95vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden animate-slide-in-from-bottom-10">
+            <VisualizacionDatos
+              onClose={() => setShowExportacion(false)}
+              onExportComplete={handleExportacionCompletada}
+              // Datos financieros
+              ingresos={ingresosInstant}
+              gastos={gastosInstant}
+              gastosFijos={gastosFijosInstant}
+              suscripciones={suscripcionesInstant}
+              deudas={deudasInstant}
+              cuentas={cuentas}
+              // Cálculos
+              calculosReales={calculosReales}
+              calculosProyectados={calculosProyectados}
+            />
+          </div>
+        </div>
+      )}
 
       {/* --- TUTORIAL OVERLAY --- */}
       {tutorialActivo && (
@@ -1694,19 +1772,14 @@ const gastosDelMes = useMemo(() => {
       )}
 
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
-      <div 
-        id="boton-agregar"
-        className={`fixed bottom-0 left-0 right-0 md:hidden transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] z-40 ${
-          mostrarMenuInferior || tutorialActivo ? 'translate-y-0' : 'translate-y-[85%]'
-        }`}
-      >
-        <MenuInferior 
-          onOpenModal={setShowModal} 
-          alertasCount={alertas.length} 
-          nombreUsuario={usuario.nombre} 
-          onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} 
-        />
-      </div>
+      {/* NOTA PARA MENU INFERIOR: Asegúrate de que `MenuInferior.jsx` tenga acceso a la prop `onOpenExport` */}
+      <MenuInferior 
+        onOpenModal={setShowModal}
+        alertasCount={alertas.length} 
+        nombreUsuario={usuario.nombre} 
+        onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} 
+        onOpenExport={() => setShowExportacion(true)} // <--- Pasa la función aquí
+      />
 
       {/* ESTILOS ADICIONALES */}
       <style jsx>{`
