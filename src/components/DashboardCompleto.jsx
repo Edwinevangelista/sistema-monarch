@@ -64,9 +64,15 @@ import { Calendar, Archive } from 'lucide-react'
 import { 
   obtenerDatosFiltrados, 
   obtenerEstadisticasTransicion,
-  hayDatosArchivados,
-  FILTRO_TIPOS 
+  hayDatosArchivados
+  // ✅ ELIMINADO: FILTRO_TIPOS de la importación para evitar "no-unused-vars"
 } from '../utils/filtrosInteligentes'
+
+const FILTRO_TIPOS = {
+  MES_ACTUAL: 'MES_ACTUAL',
+  MES_ANTERIOR: 'MES_ANTERIOR',
+  TODO: 'TODO'
+}
 // ============================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD (OPTIMIZADO)
 // ============================================
@@ -170,7 +176,7 @@ export default function DashboardCompleto()  {
 
   useInactivityTimeout(15)
   
-// Hook de transición mensual automática
+  // Hook de transición mensual automática
 const { 
   forzarTransicion 
 } = useMonthlyTransition()
@@ -218,13 +224,7 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
     return cached ? JSON.parse(cached) : [];
 });
 
-// 📅 FILTROS INTELIGENTES: Respetan transición mensual
-  // 🔧 DEFINICIÓN LOCAL PARA EVITAR ERROR DE FILTRO_TIPOS INDEFINIDO
-  const FILTRO_TIPOS = {
-    MES_ACTUAL: 'MES_ACTUAL',
-    MES_ANTERIOR: 'MES_ANTERIOR',
-    TODO: 'TODO'
-  };
+
 
   // 📅 FILTROS INTELIGENTES: Respetan transición mensual
   const datosFiltradosInteligentes = useMemo(() => {
@@ -235,10 +235,17 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
       suscripciones: suscripcionesInstant,
       deudas: deudasInstant
     }, FILTRO_TIPOS.MES_ACTUAL)
-  }, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, deudasInstant])
+
+}, [
+  ingresosInstant,
+  gastosInstant,
+  gastosFijosInstant,
+  suscripcionesInstant,
+  deudasInstant
+])
+
 
 // --- EFECTOS DE SINCRONIZACIÓN ---
-// (El código debe continuar aquí directamente, sin los 'const cached' de por medio)
 useEffect(() => {
   if (ingresos.length > 0) {
     setIngresosInstant(ingresos);
@@ -246,28 +253,28 @@ useEffect(() => {
   }
 }, [ingresos]);
 
-  useEffect(() => {
+useEffect(() => {
     if (gastos.length > 0) {
       setGastosInstant(gastos);
       localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos));
     }
   }, [gastos]);
 
-  useEffect(() => {
+useEffect(() => {
     if (gastosFijos.length > 0) {
       setGastosFijosInstant(gastosFijos);
       localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos));
     }
   }, [gastosFijos]);
 
-  useEffect(() => {
+useEffect(() => {
     if (suscripciones.length > 0) {
       setSuscripcionesInstant(suscripciones);
       localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones));
     }
   }, [suscripciones]);
 
-  useEffect(() => {
+useEffect(() => {
     if (deudas.length > 0) {
       setDeudasInstant(deudas);
       localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
@@ -1207,7 +1214,7 @@ const overviewData = useMemo(() => {
   // --- LÓGICA DE INTELIGENCIA FINANCIERA ---
   const financialHealth = useMemo(() => {
     let score = 60;
-    const tasaAhorroNum = (totalIngresos - totalGastosReales) / (totalIngresos || 1);
+    const tasaAhorroNum = (totalIngresos - totalGastosReales) / (totalIngresos ||1);
     const deudaTotal = deudasInstant.reduce((sum, d) => sum + (d.saldo || 0), 0);
     
     if (tasaAhorroNum > 0.2) score += 20;
@@ -1555,7 +1562,7 @@ const IndicadorDatosArchivados = () => {
           <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-green-500/50 shadow-lg shadow-green-900/20"><Plus className="w-4 h-4" /> Ingreso</button>
           <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-red-500/50 shadow-lg shadow-red-900/20"><Plus className="w-4 h-4" /> Gasto</button>
           <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-indigo-500/50 shadow-lg shadow-indigo-900/20"><Repeat className="w-4 h-4" /> Suscripción</button>
-          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-purple-500/50 shadow-lg shadow-purple-900/20"><CreditCard className="w-4 h-4" /> Tarjetas</button>
+          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-purple-500/50 shadow-lg shadow-purple-900/20"><CreditCard className="w-4 h-4" /> Tarjetas</button>
           {/* NUEVO: Botón Exportar */}
           <button 
             onClick={() => setShowExportacion(true)} 
@@ -1691,11 +1698,11 @@ const IndicadorDatosArchivados = () => {
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{deudasInstant.length}</div>
               <div className="text-[10px] md:text-xs text-purple-300 font-medium uppercase tracking-wide">Deudas</div>
             </div>
-            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border-yellow-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+            <div onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }} className="group bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosFijosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
-            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
+            <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
               <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length}</div>
               <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
             </div>
@@ -1965,7 +1972,7 @@ const IndicadorDatosArchivados = () => {
         
         @keyframes slide-in-from-bottom-10 {
           from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(0); opacity:1; }
         }
         
         @keyframes bounce-in {
