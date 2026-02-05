@@ -59,6 +59,14 @@ import VisualizacionDatos from './VisualizacionDatos'
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
 
+// --- NUEVOS IMPORTS PARA TRANSICIÓN MENSUAL ---
+import { Calendar, Archive } from 'lucide-react'
+import { 
+  obtenerDatosFiltrados, 
+  obtenerEstadisticasTransicion,
+  hayDatosArchivados,
+  FILTRO_TIPOS 
+} from '../utils/filtrosInteligentes'
 // ============================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD (OPTIMIZADO)
 // ============================================
@@ -162,8 +170,10 @@ export default function DashboardCompleto()  {
 
   useInactivityTimeout(15)
   
-  // Hook de transición mensual automática
-  const { forzarTransicion } = useMonthlyTransition()
+// Hook de transición mensual automática
+const { 
+  forzarTransicion 
+} = useMonthlyTransition()
 
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
   const { gastos, addGasto, updateGasto, deleteGasto } = useGastosVariables()
@@ -203,18 +213,30 @@ export default function DashboardCompleto()  {
     return cached ? JSON.parse(cached) : [];
   });
 
-  const [deudasInstant, setDeudasInstant] = useState(() => {
+const [deudasInstant, setDeudasInstant] = useState(() => {
     const cached = localStorage.getItem('deudas_cache_v2');
     return cached ? JSON.parse(cached) : [];
-  });
+});
 
-  // --- EFECTOS DE SINCRONIZACIÓN ---
-  useEffect(() => {
-    if (ingresos.length > 0) {
-      setIngresosInstant(ingresos);
-      localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos));
-    }
-  }, [ingresos]);
+// 📅 FILTROS INTELIGENTES: Respetan transición mensual
+const datosFiltradosInteligentes = useMemo(() => {
+  return obtenerDatosFiltrados({
+    ingresos: ingresosInstant,
+    gastosVariables: gastosInstant,
+    gastosFijos: gastosFijosInstant, 
+    suscripciones: suscripcionesInstant,
+    deudas: deudasInstant
+  }, FILTRO_TIPOS.MES_ACTUAL)
+}, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, deudasInstant])
+
+// --- EFECTOS DE SINCRONIZACIÓN ---
+// (El código debe continuar aquí directamente, sin los 'const cached' de por medio)
+useEffect(() => {
+  if (ingresos.length > 0) {
+    setIngresosInstant(ingresos);
+    localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos));
+  }
+}, [ingresos]);
 
   useEffect(() => {
     if (gastos.length > 0) {
@@ -809,19 +831,32 @@ useEffect(() => {
   };
 
   // 📋 PASO 5: FUNCIONES DE DEBUGGING Y EXPORTACIÓN
-  const handleForzarTransicionMensual = async () => {
-    if (window.confirm('¿Forzar transición mensual? (Solo para testing)')) {
-      try {
-        await forzarTransicion()
-        alert('✅ Transición mensual ejecutada')
-        // Refrescar datos
-        refreshDeudas()
-        refreshPlanes()
-      } catch (error) {
-        alert('❌ Error en transición: ' + error.message)
-      }
+const handleForzarTransicionMensual = async () => {
+  if (window.confirm('⚠️ ¿Forzar transición mensual?\n\nEsto:\n- Archivará gastos variables del mes anterior\n- Reseteará gastos fijos\n- Generará ingresos recurrentes\n- Actualizará suscripciones\n\n¿Continuar?')) {
+    try {
+      setShowExportacion(true) // Mostrar loading (reutilizamos el estado)
+      await forzarTransicion()
+      
+      // Mostrar estadísticas después de la transición
+      const nuevasStats = obtenerEstadisticasTransicion({
+        gastosVariables: gastosInstant,
+        ingresos: ingresosInstant
+      })
+      
+      console.log('📊 Estadísticas post-transición:', nuevasStats)
+      
+      alert(`✅ Transición mensual ejecutada\n\n📊 Resultados:\n- ${nuevasStats.totalGastosArchivados} gastos archivados\n- ${nuevasStats.ingresosRecurrentesGenerados} ingresos recurrentes generados\n- $${nuevasStats.montoIngresosRecurrentes.toLocaleString()} en ingresos automáticos`)
+      
+      // Refrescar datos
+      refreshDeudas()
+      refreshPlanes()
+    } catch (error) {
+      alert('❌ Error en transición: ' + error.message)
+    } finally {
+      setShowExportacion(false)
     }
   }
+}
 
   const mostrarEstadisticasDetalladas = () => {
     const stats = {
@@ -873,30 +908,15 @@ useEffect(() => {
   }, [])
 
   // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
-  const ingresosDelMes = useMemo(() => {
-    // Definimos las fechas dentro del useMemo para que no cambien de referencia
-    const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
-  
-    return ingresosInstant.filter(i => {
-      const fecha = i.fecha ? new Date(i.fecha) : null
-      return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
-    })
-  }, [ingresosInstant, hoy])
+// DATOS FILTRADOS CON LÓGICA DE TRANSICIÓN
+const ingresosDelMes = datosFiltradosInteligentes.ingresos
+const gastosDelMes = datosFiltradosInteligentes.gastosVariables
+const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
+const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
 
-  const gastosDelMes = useMemo(() => {
-    // Definimos las fechas dentro del useMemo
-    const inicioMesVisual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    const finMesVisual = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
-  
-    return gastosInstant.filter(g => {
-      const fecha = g.fecha ? new Date(g.fecha) : null
-      return fecha && fecha >= inicioMesVisual && fecha <= finMesVisual
-    })
-  }, [gastosInstant, hoy])
 
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
-  const overviewData = useMemo(() => {
+const overviewData = useMemo(() => {
     const base = {
       deudas: [],
       gastosFijos: [],
@@ -907,19 +927,19 @@ useEffect(() => {
     if (overviewMode === 'ALL') {
       return {
         deudas: deudasInstant,
-        gastosFijos: gastosFijosInstant,
-        gastosVariables: gastosInstant,
-        suscripciones: suscripcionesInstant
+        gastosFijos: gastosFijosActivos, // ✅ Cambiado
+        gastosVariables: gastosDelMes,   // ✅ Cambiado  
+        suscripciones: suscripcionesActivas // ✅ Cambiado
       }
     }
     
     if (overviewMode === 'DEUDAS') return { ...base, deudas: deudasInstant }
-    if (overviewMode === 'FIJOS') return { ...base, gastosFijos: gastosFijosInstant }
-    if (overviewMode === 'VARIABLES') return { ...base, gastosVariables: gastosInstant }
-    if (overviewMode === 'SUSCRIPCIONES') return { ...base, suscripciones: suscripcionesInstant }
+    if (overviewMode === 'FIJOS') return { ...base, gastosFijos: gastosFijosActivos } // ✅ Cambiado
+    if (overviewMode === 'VARIABLES') return { ...base, gastosVariables: gastosDelMes } // ✅ Cambiado
+    if (overviewMode === 'SUSCRIPCIONES') return { ...base, suscripciones: suscripcionesActivas } // ✅ Cambiado
     
     return base
-  }, [overviewMode, deudasInstant, gastosFijosInstant, gastosInstant, suscripcionesInstant])
+  }, [overviewMode, deudasInstant, gastosFijosActivos, gastosDelMes, suscripcionesActivas]) // ✅ Dependencias actualizadas
 
   // 💳 CALCULAR TOTAL PAGADO A TARJETAS DE CRÉDITO ESTE MES
   const deudasPagadasEsteMesSet = useMemo(() => {
@@ -1231,6 +1251,148 @@ useEffect(() => {
     dailyBudget
   }
 
+// 📊 Estadísticas de transición mensual
+const estadisticasTransicion = useMemo(() => {
+  return obtenerEstadisticasTransicion({
+    gastosVariables: gastosInstant,
+    ingresos: ingresosInstant
+  })
+}, [gastosInstant, ingresosInstant])
+
+// WIDGET DE TRANSICIÓN MENSUAL
+// WIDGET DE TRANSICIÓN MENSUAL
+const WidgetTransicionMensual = () => {
+  const [mostrarDetalles, setMostrarDetalles] = useState(false)
+  
+  if (estadisticasTransicion.totalGastosArchivados === 0 && 
+      estadisticasTransicion.ingresosRecurrentesGenerados === 0) {
+    return null
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4">
+      <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/30 rounded-xl">
+              <Calendar className="w-5 h-5 text-purple-300" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold">Transición Mensual Automática</h3>
+              <p className="text-purple-200 text-sm">Gestión inteligente de datos</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMostrarDetalles(!mostrarDetalles)}
+            className="text-purple-300 hover:text-purple-200 transition-colors"
+          >
+            <ChevronRight className={`w-5 h-5 transform transition-transform ${mostrarDetalles ? 'rotate-90' : ''}`} />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold text-white">{estadisticasTransicion.totalGastosArchivados}</div>
+            <div className="text-xs text-purple-300">Gastos archivados</div>
+          </div>
+          
+          <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold text-white">{estadisticasTransicion.ingresosRecurrentesGenerados}</div>
+            <div className="text-xs text-purple-300">Ingresos generados</div>
+          </div>
+          
+          <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold text-green-400">
+              ${estadisticasTransicion.montoIngresosRecurrentes.toLocaleString()}
+            </div>
+            <div className="text-xs text-purple-300">Ingresos recurrentes</div>
+          </div>
+          
+          <div className="bg-black/20 rounded-xl p-3 text-center">
+            <div className="text-xl font-bold text-gray-400">
+              ${estadisticasTransicion.montoGastosArchivados.toLocaleString()}
+            </div>
+            <div className="text-xs text-purple-300">Gastos archivados</div>
+          </div>
+        </div>
+
+        {mostrarDetalles && (
+          <div className="mt-4 p-3 bg-black/30 rounded-xl">
+            <div className="text-sm text-purple-200 space-y-2">
+              <p><strong>📊 Resumen:</strong></p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Gastos variables del mes anterior: <span className="text-white font-semibold">{estadisticasTransicion.gastosDelMesAnterior} archivados</span></li>
+                <li>Gastos fijos: <span className="text-white font-semibold">Reseteados para el nuevo mes</span></li>
+                <li>Ingresos recurrentes: <span className="text-white font-semibold">Auto-generados para este mes</span></li>
+                <li>Suscripciones: <span className="text-white font-semibold">Fechas actualizadas automáticamente</span></li>
+              </ul>
+              {estadisticasTransicion.fechaUltimaTransicion && (
+                <p className="text-xs text-gray-400 mt-2">
+                  Última transición: {new Date(estadisticasTransicion.fechaUltimaTransicion).toLocaleDateString('es-MX')}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// INDICADOR DE DATOS ARCHIVADOS
+const IndicadorDatosArchivados = () => {
+  const tieneArchivados = hayDatosArchivados(gastosInstant)
+  const [mostrarArchivados, setMostrarArchivados] = useState(false)
+  
+  if (!tieneArchivados) return null
+
+  const gastosArchivados = gastosInstant.filter(g => g.archivado === true)
+  const montoArchivado = gastosArchivados.reduce((sum, g) => sum + (g.monto || 0), 0)
+
+  return (
+    <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4">
+      <div className="bg-gray-700/50 border border-gray-600/30 rounded-xl p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-gray-600/50 rounded-lg">
+              <Archive className="w-4 h-4 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-300">
+                <span className="font-semibold">{gastosArchivados.length}</span> gastos archivados
+                <span className="text-gray-500 ml-2">(${montoArchivado.toLocaleString()})</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMostrarArchivados(!mostrarArchivados)}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {mostrarArchivados ? 'Ocultar' : 'Ver'}
+          </button>
+        </div>
+        
+        {mostrarArchivados && (
+          <div className="mt-3 pt-3 border-t border-gray-600/30">
+            <div className="grid gap-2 max-h-32 overflow-y-auto">
+              {gastosArchivados.slice(0, 5).map(gasto => (
+                <div key={gasto.id} className="flex justify-between text-xs text-gray-400">
+                  <span>{gasto.descripcion || gasto.categoria}</span>
+                  <span>${gasto.monto.toLocaleString()}</span>
+                </div>
+              ))}
+              {gastosArchivados.length > 5 && (
+                <div className="text-xs text-gray-500 text-center">
+                  ... y {gastosArchivados.length - 5} más
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
   // ============================================
   // RENDERIZADO UI MODERNA
   // ============================================
@@ -1319,6 +1481,7 @@ useEffect(() => {
         setVistaActiva={setVistaActiva}
         hoy={hoy}
       />
+<WidgetTransicionMensual />
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
@@ -1449,11 +1612,13 @@ useEffect(() => {
             </div>
           </div>
           {/* Vista escritorio normal */}
-          <div className="hidden md:block">
-            <Notificaciones alertas={alertas} onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)} />
-          </div>
+   <div className="hidden md:block">
+          <Notificaciones alertas={alertas} onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)} />
         </div>
-
+        
+        {/* INDICADOR DE DATOS ARCHIVADOS */}
+        <IndicadorDatosArchivados />
+      </div>
         {/* ASISTENTE FINANCIERO */}
         <div className="animate-in fade-in delay-300">
           <AsistenteFinancieroV2
