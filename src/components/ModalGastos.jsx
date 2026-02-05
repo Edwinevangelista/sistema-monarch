@@ -273,7 +273,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                   value={formData.cuenta_id || ''} 
                   onChange={(e) => {
                     const cuentaId = e.target.value
-                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO
+                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO (MEJORADA)
                     const cuentaSeleccionada = cuentas.find(c => c.id === cuentaId)
                     let metodoCalculado = 'Efectivo' // Default
 
@@ -281,25 +281,30 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                       const nombre = cuentaSeleccionada.nombre.toLowerCase()
                       const tipo = (cuentaSeleccionada.tipo || '').toLowerCase()
                       
-                      // Detectar Tarjetas (Crédito/Débito) o Bancos
+                      // Buscamos palabras clave tanto en Español como en Inglés (e.g. "Debit business")
                       if (
                         nombre.includes('visa') || 
                         nombre.includes('master') || 
                         nombre.includes('amex') ||
                         nombre.includes('tarjeta') ||
+                        nombre.includes('credit') || // Inglés
+                        nombre.includes('debit') ||  // Inglés
+                        nombre.includes('card') ||   // Inglés
+                        tipo.includes('credit') ||
+                        tipo.includes('debit') ||
                         tipo.includes('credito') || 
-                        tipo.includes('debito') ||
-                        nombre.includes('banc') 
+                        tipo.includes('debito') || 
+                        nombre.includes('banc')
                       ) {
                         metodoCalculado = 'Tarjeta'
                       } 
                       // Detectar Efectivo
                       else if (
                         nombre.includes('efectivo') || 
-                        tipo.includes('efectivo') ||
                         nombre.includes('cash') ||
                         nombre.includes('wallet') ||
-                        nombre.includes('billetera')
+                        nombre.includes('billetera') ||
+                        tipo.includes('efectivo')
                       ) {
                         metodoCalculado = 'Efectivo'
                       }
@@ -417,7 +422,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                   value={formData.cuenta_id || ''} 
                   onChange={(e) => {
                     const cuentaId = e.target.value
-                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO (Versión Fijo)
+                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO (MEJORADA - Versión Fijo)
                     const cuentaSeleccionada = cuentas.find(c => c.id === cuentaId)
                     let metodoCalculado = 'Efectivo'
 
@@ -430,18 +435,23 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                         nombre.includes('master') || 
                         nombre.includes('amex') ||
                         nombre.includes('tarjeta') ||
+                        nombre.includes('credit') || // Inglés
+                        nombre.includes('debit') ||  // Inglés
+                        nombre.includes('card') ||   // Inglés
+                        tipo.includes('credit') ||
+                        tipo.includes('debit') ||
                         tipo.includes('credito') || 
-                        tipo.includes('debito') ||
-                        nombre.includes('banc') 
+                        tipo.includes('debito') || 
+                        nombre.includes('banc')
                       ) {
                         metodoCalculado = 'Tarjeta'
                       } 
                       else if (
                         nombre.includes('efectivo') || 
-                        tipo.includes('efectivo') ||
                         nombre.includes('cash') ||
                         nombre.includes('wallet') ||
-                        nombre.includes('billetera')
+                        nombre.includes('billetera') ||
+                        tipo.includes('efectivo')
                       ) {
                         metodoCalculado = 'Efectivo'
                       }

@@ -876,7 +876,7 @@ const fechasFiltradas = useMemo(() => {
 
         {/* Navigation Tabs - Scroll horizontal en móvil */}
         <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/10 bg-[#111827]/95 backdrop-blur shrink-0 z-10">
-          <div className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20 pb-1">
+          <div className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white-20 pb-1">
             {pestanas.map(p => {
               const Icono = p.icono
               return (
@@ -913,7 +913,7 @@ const fechasFiltradas = useMemo(() => {
 
       </div>
       
-      {/* Estilos adicionales para scroll suave en móvil */}
+               {/* Estilos adicionales para scroll suave en móvil */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -935,7 +935,8 @@ const fechasFiltradas = useMemo(() => {
         .scrollbar-track-transparent::-webkit-scrollbar-track {
           background: transparent;
         }
-        .scrollbar-thumb-white\/20::-webkit-scrollbar-thumb {
+        /* CORREGIDO: Cambiado de /20 a -20 para evitar errores de CSS */
+        .scrollbar-thumb-white-20::-webkit-scrollbar-thumb {
           background-color: rgba(255, 255, 255, 0.2);
           border-radius: 2px;
         }
