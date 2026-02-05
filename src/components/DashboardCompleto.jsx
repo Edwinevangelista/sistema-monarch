@@ -219,15 +219,23 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
 });
 
 // 📅 FILTROS INTELIGENTES: Respetan transición mensual
-const datosFiltradosInteligentes = useMemo(() => {
-  return obtenerDatosFiltrados({
-    ingresos: ingresosInstant,
-    gastosVariables: gastosInstant,
-    gastosFijos: gastosFijosInstant, 
-    suscripciones: suscripcionesInstant,
-    deudas: deudasInstant
-  }, FILTRO_TIPOS.MES_ACTUAL)
-}, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, deudasInstant])
+  // 🔧 DEFINICIÓN LOCAL PARA EVITAR ERROR DE FILTRO_TIPOS INDEFINIDO
+  const FILTRO_TIPOS = {
+    MES_ACTUAL: 'MES_ACTUAL',
+    MES_ANTERIOR: 'MES_ANTERIOR',
+    TODO: 'TODO'
+  };
+
+  // 📅 FILTROS INTELIGENTES: Respetan transición mensual
+  const datosFiltradosInteligentes = useMemo(() => {
+    return obtenerDatosFiltrados({
+      ingresos: ingresosInstant,
+      gastosVariables: gastosInstant,
+      gastosFijos: gastosFijosInstant, 
+      suscripciones: suscripcionesInstant,
+      deudas: deudasInstant
+    }, FILTRO_TIPOS.MES_ACTUAL)
+  }, [ingresosInstant, gastosInstant, gastosFijosInstant, suscripcionesInstant, deudasInstant])
 
 // --- EFECTOS DE SINCRONIZACIÓN ---
 // (El código debe continuar aquí directamente, sin los 'const cached' de por medio)

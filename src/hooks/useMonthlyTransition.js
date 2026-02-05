@@ -1,258 +1,214 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { generarFechasRecurrentes, necesitaTransicionMensual, marcarTransicionCompletada } from '../utils/financialCalculations'
 
 /**
- * Hook para manejar la transición automática entre meses
- * - Genera ingresos recurrentes
- * - Resetea gastos fijos 
- * - Actualiza suscripciones
- * - Archiva datos del mes anterior
+ * 🔄 Hook para gestionar la transición mensual automática
  */
 export const useMonthlyTransition = () => {
-  
-  const obtenerUsuarioActual = useCallback(async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) throw new Error("Usuario no autenticado")
-    return user
+
+  /**
+   * 🤖 Detecta si un ingreso es recurrente
+   */
+  const esIngresoRecurrente = useCallback((ingreso) => {
+    const fuentesRecurrentes = [
+      'salario', 'sueldo', 'nomina', 'pension', 'renta', 'alquiler',
+      'dividendos', 'intereses', 'pension alimenticia', 'beca',
+      'freelance recurrente', 'consultoria mensual'
+    ]
+
+    const fuente = (ingreso.fuente || '').toLowerCase()
+    const descripcion = (ingreso.descripcion || '').toLowerCase()
+    
+    // Verificar si ya está marcado como recurrente
+    if (ingreso.es_recurrente === true || ingreso.tipo === 'recurrente') {
+      return true
+    }
+
+    // Verificar por palabras clave
+    return fuentesRecurrentes.some(keyword => 
+      fuente.includes(keyword) || descripcion.includes(keyword)
+    )
   }, [])
 
-  const generarIngresosRecurrentes = useCallback(async (fecha) => {
-    try {
-      console.log('🔄 Generando ingresos recurrentes para:', fecha.toISOString().split('T')[0])
-      
-      const user = await obtenerUsuarioActual()
-      
-      // Buscar ingresos con frecuencia definida
-      const { data: ingresosRecurrentes, error } = await supabase
-        .from('ingresos')
-        .select('*')
-        .eq('user_id', user.id)
-        .not('frecuencia', 'is', null)
-        .neq('frecuencia', 'Único')
-      
-      if (error) throw error
-      
-      if (!ingresosRecurrentes || ingresosRecurrentes.length === 0) {
-        console.log('📋 No hay ingresos recurrentes configurados')
-        return
-      }
-      
-      for (const ingreso of ingresosRecurrentes) {
-        const nuevasFechas = generarFechasRecurrentes(
-          ingreso, 
-          fecha.getFullYear(), 
-          fecha.getMonth()
-        )
-        
-        for (const fechaNueva of nuevasFechas) {
-          // Verificar si ya existe este ingreso para esta fecha
-          const { data: existente } = await supabase
-            .from('ingresos')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('fuente', ingreso.fuente)
-            .eq('fecha', fechaNueva)
-            .single()
-          
-          if (!existente) {
-            // Crear nuevo ingreso recurrente
-            const nuevoIngreso = {
-              user_id: user.id,
-              fuente: ingreso.fuente,
-              monto: ingreso.monto,
-              fecha: fechaNueva,
-              categoria: ingreso.categoria,
-              descripcion: `${ingreso.descripcion || ''} (Auto-generado)`.trim(),
-              frecuencia: ingreso.frecuencia,
-              cuenta_id: ingreso.cuenta_id,
-              metodo: ingreso.metodo,
-              generado_automaticamente: true
-            }
-            
-            const { error: insertError } = await supabase
-              .from('ingresos')
-              .insert([nuevoIngreso])
-            
-            if (insertError) {
-              console.error('❌ Error insertando ingreso recurrente:', insertError)
-            } else {
-              console.log('✅ Ingreso recurrente creado:', nuevoIngreso.fuente, fechaNueva)
-            }
-          } else {
-            console.log('📋 Ingreso recurrente ya existe:', ingreso.fuente, fechaNueva)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error en generarIngresosRecurrentes:', error)
-    }
-  }, [obtenerUsuarioActual])
-
-  const resetearGastosFijos = useCallback(async (fecha) => {
-    try {
-      console.log('🔄 Reseteando gastos fijos para:', fecha.toISOString().split('T')[0])
-      
-      const user = await obtenerUsuarioActual()
-      
-      // Resetear todos los gastos fijos como "pendientes"
-      const { error } = await supabase
-        .from('gastos_fijos')
-        .update({ estado: 'Pendiente' })
-        .eq('user_id', user.id)
-        .neq('estado', 'Cancelado')
-      
-      if (error) throw error
-      
-      console.log('✅ Gastos fijos reseteados como "Pendiente"')
-    } catch (error) {
-      console.error('❌ Error en resetearGastosFijos:', error)
-    }
-  }, [obtenerUsuarioActual])
-
-  const actualizarSuscripciones = useCallback(async (fecha) => {
-    try {
-      console.log('🔄 Actualizando suscripciones para:', fecha.toISOString().split('T')[0])
-      
-      const user = await obtenerUsuarioActual()
-      
-      // Obtener suscripciones activas que vencieron el mes anterior
-      const mesAnterior = new Date(fecha.getFullYear(), fecha.getMonth() - 1, 1)
-      const finMesAnterior = new Date(fecha.getFullYear(), fecha.getMonth(), 0)
-      
-      const { data: suscripciones, error } = await supabase
-        .from('suscripciones')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('estado', 'Activo')
-        .not('proximo_pago', 'is', null)
-      
-      if (error) throw error
-      
-      if (!suscripciones || suscripciones.length === 0) {
-        console.log('📋 No hay suscripciones activas')
-        return
-      }
-      
-      for (const sub of suscripciones) {
-        const proximoPago = new Date(sub.proximo_pago)
-        
-        // Si el próximo pago era en el mes anterior, actualizar
-        if (proximoPago >= mesAnterior && proximoPago <= finMesAnterior) {
-          let nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
-          
-          const { error: updateError } = await supabase
-            .from('suscripciones')
-            .update({ proximo_pago: nuevoProximoPago })
-            .eq('id', sub.id)
-          
-          if (updateError) {
-            console.error('❌ Error actualizando suscripción:', updateError)
-          } else {
-            console.log('✅ Suscripción actualizada:', sub.servicio, nuevoProximoPago)
-          }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error en actualizarSuscripciones:', error)
-    }
-  }, [obtenerUsuarioActual])
-
-  const archivarMesAnterior = useCallback(async (fecha) => {
-    try {
-      console.log('🗄️ Archivando datos del mes anterior...')
-      // Lógica futura de archivo va aquí
-      
-      console.log('✅ Archivado completado')
-    } catch (error) {
-      console.error('❌ Error en archivarMesAnterior:', error)
-    }
-  }, [])
-
-  const ejecutarTransicionMensual = useCallback(async () => {
-    try {
-      const fecha = new Date()
-      console.log('🚀 Iniciando transición mensual para:', fecha.toISOString().split('T')[0])
-      
-      // Ejecutar todas las tareas de transición
-      await Promise.all([
-        generarIngresosRecurrentes(fecha),
-        resetearGastosFijos(fecha),
-        actualizarSuscripciones(fecha),
-        archivarMesAnterior(fecha)
-      ])
-      
-      // Marcar como completada
-      marcarTransicionCompletada()
-      
-      console.log('✅ Transición mensual completada exitosamente')
-      
-      // Opcional: Mostrar notificación al usuario
-      if (window.showLocalNotification) {
-        window.showLocalNotification('📅 Nuevo mes iniciado', {
-          body: 'Tus ingresos recurrentes han sido generados automáticamente',
-          icon: '/favicon.ico'
-        })
-      }
-      
-    } catch (error) {
-      console.error('❌ Error en transición mensual:', error)
-    }
-  }, [generarIngresosRecurrentes, resetearGastosFijos, actualizarSuscripciones, archivarMesAnterior])
-
-  // Efecto principal: verificar si necesita transición
-  useEffect(() => {
-    const verificarTransicion = async () => {
-      if (necesitaTransicionMensual()) {
-        await ejecutarTransicionMensual()
-      }
-    }
-    
-    // Verificar inmediatamente al montar
-    verificarTransicion()
-    
-    // Verificar cada hora (opcional, para casos edge)
-    const intervalo = setInterval(verificarTransicion, 60 * 60 * 1000)
-    
-    return () => clearInterval(intervalo)
-  }, [ejecutarTransicionMensual])
-
-  // Función manual para forzar transición (útil para testing)
+  /**
+   * 📋 Fuerza la transición mensual (para testing)
+   */
   const forzarTransicion = useCallback(async () => {
-    localStorage.removeItem('ultima_transicion_mensual')
-    await ejecutarTransicionMensual()
-  }, [ejecutarTransicionMensual])
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuario no autenticado')
+
+      console.log('🔄 Iniciando transición mensual forzada...')
+      
+      // Procesar todas las operaciones de transición
+      await procesarTransicionCompleta(user.id)
+      
+      console.log('✅ Transición mensual completada')
+      
+    } catch (error) {
+      console.error('❌ Error en transición forzada:', error)
+      throw error
+    }
+  }, [])
+
+  /**
+   * 🛠️ Procesa la transición completa
+   */
+  const procesarTransicionCompleta = async (userId) => {
+    // 1. Archivar gastos variables del mes anterior
+    await archivarGastosVariablesAnteriores(userId)
+    
+    // 2. Resetear gastos fijos
+    await resetearGastosFijosParaNuevoMes(userId)
+    
+    // 3. Generar ingresos recurrentes
+    await generarIngresosRecurrentes(userId)
+    
+    // 4. Actualizar suscripciones vencidas
+    await actualizarSuscripcionesVencidas(userId)
+  }
+
+  /**
+   * 📦 Archiva gastos variables del mes anterior
+   */
+  const archivarGastosVariablesAnteriores = async (userId) => {
+    const hoy = new Date()
+    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+    const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
+
+    const { error } = await supabase
+      .from('gastos_variables')
+      .update({ 
+        archivado: true, 
+        fecha_archivado: new Date().toISOString() 
+      })
+      .eq('user_id', userId)
+      .gte('fecha', mesAnterior.toISOString().split('T')[0])
+      .lte('fecha', finMesAnterior.toISOString().split('T')[0])
+      .is('archivado', false)
+
+    if (error) throw error
+    console.log('📦 Gastos variables archivados')
+  }
+
+  /**
+   * 🔄 Resetea gastos fijos para el nuevo mes
+   */
+  const resetearGastosFijosParaNuevoMes = async (userId) => {
+    const { error } = await supabase
+      .from('gastos_fijos')
+      .update({ estado: 'Pendiente' })
+      .eq('user_id', userId)
+      .eq('estado', 'Pagado')
+
+    if (error) throw error
+    console.log('🔄 Gastos fijos reseteados')
+  }
+
+  /**
+   * 💰 Genera ingresos recurrentes para el mes actual
+   */
+  const generarIngresosRecurrentes = async (userId) => {
+    // Obtener ingresos del mes anterior
+    const hoy = new Date()
+    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+    const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
+
+    const { data: ingresosAnteriores, error: errorQuery } = await supabase
+      .from('ingresos')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('fecha', mesAnterior.toISOString().split('T')[0])
+      .lte('fecha', finMesAnterior.toISOString().split('T')[0])
+
+    if (errorQuery) throw errorQuery
+
+    const ingresosRecurrentes = []
+    
+    for (const ingreso of ingresosAnteriores || []) {
+      if (esIngresoRecurrente(ingreso)) {
+        const nuevoIngreso = {
+          user_id: userId,
+          fecha: hoy.toISOString().split('T')[0],
+          monto: ingreso.monto,
+          fuente: `${ingreso.fuente} (Auto-generado)`,
+          descripcion: ingreso.descripcion,
+          categoria: ingreso.categoria,
+          cuenta_id: ingreso.cuenta_id,
+          es_recurrente: true,
+          ingreso_origen_id: ingreso.id
+        }
+        
+        ingresosRecurrentes.push(nuevoIngreso)
+      }
+    }
+
+    if (ingresosRecurrentes.length > 0) {
+      const { error } = await supabase
+        .from('ingresos')
+        .insert(ingresosRecurrentes)
+
+      if (error) throw error
+      console.log(`💰 ${ingresosRecurrentes.length} ingresos recurrentes generados`)
+    }
+  }
+
+  /**
+   * 🔄 Actualiza suscripciones vencidas
+   */
+  const actualizarSuscripcionesVencidas = async (userId) => {
+    const hoy = new Date().toISOString().split('T')[0]
+    
+    const { data: suscripciones, error: errorQuery } = await supabase
+      .from('suscripciones')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('estado', 'Activo')
+      .lte('proximo_pago', hoy)
+
+    if (errorQuery) throw errorQuery
+
+    for (const sub of suscripciones || []) {
+      const nuevaFecha = calcularProximoPago(sub.proximo_pago, sub.ciclo)
+      
+      const { error } = await supabase
+        .from('suscripciones')
+        .update({ proximo_pago: nuevaFecha })
+        .eq('id', sub.id)
+
+      if (error) throw error
+    }
+
+    if (suscripciones?.length > 0) {
+      console.log(`🔄 ${suscripciones.length} suscripciones actualizadas`)
+    }
+  }
+
+  /**
+   * 📅 Calcula próximo pago según ciclo
+   */
+  const calcularProximoPago = (fechaActual, ciclo) => {
+    const fecha = new Date(fechaActual + 'T00:00:00')
+    
+    switch (ciclo) {
+      case 'Mensual':
+        fecha.setMonth(fecha.getMonth() + 1)
+        break
+      case 'Anual':
+        fecha.setFullYear(fecha.getFullYear() + 1)
+        break
+      case 'Semanal':
+        fecha.setDate(fecha.getDate() + 7)
+        break
+      default:
+        fecha.setMonth(fecha.getMonth() + 1)
+    }
+    
+    return fecha.toISOString().split('T')[0]
+  }
 
   return {
-    forzarTransicion // Exportar para uso manual/debug
+    forzarTransicion,
+    esIngresoRecurrente
   }
-}
-
-/**
- * Calcula el próximo pago de una suscripción
- */
-const calcularProximoPago = (fechaActualStr, ciclo) => {
-  const fecha = new Date(fechaActualStr + 'T00:00:00')
-  let nuevaFecha = new Date(fecha)
-  
-  switch (ciclo) {
-    case 'Mensual':
-      nuevaFecha.setMonth(nuevaFecha.getMonth() + 1)
-      break
-    case 'Anual':
-      nuevaFecha.setFullYear(nuevaFecha.getFullYear() + 1)
-      break
-    case 'Semanal':
-      nuevaFecha.setDate(nuevaFecha.getDate() + 7)
-      break
-    case 'Quincenal':
-      nuevaFecha.setDate(nuevaFecha.getDate() + 15)
-      break
-    default:
-      // Por defecto, mensual
-      nuevaFecha.setMonth(nuevaFecha.getMonth() + 1)
-      break
-  }
-  
-  return nuevaFecha.toISOString().split('T')[0]
 }
