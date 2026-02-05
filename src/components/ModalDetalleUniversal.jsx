@@ -1,265 +1,183 @@
-import { ITEM_TYPES } from '../constants/itemTypes'
+import React, { useState, useEffect, useMemo } from 'react'; // ✅ CORREGIDO: Incluir useMemo
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  X, 
-  Edit2, 
-  CheckCircle, 
-  CreditCard, 
-  Calendar, 
-  Info,
-  Wallet,
-  FileText,
-  Repeat
-} from 'lucide-react'
+  X, CreditCard, Calendar, DollarSign, FileText, Repeat, 
+  TrendingUp, Info, Wallet, Home, AlertTriangle
+} from 'lucide-react';
+import { ITEM_TYPES } from '../constants/itemTypes';
 
 export default function ModalDetalleUniversal({
   item,
   type,
-  status,
   onClose,
   onEditar,
   onPagar
 }) {
-  // =========================
-  // Helpers seguros
-  // =========================
-  const getMonto = () => {
-    if (type === ITEM_TYPES.DEUDA) return Number(item.saldo || 0)
-    if (type === ITEM_TYPES.SUSCRIPCION) return Number(item.costo || 0)
-    return Number(item.monto || 0)
-  }
+  // Bloquear scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, []);
 
-  const getTitle = () => {
-    return item.nombre || item.descripcion || item.servicio || item.cuenta || 'Sin título'
-  }
+  // Helpers de visualización según tipo
+  const themeConfig = useMemo(() => {
+    switch (type) {
+      case ITEM_TYPES.DEUDA:
+        return { 
+          icon: CreditCard, color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30',
+          label: 'Tarjeta de Crédito', gradient: 'from-purple-900/40 to-indigo-900/40'
+        };
+      case ITEM_TYPES.SUSCRIPCION:
+        return { 
+          icon: Repeat, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30',
+          label: 'Suscripción', gradient: 'from-blue-900/40 to-indigo-900/40'
+        };
+      case ITEM_TYPES.FIJO:
+        return { 
+          icon: Calendar, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30',
+          label: 'Gasto Fijo', gradient: 'from-yellow-900/40 to-orange-900/40'
+        };
+      case ITEM_TYPES.INGRESO:
+        return { 
+          icon: Wallet, color: 'text-emerald-400', bg: 'bg-emerald-500/20', border: 'border-emerald-500/30',
+          label: 'Ingreso', gradient: 'from-emerald-900/40 to-green-900/40'
+        };
+      default:
+        return { 
+          icon: FileText, color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/30',
+          label: 'Gasto Variable', gradient: 'from-rose-900/40 to-red-900/40'
+        };
+    }
+  }, [type]);
 
-  const getSubtitle = () => {
-    return item.categoria || item.tipo || 'Registro financiero'
-  }
+  const IconComponent = themeConfig.icon;
 
-  // Colores y Estilos por Tipo
-  const theme = {
-    debt: { color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: CreditCard, label: 'Deuda' },
-    fixed: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', icon: Calendar, label: 'Gasto Fijo' },
-    subscription: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: Repeat, label: 'Suscripción' },
-    income: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', icon: Wallet, label: 'Ingreso' },
-    variable: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', icon: FileText, label: 'Gasto' },
-    default: { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', icon: Info, label: 'Detalle' }
-  }
+  if (!item || !themeConfig) return null;
 
-  const currentTheme = 
-    type === ITEM_TYPES.DEUDA ? theme.debt :
-    type === ITEM_TYPES.FIJO ? theme.fixed :
-    type === ITEM_TYPES.SUSCRIPCION ? theme.subscription :
-    type === ITEM_TYPES.VARIABLE ? theme.variable :
-    theme.default
-
-  const IconComponent = currentTheme.icon
-
-  // =========================
-  // Lógica de Estado
-  // =========================
-  const isPagado = (type === ITEM_TYPES.FIJO && item.estado === 'Pagado')
-
-  // =========================
-  // Render
-  // =========================
   return (
-    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full max-w-lg border border-gray-700 shadow-2xl overflow-hidden">
-        
-        {/* --- HEADER --- */}
-        <div className="bg-gray-800/50 border-b border-gray-700 p-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl shadow-sm ${currentTheme.bg} ${currentTheme.border}`}>
-              <IconComponent className={`w-6 h-6 ${currentTheme.color}`} />
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          className={`bg-gray-900 w-full h-full md:w-[600px] md:h-auto md:max-h-[90vh] rounded-none md:rounded-3xl shadow-2xl border border-white/10 flex flex-col relative overflow-hidden`}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header con Gradiente Dinámico */}
+          <div className={`bg-gradient-to-r ${themeConfig.gradient} backdrop-blur-md p-6 pb-8 border-b border-white/5 shrink-0 relative`}>
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 bg-black/30 hover:bg-black/50 rounded-full text-white/70 hover:text-white transition-colors z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-4 md:gap-5 relative z-10">
+              <div className={`p-3 md:p-4 rounded-2xl md:rounded-3xl border-2 border-white/20 shadow-lg ${themeConfig.bg} ${themeConfig.color} backdrop-blur-md`}>
+                <IconComponent className="w-8 h-8 md:w-10 md:h-10" />
+              </div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white leading-none mb-1">
+                  {type === ITEM_TYPES.DEUDA ? item.cuenta : item.nombre}
+                </h2>
+                <div className={`text-lg md:text-2xl font-bold ${type === ITEM_TYPES.INGRESO ? 'text-emerald-300' : type === ITEM_TYPES.DEUDA ? 'text-rose-300' : 'text-white'}`}>
+                  ${type === ITEM_TYPES.INGRESO ? '+' : ''}{type === ITEM_TYPES.DEUDA && item.saldo ? item.saldo.toLocaleString() : item.monto?.toLocaleString()}
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{currentTheme.label}</span>
-              <h2 className="text-xl font-bold text-white leading-tight mt-0.5">
-                {getTitle()}
-              </h2>
-              <p className="text-sm text-gray-400">{getSubtitle()}</p>
-            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg transition-colors"
-            title="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* --- HERO SECTION (MONTO) --- */}
-        <div className="p-8 text-center bg-gradient-to-b from-gray-900 to-gray-800/50">
-          <div className="mb-2">
-            <span className="text-sm font-medium text-gray-400">Saldo / Monto</span>
-          </div>
-          <div className={`text-4xl md:text-5xl font-bold tracking-tight ${currentTheme.color} drop-shadow-lg`}>
-            ${getMonto().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        </div>
-
-        {/* --- DETALLES GRID --- */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/30">
-          
-          {/* Detalles Específicos según Tipo */}
-          
-          {/* 1. Suscripciones */}
-          {type === ITEM_TYPES.SUSCRIPCION && (
-            <>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <Repeat className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Ciclo</p>
-                  <p className="text-white font-medium">{item.ciclo}</p>
+          {/* Contenido Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            
+            {/* Fecha (Si aplica) */}
+            {(item.fecha || item.vence || item.proximo_pago) && (
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                <div className="flex items-center gap-3 mb-2">
+                  <Calendar className={`w-5 h-5 ${themeConfig.color}`} />
+                  <span className="text-white text-sm font-bold uppercase tracking-wider">Fecha</span>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <Calendar className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Próximo Cobro</p>
-                  <p className="text-white font-medium">
-                    {item.proximo_pago ? new Date(item.proximo_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '-'}
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 2. Deudas */}
-          {type === ITEM_TYPES.DEUDA && (
-            <>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <Info className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Estado</p>
-                  <p className={`font-medium ${status ? 'text-green-400' : 'text-yellow-400'}`}>
-                    {status ? status.label : 'Activa'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <CreditCard className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Tarjeta</p>
-                  <p className="text-white font-medium">{item.cuenta}</p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 3. Fijos */}
-          {type === ITEM_TYPES.FIJO && (
-            <>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <Calendar className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Vencimiento</p>
-                  <p className="text-white font-medium">Día {item.dia_venc}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <CheckCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Estado</p>
-                  <p className={`font-medium ${item.estado === 'Pagado' ? 'text-green-400' : 'text-yellow-400'}`}>
-                    {item.estado}
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 4. Variables / Ingresos */}
-          {(type === ITEM_TYPES.VARIABLE || type === ITEM_TYPES.INGRESO) && item.fecha && (
-            <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700 md:col-span-2">
-              <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs text-gray-500 font-semibold uppercase">Fecha del Movimiento</p>
-                <p className="text-white font-medium">
-                  {new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                <p className="text-white text-lg font-medium">
+                  {type === ITEM_TYPES.FIJO 
+                    ? `Vence el día ${item.dia_venc} de cada mes`
+                    : new Date(item.fecha || item.vence || item.proximo_pago).toLocaleDateString('es-ES', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                      })
+                  }
                 </p>
               </div>
+            )}
+
+            {/* Detalles Específicos (Categoría / Tipo) */}
+            {(item.categoria || item.tipo || item.descripcion) && (
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                 <div className="flex items-center gap-3 mb-2">
+                  <Info className={`w-5 h-5 text-gray-400`} />
+                  <span className="text-white text-sm font-bold uppercase tracking-wider">Detalles</span>
+                </div>
+                <div className="space-y-2 text-sm md:text-base">
+                   {item.categoria && (
+                     <p className="text-gray-300"><span className="text-gray-500 font-medium">Categoría:</span> {item.categoria}</p>
+                   )}
+                   {item.tipo && (
+                     <p className="text-gray-300"><span className="text-gray-500 font-medium">Tipo:</span> {item.tipo}</p>
+                   )}
+                   {item.descripcion && (
+                     <p className="text-white leading-relaxed">{item.descripcion}</p>
+                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Metadatos (ID, Created At) */}
+            <div className="bg-black/20 rounded-2xl p-4 border border-white/5">
+               <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">Información técnica</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                 <div className="flex justify-between border-b border-white/5 pb-2">
+                   <span className="text-gray-500">ID:</span>
+                   <span className="text-gray-300 font-mono text-xs">{item.id.substring(0, 8)}...</span>
+                 </div>
+                 <div className="flex justify-between border-b border-white/5 pb-2">
+                   <span className="text-gray-500">Creado:</span>
+                   <span className="text-gray-300">{new Date(item.created_at || Date.now()).toLocaleDateString('es-ES')}</span>
+                 </div>
+               </div>
             </div>
-          )}
+          </div>
 
-          {/* --- DESCRIPCIÓN / CUENTA (Full Width) --- */}
-          <div className="col-span-1 md:col-span-2 mt-2">
-            <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700 space-y-3">
-              
-              {/* Cuenta */}
-              {item.cuenta_nombre && (
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 text-gray-400" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 font-semibold uppercase">Cuenta Asociada</p>
-                    <p className="text-white font-medium">{item.cuenta_nombre}</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Descripción */}
-              {item.descripcion && (
-                <div className="flex items-start gap-3 mt-2 pt-2 border-t border-gray-700">
-                  <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 font-semibold uppercase">Notas / Descripción</p>
-                    <p className="text-gray-300 text-sm leading-relaxed">{item.descripcion}</p>
-                  </div>
-                </div>
-              )}
+          {/* Footer con Botones de Acción */}
+          <div className="p-6 border-t border-white/10 bg-gray-900/80 backdrop-blur-sm shrink-0 z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {/* Botón Editar */}
+              <button
+                onClick={() => { if (onEditar) onEditar(item); onClose(); }}
+                className="flex items-center justify-center gap-2 py-3 md:py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-white transition-all active:scale-95"
+              >
+                Editar Detalles
+              </button>
 
-              {/* Metadata Suscripción */}
-              {type === ITEM_TYPES.SUSCRIPCION && (
-                <div className="flex items-center gap-4 mt-2 pt-2 border-t border-gray-700 text-sm">
-                   <span className="text-gray-400">Autopago: {item.autopago ? 'Activado' : 'Inactivo'}</span>
-                   {item.autopago && <span className="text-green-500 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Automático</span>}
-                </div>
+              {/* Botón Acción (Pagar / Marcar / etc.) */}
+              {onPagar && type !== ITEM_TYPES.INGRESO && (
+                <button
+                  onClick={() => { onPagar(item, type); onClose(); }}
+                  className={`flex items-center justify-center gap-2 py-3 md:py-4 rounded-xl font-bold text-white shadow-lg shadow-opacity-20 transition-all active:scale-95 ${themeConfig.bg} hover:opacity-90`}
+                >
+                  <Home className="w-5 h-5" />
+                  {type === ITEM_TYPES.DEUDA ? 'Registrar Pago' : type === ITEM_TYPES.FIJO ? 'Marcar Pagado' : 'Gestionar'}
+                </button>
               )}
             </div>
           </div>
-        </div>
-
-        {/* --- BOTONES DE ACCIÓN --- */}
-        <div className="p-6 bg-gray-900/80 border-t border-gray-700 grid grid-cols-2 gap-4">
-          
-          {/* Botón Secundario (Editar) */}
-          <button
-            onClick={() => onEditar(item, type)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-all border border-gray-600 active:scale-95"
-          >
-            <Edit2 className="w-4 h-4" />
-            Editar
-          </button>
-
-          {/* Botón Primario (Pagar / Gestionar) */}
-          <button
-            onClick={() => onPagar ? onPagar(item, type) : onEditar(item, type)}
-            disabled={isPagado}
-            className={`
-              w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-              ${isPagado 
-                ? 'bg-green-600/20 text-green-400 border-green-600/30 cursor-default' 
-                : `${currentTheme.bg} ${currentTheme.border} hover:opacity-90 text-white cursor-pointer`
-              }
-            `}
-          >
-            {isPagado ? (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                Pagado
-              </>
-            ) : (
-              <>
-                {type === ITEM_TYPES.DEUDA ? <CreditCard className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                {type === ITEM_TYPES.DEUDA ? 'Registrar Pago' : (type === ITEM_TYPES.FIJO ? 'Marcar Pagado' : 'Gestionar')}
-              </>
-            )}
-          </button>
-        </div>
-
-      </div>
-    </div>
-  )
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
 }

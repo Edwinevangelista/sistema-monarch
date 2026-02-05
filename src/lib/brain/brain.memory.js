@@ -2,7 +2,7 @@
 // 🧠 Sistema de Memoria Conversacional
 // Recuerda interacciones, promesas, consejos ignorados y contexto histórico
 
-const MEMORY_KEY = 'monarch_brain_memory';
+const MEMORY_KEY = 'finguide App_brain_memory';
 const MAX_CONVERSATIONS = 100; // Últimas 100 interacciones
 
 /**

@@ -1,403 +1,513 @@
 // src/hooks/usePlanExecution.js
 // ============================================
-// VERSIÓN HÍBRIDA FINAL CON INTEGRACIÓN IA
-// Combina: IA Financiera en Tiempo Real + Estructura de Plan de Deuda + Notificaciones Smart
+// SISTEMA INTELIGENTE DE EJECUCIÓN DE PLANES
+// Genera tareas dinámicas basadas en datos REALES del usuario
 // ============================================
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
 // ==========================================
-// CONSTANTES Y STORAGE KEYS
+// STORAGE KEYS
 // ==========================================
 
 const STORAGE_KEYS = {
-  TASKS_COMPLETED: 'finguide_plan_tasks_completed',
-  LAST_CHECKIN: 'finguide_plan_last_checkin',
-  STREAK_DATA: 'finguide_plan_streak',
-  PAYMENTS_LOGGED: 'finguide_plan_payments_logged',
-  NOTIFICATIONS_SENT: 'finguide_smart_notifications_sent'
+  TASKS_COMPLETED: 'finguide_tasks_completed_v2',
+  LAST_CHECKIN: 'finguide_last_checkin_v2',
+  STREAK_DATA: 'finguide_streak_v2',
+  PAYMENTS_LOGGED: 'finguide_payments_v2',
+  NOTIFICATIONS_SENT: 'finguide_notifs_sent_v2'
 };
 
 // ==========================================
-// FUNCIONES DE ALMACENAMIENTO
+// HELPERS DE ALMACENAMIENTO
 // ==========================================
 
-function getStoredData(key, defaultValue = null) {
+const getStored = (key, fallback = null) => {
   try {
-    const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
-  } catch (e) {
-    return defaultValue;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : fallback;
+  } catch {
+    return fallback;
   }
-}
+};
 
-function setStoredData(key, value) {
+const setStored = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.warn(`Storage error (${key}):`, e);
+    console.warn('Storage error:', e);
   }
-}
+};
 
 // ==========================================
-// MÓDULO DE INTELIGENCIA FINANCIERA (IA)
+// MOTOR DE INTELIGENCIA FINANCIERA
 // ==========================================
 
-function calculateRealFinancialHealth(realData, today) {
-  if (!realData) return null;
-
-  // ✅ Valores por defecto seguros
-  const { 
-    ingresos = [], 
-    gastos = [], 
-    gastosFijos = [], 
-    deudas = [] 
-  } = realData;
-
-  // 1. Ingresos del mes actual
-  const ingresosMes = ingresos
-    .filter(i => i && i.fecha && new Date(i.fecha).getMonth() === today.getMonth())
-    .reduce((sum, i) => sum + (i.monto || 0), 0);
-
-  // 2. Gastos Variables del mes actual
-  const gastosVariablesMes = gastos
-    .filter(g => g && g.fecha && new Date(g.fecha).getMonth() === today.getMonth())
-    .reduce((sum, g) => sum + (g.monto || 0), 0);
-
-  // 3. Gastos Fijos Totales (Compromisos)
-  const compromisosFijos = gastosFijos.reduce((sum, gf) => sum + (gf.monto || 0), 0);
+function analyzeFinancialHealth(data, today) {
+  if (!data) return null;
   
-  // 4. Pagos Mínimos de Deuda (Obligaciones)
-  const pagosDeuda = deudas.reduce((sum, d) => sum + (d.pago_minimo || 0), 0);
-
-  // 5. Gasto de HOY (Usamos 'today' recibido por parámetro)
+  const { ingresos = [], gastos = [], gastosFijos = [], deudas = [] } = data;
+  const mesActual = today.getMonth();
+  const añoActual = today.getFullYear();
+  
+  // 1. Ingresos del mes
+  const ingresosMes = ingresos
+    .filter(i => {
+      if (!i?.fecha) return false;
+      const f = new Date(i.fecha);
+      return f.getMonth() === mesActual && f.getFullYear() === añoActual;
+    })
+    .reduce((sum, i) => sum + (Number(i.monto) || 0), 0);
+  
+  // 2. Gastos variables del mes
+  const gastosVariablesMes = gastos
+    .filter(g => {
+      if (!g?.fecha) return false;
+      const f = new Date(g.fecha);
+      return f.getMonth() === mesActual && f.getFullYear() === añoActual;
+    })
+    .reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+  
+  // 3. Gastos de HOY
   const hoyStr = today.toISOString().split('T')[0];
-  const gastoHoy = gastos
-    .filter(g => g && g.fecha === hoyStr)
-    .reduce((sum, g) => sum + (g.monto || 0), 0);
-
-  // 6. Cálculo del Margen Disponible
-  const diasRestantes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
-  const margenTotal = ingresosMes - compromisosFijos - pagosDeuda - gastosVariablesMes;
-  const presupuestoDiario = diasRestantes > 0 ? margenTotal / diasRestantes : 0;
-
+  const gastosHoy = gastos
+    .filter(g => g?.fecha === hoyStr)
+    .reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+  
+  // 4. Compromisos fijos mensuales
+  const compromisosFijos = gastosFijos.reduce((sum, gf) => sum + (Number(gf.monto) || 0), 0);
+  
+  // 5. Pagos mínimos de deuda
+  const pagosMinimosDeuda = deudas.reduce((sum, d) => sum + (Number(d.pago_minimo) || 0), 0);
+  
+  // 6. Deuda total
+  const deudaTotal = deudas.reduce((sum, d) => sum + (Number(d.saldo) || 0), 0);
+  
+  // 7. Cálculos de presupuesto
+  const ultimoDiaMes = new Date(añoActual, mesActual + 1, 0).getDate();
+  const diaActual = today.getDate();
+  const diasRestantes = Math.max(1, ultimoDiaMes - diaActual + 1);
+  
+  const gastosTotalesMes = compromisosFijos + gastosVariablesMes + pagosMinimosDeuda;
+  const margenDisponible = ingresosMes - gastosTotalesMes;
+  const presupuestoDiario = diasRestantes > 0 ? Math.max(0, margenDisponible / diasRestantes) : 0;
+  
+  // 8. Promedio diario de gasto (tendencia)
+  const promedioDiarioGasto = diaActual > 0 ? gastosVariablesMes / diaActual : 0;
+  const proyeccionFinMes = promedioDiarioGasto * ultimoDiaMes;
+  
+  // 9. Estados de alerta
+  const esCrisis = margenDisponible < 0;
+  const esEmergencia = presupuestoDiario < 10;
+  const tendenciaAlza = proyeccionFinMes > (ingresosMes * 0.7); // Gastando más del 70%
+  
+  // 10. Score de salud (0-100)
+  let healthScore = 50;
+  if (margenDisponible > ingresosMes * 0.2) healthScore += 30;
+  else if (margenDisponible > 0) healthScore += 15;
+  else healthScore -= 20;
+  
+  if (deudaTotal < ingresosMes) healthScore += 10;
+  else if (deudaTotal > ingresosMes * 3) healthScore -= 15;
+  
+  if (!esCrisis && !esEmergencia) healthScore += 10;
+  
+  healthScore = Math.max(0, Math.min(100, healthScore));
+  
   return {
-    presupuestoDiario,
-    margenTotal,
-    gastoHoy,
+    // Métricas principales
+    presupuestoDiario: Math.round(presupuestoDiario * 100) / 100,
+    gastosHoy,
+    margenDisponible,
     diasRestantes,
-    esCrisis: margenTotal < 0,
-    esEmergencia: presupuestoDiario < 5
+    
+    // Totales del mes
+    ingresosMes,
+    gastosTotalesMes,
+    gastosVariablesMes,
+    compromisosFijos,
+    pagosMinimosDeuda,
+    deudaTotal,
+    
+    // Tendencias
+    promedioDiarioGasto,
+    proyeccionFinMes,
+    tendenciaAlza,
+    
+    // Estados
+    esCrisis,
+    esEmergencia,
+    healthScore,
+    
+    // Mensaje contextual
+    mensaje: esCrisis 
+      ? '🚨 Estás en números rojos. Evita gastos no esenciales.'
+      : esEmergencia 
+      ? '⚠️ Presupuesto muy ajustado. Solo compra lo necesario.'
+      : tendenciaAlza
+      ? '📊 Estás gastando más rápido de lo ideal.'
+      : '✅ Vas bien. Mantén el ritmo.'
   };
 }
 
 // ==========================================
-// GENERADOR DE TAREAS HÍBRIDO
+// GENERADOR DE TAREAS INTELIGENTES
 // ==========================================
 
-function generateHybridTasks(activePlan, realData, completedTaskIds) {
-  if (!activePlan) return [];
-  
-  // ✅ Definimos 'today' localmente aquí
-  const today = new Date();
+function generateSmartTasks(plan, financialData, completedIds, today) {
+  const tasks = [];
   const todayStr = today.toISOString().split('T')[0];
-  const dayOfWeek = today.getDay();
+  const dayOfWeek = today.getDay(); // 0=Dom, 1=Lun...
   const dayOfMonth = today.getDate();
   
-  const config = activePlan.configuracion || {};
-  const health = calculateRealFinancialHealth(realData, today); // Pasamos 'today' explícito
-  const tasks = [];
-
+  const config = plan?.configuracion || {};
+  const health = financialData;
+  const targetDebt = config.plan?.orderedDebts?.[0];
+  const monthlyPayment = config.monthlyPayment || 0;
+  
   // ==========================================
-  // TAREA 0: INTELIGENCIA DIARIA
+  // 1. TAREA PRINCIPAL: Estado financiero del día
   // ==========================================
+  
   if (health) {
-    const budgetTaskId = `budget_health_${todayStr}`;
-    if (!completedTaskIds.includes(budgetTaskId)) {
-      let title = `Límite de gasto hoy: $${health.presupuestoDiario.toFixed(0)}`;
-      let description = "Mantente dentro del rango para fin de mes.";
-      let priority = 'medium';
-      let points = 10;
-
+    const budgetId = `budget_${todayStr}`;
+    if (!completedIds.includes(budgetId)) {
+      let title, description, priority, points;
+      
       if (health.esCrisis) {
-        title = "🚨 SITUACIÓN CRÍTICA";
-        description = "Has gastado más de lo que tienes este mes. Debes gastar $0 hoy.";
+        title = '🚨 ALERTA: Estás en rojo';
+        description = `Tu margen es -$${Math.abs(health.margenDisponible).toFixed(0)}. Hoy no gastes nada que no sea esencial.`;
         priority = 'critical';
         points = 100;
       } else if (health.esEmergencia) {
-        title = "⚠️ Presupuesto de Emergencia";
-        description = "Te quedan muy pocos fondos. Solo compra lo esencial.";
+        title = '⚠️ Presupuesto crítico';
+        description = `Solo tienes $${health.presupuestoDiario.toFixed(0)}/día. Evalúa cada gasto.`;
         priority = 'high';
-        points = 30;
+        points = 50;
+      } else {
+        title = `💰 Tu límite hoy: $${health.presupuestoDiario.toFixed(0)}`;
+        description = health.gastosHoy > 0 
+          ? `Ya gastaste $${health.gastosHoy}. Te quedan $${Math.max(0, health.presupuestoDiario - health.gastosHoy).toFixed(0)}.`
+          : `Quedan ${health.diasRestantes} días del mes. Mantén el control.`;
+        priority = health.tendenciaAlza ? 'medium' : 'low';
+        points = 15;
       }
-
+      
       tasks.push({
-        id: budgetTaskId,
+        id: budgetId,
         type: 'daily',
         priority,
-        category: 'finance',
+        category: 'budget',
         title,
         description,
-        actionText: 'Ver detalle',
+        actionText: 'Entendido',
         points,
         data: health
       });
     }
   }
-
+  
   // ==========================================
-  // TAREAS DE PAGO (Basadas en Plan Estático)
-  // ==========================================
-  const paymentDay = config.analysis?.cleanDebts?.[0]?.vence 
-    ? new Date(config.analysis.cleanDebts[0].vence).getDate() 
-    : 15;
-  const targetDebt = config.plan?.orderedDebts?.[0];
-
-  if (dayOfMonth === paymentDay - 3) {
-    tasks.push({
-      id: `payment_reminder_${todayStr}`,
-      type: 'monthly',
-      priority: 'critical',
-      category: 'payment',
-      title: `⚠️ Pago en 3 días (${targetDebt?.nombre || 'Deuda'})`,
-      description: `Meta: $${config.monthlyPayment?.toLocaleString() || '0'}`,
-      actionText: 'Verificar fondos',
-      points: 20
-    });
-  }
-
-  if (dayOfMonth === paymentDay) {
-    tasks.push({
-      id: `payment_day_${todayStr}`,
-      type: 'monthly',
-      priority: 'critical',
-      category: 'payment',
-      title: `💳 HOY PAGAR: ${targetDebt?.nombre || 'Deuda Principal'}`,
-      description: `Realiza el pago de $${config.monthlyPayment?.toLocaleString() || '0'}`,
-      actionText: 'Registrar pago',
-      points: 100,
-      opensModal: 'registerPayment'
-    });
-  }
-
-  // ==========================================
-  // TAREAS SEMANALES (Hábitos)
+  // 2. TAREA: No usar tarjetas de crédito
   // ==========================================
   
-  if (dayOfWeek === 5) {
+  const noCardsId = `no_cards_${todayStr}`;
+  if (!completedIds.includes(noCardsId) && config.plan?.orderedDebts?.length > 0) {
     tasks.push({
-      id: `weekly_checkin_${todayStr}`,
-      type: 'weekly',
-      priority: 'critical',
-      category: 'checkin',
-      title: '✅ Check-in Semanal',
-      description: 'Reporta tu progreso y ajusta tu rumbo si es necesario.',
-      actionText: 'Hacer Check-in',
-      points: 50,
-      opensModal: 'checkIn'
-    });
-  }
-
-  if (dayOfWeek === 1) {
-    tasks.push({
-      id: `weekly_review_${todayStr}`,
-      type: 'weekly',
-      priority: 'high',
-      category: 'review',
-      title: '📊 Revisión de Semana',
-      description: 'Analiza tus gastos de la semana pasada.',
-      actionText: 'Ver reporte',
-      points: 25
-    });
-  }
-
-  // ==========================================
-  // TAREA DE HÁBITO: No usar tarjetas (Si no es modo crisis)
-  // ==========================================
-  if (!health?.esCrisis) {
-    tasks.push({
-      id: `habit_no_cards_${todayStr}`,
+      id: noCardsId,
       type: 'daily',
       priority: 'high',
       category: 'habit',
       title: '🚫 No usar tarjetas de crédito',
-      description: 'Evita incrementar el saldo pendiente.',
-      actionText: 'Confirmar',
-      points: 10
+      description: 'Cada compra nueva aleja tu meta. Usa solo efectivo o débito.',
+      actionText: 'No usé tarjetas hoy',
+      points: 20
     });
   }
-
-  // Filtrar completadas
-  return tasks.filter(task => !completedTaskIds.includes(task.id));
-}
-
-// ==========================================
-// GENERADOR DE NOTIFICACIONES INTELIGENTES (IA)
-// ==========================================
-
-function getSmartNotifications(plan, financialHealth, showLocalNotification, getStoredData, setStoredData) {
-  if (!plan || !showLocalNotification) return [];
   
-  const notifications = [];
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const hour = today.getHours();
-  const isMorning = hour >= 8 && hour < 11;
-  const isEvening = hour >= 18 && hour < 21;
-  
-  // Verificar si ya enviamos notificaciones hoy (Spam Guard)
-  const notifId = `${todayStr}_${hour < 12 ? 'AM' : 'PM'}`;
-  const alreadySentNotifs = getStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, []);
-  
-  if (alreadySentNotifs.includes(notifId)) return []; // Ya notificamos este periodo
-
   // ==========================================
-  // 1. NOTIFICACIÓN MAÑANA: Presupuesto del Día
+  // 3. TAREAS BASADAS EN DÍA DE LA SEMANA
   // ==========================================
-  if (isMorning && financialHealth) {
-    let title = "☀️ Buenos días, FinGuider";
-    let body = "Tu presupuesto diario está listo.";
-    let urgent = false;
-
-    // Lógica IA Basada en Salud Financiera Real
-    if (financialHealth.esCrisis) {
-      title = "🚨 ¡ALERTA FINANCIERA!";
-      body = "Estás en números rojos hoy. Gasto objetivo: $0. Prioriza emergencias.";
-      urgent = true;
-    } else if (financialHealth.presupuestoDiario < 10) {
-      title = "⚠️ Presupuesto Crítico";
-      body = `Solo te quedan $${financialHealth.presupuestoDiario.toFixed(0)} hoy. Evita gastos hormiga.`;
-    } else {
-      body = `Tu límite hoy es $${financialHealth.presupuestoDiario.toFixed(0)}. ¡Vamos por más!`;
+  
+  // Lunes: Planificación
+  if (dayOfWeek === 1) {
+    const mondayId = `monday_plan_${todayStr}`;
+    if (!completedIds.includes(mondayId)) {
+      tasks.push({
+        id: mondayId,
+        type: 'weekly',
+        priority: 'medium',
+        category: 'planning',
+        title: '📅 Planifica tu semana',
+        description: `Meta semanal: mantener gastos bajo $${(health?.presupuestoDiario * 7).toFixed(0) || '---'}`,
+        actionText: 'Ya lo planeé',
+        points: 25
+      });
     }
-
-    notifications.push({
-      title,
-      body,
-      urgent,
-      type: 'daily_budget'
-    });
   }
-
-  // ==========================================
-  // 2. NOTIFICACIÓN TARDE: Recordatorio de Disciplina
-  // ==========================================
-  if (isEvening) {
-    notifications.push({
-      title: "🌙 Buenas noches",
-      body: "¿Usaste tus tarjetas hoy? Revisa tu progreso antes de dormir.",
-      type: 'daily_review'
-    });
+  
+  // Viernes: Check-in obligatorio
+  if (dayOfWeek === 5) {
+    const fridayId = `checkin_${todayStr}`;
+    if (!completedIds.includes(fridayId)) {
+      tasks.push({
+        id: fridayId,
+        type: 'weekly',
+        priority: 'critical',
+        category: 'checkin',
+        title: '✅ Check-in semanal',
+        description: '¿Cómo te fue esta semana? Reporta tu progreso.',
+        actionText: 'Hacer check-in',
+        points: 50,
+        opensModal: 'checkIn'
+      });
+    }
   }
-
-  // ==========================================
-  // 3. NOTIFICACIÓN SEMANAL: Check-in (Viernes Mañana)
-  // ==========================================
-  if (today.getDay() === 5 && isMorning) {
-    notifications.push({
-      title: "📋 ¡Es Viernes de Check-in!",
-      body: "¿Cumpliste tus metas esta semana? Abre la app para reportar tu progreso.",
-      type: 'checkin'
-    });
+  
+  // Domingo: Preparación
+  if (dayOfWeek === 0) {
+    const sundayId = `prep_${todayStr}`;
+    if (!completedIds.includes(sundayId)) {
+      tasks.push({
+        id: sundayId,
+        type: 'weekly',
+        priority: 'low',
+        category: 'planning',
+        title: '📆 Prepara la nueva semana',
+        description: 'Revisa tus cuentas y confirma los pagos que vienen.',
+        actionText: 'Listo',
+        points: 15
+      });
+    }
   }
-
-  // Ejecutar inmediatamente si hay notificaciones
-  if (notifications.length > 0) {
-    notifications.forEach(notif => {
-      showLocalNotification(notif.title, { body: notif.body, tag: notif.type });
-    });
+  
+  // ==========================================
+  // 4. TAREAS DE PAGO (Basadas en fecha de vencimiento)
+  // ==========================================
+  
+  if (targetDebt && monthlyPayment > 0) {
+    // Obtener día de vencimiento de la primera deuda
+    const paymentDay = targetDebt.vence 
+      ? new Date(targetDebt.vence).getDate() 
+      : 15;
     
-    // Marcar como enviadas
-    setStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, [...alreadySentNotifs, notifId]);
+    // 3 días antes del pago
+    if (dayOfMonth === paymentDay - 3 || dayOfMonth === paymentDay - 2 || dayOfMonth === paymentDay - 1) {
+      const reminderId = `payment_soon_${todayStr}`;
+      if (!completedIds.includes(reminderId)) {
+        const diasParaPago = paymentDay - dayOfMonth;
+        tasks.push({
+          id: reminderId,
+          type: 'monthly',
+          priority: 'critical',
+          category: 'payment',
+          title: `⚠️ Pago en ${diasParaPago} día${diasParaPago > 1 ? 's' : ''}`,
+          description: `Prepara $${monthlyPayment.toLocaleString()} para ${targetDebt.nombre || 'tu deuda'}`,
+          actionText: 'Fondos listos',
+          points: 30
+        });
+      }
+    }
+    
+    // Día del pago
+    if (dayOfMonth === paymentDay) {
+      const payDayId = `payment_day_${todayStr}`;
+      if (!completedIds.includes(payDayId)) {
+        tasks.push({
+          id: payDayId,
+          type: 'monthly',
+          priority: 'critical',
+          category: 'payment',
+          title: `💳 ¡HOY TOCA PAGAR!`,
+          description: `Paga $${monthlyPayment.toLocaleString()} a ${targetDebt.nombre || 'tu deuda principal'}`,
+          actionText: 'Registrar pago',
+          points: 100,
+          opensModal: 'registerPayment'
+        });
+      }
+    }
   }
-
-  return notifications;
+  
+  // ==========================================
+  // 5. TAREAS DE TENDENCIA (Si está gastando mucho)
+  // ==========================================
+  
+  if (health?.tendenciaAlza && !health.esCrisis) {
+    const trendId = `trend_alert_${todayStr}`;
+    if (!completedIds.includes(trendId)) {
+      tasks.push({
+        id: trendId,
+        type: 'daily',
+        priority: 'medium',
+        category: 'alert',
+        title: '📈 Gastos acelerados detectados',
+        description: `Proyección: gastarás $${health.proyeccionFinMes.toFixed(0)} este mes (${((health.proyeccionFinMes / health.ingresosMes) * 100).toFixed(0)}% de ingresos)`,
+        actionText: 'Revisaré mis gastos',
+        points: 20
+      });
+    }
+  }
+  
+  // Ordenar por prioridad
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  return tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 }
 
 // ==========================================
-// HOOK PRINCIPAL HÍBRIDO
+// SISTEMA DE NOTIFICACIONES INTELIGENTES
 // ==========================================
 
-export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNotification) {
-  // Estados
+function triggerSmartNotifications(plan, health, showNotification) {
+  if (!plan || !showNotification || !health) return;
+  
+  const today = new Date();
+  const hour = today.getHours();
+  const todayStr = today.toISOString().split('T')[0];
+  const notifKey = `${todayStr}_${hour < 12 ? 'AM' : 'PM'}`;
+  
+  // Verificar si ya notificamos
+  const sentNotifs = getStored(STORAGE_KEYS.NOTIFICATIONS_SENT, []);
+  if (sentNotifs.includes(notifKey)) return;
+  
+  // Mañana (8-10am): Presupuesto del día
+  if (hour >= 8 && hour < 10) {
+    let title = '☀️ Buenos días';
+    let body = `Tu presupuesto hoy: $${health.presupuestoDiario.toFixed(0)}`;
+    
+    if (health.esCrisis) {
+      title = '🚨 ¡Alerta financiera!';
+      body = 'Estás en números rojos. Evita gastos hoy.';
+    } else if (health.esEmergencia) {
+      title = '⚠️ Presupuesto muy bajo';
+      body = `Solo tienes $${health.presupuestoDiario.toFixed(0)} disponibles hoy.`;
+    }
+    
+    showNotification(title, { body });
+    setStored(STORAGE_KEYS.NOTIFICATIONS_SENT, [...sentNotifs, notifKey]);
+  }
+  
+  // Noche (7-9pm): Recordatorio
+  if (hour >= 19 && hour < 21) {
+    const body = health.gastosHoy > 0
+      ? `Gastaste $${health.gastosHoy} hoy. ¿Fue necesario todo?`
+      : '¡Excelente! No registraste gastos hoy.';
+    
+    showNotification('🌙 Resumen del día', { body });
+    setStored(STORAGE_KEYS.NOTIFICATIONS_SENT, [...sentNotifs, notifKey]);
+  }
+  
+  // Viernes tarde: Recordatorio de check-in
+  if (today.getDay() === 5 && hour >= 17 && hour < 19) {
+    showNotification('📋 Check-in semanal', { 
+      body: '¿Cumpliste tus metas esta semana? Abre la app para reportar.' 
+    });
+    setStored(STORAGE_KEYS.NOTIFICATIONS_SENT, [...sentNotifs, notifKey]);
+  }
+}
+
+// ==========================================
+// HOOK PRINCIPAL
+// ==========================================
+
+export function usePlanExecution(activePlan, realFinancialData, showLocalNotification) {
+  // Estados persistentes
   const [completedTaskIds, setCompletedTaskIds] = useState(() => 
-    getStoredData(STORAGE_KEYS.TASKS_COMPLETED, [])
+    getStored(STORAGE_KEYS.TASKS_COMPLETED, [])
   );
   const [lastCheckIn, setLastCheckIn] = useState(() => 
-    getStoredData(STORAGE_KEYS.LAST_CHECKIN, null)
+    getStored(STORAGE_KEYS.LAST_CHECKIN, null)
   );
   const [streakData, setStreakData] = useState(() => 
-    getStoredData(STORAGE_KEYS.STREAK_DATA, { current: 0, longest: 0, lastActiveDate: null })
+    getStored(STORAGE_KEYS.STREAK_DATA, { current: 0, longest: 0, lastActiveDate: null })
   );
   const [paymentsLogged, setPaymentsLogged] = useState(() => 
-    getStoredData(STORAGE_KEYS.PAYMENTS_LOGGED, [])
+    getStored(STORAGE_KEYS.PAYMENTS_LOGGED, [])
   );
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-
+  
+  const today = useMemo(() => new Date(), []);
+  const todayStr = today.toISOString().split('T')[0];
+  
   // ==========================================
-  // CÁLCULOS REACTIVOS
+  // ANÁLISIS FINANCIERO EN TIEMPO REAL
   // ==========================================
-
-  // Salud Financiera en Tiempo Real
+  
   const financialHealth = useMemo(() => {
-    if (!realFinancialData) return null;
-    return calculateRealFinancialHealth(realFinancialData, new Date());
-  }, [realFinancialData]);
-
-  // Tareas Híbridas
+    if (!realFinancialData || Object.keys(realFinancialData).length === 0) return null;
+    return analyzeFinancialHealth(realFinancialData, today);
+  }, [realFinancialData, today]);
+  
+  // ==========================================
+  // TAREAS GENERADAS DINÁMICAMENTE
+  // ==========================================
+  
   const dailyTasks = useMemo(() => {
     if (!activePlan) return [];
-    return generateHybridTasks(activePlan, realFinancialData, completedTaskIds);
-  }, [activePlan, realFinancialData, completedTaskIds]);
-
-  // Progreso del Plan (Basado en pagos logueados)
+    return generateSmartTasks(activePlan, financialHealth, completedTaskIds, today);
+  }, [activePlan, financialHealth, completedTaskIds, today]);
+  
+  // ==========================================
+  // PROGRESO DEL PLAN
+  // ==========================================
+  
   const progress = useMemo(() => {
-    if (!activePlan?.configuracion) return { percentage: 0, monthsCompleted: 0, amountPaid: 0 };
+    if (!activePlan?.configuracion) {
+      return { percentage: 0, monthsCompleted: 0, amountPaid: 0, remaining: 0 };
+    }
     
     const totalDebt = activePlan.monto_objetivo || 0;
+    const monthlyPayment = activePlan.configuracion.monthlyPayment || 1;
+    
     const amountPaid = paymentsLogged
       .filter(p => p.planId === activePlan.id)
       .reduce((sum, p) => sum + (p.amount || 0), 0);
-      
+    
     const percentage = totalDebt > 0 ? Math.min(100, (amountPaid / totalDebt) * 100) : 0;
+    const monthsCompleted = Math.floor(amountPaid / monthlyPayment);
     
     return {
       percentage: Math.round(percentage * 10) / 10,
       amountPaid,
-      monthsCompleted: Math.floor(amountPaid / (activePlan.configuracion.monthlyPayment || 1))
+      remaining: Math.max(0, totalDebt - amountPaid),
+      monthsCompleted,
+      totalMonths: activePlan.meses_duracion || 0
     };
   }, [activePlan, paymentsLogged]);
-
-  // Estadísticas
+  
+  // ==========================================
+  // ESTADÍSTICAS
+  // ==========================================
+  
   const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayCompletedCount = completedTaskIds.filter(id => id.includes(todayStr)).length;
-    const totalTasksToday = dailyTasks.length + todayCompletedCount;
+    const todayCompleted = completedTaskIds.filter(id => id.includes(todayStr)).length;
+    const pendingTasks = dailyTasks.length;
+    const totalToday = todayCompleted + pendingTasks;
     
     return {
-      tasksCompletedToday: todayCompletedCount,
-      totalTasksToday,
+      tasksCompletedToday: todayCompleted,
+      tasksPending: pendingTasks,
+      totalTasksToday: totalToday,
+      completionRate: totalToday > 0 ? Math.round((todayCompleted / totalToday) * 100) : 0,
       streak: streakData.current || 0,
-      financialHealth: financialHealth // Exportar salud al widget
+      longestStreak: streakData.longest || 0
     };
-  }, [completedTaskIds, dailyTasks, streakData, financialHealth]);
-
+  }, [completedTaskIds, dailyTasks, streakData, todayStr]);
+  
   // ==========================================
   // ACCIONES
   // ==========================================
-
+  
   const completeTask = useCallback((taskId, points = 10) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    
+    // Agregar a completados
     setCompletedTaskIds(prev => {
       const updated = [...prev, taskId];
-      setStoredData(STORAGE_KEYS.TASKS_COMPLETED, updated);
+      setStored(STORAGE_KEYS.TASKS_COMPLETED, updated);
       return updated;
     });
     
     // Actualizar racha
-    const hasCompletedToday = completedTaskIds.some(id => id.includes(todayStr));
-    if (!hasCompletedToday) {
+    const hadCompletedToday = completedTaskIds.some(id => id.includes(todayStr));
+    if (!hadCompletedToday) {
       setStreakData(prev => {
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         const isContinuation = prev.lastActiveDate === yesterday;
@@ -408,82 +518,115 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
           longest: Math.max(newCurrent, prev.longest || 0),
           lastActiveDate: todayStr
         };
-        setStoredData(STORAGE_KEYS.STREAK_DATA, updated);
+        setStored(STORAGE_KEYS.STREAK_DATA, updated);
         return updated;
       });
     }
     
+    // Notificación de celebración
     if (showLocalNotification && points >= 50) {
-      showLocalNotification('🎉 ¡Excelente!', { body: `Ganaste ${points} puntos.` });
+      showLocalNotification('🎉 ¡Excelente!', { 
+        body: `+${points} puntos. Racha: ${streakData.current + 1} días` 
+      });
     }
-  }, [completedTaskIds, showLocalNotification]);
+    
+    return { success: true, points };
+  }, [completedTaskIds, todayStr, streakData, showLocalNotification]);
   
   const logPayment = useCallback((amount, debtName) => {
-    if (!activePlan) return;
+    if (!activePlan) return null;
+    
     const payment = {
-      id: `payment_${Date.now()}`,
+      id: `pay_${Date.now()}`,
       planId: activePlan.id,
-      amount,
+      amount: Number(amount),
       debtName,
       date: new Date().toISOString()
     };
+    
     setPaymentsLogged(prev => {
       const updated = [...prev, payment];
-      setStoredData(STORAGE_KEYS.PAYMENTS_LOGGED, updated);
+      setStored(STORAGE_KEYS.PAYMENTS_LOGGED, updated);
       return updated;
     });
+    
     if (showLocalNotification) {
-      showLocalNotification('💳 Pago Registrado', { body: `$${amount} a ${debtName}` });
+      showLocalNotification('💳 Pago registrado', { 
+        body: `$${amount.toLocaleString()} a ${debtName}. ¡Sigue así!` 
+      });
     }
+    
     return payment;
   }, [activePlan, showLocalNotification]);
-
+  
   const performCheckIn = useCallback((data) => {
-    setLastCheckIn({ date: new Date().toISOString(), ...data });
-    setStoredData(STORAGE_KEYS.LAST_CHECKIN, lastCheckIn);
+    const checkIn = {
+      date: new Date().toISOString(),
+      weekNumber: Math.ceil((today.getDate()) / 7),
+      ...data
+    };
+    
+    setLastCheckIn(checkIn);
+    setStored(STORAGE_KEYS.LAST_CHECKIN, checkIn);
     setShowCheckInModal(false);
-    // Marcar tarea check-in completada
-    const todayStr = new Date().toISOString().split('T')[0];
-    completeTask(`weekly_checkin_${todayStr}`, 50);
-  }, [completeTask, lastCheckIn]);
-
+    
+    // Completar tarea de check-in
+    completeTask(`checkin_${todayStr}`, 50);
+    
+    return checkIn;
+  }, [completeTask, todayStr, today]);
+  
+  // ==========================================
+  // ¿NECESITA CHECK-IN?
+  // ==========================================
+  
   const needsCheckIn = useMemo(() => {
     if (!lastCheckIn) return true;
-    const diffDays = Math.floor((Date.now() - new Date(lastCheckIn.date).getTime()) / 86400000);
-    return diffDays >= 7;
+    const daysSince = Math.floor((Date.now() - new Date(lastCheckIn.date).getTime()) / 86400000);
+    return daysSince >= 7;
   }, [lastCheckIn]);
-
+  
   // ==========================================
-  // EFECTO: PROGRAMADOR INTELIGENTE
+  // EFECTO: NOTIFICACIONES AUTOMÁTICAS
   // ==========================================
+  
   useEffect(() => {
-    if (!activePlan || !showLocalNotification) return;
-    
-    // Ejecutar el cerebro de notificaciones
-    // Pasamos 'financialHealth' que calculamos en el useMemo anterior
-    getSmartNotifications(
-      activePlan, 
-      financialHealth, 
-      showLocalNotification, 
-      getStoredData, 
-      setStoredData
-    );
-  // ✅ CORRECCIÓN: Eliminamos getStoredData y setStoredData de las dependencias
-  // porque son funciones constantes definidas fuera del componente.
+    if (!activePlan || !showLocalNotification || !financialHealth) return;
+    triggerSmartNotifications(activePlan, financialHealth, showLocalNotification);
   }, [activePlan, financialHealth, showLocalNotification]);
-
+  
+  // ==========================================
+  // EFECTO: LIMPIAR TAREAS ANTIGUAS (30 días)
+  // ==========================================
+  
+  useEffect(() => {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    
+    setCompletedTaskIds(prev => {
+      const filtered = prev.filter(id => {
+        const match = id.match(/\d{4}-\d{2}-\d{2}/);
+        return match ? match[0] >= thirtyDaysAgo : true;
+      });
+      
+      if (filtered.length !== prev.length) {
+        setStored(STORAGE_KEYS.TASKS_COMPLETED, filtered);
+      }
+      return filtered;
+    });
+  }, []);
+  
   // ==========================================
   // RETURN
   // ==========================================
   
   return {
-    // IA y Datos Reales
-    financialHealth, // { presupuestoDiario, margenTotal, esCrisis }
+    // Análisis en tiempo real
+    financialHealth,
     
     // Tareas
     dailyTasks,
     
-    // Progreso del Plan
+    // Progreso
     progress,
     stats,
     streakData,

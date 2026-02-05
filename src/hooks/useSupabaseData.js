@@ -143,31 +143,43 @@ export const useSupabaseData = (
     }
   }, [tableName, data, saveToCache])
 
-  // Update record
-  const updateRecord = useCallback(async (id, updates) => {
-    try {
-      const { data: updatedData, error } = await supabase
-        .from(tableName)
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+// Update record
+const updateRecord = useCallback(async (id, updates) => {
+  try {
+    console.log(`🔄 Actualizando ${tableName} ID:`, id)
+    console.log('📝 Updates:', updates)
 
-      if (error) throw error;
+    const { data: updatedData, error } = await supabase
+      .from(tableName)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-      const newData = data.map(item =>
-        item.id === id ? updatedData : item
-      );
+    if (error) throw error;
 
-      setData(newData);
-      saveToCache(newData);
+    console.log('✅ Dato actualizado en BD:', updatedData)
 
-      return { success: true, data: updatedData };
-    } catch (err) {
-      console.error(`Error updating ${tableName}:`, err);
-      return { success: false, error: err };
-    }
-  }, [tableName, data, saveToCache]);
+    // ✅ FIX: Asegurar que estamos usando el dato correcto
+    const newData = data.map(item => {
+      if (item.id === id) {
+        // Retornar el dato actualizado de la BD, no mezclar con el anterior
+        return updatedData
+      }
+      return item
+    });
+
+    console.log('📊 Nuevo array de datos:', newData)
+
+    setData(newData);
+    saveToCache(newData);
+
+    return { success: true, data: updatedData };
+  } catch (err) {
+    console.error(`❌ Error updating ${tableName}:`, err);
+    return { success: false, error: err };
+  }
+}, [tableName, data, saveToCache]);
 
 
   // Delete record

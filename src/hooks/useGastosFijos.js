@@ -1,15 +1,20 @@
-import { useSupabaseData } from './useSupabaseData'
+import { useSupabaseData } from "./useSupabaseData";
 
 export const useGastosFijos = (lazyLoad = false) => {
-  const { data, loading, addRecord, updateRecord, deleteRecord, refresh, initialize } = useSupabaseData(
-    'gastos_fijos',
-    {
-      lazyLoad,
-      orderBy: 'created_at',
-      ascending: false,
-      select: '*'  // ✅
-    }
-  )
+  const {
+    data,
+    loading,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    refresh,
+    initialize,
+  } = useSupabaseData("gastos_fijos", {
+    lazyLoad,
+    orderBy: "created_at",
+    ascending: false,
+    select: "*",
+  });
 
   return {
     gastosFijos: data,
@@ -18,6 +23,6 @@ export const useGastosFijos = (lazyLoad = false) => {
     updateGastoFijo: updateRecord,
     deleteGastoFijo: deleteRecord,
     refresh,
-    initialize
-  }
-}
+    initialize,
+  };
+};

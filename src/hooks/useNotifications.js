@@ -78,11 +78,11 @@ export const useNotifications = () => {
       
       // Mostrar notificación a través del service worker
       await registration.showNotification(title, {
-        body: options.body || 'Notificación de Sistema Monarch',
+        body: options.body || 'Notificación de finguide App',
         icon: '/logo192.png',
         badge: '/logo192.png',
         vibrate: [200, 100, 200],
-        tag: 'monarch-' + Date.now(),
+        tag: 'finguide App-' + Date.now(),
         requireInteraction: false,
         data: options.data || {},
         ...options
@@ -95,7 +95,7 @@ export const useNotifications = () => {
       // Fallback - notificación directa del navegador
       try {
         new Notification(title, {
-          body: options.body || 'Notificación de Sistema Monarch',
+          body: options.body || 'Notificación de finguide App',
           icon: '/logo192.png',
           ...options
         });

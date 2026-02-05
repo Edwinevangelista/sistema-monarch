@@ -1,156 +1,122 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { CreditCard, X, Loader2, Info, Calculator, Wallet, Building2 } from 'lucide-react'
-import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CreditCard, X, Loader2, Info, Calculator, Wallet, Building2, AlertTriangle } from 'lucide-react';
+import { useDeudas } from '../hooks/useDeudas';
+import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
 
-const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null }) => { // ✅ Agregar prop
-  const { cuentas } = useCuentasBancarias()
-  const [isLoading, setIsLoading] = useState(false)
-  
-  const montoInputRef = useRef(null)
-  const cuentasSectionRef = useRef(null)
+export default function ModalPagoTarjeta({ onClose, onSave, deudas, deudaPreseleccionada = null }) {
+  const { cuentas } = useCuentasBancarias();
+  const [isLoading, setIsLoading] = useState(false);
+  const montoInputRef = useRef(null);
+  const cuentasSectionRef = useRef(null);
+
+  const METODOS_PAGO = ['Efectivo', 'Tarjeta', 'Transferencia', 'Cheque', 'Débito'];
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
-    tarjeta: deudaPreseleccionada?.cuenta || deudas[0]?.cuenta || '', // ✅ Usar deuda preseleccionada
+    tarjeta: deudaPreseleccionada?.cuenta || deudas[0]?.cuenta || '',
     monto: '',
     principal: '',
     interes: '',
     metodo: 'Efectivo',
     cuenta_id: '',
     notas: ''
-  })
+  });
 
-  const METODOS_PAGO_COMPLETO = [
-    'Efectivo',
-    'Tarjeta',
-    'Transferencia',
-    'Cheque',
-    'Débito'
-  ]
-
+  // Helper: Calcular Interés Mensual (APR / 12)
   const calcularInteresMensual = useCallback((deuda) => {
-    if (!deuda || !deuda.apr || !deuda.saldo) return 0
-    const tasaMensual = deuda.apr / 12
-    return deuda.saldo * tasaMensual
-  }, [])
+    if (!deuda || !deuda.apr || !deuda.saldo) return 0;
+    const tasaMensual = deuda.apr / 12;
+    return deuda.saldo * tasaMensual;
+  }, []);
 
+  // Helper: Distribuir el pago (Interes vs Principal)
   const distribuirPago = useCallback((montoPago, deuda) => {
     if (!montoPago || montoPago <= 0) {
-      return { principal: 0, interes: 0 }
+      return { principal: 0, interes: 0 };
     }
-
-    const interesMensual = calcularInteresMensual(deuda)
-    
+    const interesMensual = calcularInteresMensual(deuda);
     if (montoPago <= interesMensual) {
-      return {
-        interes: montoPago,
-        principal: 0
-      }
+      return { interes: montoPago, principal: 0 };
     } else {
-      return {
-        interes: interesMensual,
-        principal: montoPago - interesMensual
-      }
+      return { interes: interesMensual, principal: montoPago - interesMensual };
     }
-  }, [calcularInteresMensual])
+  }, [calcularInteresMensual]);
 
+  // Efecto: Calcular automáticamente distribución cuando hay monto y tarjeta
   useEffect(() => {
     if (formData.monto && formData.tarjeta) {
-      const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta)
+      const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta);
       if (deudaSeleccionada) {
         const { principal, interes } = distribuirPago(
           Number(formData.monto),
           deudaSeleccionada
-        )
-        
+        );
         setFormData(prev => ({
           ...prev,
           principal: principal.toFixed(2),
           interes: interes.toFixed(2)
-        }))
+        }));
       }
     }
-  }, [formData.monto, formData.tarjeta, deudas, distribuirPago])
+  }, [formData.monto, formData.tarjeta, deudas, distribuirPago]);
 
-  // ✅ Scroll automático al montar si hay deuda preseleccionada
+  // Efecto: Scroll suave al input monto si viene con deuda preseleccionada
   useEffect(() => {
     if (deudaPreseleccionada && montoInputRef.current) {
       setTimeout(() => {
-        montoInputRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-        })
-        
+        montoInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setTimeout(() => {
-          montoInputRef.current?.querySelector('input')?.focus()
-        }, 1200)
-      }, 800)
+          montoInputRef.current.querySelector('input')?.focus();
+        }, 1200);
+      }, 800);
     }
-  }, [deudaPreseleccionada])
+  }, [deudaPreseleccionada]);
 
-  // ✅ Scroll más lento al seleccionar tarjeta manualmente
+  // Efecto: Scroll a cuentas si se selecciona débito
+  useEffect(() => {
+    if (formData.metodo === 'Débito' && cuentasSectionRef.current) {
+      setTimeout(() => {
+        cuentasSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 600);
+    }
+  }, [formData.metodo]);
+
+  // Manejo de cambio de tarjeta manual
   const handleSeleccionarTarjeta = (cuentaTarjeta) => {
-    setFormData({ ...formData, tarjeta: cuentaTarjeta })
-    
+    setFormData({ ...formData, tarjeta: cuentaTarjeta });
     setTimeout(() => {
       if (montoInputRef.current) {
-        montoInputRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-        })
-        
-        setTimeout(() => {
-          montoInputRef.current?.querySelector('input')?.focus()
-        }, 1200)
+        montoInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => montoInputRef.current.querySelector('input')?.focus(), 1200);
       }
-    }, 600)
-  }
-
-  // ✅ Scroll más lento para sección de cuentas
-  useEffect(() => {
-    if (formData.metodo === 'Débito') {
-      setTimeout(() => {
-        if (cuentasSectionRef.current) {
-          cuentasSectionRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-          })
-        }
-      }, 800)
-    }
-  }, [formData.metodo])
+    }, 600);
+  };
 
   const handleSubmit = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
-      const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta)
+      const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta);
       if (!deudaSeleccionada) {
-        alert('Debes seleccionar una tarjeta válida')
-        return
+        alert('Debes seleccionar una tarjeta válida');
+        return;
       }
 
       if (!formData.monto || Number(formData.monto) <= 0) {
-        alert('Debes ingresar un monto válido')
-        return
+        alert('Debes ingresar un monto válido');
+        return;
       }
 
-      if (formData.metodo === 'Débito' && !formData.cuenta_id) {
-        alert('⚠️ Debes seleccionar una cuenta bancaria para débito automático')
-        if (cuentasSectionRef.current) {
-          cuentasSectionRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          })
+      // Validación de saldo para Débito
+      if (formData.metodo === 'Débito') {
+        if (!formData.cuenta_id) {
+          alert('⚠️ Debes seleccionar una cuenta bancaria para débito automático');
+          return;
         }
-        return
-      }
-
-      if (formData.metodo === 'Débito' && formData.cuenta_id) {
-        const cuenta = cuentas.find(c => c.id === formData.cuenta_id)
+        const cuenta = cuentas.find(c => c.id === formData.cuenta_id);
         if (cuenta && Number(cuenta.balance) < Number(formData.monto)) {
-          alert(`❌ Fondos insuficientes\n\nSaldo disponible: $${Number(cuenta.balance).toFixed(2)}\nMonto a pagar: $${Number(formData.monto).toFixed(2)}`)
-          return
+          alert(`❌ Fondos insuficientes\nSaldo: $${Number(cuenta.balance).toFixed(2)}\nMonto: $${Number(formData.monto).toFixed(2)}`);
+          return;
         }
       }
 
@@ -163,234 +129,182 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
         cuenta_id: formData.cuenta_id || null,
         fecha: formData.fecha,
         notas: formData.notas
-      })
+      });
 
-      onClose()
+      onClose();
     } catch (e) {
-      console.error('Error registrando pago:', e)
-      alert('Error al registrar el pago')
+      console.error('Error registrando pago:', e);
+      alert('Error al registrar el pago');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const deudaActual = deudas.find(d => d.cuenta === formData.tarjeta)
-  const interesMensualCalculado = deudaActual ? calcularInteresMensual(deudaActual) : 0
-  const principalNumber = Number(formData.principal || 0)
-  const interesNumber = Number(formData.interes || 0)
-  const cuentaSeleccionada = cuentas.find(c => c.id === formData.cuenta_id)
+  // Datos para visualización
+  const deudaActual = deudas.find(d => d.cuenta === formData.tarjeta);
+  const interesMensualCalculado = deudaActual ? calcularInteresMensual(deudaActual) : 0;
+  const principalNumber = Number(formData.principal || 0);
+  const interesNumber = Number(formData.interes || 0);
+  const cuentaSeleccionada = cuentas.find(c => c.id === formData.cuenta_id);
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div 
-        className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border-2 border-purple-500 max-h-[90vh] overflow-y-auto"
-        style={{ 
-          scrollBehavior: 'smooth',
-          scrollPaddingTop: '20px'
-        }}
+        className="bg-gray-900 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-purple-500/30 shadow-2xl relative"
+        style={{ scrollBehavior: 'smooth', scrollPaddingTop: '20px' }}
       >
-        <div className="flex items-center justify-between mb-6 sticky top-0 bg-gray-800 pb-2 z-10 border-b border-gray-700">
-          <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-            <CreditCard className="w-7 h-7 text-purple-400" />
-            Pago de Tarjeta
-          </h3>
-          <button 
-            onClick={onClose} 
-            className="text-gray-400 hover:text-white disabled:opacity-50" 
-            disabled={isLoading}
-          >
-            <X className="w-6 h-6" />
+        {/* HEADER */}
+        <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-t-3xl sticky top-0 z-10 border-b border-purple-500/30 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-500/20 p-2 rounded-xl border border-purple-400/30">
+              <CreditCard className="w-6 h-6 text-purple-400" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Pagar Tarjeta</h3>
+          </div>
+          <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-gray-400 hover:text-white transition-all">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-4">
-          {/* SELECTOR DE TARJETA */}
+        <div className="p-6 space-y-5">
+          
+          {/* SELECTOR DE TARJETAS */}
           <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-3">
-              1️⃣ Selecciona la Tarjeta a Pagar *
+            <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">
+              1️⃣ Elige la tarjeta a pagar
             </label>
-            
-            <div className="space-y-2">
+            <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
               {deudas.map((deuda) => {
-                const isSelected = formData.tarjeta === deuda.cuenta
-                const pagoMinimo = deuda.pago_minimo || 0
-                
+                const isSelected = formData.tarjeta === deuda.cuenta;
+                const pagoMinimo = deuda.pago_minimo || 0;
+                // Porcentaje de uso (si hay balance total)
+                const usoPorcentaje = deuda.balance && deuda.balance > 0 
+                  ? Math.min((deuda.saldo / deuda.balance) * 100, 100) 
+                  : 0;
+
                 return (
                   <button
                     key={deuda.id}
                     type="button"
                     onClick={() => handleSeleccionarTarjeta(deuda.cuenta)}
                     disabled={isLoading}
-                    className={`
-                      w-full p-4 rounded-xl border-2 transition-all duration-300 text-left
-                      ${isSelected 
-                        ? 'border-purple-500 bg-purple-500/20 shadow-lg shadow-purple-500/20' 
-                        : 'border-gray-600 bg-gray-700 hover:border-gray-500 hover:bg-gray-650'
-                      }
-                      disabled:opacity-50
-                    `}
+                    className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden ${
+                      isSelected 
+                        ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20 scale-[1.02]' 
+                        : 'border-gray-700 bg-white/5 hover:border-purple-500/50'
+                    }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <CreditCard className={`w-4 h-4 ${isSelected ? 'text-purple-400' : 'text-gray-400'}`} />
-                          <span className={`font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-purple-500/5 pointer-events-none" />
+                    )}
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="flex items-center gap-3">
+                        <CreditCard className={`w-5 h-5 ${isSelected ? 'text-purple-400' : 'text-gray-400'}`} />
+                        <div>
+                          <div className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-gray-200'}`}>
                             {deuda.cuenta}
-                          </span>
-                        </div>
-                        
-                        <div className="text-xs text-gray-400 space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span>Tipo:</span>
-                            <span className="text-gray-300">{deuda.tipo || 'Tarjeta de Crédito'}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span>APR:</span>
-                            <span className="text-yellow-400 font-semibold">
-                              {((deuda.apr || 0) * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>Pago mínimo:</span>
-                            <span className="text-orange-400 font-semibold">
-                              ${pagoMinimo.toFixed(2)}
-                            </span>
+                          <div className="text-[10px] text-gray-400">
+                            {deuda.tipo || 'Crédito'}
                           </div>
                         </div>
                       </div>
-                      
                       <div className="text-right">
-                        <div className="text-xs text-gray-400 mb-1">Saldo</div>
-                        <div className={`text-2xl font-bold ${isSelected ? 'text-red-400' : 'text-red-500'}`}>
+                        <div className={`text-lg font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
                           ${deuda.saldo?.toFixed(2)}
+                        </div>
+                        <div className="text-[10px] text-gray-500">
+                          Pago Min: ${pagoMinimo.toFixed(2)}
                         </div>
                       </div>
                     </div>
-
-                    {deuda.balance && (
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-gray-400 mb-1">
-                          <span>Usado</span>
-                          <span>{((deuda.saldo / deuda.balance) * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-600 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-500 ${
-                              (deuda.saldo / deuda.balance) > 0.8 
-                                ? 'bg-red-500' 
-                                : (deuda.saldo / deuda.balance) > 0.5 
-                                ? 'bg-yellow-500' 
-                                : 'bg-green-500'
-                            }`}
-                            style={{ width: `${Math.min((deuda.saldo / deuda.balance) * 100, 100)}%` }}
-                          />
-                        </div>
+                    {deuda.balance && deuda.balance > 0 && (
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                        <div 
+                          className={`h-full rounded-full transition-all ${isSelected ? 'bg-purple-500' : 'bg-gray-500'}`}
+                          style={{ width: `${usoPorcentaje}%` }}
+                        />
                       </div>
                     )}
-
                     {isSelected && (
-                      <div className="mt-2 text-xs text-purple-400 font-semibold flex items-center gap-1">
+                      <div className="absolute top-2 right-2">
                         <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                        Tarjeta seleccionada
                       </div>
                     )}
                   </button>
-                )
+                );
               })}
             </div>
           </div>
 
-          {/* INFO DE INTERESES */}
+          {/* INFO DE INTERESES CALCULADO */}
           {deudaActual && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 transition-all duration-300">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-blue-300">
-                  <p className="font-semibold mb-1">Interés mensual estimado:</p>
-                  <p className="text-base font-bold text-blue-400">${interesMensualCalculado.toFixed(2)}</p>
-                  <p className="text-blue-400 mt-1 text-[10px]">
-                    Calculado con APR {((deudaActual.apr || 0) * 100).toFixed(1)}% sobre ${deudaActual.saldo?.toFixed(2)}
-                  </p>
-                </div>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 flex items-center gap-3">
+              <Info className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-blue-200 text-xs font-semibold uppercase">Interés mensual estimado:</p>
+                <p className="text-blue-100 text-sm">
+                  ${interesMensualCalculado.toFixed(2)} <span className="text-blue-300 opacity-70">(APR {((deudaActual.apr || 0) * 100).toFixed(1)}%)</span>
+                </p>
               </div>
             </div>
           )}
 
-          {/* MONTO + FECHA */}
-          <div ref={montoInputRef} className="grid grid-cols-2 gap-4 scroll-mt-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                2️⃣ Monto a Pagar *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-3 text-gray-400 text-lg">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.monto}
-                  onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-                  disabled={isLoading}
-                  className="w-full pl-8 pr-4 py-3 bg-gray-700 border-2 border-gray-600 rounded-lg text-white text-lg font-semibold focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none disabled:opacity-50 transition-all duration-300"
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Fecha
-              </label>
+          {/* MONTO */}
+          <div ref={montoInputRef}>
+            <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">
+              2️⃣ Monto a Pagar
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">$</span>
               <input
-                type="date"
-                value={formData.fecha}
-                onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.monto}
+                onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
                 disabled={isLoading}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none disabled:opacity-50 transition-all duration-300"
+                className="w-full bg-gray-800 text-white pl-10 pr-4 py-4 rounded-2xl text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-700 disabled:bg-gray-900 disabled:opacity-50 placeholder-gray-500"
+                style={{ fontSize: '16px' }}
               />
             </div>
+            {/* FECHA */}
+            <input
+              type="date"
+              value={formData.fecha}
+              onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+              disabled={isLoading}
+              className="w-full mt-2 bg-white/5 border border-white/10 text-gray-300 px-4 py-2 rounded-xl focus:outline-none focus:border-purple-500 disabled:opacity-50"
+              style={{ fontSize: '16px' }}
+            />
           </div>
 
-          {/* DISTRIBUCIÓN AUTOMÁTICA */}
+          {/* DISTRIBUCIÓN VISUAL */}
           {formData.monto && Number(formData.monto) > 0 && (
-            <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-lg p-4 transition-all duration-300">
+            <div className="bg-gray-800/50 border border-white/5 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Calculator className="w-4 h-4 text-purple-400" />
-                <h4 className="text-sm font-bold text-white">Distribución del Pago</h4>
+                <h4 className="text-white font-semibold text-sm">Distribución del Pago</h4>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400">A Intereses:</span>
-                  <span className="text-sm font-bold text-red-400">
-                    ${interesNumber.toFixed(2)}
-                  </span>
+              <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
+                <div className="text-center">
+                  <p className="text-gray-400 text-xs uppercase">A Intereses</p>
+                  <p className="text-red-400 font-bold text-lg">${interesNumber.toFixed(2)}</p>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-400">A Principal (reduce saldo):</span>
-                  <span className="text-sm font-bold text-green-400">
-                    ${principalNumber.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="pt-2 border-t border-gray-700">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-300 font-semibold">Nuevo Saldo:</span>
-                    <span className="text-base font-bold text-white">
-                      ${((deudaActual?.saldo || 0) - principalNumber).toFixed(2)}
-                    </span>
-                  </div>
+                <div className="h-8 w-px bg-gray-700"></div>
+                <div className="text-center">
+                  <p className="text-gray-400 text-xs uppercase">A Capital</p>
+                  <p className="text-emerald-400 font-bold text-lg">${principalNumber.toFixed(2)}</p>
                 </div>
               </div>
-
               {principalNumber === 0 && interesNumber > 0 && (
-                <div className="mt-3 p-2 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-300">
-                  ⚠️ Este pago solo cubre intereses. El saldo no se reducirá.
+                <div className="mt-2 text-xs text-yellow-500 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Este pago solo cubre intereses. El saldo no se reducirá.
                 </div>
               )}
-
               {principalNumber > 0 && (
-                <div className="mt-3 p-2 bg-green-500/20 border border-green-500/30 rounded text-xs text-green-300">
+                <div className="mt-2 text-xs text-emerald-500 flex items-center gap-1">
                   ✅ Reducirás tu deuda en ${principalNumber.toFixed(2)}
                 </div>
               )}
@@ -399,126 +313,90 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
           {/* MÉTODO DE PAGO */}
           <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">
-              3️⃣ Método de Pago *
+            <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">
+              3️⃣ Método
             </label>
-            <select
-              value={formData.metodo}
-              onChange={(e) => {
-                setFormData({ 
-                  ...formData, 
-                  metodo: e.target.value,
-                  cuenta_id: e.target.value === 'Débito' ? '' : formData.cuenta_id
-                })
-              }}
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gray-700 border-2 border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none disabled:opacity-50 transition-all duration-300"
-            >
-              {METODOS_PAGO_COMPLETO.map((metodo) => (
-                <option key={metodo} value={metodo}>
-                  {metodo === 'Débito' ? '💳 Débito (de mis cuentas)' : metodo}
-                </option>
+            <div className="grid grid-cols-1 gap-2">
+              {METODOS_PAGO.map((metodo) => (
+                <button
+                  key={metodo}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, metodo: metodo, cuenta_id: metodo === 'Débito' ? formData.cuenta_id : null })}
+                  disabled={isLoading}
+                  className={`p-3 md:p-4 rounded-xl border-2 transition-all text-left flex items-center justify-between ${
+                    formData.metodo === metodo 
+                      ? 'bg-purple-600 border-purple-600 text-white' 
+                      : 'bg-gray-800 border-gray-700 hover:border-purple-500 text-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-black/20 p-1.5 rounded-lg">
+                      {metodo === 'Efectivo' && '💵'}
+                      {metodo === 'Tarjeta' && '💳'}
+                      {metodo === 'Transferencia' && '🏦'}
+                      {metodo === 'Cheque' && '📄'}
+                      {metodo === 'Débito' && '💳'}
+                    </div>
+                    <span className="font-semibold text-sm md:text-base">{metodo}</span>
+                  </div>
+                  {formData.metodo === metodo && <div className="w-2 h-2 bg-white rounded-full" />}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          {/* SELECTOR DE CUENTA BANCARIA */}
+          {/* SELECTOR DE CUENTA (SI ES DÉBITO) */}
           {formData.metodo === 'Débito' && (
-            <div 
-              ref={cuentasSectionRef}
-              className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border-2 border-cyan-500/30 rounded-xl p-4 scroll-mt-4 transition-all duration-300"
-            >
+            <div ref={cuentasSectionRef} className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-center gap-2 mb-3">
                 <Wallet className="w-5 h-5 text-cyan-400" />
-                <h4 className="text-sm font-bold text-white">4️⃣ Selecciona Cuenta para Débito *</h4>
+                <h4 className="text-white font-semibold text-sm">4️⃣ Cuenta de Débito</h4>
               </div>
-
               {cuentas.length === 0 ? (
-                <div className="text-center py-4 text-gray-400 text-sm">
-                  <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No tienes cuentas bancarias registradas</p>
-                  <p className="text-xs mt-1">Agrega una cuenta primero</p>
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No tienes cuentas bancarias.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1 custom-scrollbar">
                   {cuentas.map((cuenta) => {
-                    const isSelected = formData.cuenta_id === cuenta.id
-                    const tieneFondos = !formData.monto || Number(cuenta.balance) >= Number(formData.monto)
-                    
+                    const isSelected = formData.cuenta_id === cuenta.id;
+                    const tieneFondos = !formData.monto || Number(cuenta.balance) >= Number(formData.monto);
                     return (
                       <button
                         key={cuenta.id}
                         type="button"
                         onClick={() => setFormData({ ...formData, cuenta_id: cuenta.id })}
                         disabled={isLoading || !tieneFondos}
-                        className={`
-                          w-full p-3 rounded-lg border-2 transition-all duration-300 text-left
-                          ${isSelected 
-                            ? 'border-cyan-500 bg-cyan-500/20 scale-[1.02]' 
+                        className={`w-full p-3 rounded-xl border-2 transition-all text-left flex items-center justify-between ${
+                          isSelected 
+                            ? 'bg-cyan-600 border-cyan-600 text-white' 
                             : tieneFondos
-                            ? 'border-gray-600 bg-gray-700 hover:border-cyan-500/50 hover:scale-[1.01]'
-                            : 'border-red-500/30 bg-red-500/10 opacity-60'
-                          }
-                          disabled:cursor-not-allowed disabled:hover:scale-100
-                        `}
+                            ? 'bg-gray-800 border-gray-700 hover:border-cyan-500/50 hover:bg-gray-700' 
+                            : 'bg-red-500/10 border-red-500/30 opacity-60'
+                        }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Building2 className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-gray-400'}`} />
-                            <div>
-                              <div className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-300'}`}>
-                                {cuenta.nombre}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {cuenta.tipo} • {cuenta.banco || 'Sin banco'}
-                              </div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
+                          <div>
+                            <div className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-gray-200'}`}>
+                              {cuenta.nombre}
                             </div>
-                          </div>
-                          
-                          <div className="text-right">
-                            <div className={`text-lg font-bold ${
-                              tieneFondos 
-                                ? isSelected ? 'text-cyan-400' : 'text-green-400'
-                                : 'text-red-400'
-                            }`}>
-                              ${Number(cuenta.balance).toFixed(2)}
+                            <div className="text-xs text-gray-400">
+                              {cuenta.tipo} • {cuenta.banco}
                             </div>
-                            {!tieneFondos && formData.monto && (
-                              <div className="text-xs text-red-400">Fondos insuficientes</div>
-                            )}
                           </div>
                         </div>
-
-                        {isSelected && (
-                          <div className="mt-2 text-xs text-cyan-400 font-semibold flex items-center gap-1">
-                            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-                            Se debitará de esta cuenta
+                        <div className="text-right">
+                          <div className={`text-sm font-bold ${
+                            tieneFondos ? isSelected ? 'text-cyan-100' : 'text-emerald-400' : 'text-red-400'
+                          }`}>
+                            ${Number(cuenta.balance).toFixed(2)}
                           </div>
-                        )}
+                          {!tieneFondos && <div className="text-[10px] text-red-400">Fondos</div>}
+                        </div>
                       </button>
-                    )
+                    );
                   })}
-                </div>
-              )}
-
-              {cuentaSeleccionada && formData.monto && (
-                <div className="mt-3 p-3 bg-gray-900 rounded-lg border border-cyan-500/20 transition-all duration-300">
-                  <div className="text-xs text-gray-400 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Saldo actual:</span>
-                      <span className="text-white font-semibold">${Number(cuentaSeleccionada.balance).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>A debitar:</span>
-                      <span className="text-red-400 font-semibold">-${Number(formData.monto).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t border-gray-700">
-                      <span className="font-semibold text-white">Nuevo saldo:</span>
-                      <span className="text-cyan-400 font-bold">
-                        ${(Number(cuentaSeleccionada.balance) - Number(formData.monto)).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -526,47 +404,52 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
           {/* NOTAS */}
           <div>
-            <label className="block text-sm font-semibold text-gray-300 mb-2">
-              Notas (opcional)
-            </label>
-            <input
-              value={formData.notas}
-              onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none disabled:opacity-50 transition-all duration-300"
-              placeholder="Detalles del pago"
-            />
+             <label className="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">
+               📝 Notas
+             </label>
+             <textarea
+               value={formData.notas}
+               onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+               rows={2}
+               disabled={isLoading}
+               className="w-full bg-gray-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 resize-none text-sm md:text-base border border-gray-700"
+               style={{ fontSize: '16px' }}
+               placeholder="Detalles del pago..."
+             />
           </div>
+
+          {/* RESUMEN DEUDA (AL PIE) */}
+          {deudaActual && cuentaSeleccionada && formData.metodo === 'Débito' && formData.monto && (
+             <div className="mt-4 p-3 bg-black/30 border border-white/10 rounded-xl flex items-center justify-between">
+                <span className="text-gray-400 text-xs">Saldo Final Tarjeta:</span>
+                <span className="text-white font-bold text-sm">
+                  ${((deudaActual.saldo || 0) - principalNumber).toFixed(2)}
+                </span>
+             </div>
+          )}
         </div>
 
-        <div className="flex gap-3 mt-6 sticky bottom-0 bg-gray-800 pt-4 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all duration-300 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading || !formData.monto}
-            className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 active:scale-95 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Procesando...
-              </>
-            ) : (
-              <>
-                {formData.metodo === 'Débito' ? '💳 Debitar y Pagar' : 'Registrar Pago'}
-              </>
-            )}
-          </button>
+        {/* FOOTER */}
+        <div className="p-4 border-t border-white/10 bg-gray-900/90 sticky bottom-0 z-10">
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-2xl font-bold transition-all disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading || !formData.monto}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2"
+            >
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wallet className="w-5 h-5" />}
+              {isLoading ? 'Procesando...' : 'Pagar'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default ModalPagoTarjeta

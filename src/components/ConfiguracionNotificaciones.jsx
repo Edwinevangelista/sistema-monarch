@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, Calendar, TrendingDown, CreditCard, FileText } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 
 export default function ConfiguracionNotificaciones() {
@@ -13,7 +13,7 @@ export default function ConfiguracionNotificaciones() {
 
   const [loading, setLoading] = useState(false);
 
-  // ✅ INICIO: Cargar configuración desde LocalStorage al inicio
+  // Config inicial
   const [config, setConfig] = useState(() => {
     const guardadas = localStorage.getItem("configNotificaciones");
     return guardadas
@@ -28,7 +28,7 @@ export default function ConfiguracionNotificaciones() {
         };
   });
 
-  // ✅ FIN: Guardar en LocalStorage cada vez que cambia la config
+  // Guardar cambios
   useEffect(() => {
     localStorage.setItem("configNotificaciones", JSON.stringify(config));
   }, [config]);
@@ -37,11 +37,8 @@ export default function ConfiguracionNotificaciones() {
     setLoading(true);
     try {
       const perm = await requestPermission();
-      
       if (perm === 'granted') {
         await subscribeToPush();
-        
-        // Mostrar notificación de prueba
         showLocalNotification('¡Notificaciones activadas!', {
           body: 'Recibirás alertas sobre tus finanzas',
           icon: '/logo192.png'
@@ -49,7 +46,6 @@ export default function ConfiguracionNotificaciones() {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al activar notificaciones: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -64,32 +60,33 @@ export default function ConfiguracionNotificaciones() {
 
   if (!supported) {
     return (
-      <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl">
-        <div className="flex items-center gap-3 mb-4">
-          <BellOff className="w-6 h-6 text-gray-400" />
-          <h2 className="text-xl font-bold text-white">Notificaciones Push</h2>
-        </div>
+      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center shadow-xl">
+        <BellOff className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">No soportado</h2>
         <p className="text-gray-400">
-          Tu navegador no soporta notificaciones push. Prueba con Chrome, Firefox o Edge.
+          Tu navegador no soporta notificaciones push. Prueba con Chrome, Firefox o Edge en Android/iOS.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6">
+      
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className={`p-3 rounded-xl ${
-            permission === 'granted' ? 'bg-green-600' : 'bg-gray-700'
+      <div className="flex items-center justify-between pb-6 border-b border-white/10">
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-xl transition-colors ${
+            permission === 'granted' 
+              ? 'bg-green-500/20 text-green-400 shadow-[0_0_15px_rgba(74,222,128,0.3)]' 
+              : 'bg-gray-700/50 text-gray-400'
           }`}>
-            <Bell className="w-6 h-6 text-white" />
+            <Bell className="w-6 h-6" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">Notificaciones Push</h2>
             <p className="text-sm text-gray-400">
-              {permission === 'granted' ? '✓ Activadas' : 'Desactivadas'}
+              {permission === 'granted' ? 'Activas y funcionando' : 'Desactivadas actualmente'}
             </p>
           </div>
         </div>
@@ -98,95 +95,94 @@ export default function ConfiguracionNotificaciones() {
           <button
             onClick={handleActivarNotificaciones}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:opacity-50 text-white rounded-xl font-semibold transition-all active:scale-95 shadow-lg shadow-blue-900/20"
           >
             {loading ? 'Activando...' : 'Activar'}
           </button>
         )}
       </div>
 
-      {/* Configuración */}
+      {/* Configuraciones (Ocultas si no hay permiso) */}
       {permission === 'granted' && (
-        <>
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-              <div>
-                <h3 className="text-white font-semibold">Gastos próximos a vencer</h3>
-                <p className="text-sm text-gray-400">
-                  Alertar con {config.diasAnticipacion} días de anticipación
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.gastosProximosVencer}
-                  onChange={(e) => setConfig({ ...config, gastosProximosVencer: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-              </label>
-            </div>
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          
+          {/* Gastos por vencer */}
+          <SettingCard 
+            icon={<Calendar className="w-5 h-5 text-orange-400" />}
+            title="Gastos por vencer"
+            description={`Alertar ${config.diasAnticipacion} días antes`}
+            enabled={config.gastosProximosVencer}
+            onToggle={() => setConfig({ ...config, gastosProximosVencer: !config.gastosProximosVencer })}
+          />
 
-            <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-              <div>
-                <h3 className="text-white font-semibold">Suscripciones próximas a renovar</h3>
-                <p className="text-sm text-gray-400">Notificar 2 días antes</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.suscripcionesRenovar}
-                  onChange={(e) => setConfig({ ...config, suscripcionesRenovar: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-              </label>
-            </div>
+          {/* Suscripciones */}
+          <SettingCard 
+            icon={<Repeat className="w-5 h-5 text-purple-400" />}
+            title="Suscripciones"
+            description="Alertar 2 días antes del cobro"
+            enabled={config.suscripcionesRenovar}
+            onToggle={() => setConfig({ ...config, suscripcionesRenovar: !config.suscripcionesRenovar })}
+          />
+          
+          {/* Saldo bajo */}
+          <SettingCard 
+            icon={<TrendingDown className="w-5 h-5 text-rose-400" />}
+            title="Saldo bajo"
+            description={`Si baja de $${config.montoMinimo}`}
+            enabled={config.saldoBajo}
+            onToggle={() => setConfig({ ...config, saldoBajo: !config.saldoBajo })}
+          />
 
-            <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-              <div>
-                <h3 className="text-white font-semibold">Saldo bajo</h3>
-                <p className="text-sm text-gray-400">
-                  Cuando queden menos de ${config.montoMinimo}
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.saldoBajo}
-                  onChange={(e) => setConfig({ ...config, saldoBajo: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
-              <div>
-                <h3 className="text-white font-semibold">Resumen semanal</h3>
-                <p className="text-sm text-gray-400">Cada lunes a las 9:00 AM</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.resumenSemanal}
-                  onChange={(e) => setConfig({ ...config, resumenSemanal: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-              </label>
-            </div>
-          </div>
-
+          {/* Resumen semanal */}
+          <SettingCard 
+            icon={<FileText className="w-5 h-5 text-blue-400" />}
+            title="Resumen semanal"
+            description="Cada lunes a las 9:00 AM"
+            enabled={config.resumenSemanal}
+            onToggle={() => setConfig({ ...config, resumenSemanal: !config.resumenSemanal })}
+          />
+          
           {/* Botón de prueba */}
           <button
             onClick={handleProbarNotificacion}
-            className="w-full px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-colors"
+            className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
           >
-            🔔 Probar Notificación
+            <Bell className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+            Probar Notificación
           </button>
-        </>
+
+        </div>
       )}
     </div>
   );
 }
+
+// Componente auxiliar para las tarjetas de configuración
+function SettingCard({ icon, title, description, enabled, onToggle }) {
+  return (
+    <div className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${enabled ? 'bg-white/5 border-white/10' : 'bg-black/20 border-transparent opacity-60'}`}>
+      <div className="flex items-center gap-4">
+        <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+          {icon}
+        </div>
+        <div>
+          <h3 className="text-white font-semibold text-base">{title}</h3>
+          <p className="text-gray-400 text-sm">{description}</p>
+        </div>
+      </div>
+      
+      {/* Custom Toggle Switch */}
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={onToggle}
+          className="sr-only peer"
+        />
+        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
+      </label>
+    </div>
+  );
+}
+
+import { Repeat } from 'lucide-react'; // Agregar esto al import
