@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   BarChart3, PieChart, TrendingUp, TrendingDown, Download, 
-CreditCard, Target, Eye, X, FileText, RefreshCw,
+  CreditCard, Target, Eye, X, FileText, RefreshCw,
   ArrowUp, ArrowDown, Minus, AlertTriangle, CheckCircle,
   Building, Clock, Activity, Layers, Wallet
 } from 'lucide-react'
@@ -30,8 +30,9 @@ import jsPDF from 'jspdf'
 import { exportToExcel, exportToCSV } from '../utils/exportUtils'
 
 /**
- * Componente de Visualización de Datos Financieros (COMPLETO Y CORREGIDO)
+ * Componente de Visualización de Datos Financieros (COMPLETO Y CORREGIDO - VERSION RESPONSIVA)
  * Incluye generación de PDF real y manejo de errores.
+ * ✅ RESPONSIVO PARA MÓVILES
  */
 const VisualizacionDatos = ({ 
   onClose,
@@ -48,8 +49,6 @@ const VisualizacionDatos = ({
 }) => {
   const [pestanaActiva, setPestanaActiva] = useState('resumen')
   const [rangoFecha, setRangoFecha] = useState('mes_actual')
-
-
   const [exportando, setExportando] = useState(false)
   const [mostrarOpciones, setMostrarOpciones] = useState(false)
 
@@ -490,9 +489,9 @@ const fechasFiltradas = useMemo(() => {
     }
   }
 
-  // --- COMPONENTES UI ---
+  // --- COMPONENTES UI RESPONSIVOS ---
 
-  // Tarjeta Métrica
+  // Tarjeta Métrica Responsiva
   const TarjetaMetrica = ({ titulo, valor, valorAnterior, tendencia, icono: Icono, formato = 'moneda', color, subtitulo }) => {
     const isPositive = valor >= 0
     
@@ -514,63 +513,74 @@ const fechasFiltradas = useMemo(() => {
     const theme = colorMap[color] || colorMap.default
 
     return (
-      <div className={`bg-gradient-to-br from-white/5 to-transparent backdrop-blur-xl rounded-3xl p-6 border ${theme.border} hover:border-white/20 transition-all duration-300 relative overflow-hidden group`}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all" />
+      <div className={`bg-gradient-to-br from-white/5 to-transparent backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 border ${theme.border} hover:border-white/20 transition-all duration-300 relative overflow-hidden group`}>
+        <div className="absolute top-0 right-0 w-20 h-20 md:w-32 md:h-32 bg-white/5 rounded-full blur-2xl md:blur-3xl group-hover:bg-white/10 transition-all" />
         <div className="relative z-10 flex flex-col h-full justify-between">
-          <div className="flex items-start justify-between mb-4">
-            <div className={`p-3 rounded-2xl ${theme.bg} shadow-lg border border-white/5`}>
-              <Icono className={`w-6 h-6 ${theme.text}`} />
+          <div className="flex items-start justify-between mb-3 md:mb-4">
+            <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl ${theme.bg} shadow-lg border border-white/5`}>
+              <Icono className={`w-4 h-4 md:w-6 md:h-6 ${theme.text}`} />
             </div>
             {tendencia && (
-              <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${tendencia.direccion === 'subida' ? 'bg-green-500/10 text-green-400 border-green-500/20' : tendencia.direccion === 'bajada' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
-                {tendencia.direccion === 'subida' ? <ArrowUp className="w-3 h-3"/> : tendencia.direccion === 'bajada' ? <ArrowDown className="w-3 h-3"/> : <Minus className="w-3 h-3"/>}
+              <div className={`flex items-center gap-1 px-2 md:px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold border ${tendencia.direccion === 'subida' ? 'bg-green-500/10 text-green-400 border-green-500/20' : tendencia.direccion === 'bajada' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                {tendencia.direccion === 'subida' ? <ArrowUp className="w-2 h-2 md:w-3 md:h-3"/> : tendencia.direccion === 'bajada' ? <ArrowDown className="w-2 h-2 md:w-3 md:h-3"/> : <Minus className="w-2 h-2 md:w-3 md:h-3"/>}
                 {tendencia.porcentaje.toFixed(1)}%
               </div>
             )}
           </div>
           
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-gray-100 uppercase tracking-wider leading-tight">{titulo}</h3>
-            {subtitulo && (<p className="text-xs text-gray-400 font-medium">{subtitulo}</p>)}
-            <div className={`text-3xl font-extrabold text-white mt-1 ${theme.text} drop-shadow-sm`}>{formatear(valor)}</div>
+          <div className="space-y-1 md:space-y-2">
+            <h3 className="text-sm md:text-lg font-bold text-gray-100 uppercase tracking-wider leading-tight">{titulo}</h3>
+            {subtitulo && (<p className="text-[10px] md:text-xs text-gray-400 font-medium">{subtitulo}</p>)}
+            <div className={`text-lg md:text-3xl font-extrabold text-white mt-1 ${theme.text} drop-shadow-sm`}>{formatear(valor)}</div>
           </div>
 
           {valorAnterior !== undefined && (
-             <div className="text-xs text-gray-500 mt-3 font-mono border-t border-white/5 pt-2">vs Anterior: <span className="text-gray-300">{formatear(valorAnterior)}</span></div>
+             <div className="text-[10px] md:text-xs text-gray-500 mt-2 md:mt-3 font-mono border-t border-white/5 pt-2">vs Anterior: <span className="text-gray-300">{formatear(valorAnterior)}</span></div>
           )}
         </div>
       </div>
     )
   }
 
-  // --- RENDERIZADO PRINCIPAL ---
+  // --- RENDERIZADO PRINCIPAL RESPONSIVO ---
   const renderizarContenido = () => {
     switch (pestanaActiva) {
       case 'resumen':
         return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Grid de métricas responsivo */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               <TarjetaMetrica titulo="Ingresos" valor={metricas.totalIngresos} valorAnterior={datosHistoricos[4]?.ingresos} tendencia={tendencias.ingresos} icono={TrendingUp} color="ingreso" />
               <TarjetaMetrica titulo="Gastos" valor={metricas.totalGastos} valorAnterior={datosHistoricos[4]?.gastos} tendencia={tendencias.gastos} icono={TrendingDown} color="gasto" />
-              <TarjetaMetrica titulo="Balance" valor={metricas.balance} valorAnterior={datosHistoricos[4]?.balance} tendencia={tendencias.balance} icono={Wallet} color="balance" subtitulo="Disponible para ahorro" />
-              <TarjetaMetrica titulo="Ahorro" valor={metricas.tasaAhorro} icono={Target} formato="porcentaje" color="default" subtitulo="Tasa de eficiencia" />
+              <TarjetaMetrica titulo="Balance" valor={metricas.balance} valorAnterior={datosHistoricos[4]?.balance} tendencia={tendencias.balance} icono={Wallet} color="balance" subtitulo="Disponible" />
+              <TarjetaMetrica titulo="Ahorro" valor={metricas.tasaAhorro} icono={Target} formato="porcentaje" color="default" subtitulo="Tasa" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Gráfica Flujo de Caja */}
-              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-8 border border-white/10 relative overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+              {/* Gráfica Flujo de Caja - Responsiva */}
+              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl md:rounded-3xl p-4 md:p-8 border border-white/10 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-8 gap-3">
                   <div>
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2"><Activity className="w-5 h-5 text-blue-400" />Flujo de Caja</h3>
-                    <p className="text-sm text-gray-400 ml-7">Evolución comparativa últimos 6 meses</p>
+                    <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                      <Activity className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
+                      <span className="hidden sm:inline">Flujo de Caja</span>
+                      <span className="sm:hidden">Flujo</span>
+                    </h3>
+                    <p className="text-xs md:text-sm text-gray-400 ml-6 md:ml-7">Últimos 6 meses</p>
                   </div>
-                  <div className="flex gap-4 text-xs font-bold">
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />Ingresos</div>
-                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400"><div className="w-2 h-2 rounded-full bg-red-500" />Gastos</div>
+                  <div className="flex gap-2 md:gap-4 text-[10px] md:text-xs font-bold">
+                    <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Ingresos
+                    </div>
+                    <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
+                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500" />
+                      Gastos
+                    </div>
                   </div>
                 </div>
-                <div className="h-80 w-full">
+                <div className="h-60 md:h-80 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={datosHistoricos} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                       <defs>
@@ -578,38 +588,49 @@ const fechasFiltradas = useMemo(() => {
                         <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#EF4444" stopOpacity={0.5}/><stop offset="95%" stopColor="#EF4444" stopOpacity={0.05}/></linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff" strokeOpacity={0.05} vertical={false} />
-                      <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12, fontWeight: 500}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} tickFormatter={(v) => `$${v/1000}k`} />
-                      <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }} itemStyle={{ color: '#fff', fontWeight: 'bold' }} formatter={(value) => [`$${value.toLocaleString()}`, '']} cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                      <Area type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={3} fill="url(#colorIngresos)" activeDot={{ r: 6 }} />
-                      <Area type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={3} fill="url(#colorGastos)" activeDot={{ r: 6 }} />
+                      <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 500}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} tickFormatter={(v) => `$${v/1000}k`} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', fontSize: 12 }} itemStyle={{ color: '#fff', fontWeight: 'bold' }} formatter={(value) => [`$${value.toLocaleString()}`, '']} cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                      <Area type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} fill="url(#colorIngresos)" activeDot={{ r: 4 }} />
+                      <Area type="monotone" dataKey="gastos" stroke="#EF4444" strokeWidth={2} fill="url(#colorGastos)" activeDot={{ r: 4 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Gráfica Distribución Mejorada */}
-              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-8 border border-white/10 flex flex-col relative overflow-hidden">
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
-                <div className="flex items-center justify-between mb-6">
-                  <div><h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChart className="w-5 h-5 text-purple-400" />Distribución de Gastos</h3><p className="text-sm text-gray-400 ml-7">Categorías principales</p></div>
-                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2.5 py-1 rounded-full border border-purple-500/20 font-semibold">{Object.keys(metricas.gastosPorCategoria).length} Categorías</span>
+              {/* Gráfica Distribución - Optimizada para móvil */}
+              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl md:rounded-3xl p-4 md:p-8 border border-white/10 flex flex-col relative overflow-hidden">
+                <div className="absolute -bottom-10 -right-10 w-32 h-32 md:w-40 md:h-40 bg-purple-500/10 rounded-full blur-3xl" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-2">
+                  <div>
+                    <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                      <PieChart className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+                      <span className="hidden sm:inline">Distribución</span>
+                      <span className="sm:hidden">Gastos</span>
+                    </h3>
+                    <p className="text-xs md:text-sm text-gray-400 ml-6 md:ml-7">Categorías principales</p>
+                  </div>
+                  <span className="text-[10px] md:text-xs bg-purple-500/20 text-purple-300 px-2 md:px-2.5 py-1 rounded-full border border-purple-500/20 font-semibold self-start sm:self-center">
+                    {Object.keys(metricas.gastosPorCategoria).length} Categorías
+                  </span>
                 </div>
-                <div className="flex flex-col md:flex-row gap-8 items-center h-full justify-center">
-                  <div className="relative w-64 h-64 shrink-0">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-center h-full justify-center">
+                  <div className="relative w-48 h-48 md:w-64 md:h-64 shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <RechartsPieChart>
-                        <Pie data={dataPieChart} cx="50%" cy="50%" innerRadius={65} outerRadius={100} paddingAngle={3} dataKey="value" stroke="#111827" strokeWidth={4}>
+                        <Pie data={dataPieChart} cx="50%" cy="50%" innerRadius={45} outerRadius={85} paddingAngle={3} dataKey="value" stroke="#111827" strokeWidth={3}>
                           {dataPieChart.map((entry, index) => <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />)}
                         </Pie>
                       </RechartsPieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-xs text-gray-400 uppercase tracking-widest font-bold">Total</span>
-                      <span className="text-2xl font-extrabold text-white mt-1 drop-shadow-lg">{metricas.totalGastos > 0 ? `$${(metricas.totalGastos / 1000).toFixed(1)}k` : '$0'}</span>
+                      <span className="text-[10px] md:text-xs text-gray-400 uppercase tracking-widest font-bold">Total</span>
+                      <span className="text-lg md:text-2xl font-extrabold text-white mt-1 drop-shadow-lg">
+                        {metricas.totalGastos > 0 ? `$${(metricas.totalGastos / 1000).toFixed(1)}k` : '$0'}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex-1 w-full space-y-4 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="flex-1 w-full space-y-3 md:space-y-4 max-h-60 md:max-h-72 overflow-y-auto pr-2 custom-scrollbar">
                     {dataPieChart.length > 0 ? (
                       dataPieChart.map((cat, i) => {
                         const pct = ((cat.value / metricas.totalGastos) * 100).toFixed(0)
@@ -617,27 +638,40 @@ const fechasFiltradas = useMemo(() => {
                           <div key={cat.name} className="group hover:bg-white/5 p-2 rounded-lg transition-colors">
                             <div className="flex justify-between items-center mb-1.5">
                               <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px] transition-transform group-hover:scale-125" style={{ backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length], boxShadow: `0 0 8px ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}` }} />
-                                <span className="text-gray-200 font-medium text-sm truncate max-w-[100px]">{cat.name}</span>
+                                <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-[0_0_8px] transition-transform group-hover:scale-125" style={{ backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length], boxShadow: `0 0 8px ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}` }} />
+                                <span className="text-gray-200 font-medium text-xs md:text-sm truncate max-w-[80px] md:max-w-[100px]">{cat.name}</span>
                               </div>
-                              <div className="flex items-center gap-3"><span className="text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded">{pct}%</span><span className="text-xs font-mono text-gray-400">${cat.value.toLocaleString()}</span></div>
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <span className="text-[10px] md:text-xs font-bold text-white bg-white/10 px-1.5 md:px-2 py-0.5 rounded">{pct}%</span>
+                                <span className="text-[10px] md:text-xs font-mono text-gray-400">${cat.value.toLocaleString()}</span>
+                              </div>
                             </div>
-                            <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                              <div className="h-full rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }}><div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50" /></div>
+                            <div className="w-full bg-gray-800 rounded-full h-1 md:h-1.5 overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-1000 ease-out relative" style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }}>
+                                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-50" />
+                              </div>
                             </div>
                           </div>
                         )
                       })
-                    ) : (<div className="text-center py-8 text-gray-500 text-sm italic">No hay gastos registrados en este período.</div>)}
+                    ) : (
+                      <div className="text-center py-6 md:py-8 text-gray-500 text-sm italic">No hay gastos registrados en este período.</div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Alerta de déficit - Responsiva */}
             {metricas.balance < 0 && (
-              <div className="bg-gradient-to-r from-red-500/10 to-transparent border-l-4 border-red-500 p-6 rounded-r-2xl flex items-start gap-4 animate-in slide-in-from-left-2">
-                <div className="p-2 bg-red-500/20 rounded-full text-red-400 shrink-0"><AlertTriangle className="w-6 h-6" /></div>
-                <div><h4 className="text-lg font-bold text-white">Déficit Detectado</h4><p className="text-gray-400 text-sm mt-1">Tu balance actual es negativo (${Math.abs(metricas.balance).toLocaleString()}). Se recomienda revisar los gastos de suscripciones o fijos.</p></div>
+              <div className="bg-gradient-to-r from-red-500/10 to-transparent border-l-4 border-red-500 p-4 md:p-6 rounded-r-2xl flex items-start gap-3 md:gap-4 animate-in slide-in-from-left-2">
+                <div className="p-2 bg-red-500/20 rounded-full text-red-400 shrink-0">
+                  <AlertTriangle className="w-5 h-5 md:w-6 md:h-6" />
+                </div>
+                <div>
+                  <h4 className="text-base md:text-lg font-bold text-white">Déficit Detectado</h4>
+                  <p className="text-gray-400 text-xs md:text-sm mt-1">Tu balance actual es negativo (${Math.abs(metricas.balance).toLocaleString()}). Revisa gastos de suscripciones o fijos.</p>
+                </div>
               </div>
             )}
           </div>
@@ -645,70 +679,118 @@ const fechasFiltradas = useMemo(() => {
 
       case 'tendencias':
         return (
-          <div className="space-y-8">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/10"><h3 className="text-lg font-bold text-white mb-6">Ingresos vs Promedio</h3><div className="h-72"><ResponsiveContainer width="100%" height="100%"><RechartsLineChart data={datosHistoricos}><CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} /><XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(v)=>`$${v}`} /><Tooltip contentStyle={{backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px'}} /><ReferenceLine y={metricas.avgIngresos} stroke="#10B981" strokeDasharray="5 5" label="Promedio" /><Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={3} dot={{fill: '#10B981', strokeWidth: 2, r: 4}} activeDot={{r: 6}} /></RechartsLineChart></ResponsiveContainer></div></div>
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/10"><h3 className="text-lg font-bold text-white mb-6">Gastos vs Promedio</h3><div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={datosHistoricos}><CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} /><XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF'}} tickFormatter={(v)=>`$${v}`} /><Tooltip contentStyle={{backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px'}} cursor={{fill: 'rgba(239,68,68,0.1)'}} /><ReferenceLine y={metricas.avgGastos} stroke="#EF4444" strokeDasharray="5 5" /><Bar dataKey="gastos" fill="#EF4444" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div></div>
+          <div className="space-y-6 md:space-y-8">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                <div className="bg-white/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-white/10">
+                  <h3 className="text-base md:text-lg font-bold text-white mb-4 md:mb-6">Ingresos vs Promedio</h3>
+                  <div className="h-60 md:h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={datosHistoricos}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                        <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} tickFormatter={(v)=>`$${(v/1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={{backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', fontSize: 12}} />
+                        <ReferenceLine y={metricas.avgIngresos} stroke="#10B981" strokeDasharray="5 5" label="Promedio" />
+                        <Line type="monotone" dataKey="ingresos" stroke="#10B981" strokeWidth={2} dot={{fill: '#10B981', strokeWidth: 2, r: 3}} activeDot={{r: 5}} />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-white/10">
+                  <h3 className="text-base md:text-lg font-bold text-white mb-4 md:mb-6">Gastos vs Promedio</h3>
+                  <div className="h-60 md:h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={datosHistoricos}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                        <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} tickFormatter={(v)=>`$${(v/1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={{backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', fontSize: 12}} cursor={{fill: 'rgba(239,68,68,0.1)'}} />
+                        <ReferenceLine y={metricas.avgGastos} stroke="#EF4444" strokeDasharray="5 5" />
+                        <Bar dataKey="gastos" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
              </div>
           </div>
         )
 
       case 'comparativo':
         return (
-           <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
-             <table className="w-full text-left">
-                <thead className="bg-white/5 text-gray-300 text-sm uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="p-4">Mes</th>
-                    <th className="p-4 text-right">Ingresos</th>
-                    <th className="p-4 text-right">Gastos</th>
-                    <th className="p-4 text-right">Balance</th>
-                    <th className="p-4 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
-                  {datosHistoricos.map((d, i) => (
-                    <tr key={i} className="hover:bg-white/5 transition-colors group">
-                      <td className="p-4 text-white font-medium">{d.mesCompleto}</td>
-                      <td className="p-4 text-right font-mono text-emerald-400">{`$${d.ingresos.toLocaleString()}`}</td>
-                      <td className="p-4 text-right font-mono text-red-400">{`$${d.gastos.toLocaleString()}`}</td>
-                      <td className={`p-4 text-right font-mono font-bold ${d.balance >= 0 ? 'text-blue-400' : 'text-red-400'}`}>{d.balance >= 0 ? '+' : ''}{`$${d.balance.toLocaleString()}`}</td>
-                      <td className="p-4 text-center">{d.balance >= 0 ? <CheckCircle className="w-5 h-5 text-green-500 mx-auto" /> : <AlertTriangle className="w-5 h-5 text-red-500 mx-auto" />}</td>
+           <div className="bg-white/5 border border-white/10 rounded-2xl md:rounded-3xl overflow-hidden">
+             {/* Contenedor con scroll horizontal para móvil */}
+             <div className="overflow-x-auto">
+               <table className="w-full text-left min-w-[600px]">
+                  <thead className="bg-white/5 text-gray-300 text-xs md:text-sm uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="p-3 md:p-4">Mes</th>
+                      <th className="p-3 md:p-4 text-right">Ingresos</th>
+                      <th className="p-3 md:p-4 text-right">Gastos</th>
+                      <th className="p-3 md:p-4 text-right">Balance</th>
+                      <th className="p-3 md:p-4 text-center">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-             </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-xs md:text-sm">
+                    {datosHistoricos.map((d, i) => (
+                      <tr key={i} className="hover:bg-white/5 transition-colors group">
+                        <td className="p-3 md:p-4 text-white font-medium">{d.mesCompleto}</td>
+                        <td className="p-3 md:p-4 text-right font-mono text-emerald-400">{`$${d.ingresos.toLocaleString()}`}</td>
+                        <td className="p-3 md:p-4 text-right font-mono text-red-400">{`$${d.gastos.toLocaleString()}`}</td>
+                        <td className={`p-3 md:p-4 text-right font-mono font-bold ${d.balance >= 0 ? 'text-blue-400' : 'text-red-400'}`}>{d.balance >= 0 ? '+' : ''}{`$${d.balance.toLocaleString()}`}</td>
+                        <td className="p-3 md:p-4 text-center">{d.balance >= 0 ? <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500 mx-auto" /> : <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-500 mx-auto" />}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+               </table>
+             </div>
            </div>
         )
 
       case 'deudas':
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <TarjetaMetrica titulo="Deuda Total" descripcion="Suma de todos los saldos pendientes" valor={metricas.deudaTotal} icono={CreditCard} color="red" />
-              <TarjetaMetrica titulo="Número de Deudas" descripcion="Cantidad de tarjetas y préstamos activos" valor={metricas.contadores.deudas} icono={Building} formato="numero" color="yellow" />
-              <TarjetaMetrica titulo="Promedio por Deuda" descripcion="Saldo promedio por cuenta de crédito" valor={metricas.contadores.deudas > 0 ? metricas.deudaTotal / metricas.contadores.deudas : 0} icono={Target} color="purple" />
+          <div className="space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              <TarjetaMetrica titulo="Deuda Total" valor={metricas.deudaTotal} icono={CreditCard} color="red" />
+              <TarjetaMetrica titulo="Número de Deudas" valor={metricas.contadores.deudas} icono={Building} formato="numero" color="yellow" />
+              <TarjetaMetrica titulo="Promedio por Deuda" valor={metricas.contadores.deudas > 0 ? metricas.deudaTotal / metricas.contadores.deudas : 0} icono={Target} color="purple" />
             </div>
-            <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <div className="flex items-center gap-3 mb-6"><CreditCard className="w-6 h-6 text-red-400" /><h3 className="text-lg font-bold text-white">Detalle de Pasivos</h3><span className="text-sm text-gray-400">({datosFiltrados.deudas.length} elementos)</span></div>
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-white/10">
+              <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+                <CreditCard className="w-5 h-5 md:w-6 md:h-6 text-red-400" />
+                <h3 className="text-base md:text-lg font-bold text-white">Detalle de Pasivos</h3>
+                <span className="text-xs md:text-sm text-gray-400">({datosFiltrados.deudas.length} elementos)</span>
+              </div>
+              <div className="space-y-3 max-h-80 md:max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {datosFiltrados.deudas.map((deuda, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 bg-black/20 rounded-xl border border-white/5 hover:bg-white/5 transition-colors group">
-                    <div className="flex-1 min-w-0 mr-4">
-                      <div className="text-white font-bold text-base truncate group-hover:text-red-300 transition-colors">{deuda.nombre || deuda.cuenta || 'Deuda sin nombre'}</div>
-                      <div className="text-gray-400 text-sm mt-1 flex items-center gap-2">
-                        {deuda.banco && (<span className="bg-white/10 px-2 py-0.5 rounded text-xs text-gray-300 border border-white/5">{deuda.banco}</span>)}
-                        <span className="truncate">{deuda.tipo || 'Tarjeta'}</span>
+                  <div key={idx} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 md:p-4 bg-black/20 rounded-xl border border-white/5 hover:bg-white/5 transition-colors group gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm md:text-base truncate group-hover:text-red-300 transition-colors">{deuda.nombre || deuda.cuenta || 'Deuda sin nombre'}</div>
+                      <div className="text-gray-400 text-xs md:text-sm mt-1 flex flex-wrap items-center gap-2">
+                        {deuda.banco && (
+                          <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] md:text-xs text-gray-300 border border-white/5">{deuda.banco}</span>
+                        )}
+                        <span className="text-[10px] md:text-xs">{deuda.tipo || 'Tarjeta'}</span>
                       </div>
-                      {deuda.interes_anual && (<div className="text-yellow-400 text-xs mt-2 font-mono flex items-center gap-1"><Clock className="w-3 h-3"/> Tasa: {deuda.interes_anual}% anual</div>)}
+                      {deuda.interes_anual && (
+                        <div className="text-yellow-400 text-[10px] md:text-xs mt-2 font-mono flex items-center gap-1">
+                          <Clock className="w-3 h-3"/> Tasa: {deuda.interes_anual}% anual
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-red-400 font-mono font-bold text-lg">{`${(deuda.saldo || 0).toLocaleString()}`}</div>
-                      {deuda.limite_credito && (<div className="text-gray-500 text-xs">Límite: {`${(deuda.limite_credito || 0).toLocaleString()}`}</div>)}
+                    <div className="text-left sm:text-right shrink-0">
+                      <div className="text-red-400 font-mono font-bold text-base md:text-lg">${(deuda.saldo || 0).toLocaleString()}</div>
+                      {deuda.limite_credito && (
+                        <div className="text-gray-500 text-[10px] md:text-xs">Límite: ${(deuda.limite_credito || 0).toLocaleString()}</div>
+                      )}
                     </div>
                   </div>
                 ))}
-                {datosFiltrados.deudas.length === 0 && (<div className="text-center py-12 text-gray-500 bg-white/5 rounded-2xl border border-dashed border-gray-700"><CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-600" /><p>No tienes deudas registradas</p></div>)}
+                {datosFiltrados.deudas.length === 0 && (
+                  <div className="text-center py-8 md:py-12 text-gray-500 bg-white/5 rounded-2xl border border-dashed border-gray-700">
+                    <CheckCircle className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-4 text-gray-600" />
+                    <p className="text-sm md:text-base">No tienes deudas registradas</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -717,40 +799,56 @@ const fechasFiltradas = useMemo(() => {
     }
   }
 
+  // --- RETURN RESPONSIVO COMPLETO ---
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-      <div className="bg-[#111827] text-gray-100 rounded-3xl w-full max-w-7xl h-[95vh] max-h-[1000px] flex flex-col shadow-2xl border border-white/10 relative overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 z-50 animate-in fade-in duration-300">
+      <div className="bg-[#111827] text-gray-100 rounded-t-3xl md:rounded-3xl w-full max-w-full md:max-w-7xl h-screen md:h-[95vh] md:max-h-[900px] flex flex-col shadow-2xl border-t md:border border-white/10 relative">
         
-        {/* Header */}
-        <div className="p-6 border-b border-white/10 bg-[#111827]/95 backdrop-blur z-20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-lg shadow-purple-500/20">
-                <Eye className="w-8 h-8 text-white" />
+        {/* Header - Responsivo */}
+        <div className="p-4 md:p-6 border-b border-white/10 bg-[#111827]/95 backdrop-blur z-20 shrink-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+            {/* Logo y título */}
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="p-2 md:p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl md:rounded-2xl shadow-lg shadow-purple-500/20">
+                <Eye className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">FinGuide</h1>
-                <p className="text-sm text-gray-400 font-medium">Visualización Inteligente de Datos</p>
+                <h1 className="text-xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">FinGuide</h1>
+                <p className="text-xs md:text-sm text-gray-400 font-medium">Visualización Inteligente de Datos</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-               <select value={rangoFecha} onChange={(e) => setRangoFecha(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+            {/* Controles del header */}
+            <div className="flex items-center gap-2 md:gap-4 overflow-x-auto">
+               <select 
+                value={rangoFecha} 
+                onChange={(e) => setRangoFecha(e.target.value)} 
+                className="bg-white/5 border border-white/10 rounded-lg md:rounded-xl px-3 md:px-4 py-2 text-white text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all min-w-0 flex-shrink-0"
+              >
                 <option value="mes_actual" className="bg-gray-900">Mes Actual</option>
                 <option value="mes_anterior" className="bg-gray-900">Mes Anterior</option>
                 <option value="trimestre" className="bg-gray-900">Trimestre</option>
                 <option value="año_actual" className="bg-gray-900">Año Actual</option>
               </select>
 
-              <div className="relative">
-                <button onClick={() => setMostrarOpciones(!mostrarOpciones)} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2">
-                  <Download className="w-4 h-4" /> Exportar
+              <div className="relative flex-shrink-0">
+                <button 
+                  onClick={() => setMostrarOpciones(!mostrarOpciones)} 
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-bold text-xs md:text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> 
+                  <span className="hidden sm:inline">Exportar</span>
                 </button>
                 
                 {mostrarOpciones && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-2 w-40 md:w-48 bg-gray-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200 z-30">
                     {['pdf', 'excel', 'csv', 'json'].map(t => (
-                      <button key={t} onClick={() => handleExportar(t)} disabled={exportando} className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50">
+                      <button 
+                        key={t} 
+                        onClick={() => handleExportar(t)} 
+                        disabled={exportando} 
+                        className="w-full flex items-center gap-3 px-3 md:px-4 py-3 text-left text-xs md:text-sm text-gray-300 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 touch-manipulation"
+                      >
                          <FileText className="w-4 h-4 text-gray-400" />
                          {t.toUpperCase()}
                       </button>
@@ -759,53 +857,89 @@ const fechasFiltradas = useMemo(() => {
                 )}
               </div>
 
-              <button onClick={onClose} className="p-2.5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+              <button 
+                onClick={onClose} 
+                className="p-2 md:p-2.5 hover:bg-white/10 rounded-lg md:rounded-xl text-gray-400 hover:text-white transition-colors flex-shrink-0"
+              >
+                <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
           </div>
           
           {rangoFecha === 'personalizado' && (
-             <div className="flex gap-4 mt-4">
-               <input type="date" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
-               <input type="date" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+             <div className="flex flex-col sm:flex-row gap-3 mt-4">
+               <input type="date" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white flex-1" />
+               <input type="date" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white flex-1" />
              </div>
           )}
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="px-6 py-4 border-b border-white/10 bg-[#111827]/95 backdrop-blur shrink-0 z-10">
-          <div className="flex gap-2">
+        {/* Navigation Tabs - Scroll horizontal en móvil */}
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/10 bg-[#111827]/95 backdrop-blur shrink-0 z-10">
+          <div className="flex gap-2 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20 pb-1">
             {pestanas.map(p => {
               const Icono = p.icono
               return (
-                <button key={p.id} onClick={() => setPestanaActiva(p.id)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${pestanaActiva === p.id ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                  <Icono className="w-4 h-4" /> {p.nombre}
+                <button 
+                  key={p.id} 
+                  onClick={() => setPestanaActiva(p.id)} 
+                  className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl font-bold text-xs md:text-sm transition-all duration-300 whitespace-nowrap touch-manipulation ${pestanaActiva === p.id ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                >
+                  <Icono className="w-4 h-4" /> 
+                  <span className="hidden sm:inline">{p.nombre}</span>
                 </button>
               )
             })}
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8 bg-[#0B1120] overflow-y-auto">
+        {/* Main Content - Mejorado scroll y padding responsivo */}
+        <div className="flex-1 p-4 md:p-8 bg-[#0B1120] overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {exportando && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-gray-800 rounded-2xl p-6 flex items-center gap-4">
-                <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
-                <span className="text-white font-semibold">Generando documento...</span>
+              <div className="bg-gray-800 rounded-2xl p-4 md:p-6 flex items-center gap-3 md:gap-4 mx-4">
+                <RefreshCw className="w-5 h-5 md:w-6 md:h-6 text-blue-400 animate-spin" />
+                <span className="text-white font-semibold text-sm md:text-base">Generando documento...</span>
               </div>
             </div>
           )}
           {renderizarContenido()}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-white/10 bg-[#111827] text-xs text-center text-gray-500">
+        {/* Footer - Más compacto en móvil */}
+        <div className="p-3 md:p-4 border-t border-white/10 bg-[#111827] text-[10px] md:text-xs text-center text-gray-500 shrink-0">
           Visualizando {metricas.periodo}
         </div>
 
       </div>
+      
+      {/* Estilos adicionales para scroll suave en móvil */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 2px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 4px;
+        }
+        .scrollbar-track-transparent::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thumb-white\/20::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 2px;
+        }
+      `}</style>
     </div>
   )
 }
