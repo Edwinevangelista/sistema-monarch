@@ -1,41 +1,23 @@
-// src/hooks/useGastosVariables.js
+import { useSupabaseData } from './useSupabaseData'
+
 export const useGastosVariables = (lazyLoad = false) => {
-  const {
-    data,
-    loading,
-    addRecord,
-    updateRecord,
-    deleteRecord,
-    refresh,
-    initialize,
-  } = useSupabaseData("gastos", {
-    lazyLoad,
-    orderBy: "fecha",
-    ascending: false,
-    select: "*",
-  });
+  const { data, loading, addRecord, updateRecord, deleteRecord, refresh, initialize } = useSupabaseData(
+    'gastos_variables',
+    {
+      lazyLoad,
+      orderBy: 'fecha',
+      ascending: false,
+      select: '*'  // ✅ 
+    }
+  )
 
   return {
     gastos: data,
     loading,
-
-    addGasto: async (data) => {
-      const res = await addRecord(data);
-      return res ?? { success: true };
-    },
-
-    // ✅ AGREGAR ESTA FUNCIÓN SI NO EXISTE
-    updateGasto: async (id, data) => {
-      const res = await updateRecord(id, data);
-      return res ?? { success: true };
-    },
-
-    deleteGasto: async (id) => {
-      const res = await deleteRecord(id);
-      return res ?? { success: true };
-    },
-
+    addGasto: addRecord,
+    updateGasto: updateRecord,
+    deleteGasto: deleteRecord,
     refresh,
-    initialize,
-  };
-};
+    initialize
+  }
+}

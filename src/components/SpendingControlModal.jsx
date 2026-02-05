@@ -1,357 +1,544 @@
-import React, { useState, useMemo } from 'react';
-import { X, TrendingDown, AlertTriangle, Zap, Save, PieChart, Activity, Target } from 'lucide-react';
+import { useState } from 'react';
+import { X, TrendingDown, AlertTriangle, Zap, Save } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
 export default function SpendingControlModal({ gastosFijos = [], gastosVariables = [], suscripciones = [], kpis = {}, onClose, onPlanGuardado }) {
-  const { addPlan } = usePlanesGuardados();
-  
-  // Estado
-  const [view, setView] = useState('analysis'); // 'analysis' | 'recommendations'
   const [customGoal, setCustomGoal] = useState('');
+  const [view, setView] = useState('analysis');
+  
+  const { addPlan } = usePlanesGuardados();
   const [showConfirmacion, setShowConfirmacion] = useState(false);
   const [planParaGuardar, setPlanParaGuardar] = useState(null);
 
-  // --- CÁLCULOS INTELIGENTES ---
-  
-  const safeKpis = kpis || {};
-  const totalIngresos = Number(safeKpis.totalIngresos) || 1000; // Fallback para evitar división por 0
-
   // Calcular totales
-  const totalGastosFijos = useMemo(() => gastosFijos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0), [gastosFijos]);
-  const totalGastosVariables = useMemo(() => gastosVariables.reduce((sum, g) => sum + (Number(g.monto) || 0), 0), [gastosVariables]);
+  const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+  const totalGastosVariables = gastosVariables.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
   
-  const totalSuscripciones = useMemo(() => {
-    return suscripciones
-      .filter(s => s.estado === 'Activo')
-      .reduce((sum, s) => {
-        const costo = Number(s.costo) || 0;
-        if (s.ciclo === 'Anual') return sum + (costo / 12);
-        if (s.ciclo === 'Semanal') return sum + (costo * 4.33);
-        return sum + costo;
-      }, 0);
-  }, [suscripciones]);
+  const totalSuscripciones = suscripciones
+    .filter(s => s.estado === 'Activo')
+    .reduce((sum, s) => {
+      const costo = Number(s.costo) || 0;
+      if (s.ciclo === 'Anual') return sum + (costo / 12);
+      if (s.ciclo === 'Semanal') return sum + (costo * 4.33);
+      return sum + costo;
+    }, 0);
 
   const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones;
-  const porcentajeGastos = totalIngresos > 0 ? (totalGastos / totalIngresos) * 100 : 0;
+  const totalIngresos = Number(kpis.totalIngresos) || 1000;
+  const porcentajeGastos = (totalGastos / totalIngresos) * 100;
 
-  // Agrupar por categoría
-  const gastosPorCategoria = useMemo(() => {
-    const agrupados = {};
-    [...gastosFijos, ...gastosVariables].forEach(gasto => {
-      const categoria = gasto.categoria || 'Otros';
-      const monto = Number(gasto.monto) || 0;
-      if (!agrupados[categoria]) {
-        agrupados[categoria] = { total: 0, items: [], tipo: gastosFijos.includes(gasto) ? 'fijo' : 'variable' };
-      }
-      agrupados[categoria].total += monto;
-      agrupados[categoria].items.push(gasto);
-    });
-    return Object.values(agrupados).sort((a, b) => b.total - a.total);
-  }, [gastosFijos, gastosVariables]);
-
-  // Análisis de Factibilidad y Salud
-  const saludFinanciera = useMemo(() => {
-    if (porcentajeGastos > 100) return { color: 'text-rose-500', label: 'Crítico', value: 10 }; // Riesgo 10
-    if (porcentajeGastos > 90) return { color: 'text-orange-500', label: 'Alto', value: 7 };
-    if (porcentajeGastos > 70) return { color: 'text-yellow-500', label: 'Cuidado', value: 5 };
-    if (porcentajeGastos > 50) return { color: 'text-blue-400', label: 'Saludable', value: 3 };
-    return { color: 'text-emerald-400', label: 'Excelente', value: 1 };
-  }, [porcentajeGastos]);
-
-  const metaRecomendada = totalIngresos * 0.6; // Regla del 60%
-  const reduccionNecesaria = Math.max(0, totalGastos - metaRecomendada);
-  const metaPersonalizada = customGoal ? Number(customGoal) : metaRecomendada;
-  const progresoMeta = metaPersonalizada > 0 ? (totalGastos / metaPersonalizada) * 100 : 0;
-
-  // Generador de Recomendaciones (IA Simulada)
-  const recomendaciones = useMemo(() => {
-    const recs = [];
-
-    if (porcentajeGastos > 100) {
-      recs.push({ icon: '🚨', title: 'Déficit Financiero', message: `Gastas el ${porcentajeGastos.toFixed(0)}% de tus ingresos`, accion: `Reduce $${Math.round(reduccionNecesaria)} inmediatamente`, priority: 'critical' });
-    } else if (porcentajeGastos > 70) {
-      recs.push({ icon: '⚠️', title: 'Gastos Elevados', message: 'Gastas más del 70% de tus ingresos', accion: 'Establece un presupuesto tope', priority: 'high' });
-    }
-
-    // Detectar categorías "Hueco Negro" (>15% del gasto total)
-    const categoriasCriticas = gastosPorCategoria.filter(cat => (cat.total / totalGastos) > 0.15);
-    if (categoriasCriticas.length > 0) {
-      recs.push({ icon: '📊', title: 'Fugas de Dinero', message: `${categoriasCriticas.length} categorías concentran el ${Math.round((categoriasCriticas.reduce((s,c)=>s+c.total,0)/totalGastos)*100)}%`, accion: 'Audita estas categorías', priority: 'medium' });
-    }
-
-    if (totalGastosVariables > totalGastosFijos * 1.5) {
-      recs.push({ icon: '🎛️', title: 'Gastos Hormiga', message: 'Tus gastos variables superan a tus fijos', accion: 'Registra gastos mayores en fijos', priority: 'medium' });
-    }
-
-    if (totalSuscripciones > totalIngresos * 0.1) {
-      recs.push({ icon: '📱', title: 'Suscripciones Altas', message: `$${Math.round(totalSuscripciones)}/mes en suscripciones`, accion: 'Cancela las que no uses', priority: 'medium' });
-    }
-
-    if (recs.length === 0) {
-      recs.push({ icon: '✅', title: 'Control Sólido', message: 'Tus gastos están en equilibrio', accion: 'Sigue así', priority: 'success' });
-    }
-
-    return recs;
-  }, [totalGastosVariables, totalGastosFijos, gastosPorCategoria, totalSuscripciones, porcentajeGastos, totalIngresos]);
-
-  // --- MANEJADORES DE EVENTOS ---
-  const handleGuardar = async (nombre) => {
-    if (!nombre.trim()) {
-      alert('Por favor ingresa un nombre para tu plan');
-      return;
-    }
-    try {
-      const planData = {
-        tipo: 'gastos',
-        nombre: nombre,
-        descripcion: `Plan de control para límite de $${Math.round(metaPersonalizada)}`,
-        configuracion: {
-          tipo: 'control_gastos',
-          meta_actual: totalGastos,
-          meta_objetivo: metaPersonalizada,
-          recomendaciones: recomendaciones.map(r => r.accion).join(', ')
-        },
-        meta_principal: 'Control de Gastos',
-        monto_objetivo: metaPersonalizada,
-        monto_actual: totalGastos,
-        progreso: 0,
-        fecha_inicio: new Date().toISOString().split('T')[0],
-        meses_duracion: 1, // Control mensual
-        activo: true,
-        completado: false
+  // Agrupar gastos por categoría
+  const gastosPorCategoria = {};
+  
+  [...gastosFijos, ...gastosVariables].forEach(gasto => {
+    const categoria = gasto.categoria || '📦 Otros';
+    const monto = Number(gasto.monto) || 0;
+    
+    if (!gastosPorCategoria[categoria]) {
+      gastosPorCategoria[categoria] = {
+        categoria,
+        total: 0,
+        items: [],
+        tipo: gastosFijos.includes(gasto) ? 'fijo' : 'variable'
       };
-
-      await addPlan(planData);
-      if (onPlanGuardado) await onPlanGuardado();
-      setShowConfirmacion(false);
-      onClose();
-    } catch (error) {
-      console.error('Error guardando plan:', error);
-      alert('Error al guardar el plan');
     }
+    
+    gastosPorCategoria[categoria].total += monto;
+    gastosPorCategoria[categoria].items.push(gasto);
+  });
+
+  // Convertir a array y ordenar
+  const categoriasOrdenadas = Object.values(gastosPorCategoria)
+    .sort((a, b) => b.total - a.total);
+
+  // Análisis de reducción
+  const metaRecomendada = totalIngresos * 0.6; // 60% de ingresos
+  const reduccionNecesaria = Math.max(0, totalGastos - metaRecomendada);
+
+  // Identificar categorías problemáticas
+  const categoriasCriticas = categoriasOrdenadas
+    .filter(cat => (cat.total / totalGastos) > 0.15) // Más del 15% del total
+    .slice(0, 3);
+
+  // Generar recomendaciones
+  const generarRecomendaciones = () => {
+    const recomendaciones = [];
+
+    // Déficit
+    if (porcentajeGastos > 100) {
+      recomendaciones.push({
+        icon: '🚨',
+        title: 'Estás en déficit',
+        message: `Gastas ${porcentajeGastos.toFixed(0)}% de tus ingresos`,
+        ahorro: Math.round(totalGastos - totalIngresos),
+        priority: 'critical',
+        actions: [
+          `Reduce ${Math.round(reduccionNecesaria)} inmediatamente`,
+          'Prioriza gastos esenciales',
+          'Cancela suscripciones no esenciales'
+        ]
+      });
+    }
+
+    // Gastos altos
+    if (porcentajeGastos > 70 && porcentajeGastos <= 100) {
+      recomendaciones.push({
+        icon: '⚠️',
+        title: 'Gastos muy altos',
+        message: 'Estás gastando más del 70% de tus ingresos',
+        ahorro: Math.round(reduccionNecesaria),
+        priority: 'high',
+        actions: [
+          'Establece un presupuesto de 60% de ingresos',
+          'Identifica gastos innecesarios',
+          'Crea un fondo de emergencia'
+        ]
+      });
+    }
+
+    // Categorías críticas
+    if (categoriasCriticas.length > 0) {
+      recomendaciones.push({
+        icon: '📊',
+        title: 'Categorías de alto gasto',
+        message: `${categoriasCriticas.length} categorías concentran el ${Math.round((categoriasCriticas.reduce((sum, c) => sum + c.total, 0) / totalGastos) * 100)}%`,
+        ahorro: Math.round(categoriasCriticas.reduce((sum, c) => sum + c.total, 0) * 0.2),
+        priority: 'medium',
+        actions: categoriasCriticas.map(c => 
+          `${c.categoria}: Reduce $${Math.round(c.total * 0.2)} (20%)`
+        )
+      });
+    }
+
+    // Gastos variables altos
+    if (totalGastosVariables > totalGastosFijos) {
+      recomendaciones.push({
+        icon: '💸',
+        title: 'Gastos variables muy altos',
+        message: `$${Math.round(totalGastosVariables)} vs $${Math.round(totalGastosFijos)} fijos`,
+        ahorro: Math.round(totalGastosVariables * 0.3),
+        priority: 'medium',
+        actions: [
+          'Reduce gastos hormiga',
+          'Planifica compras semanalmente',
+          'Usa efectivo para gastos variables'
+        ]
+      });
+    }
+
+    // Suscripciones altas
+    if (totalSuscripciones > totalIngresos * 0.1) {
+      recomendaciones.push({
+        icon: '📱',
+        title: 'Muchas suscripciones',
+        message: `$${Math.round(totalSuscripciones)}/mes (${((totalSuscripciones / totalIngresos) * 100).toFixed(0)}% ingresos)`,
+        ahorro: Math.round(totalSuscripciones * 0.4),
+        priority: 'medium',
+        actions: [
+          'Cancela las que no uses',
+          'Usa la función "Optimizar Suscripciones"',
+          'Comparte cuentas familiares'
+        ]
+      });
+    }
+
+    // Todo bien
+    if (recomendaciones.length === 0) {
+      recomendaciones.push({
+        icon: '✅',
+        title: 'Gastos controlados',
+        message: 'Tus gastos están en un rango saludable',
+        ahorro: 0,
+        priority: 'success',
+        actions: [
+          'Mantén el control mensual',
+          'Considera aumentar tus ahorros',
+          'Revisa gastos trimestralmente'
+        ]
+      });
+    }
+
+    return recomendaciones;
+  };
+
+  const recomendaciones = generarRecomendaciones();
+  const metaPersonalizada = customGoal ? Number(customGoal) : metaRecomendada;
+  const progresoMeta = totalGastos > 0 ? (metaPersonalizada / totalGastos) * 100 : 100;
+
+  // Objeto del plan actual para guardar
+  const currentPlanData = {
+    totalGastos,
+    totalIngresos,
+    porcentajeGastos,
+    metaRecomendada,
+    reduccionNecesaria,
+    categoriasCriticas,
+    recomendaciones,
+    customGoal,
+    fechaCalculo: new Date().toISOString()
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-gray-900 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-gradient-to-br from-orange-900 to-red-900 rounded-2xl max-w-4xl w-full my-8" onClick={e => e.stopPropagation()}>
         
-        {/* HEADER */}
-        <div className="bg-gradient-to-r from-orange-600 to-rose-600 p-6 rounded-t-3xl border-b border-white/10 shrink-0 relative overflow-hidden">
-          <div className="flex items-start justify-between relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/10 rounded-2xl border border-white/20 text-white">
-                <Activity className="w-8 h-8" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Control de Gastos</h2>
-                <p className="text-orange-100 text-sm">Analiza patrones y optimiza flujo</p>
-              </div>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-orange-600/30 to-red-600/30 p-6 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TrendingDown className="w-8 h-8 text-orange-300" />
+            <div>
+              <h2 className="text-2xl font-bold text-white">Control de Gastos</h2>
+              <p className="text-orange-200 text-sm">Reduce gastos y elimina el déficit</p>
             </div>
-            <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-colors">
-              <X className="w-6 h-6" />
-            </button>
           </div>
-          {/* Decoración de fondo */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
+            <X className="w-6 h-6 text-white" />
+          </button>
         </div>
 
-        {/* CONTENIDO */}
-        <div className="p-6 space-y-6 overflow-y-auto">
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
           
-          {/* RESUMEN EJECUTIVO */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/5 p-5 rounded-2xl border border-white/10 text-center">
-              <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-2">Total Gastos</p>
-              <p className="text-white text-2xl font-bold">${Math.round(totalGastos)}</p>
+          {/* Resumen */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white/10 rounded-xl p-4">
+              <div className="text-gray-300 text-sm mb-1">Total Gastos</div>
+              <div className="text-white text-2xl font-bold">${Math.round(totalGastos)}</div>
             </div>
-            <div className={`bg-white/5 p-5 rounded-2xl border border-white/10 text-center`}>
-              <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-2">% Ingresos</p>
-              <p className={`text-2xl font-bold ${saludFinanciera.color}`}>
+            
+            <div className="bg-white/10 rounded-xl p-4">
+              <div className="text-gray-300 text-sm mb-1">% Ingresos</div>
+              <div className={`text-2xl font-bold ${
+                porcentajeGastos > 100 ? 'text-red-400' : 
+                porcentajeGastos > 70 ? 'text-yellow-400' : 'text-green-400'
+              }`}>
                 {porcentajeGastos.toFixed(0)}%
-              </p>
-              <p className={`text-[10px] mt-1 font-semibold ${saludFinanciera.color}`}>
-                {saludFinanciera.label}
-              </p>
+              </div>
             </div>
-            <div className="bg-white/5 p-5 rounded-2xl border border-white/10 text-center">
-              <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-2">Meta Sugerida</p>
-              <p className="text-white text-2xl font-bold">${Math.round(metaRecomendada)}</p>
+            
+            <div className="bg-white/10 rounded-xl p-4">
+              <div className="text-gray-300 text-sm mb-1">Meta</div>
+              <div className="text-white text-2xl font-bold">${Math.round(metaRecomendada)}</div>
             </div>
-            <div className="bg-white/5 p-5 rounded-2xl border border-white/10 text-center">
-              <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-2">Reducir</p>
-              <p className="text-rose-400 text-2xl font-bold">${Math.round(reduccionNecesaria)}</p>
+            
+            <div className="bg-white/10 rounded-xl p-4">
+              <div className="text-gray-300 text-sm mb-1">Reducir</div>
+              <div className="text-orange-400 text-2xl font-bold">${Math.round(reduccionNecesaria)}</div>
             </div>
           </div>
 
-          {/* TABS */}
-          <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl">
             <button
               onClick={() => setView('analysis')}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                view === 'analysis' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/10'
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                view === 'analysis' ? 'bg-orange-600 text-white' : 'text-gray-300 hover:bg-white/10'
               }`}
             >
-              <PieChart className="w-5 h-5" />
-              Por Categoría
+              📊 Por Categoría
             </button>
             <button
               onClick={() => setView('recommendations')}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                view === 'recommendations' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:bg-white/10'
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                view === 'recommendations' ? 'bg-orange-600 text-white' : 'text-gray-300 hover:bg-white/10'
               }`}
             >
-              <Zap className="w-5 h-5" />
-              Recomendaciones
+              💡 Recomendaciones
             </button>
           </div>
 
-          {/* VISTA ANÁLISIS */}
+          {/* Vista por Categoría */}
           {view === 'analysis' && (
-            <div className="space-y-6 animate-in fade-in">
-              <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                <h4 className="text-white font-bold text-lg mb-4">Distribución por Categoría</h4>
-                {gastosPorCategoria.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">Sin gastos registrados</div>
-                ) : (
-                  <div className="space-y-4">
-                    {gastosPorCategoria.map((cat, idx) => {
-                      const porcentaje = (cat.total / totalGastos) * 100;
-                      const esCritico = porcentaje > 15;
-                      return (
-                        <div key={idx} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${esCritico ? 'bg-rose-500/20 text-rose-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                                {cat.tipo === 'fijo' ? <TrendingDown className="w-4 h-4" /> : <ShoppingBag className="w-4 h-4" />}
-                              </div>
-                              <span className="text-white font-semibold">{cat.categoria}</span>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-white font-bold text-lg">${Math.round(cat.total)}</div>
-                              <div className="text-xs text-gray-400">{porcentaje.toFixed(0)}%</div>
-                            </div>
-                          </div>
-                          <div className="w-full bg-gray-700 rounded-full h-2.5">
-                            <div className={`h-full rounded-full transition-all duration-500 ${esCritico ? 'bg-rose-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, porcentaje)}%` }} />
-                          </div>
-                          {esCritico && (
-                            <div className="bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg flex items-center gap-2 text-xs text-rose-200 mt-2">
-                              <AlertTriangle className="w-4 h-4" />
-                              Esta categoría representa una gran fuga de dinero.
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+            <div className="space-y-4">
+              <div className="bg-white/5 rounded-xl p-4 mb-4">
+                <h4 className="text-white font-semibold mb-3">Distribución de Gastos</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-300">Gastos Fijos</span>
+                    <span className="text-white font-bold">${Math.round(totalGastosFijos)}</span>
                   </div>
-                )}
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-300">Gastos Variables</span>
+                    <span className="text-white font-bold">${Math.round(totalGastosVariables)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Suscripciones</span>
+                    <span className="text-white font-bold">${Math.round(totalSuscripciones)}</span>
+                  </div>
+                </div>
               </div>
+
+              <h4 className="text-white font-semibold mb-3">Gastos por Categoría</h4>
+              
+              {categoriasOrdenadas.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  No hay gastos registrados
+                </div>
+              ) : (
+                categoriasOrdenadas.map((cat, idx) => {
+                  const porcentaje = (cat.total / totalGastos) * 100;
+                  const esCritica = porcentaje > 15;
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className={`bg-white/5 rounded-xl p-4 border-l-4 ${
+                        esCritica ? 'border-red-500' : 'border-orange-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="text-white font-semibold">{cat.categoria}</h5>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              cat.tipo === 'fijo' ? 'bg-blue-500/20 text-blue-300' : 'bg-purple-500/20 text-purple-300'
+                            }`}>
+                              {cat.tipo}
+                            </span>
+                          </div>
+                          <div className="text-gray-400 text-sm">{cat.items.length} gasto{cat.items.length !== 1 ? 's' : ''}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-white font-bold text-lg">${Math.round(cat.total)}</div>
+                          <div className="text-gray-400 text-sm">{porcentaje.toFixed(0)}%</div>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden mb-2">
+                        <div
+                          className={`h-full transition-all ${
+                            esCritica ? 'bg-red-500' : 'bg-orange-500'
+                          }`}
+                          style={{ width: `${Math.min(100, porcentaje)}%` }}
+                        />
+                      </div>
+
+                      {esCritica && (
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 mt-2">
+                          <p className="text-red-300 text-sm flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4" />
+                            Representa más del 15% de tus gastos
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
 
-          {/* VISTA RECOMENDACIONES */}
+          {/* Vista de Recomendaciones */}
           {view === 'recommendations' && (
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-4">
               {recomendaciones.map((rec, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-2xl p-5 border ${
-                    rec.priority === 'critical' ? 'bg-rose-600/10 border-rose-500/30' :
-                    rec.priority === 'high' ? 'bg-orange-600/10 border-orange-500/30' :
-                    rec.priority === 'medium' ? 'bg-yellow-600/10 border-yellow-500/30' :
-                    'bg-green-600/10 border-green-500/30'
+                  className={`rounded-xl p-5 border ${
+                    rec.priority === 'critical' ? 'bg-red-500/10 border-red-500/30' :
+                    rec.priority === 'high' ? 'bg-orange-500/10 border-orange-500/30' :
+                    rec.priority === 'medium' ? 'bg-yellow-500/10 border-yellow-500/30' :
+                    'bg-green-500/10 border-green-500/30'
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">{rec.icon}</div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-3xl">{rec.icon}</span>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className={`text-lg font-bold ${rec.priority === 'success' ? 'text-emerald-300' : 'text-white'}`}>{rec.title}</h4>
+                          <h4 className="text-white font-semibold text-lg">{rec.title}</h4>
                           <p className="text-gray-300 text-sm">{rec.message}</p>
                         </div>
-                        {rec.priority !== 'success' && (
-                          <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                             rec.priority === 'critical' ? 'bg-rose-500/30 text-rose-300 border-rose-500/50' :
-                             rec.priority === 'high' ? 'bg-orange-500/30 text-orange-300 border-orange-500/50' :
-                             'bg-yellow-500/30 text-yellow-300 border-yellow-500/50'
-                          }`}>
-                             {rec.priority}
+                        {rec.ahorro > 0 && (
+                          <div className="bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-semibold">
+                            ${rec.ahorro}/mes
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {Array.isArray(rec.accion) ? rec.accion : rec.accion}
-                      </div>
+                      
+                      {rec.actions && rec.actions.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          {rec.actions.map((action, i) => (
+                            <div key={i} className="text-orange-300 text-sm flex items-start gap-2">
+                              <Zap className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>{action}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
 
-              {/* META PERSONALIZADA */}
-              <div className="bg-gradient-to-r from-green-600/10 to-emerald-600/10 border border-green-500/30 rounded-2xl p-6 mt-6">
-                <h4 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-green-400" /> Meta Personalizada
-                </h4>
+              {/* Meta personalizada */}
+              <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl p-5 border border-green-400/30">
+                <h4 className="text-white font-bold text-lg mb-3">Meta de Gastos</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-gray-400 text-sm mb-2">Define tu límite mensual objetivo</label>
+                    <label className="text-green-300 text-sm mb-2 block">Define tu meta mensual (opcional)</label>
                     <input
                       type="number"
                       value={customGoal}
                       onChange={(e) => setCustomGoal(e.target.value)}
-                      placeholder={`Sugerido: $${Math.round(metaRecomendada)}`}
-                      className="w-full bg-gray-900 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-green-500 text-lg"
+                      placeholder={`Recomendado: $${Math.round(metaRecomendada)}`}
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-green-400"
                     />
                   </div>
-                  {metaPersonalizada > 0 && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-400">Progreso hacia meta</span>
-                        <span className="text-white font-bold">{progresoMeta.toFixed(0)}%</span>
-                      </div>
-                      <div className="w-full bg-black/30 rounded-full h-3">
-                        <div className={`h-full rounded-full transition-all ${progresoMeta > 100 ? 'bg-rose-500' : 'bg-green-500'}`} style={{ width: `${Math.min(100, progresoMeta)}%` }} />
-                      </div>
-                      {totalGastos > metaPersonalizada && (
-                        <div className="text-rose-300 text-xs mt-2">Estás gastando ${Math.round(totalGastos - metaPersonalizada)} por encima de tu meta</div>
-                      )}
+                  
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-green-300">Progreso hacia meta</span>
+                      <span className="text-white font-bold">
+                        ${Math.round(totalGastos)} / ${Math.round(metaPersonalizada)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          progresoMeta <= 100 ? 'bg-green-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, progresoMeta)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {totalGastos > metaPersonalizada && (
+                    <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                      <p className="text-red-300 text-sm">
+                        Estás ${Math.round(totalGastos - metaPersonalizada)} por encima de tu meta
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Botón para Guardar Plan */}
+              <button
+                onClick={() => {
+                  setPlanParaGuardar(currentPlanData);
+                  setShowConfirmacion(true);
+                }}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition flex items-center justify-center gap-2"
+              >
+                <Save className="w-5 h-5" />
+                Guardar Plan de Control
+              </button>
             </div>
           )}
         </div>
 
-        {/* FOOTER GUARDAR */}
-        <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm p-4 border-t border-white/5 shrink-0 z-10">
-           <button
-             onClick={() => { setPlanParaGuardar({ totalGastos, metaPersonalizada, recomendaciones }); setShowConfirmacion(true); }}
-             className="w-full bg-gradient-to-r from-orange-600 to-rose-600 hover:from-orange-700 hover:to-rose-700 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-orange-900/20 flex items-center justify-center gap-3"
-           >
-             <Save className="w-6 h-6" />
-             Guardar Plan de Control
-           </button>
+        {showConfirmacion && planParaGuardar && (
+          <ConfirmacionGuardadoPlan
+            plan={planParaGuardar}
+            tipo="gastos"
+            onConfirmar={async (nombre) => {
+              try {
+                const config = planParaGuardar;
+                
+                       await addPlan({
+          tipo: 'gastos',
+          nombre: nombre,
+          descripcion: `Plan de control de gastos para alcanzar un presupuesto de $${Math.round(config.customGoal || config.metaRecomendada)}`,
+          configuracion: config,
+          meta_principal: 'Control de Gastos',
+          monto_objetivo: config.customGoal ? Number(config.customGoal) : config.metaRecomendada,
+          monto_actual: config.totalGastos || 0,
+          progreso: 0, 
+          fecha_inicio: new Date().toISOString().split('T')[0],
+          fecha_objetivo: null, 
+          meses_duracion: 1, // <--- AQUÍ: Control mensual
+          activo: true,
+          completado: false
+        });
+
+                alert('✅ Plan guardado exitosamente');
+                setShowConfirmacion(false);
+                if (onPlanGuardado) onPlanGuardado();
+                onClose();
+              } catch (error) {
+                console.error('Error guardando plan:', error);
+                alert('Error al guardar el plan: ' + error.message);
+              }
+            }}
+            onCancelar={() => setShowConfirmacion(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente auxiliar para confirmar guardado
+function ConfirmacionGuardadoPlan({ plan, tipo, onConfirmar, onCancelar }) {
+  const [nombre, setNombre] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async () => {
+    if (!nombre.trim()) {
+      alert('Por favor ingresa un nombre para tu plan');
+      return;
+    }
+    setGuardando(true);
+    await onConfirmar(nombre);
+    setGuardando(false);
+  };
+
+  const getTipoInfo = () => {
+    switch(tipo) {
+      case 'ahorro':
+        return { emoji: '💰', color: 'from-green-600 to-emerald-600', label: 'Ahorro' };
+      case 'deudas':
+        return { emoji: '💳', color: 'from-red-600 to-pink-600', label: 'Deudas' };
+      case 'gastos':
+        return { emoji: '💸', color: 'from-orange-600 to-yellow-600', label: 'Gastos' };
+      default:
+        return { emoji: '📋', color: 'from-blue-600 to-purple-600', label: 'Plan' };
+    }
+  };
+
+  const { emoji, color, label } = getTipoInfo();
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+      <div className={`bg-gradient-to-br ${color} rounded-2xl max-w-md w-full p-6 shadow-2xl`}>
+        <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          {emoji} Guardar Plan de {label}
+        </h3>
+        
+        <div className="bg-white/10 rounded-xl p-4 mb-4 backdrop-blur">
+          <p className="text-white/90 text-sm mb-2">
+            Este plan se guardará en tu lista de planes activos. Podrás verlo, editarlo y seguir tu progreso.
+          </p>
         </div>
 
-        {/* MODAL CONFIRMACIÓN */}
-        {showConfirmacion && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
-            <div className="bg-gray-800 rounded-2xl max-w-md w-full p-6 border border-white/10 shadow-2xl">
-               <h3 className="text-white font-bold text-xl mb-4">Guardar Plan de Gastos</h3>
-               <p className="text-gray-300 mb-4 text-sm">Este plan guardará tu meta de gastos y las alertas generadas por la IA.</p>
-               <input 
-                 type="text" 
-                 placeholder="Nombre del plan (Ej: Control 2026)"
-                 className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-white/30 mb-4"
-                 autoFocus
-               />
-               <div className="flex gap-3">
-                 <button onClick={() => setShowConfirmacion(false)} className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors">Cancelar</button>
-                 <button onClick={() => handleGuardar('Mi Plan de Gastos')} className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors">Guardar</button>
-               </div>
-            </div>
+        <div className="mb-4">
+          <label className="block text-white text-sm mb-2 font-medium">
+            Nombre del plan:
+          </label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder={`Ej: ${label} ${new Date().getFullYear()}`}
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancelar}
+            className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold hover:bg-white/20 transition backdrop-blur"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="flex-1 bg-white text-gray-900 py-3 rounded-xl font-semibold hover:bg-white/90 disabled:opacity-50 transition"
+          >
+            {guardando ? 'Guardando...' : '✅ Guardar'}
+          </button>
         </div>
       </div>
     </div>

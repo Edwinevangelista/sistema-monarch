@@ -1,201 +1,174 @@
-import React from 'react';
-import { CreditCard, TrendingDown, Calendar, Edit2, ArrowRight, AlertTriangle } from 'lucide-react';
+import React from 'react'
+import { CreditCard, TrendingDown, Calendar, Edit2, ArrowRight } from 'lucide-react'
 
-export default function ListaDeudas({ 
-  deudas = [], 
-  deudaPagadaEsteMes, 
-  onEditar, 
-  alVerDetalle 
+const ListaDeudas = ({
+  deudas = [],
+  deudaPagadaEsteMes,
+  onEditar,
+  alVerDetalle
 }) => {
-  
-  const calcularEstado = (deuda) => {
-    const hoy = new Date();
-    hoy.setHours(0,0,0,0);
-
-    // Si ya se pagó este mes
-    if (deudaPagadaEsteMes && deudaPagadaEsteMes(deuda.id)) {
-      return {
-        texto: 'Pagado este mes',
-        color: 'text-emerald-400',
-        bg: 'bg-emerald-500/10',
-        border: 'border-emerald-500/20'
-      };
-    }
-
-    if (!deuda.vence) {
-      return {
-        texto: 'Sin fecha',
-        color: 'text-gray-400',
-        bg: 'bg-gray-700/30',
-        border: 'border-gray-700/30'
-      };
-    }
-
-    const fechaVence = new Date(deuda.vence);
-    const diffDias = Math.ceil((fechaVence - hoy) / (1000 * 60 * 60 * 24));
-
-    if (diffDias < 0) {
-      return {
-        texto: 'Vencido',
-        color: 'text-rose-400',
-        bg: 'bg-rose-500/10',
-        border: 'border-rose-500/20'
-      };
-    }
-
-    if (diffDias <= 5) {
-      return {
-        texto: `${diffDias} días`,
-        color: 'text-orange-400',
-        bg: 'bg-orange-500/10',
-        border: 'border-orange-500/20'
-      };
-    }
-
-    return {
-      texto: `${diffDias} días`,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/20'
-    };
-  };
-
-  const getProgress = (deuda) => {
-    const saldo = Number(deuda.saldo) || 0;
-    const total = Number(deuda.balance) || 1; // total histórico o límite
-    const pagoMin = Number(deuda.pago_minimo) || 0;
-    
-    // Un cálculo simple de progreso: (Saldo pagado / Total inicial) invertido visualmente
-    // O bien: (1 - (SaldoActual / SaldoTotal)) * 100
-    if (!saldo || !total) return 0;
-    // Usamos balance si existe (limite credito), sino saldo 0. Esto es aproximado visualmente.
-    const limite = Number(deuda.balance) || (Number(deuda.saldo) * 1.5);
-    const pagado = limite - saldo;
-    const progreso = Math.max(0, Math.min(100, (pagado / limite) * 100));
-    return progreso;
-  };
+  const calcularProgreso = (saldo, pagoMinimo) => {
+    if (!saldo || !pagoMinimo || saldo <= 0) return 0
+    return Math.min((pagoMinimo / saldo) * 100, 100)
+  }
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 md:p-6 shadow-xl h-full flex flex-col">
-      
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="bg-purple-500/20 p-2 rounded-xl border border-purple-500/30 text-purple-300">
-            <CreditCard className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-white">Mis Deudas</h2>
-            <p className="text-xs md:text-sm text-gray-400">Control y seguimiento</p>
-          </div>
-        </div>
-        
+    <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border-2 border-gray-700 h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <CreditCard className="w-6 h-6" />
+          💳 MIS DEUDAS
+        </h2>
+
         {deudas.length > 0 && (
-          <span className="bg-purple-500/20 text-purple-300 text-xs font-bold px-3 py-1 rounded-full border border-purple-500/30">
-            {deudas.length} Activas
+          <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-1 rounded-full border border-purple-500/30">
+            {deudas.length}
           </span>
         )}
       </div>
 
-      {/* Lista */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pb-20 md:pb-0">
-        {deudas.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center py-12 text-gray-500">
-            <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mb-4">
-              <CreditCard className="w-8 h-8 text-gray-500" />
-            </div>
-            <p className="text-sm">No tienes deudas registradas.</p>
-            <p className="text-xs text-gray-600">¡Buen trabajo!</p>
-          </div>
-        ) : (
-          deudas.map((deuda) => {
-            const estado = calcularEstado(deuda);
-            const progreso = getProgress(deuda);
+      {deudas.length === 0 ? (
+        <div className="text-center py-8 h-40 flex flex-col items-center justify-center">
+          <div className="text-5xl mb-3 opacity-50">🎉</div>
+          <p className="text-gray-400 text-sm">¡Sin deudas registradas!</p>
+        </div>
+      ) : (
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          {deudas.map((deuda) => {
+            const pagadaEsteMes = deudaPagadaEsteMes
+              ? deudaPagadaEsteMes(deuda.id)
+              : false
+
+            const progreso = calcularProgreso(deuda.saldo, deuda.pago_minimo)
+
+            const diasVencimiento =
+              pagadaEsteMes || !deuda.vence
+                ? null
+                : Math.round(
+                    (new Date(deuda.vence) - new Date()) /
+                      (1000 * 60 * 60 * 24)
+                  )
 
             return (
               <div
                 key={deuda.id}
-                className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 md:p-5 transition-all duration-200 group relative overflow-hidden"
+                className="bg-gray-900 rounded-xl p-4 border border-gray-700 hover:border-purple-500 transition-all"
               >
-                {/* Barra de progreso lateral (Mobile) */}
-                <div 
-                  className="absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b from-purple-500 to-indigo-500 transition-all duration-700"
-                  style={{ width: `${progreso}%` }}
-                />
+                {/* HEADER */}
+                <div className="flex justify-between mb-3">
+                  <div className="cursor-pointer" onClick={() => alVerDetalle?.(deuda)}>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-white font-bold">{deuda.cuenta}</h3>
 
-                {/* Contenido */}
-                <div className="flex items-start justify-between pl-4 relative z-10">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-white font-bold text-base md:text-lg truncate">{deuda.cuenta || deuda.nombre}</h3>
-                      <span className={`text-[10px] md:text-xs px-2 py-0.5 rounded-full border font-medium ${estado.bg} ${estado.color} ${estado.border}`}>
-                        {estado.texto}
+                      {pagadaEsteMes ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/40">
+                          PAGADA ESTE MES
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-300 border border-gray-600">
+                          {deuda.estado || 'ACTIVA'}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-400">
+                      {deuda.tipo || 'Tarjeta de Crédito'}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-red-400 font-bold text-lg">
+                      ${Number(deuda.saldo || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      APR:{' '}
+                      {deuda.apr ? `${(deuda.apr * 100).toFixed(1)}%` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* INFO */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <TrendingDown className="w-4 h-4" />
+                      Pago mínimo
+                    </span>
+                    <span className="text-white font-semibold">
+                      ${Number(deuda.pago_minimo || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {pagadaEsteMes ? (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Estado
+                      </span>
+                      <span className="text-green-400 font-semibold text-xs">
+                        CUBIERTO ESTE MES
                       </span>
                     </div>
-                    
-                    <p className="text-gray-400 text-xs md:text-sm mb-3">
-                      {deuda.tipo || 'Crédito'} • APR: {deuda.apr ? `${(deuda.apr * 100).toFixed(1)}%` : 'N/A'}
-                    </p>
-
-                    <div className="flex items-center gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500 text-[10px] uppercase">Saldo</p>
-                        <p className="text-rose-400 font-bold text-lg md:text-xl">
-                          ${Number(deuda.saldo || 0).toLocaleString()}
-                        </p>
+                  ) : (
+                    diasVencimiento !== null && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          Vence
+                        </span>
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                            diasVencimiento <= 0
+                              ? 'bg-red-500/20 text-red-400'
+                              : diasVencimiento <= 5
+                              ? 'bg-yellow-500/20 text-yellow-400'
+                              : 'bg-green-500/20 text-green-400'
+                          }`}
+                        >
+                          {diasVencimiento <= 0
+                            ? 'VENCIDO'
+                            : `en ${diasVencimiento} días`}
+                        </span>
                       </div>
-                      <div className="w-px h-8 bg-gray-700"></div>
-                      <div>
-                        <p className="text-gray-500 text-[10px] uppercase">Pago Mín.</p>
-                        <p className="text-blue-400 font-bold text-sm md:text-base">
-                          ${Number(deuda.pago_minimo || 0).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    )
+                  )}
 
-                  <div className="flex items-center gap-2">
-                    {/* Botones de Acción */}
-                    {onEditar && (
-                      <button
-                        onClick={() => onEditar(deuda)}
-                        className="p-2 bg-white/5 hover:bg-blue-600 hover:text-white rounded-lg text-gray-400 transition-all active:scale-95"
-                        title="Editar Deuda"
-                      >
-                        <Edit2 className="w-4 h-4 md:w-5 md:h-5" />
-                      </button>
-                    )}
-                    
-                    {alVerDetalle && (
-                      <button
-                        onClick={() => alVerDetalle(deuda)}
-                        className="p-2 bg-white/5 hover:bg-purple-600 hover:text-white rounded-lg text-gray-400 transition-all active:scale-95"
-                        title="Ver Detalles / Pagar"
-                      >
-                        <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
-                      </button>
-                    )}
+                  {/* PROGRESO */}
+                  <div className="w-full bg-gray-700 h-1.5 rounded-full mt-2">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full"
+                      style={{ width: `${progreso}%` }}
+                    />
                   </div>
                 </div>
 
-                {/* Barra de progreso inferior (Desktop) */}
-                <div className="mt-4 pt-4 border-t border-white/5">
-                   <div className="flex justify-between text-xs text-gray-400 mb-1">
-                     <span>Progreso de Pago</span>
-                     <span className="text-purple-300">{Math.round(progreso)}%</span>
-                   </div>
-                   <div className="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
-                     <div 
-                       className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
-                       style={{ width: `${progreso}%` }}
-                     />
-                   </div>
+                {/* ACCIONES */}
+                <div className="flex gap-2 mt-3 pt-2 border-t border-gray-800">
+                  {onEditar && (
+                    <button
+                      onClick={() => onEditar(deuda)}
+                      className="flex-1 text-xs bg-gray-700 hover:bg-purple-600 text-white py-1.5 rounded flex items-center justify-center gap-1"
+                    >
+                      <Edit2 className="w-3 h-3" /> Editar
+                    </button>
+                  )}
+
+                  {alVerDetalle && (
+                    <button
+                      onClick={() => alVerDetalle(deuda)}
+                      className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded flex items-center justify-center gap-1"
+                    >
+                      Ver <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
-  );
+  )
 }
+
+export default ListaDeudas

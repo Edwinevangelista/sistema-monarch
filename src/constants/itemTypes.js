@@ -1,8 +1,6 @@
-// src/constants/itemTypes.js
 export const ITEM_TYPES = {
-  INGRESO: 'ingreso',
+  DEUDA: 'deuda',
   FIJO: 'fijo',
   VARIABLE: 'variable',
-  SUSCRIPCION: 'suscripcion',
-  DEUDA: 'deuda'
-};
+  SUSCRIPCION: 'suscripciones',
+}
