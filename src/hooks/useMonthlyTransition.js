@@ -31,47 +31,32 @@ export const useMonthlyTransition = () => {
   }, [])
 
   /**
-   * 📋 Fuerza la transición mensual (para testing)
+   * 📅 Calcula próximo pago según ciclo
    */
-  const forzarTransicion = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuario no autenticado')
-
-      console.log('🔄 Iniciando transición mensual forzada...')
-      
-      // Procesar todas las operaciones de transición
-      await procesarTransicionCompleta(user.id)
-      
-      console.log('✅ Transición mensual completada')
-      
-    } catch (error) {
-      console.error('❌ Error en transición forzada:', error)
-      throw error
+  const calcularProximoPago = useCallback((fechaActual, ciclo) => {
+    const fecha = new Date(fechaActual + 'T00:00:00')
+    
+    switch (ciclo) {
+      case 'Mensual':
+        fecha.setMonth(fecha.getMonth() + 1)
+        break
+      case 'Anual':
+        fecha.setFullYear(fecha.getFullYear() + 1)
+        break
+      case 'Semanal':
+        fecha.setDate(fecha.getDate() + 7)
+        break
+      default:
+        fecha.setMonth(fecha.getMonth() + 1)
     }
+    
+    return fecha.toISOString().split('T')[0]
   }, [])
-
-  /**
-   * 🛠️ Procesa la transición completa
-   */
-  const procesarTransicionCompleta = async (userId) => {
-    // 1. Archivar gastos variables del mes anterior
-    await archivarGastosVariablesAnteriores(userId)
-    
-    // 2. Resetear gastos fijos
-    await resetearGastosFijosParaNuevoMes(userId)
-    
-    // 3. Generar ingresos recurrentes
-    await generarIngresosRecurrentes(userId)
-    
-    // 4. Actualizar suscripciones vencidas
-    await actualizarSuscripcionesVencidas(userId)
-  }
 
   /**
    * 📦 Archiva gastos variables del mes anterior
    */
-  const archivarGastosVariablesAnteriores = async (userId) => {
+  const archivarGastosVariablesAnteriores = useCallback(async (userId) => {
     const hoy = new Date()
     const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
     const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
@@ -89,12 +74,12 @@ export const useMonthlyTransition = () => {
 
     if (error) throw error
     console.log('📦 Gastos variables archivados')
-  }
+  }, [])
 
   /**
    * 🔄 Resetea gastos fijos para el nuevo mes
    */
-  const resetearGastosFijosParaNuevoMes = async (userId) => {
+  const resetearGastosFijosParaNuevoMes = useCallback(async (userId) => {
     const { error } = await supabase
       .from('gastos_fijos')
       .update({ estado: 'Pendiente' })
@@ -103,12 +88,12 @@ export const useMonthlyTransition = () => {
 
     if (error) throw error
     console.log('🔄 Gastos fijos reseteados')
-  }
+  }, [])
 
   /**
    * 💰 Genera ingresos recurrentes para el mes actual
    */
-  const generarIngresosRecurrentes = async (userId) => {
+  const generarIngresosRecurrentes = useCallback(async (userId) => {
     // Obtener ingresos del mes anterior
     const hoy = new Date()
     const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
@@ -151,12 +136,12 @@ export const useMonthlyTransition = () => {
       if (error) throw error
       console.log(`💰 ${ingresosRecurrentes.length} ingresos recurrentes generados`)
     }
-  }
+  }, [esIngresoRecurrente])
 
   /**
    * 🔄 Actualiza suscripciones vencidas
    */
-  const actualizarSuscripcionesVencidas = async (userId) => {
+  const actualizarSuscripcionesVencidas = useCallback(async (userId) => {
     const hoy = new Date().toISOString().split('T')[0]
     
     const { data: suscripciones, error: errorQuery } = await supabase
@@ -182,30 +167,45 @@ export const useMonthlyTransition = () => {
     if (suscripciones?.length > 0) {
       console.log(`🔄 ${suscripciones.length} suscripciones actualizadas`)
     }
-  }
+  }, [calcularProximoPago])
 
   /**
-   * 📅 Calcula próximo pago según ciclo
+   * 🛠️ Procesa la transición completa
    */
-  const calcularProximoPago = (fechaActual, ciclo) => {
-    const fecha = new Date(fechaActual + 'T00:00:00')
+  const procesarTransicionCompleta = useCallback(async (userId) => {
+    // 1. Archivar gastos variables del mes anterior
+    await archivarGastosVariablesAnteriores(userId)
     
-    switch (ciclo) {
-      case 'Mensual':
-        fecha.setMonth(fecha.getMonth() + 1)
-        break
-      case 'Anual':
-        fecha.setFullYear(fecha.getFullYear() + 1)
-        break
-      case 'Semanal':
-        fecha.setDate(fecha.getDate() + 7)
-        break
-      default:
-        fecha.setMonth(fecha.getMonth() + 1)
+    // 2. Resetear gastos fijos
+    await resetearGastosFijosParaNuevoMes(userId)
+    
+    // 3. Generar ingresos recurrentes
+    await generarIngresosRecurrentes(userId)
+    
+    // 4. Actualizar suscripciones vencidas
+    await actualizarSuscripcionesVencidas(userId)
+  }, [archivarGastosVariablesAnteriores, resetearGastosFijosParaNuevoMes, generarIngresosRecurrentes, actualizarSuscripcionesVencidas])
+
+  /**
+   * 📋 Fuerza la transición mensual (para testing)
+   */
+  const forzarTransicion = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuario no autenticado')
+
+      console.log('🔄 Iniciando transición mensual forzada...')
+      
+      // Procesar todas las operaciones de transición
+      await procesarTransicionCompleta(user.id)
+      
+      console.log('✅ Transición mensual completada')
+      
+    } catch (error) {
+      console.error('❌ Error en transición forzada:', error)
+      throw error
     }
-    
-    return fecha.toISOString().split('T')[0]
-  }
+  }, [procesarTransicionCompleta])
 
   return {
     forzarTransicion,
