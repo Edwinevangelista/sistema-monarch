@@ -60,12 +60,9 @@ import VisualizacionDatos from './VisualizacionDatos'
 import { supabase } from '../lib/supabaseClient'
 
 // --- NUEVOS IMPORTS PARA TRANSICIÓN MENSUAL ---
-import { Calendar, Archive } from 'lucide-react'
+
 import { 
-  obtenerDatosFiltrados, 
-  obtenerEstadisticasTransicion,
-  hayDatosArchivados
-  // ✅ ELIMINADO: FILTRO_TIPOS de la importación para evitar "no-unused-vars"
+  obtenerDatosFiltrados
 } from '../utils/filtrosInteligentes'
 
 const FILTRO_TIPOS = {
@@ -859,18 +856,10 @@ useEffect(() => {
 const handleForzarTransicionMensual = async () => {
   if (window.confirm('⚠️ ¿Forzar transición mensual?\n\nEsto:\n- Archivará gastos variables del mes anterior\n- Reseteará gastos fijos\n- Generará ingresos recurrentes\n- Actualizará suscripciones\n\n¿Continuar?')) {
     try {
-      setShowExportacion(true) // Mostrar loading (reutilizamos el estado)
+      setShowExportacion(true)
       await forzarTransicion()
       
-      // Mostrar estadísticas después de la transición
-      const nuevasStats = obtenerEstadisticasTransicion({
-        gastosVariables: gastosInstant,
-        ingresos: ingresosInstant
-      })
-      
-      console.log('📊 Estadísticas post-transición:', nuevasStats)
-      
-      alert(`✅ Transición mensual ejecutada\n\n📊 Resultados:\n- ${nuevasStats.totalGastosArchivados} gastos archivados\n- ${nuevasStats.ingresosRecurrentesGenerados} ingresos recurrentes generados\n- $${nuevasStats.montoIngresosRecurrentes.toLocaleString()} en ingresos automáticos`)
+      alert('✅ Transición mensual ejecutada correctamente')
       
       // Refrescar datos
       refreshDeudas()
@@ -1101,6 +1090,78 @@ const overviewData = useMemo(() => {
     actualizarHistorial
   ])
 
+// 📅 ACTUALIZAR FECHAS VENCIDAS DE SUSCRIPCIONES (AL CARGAR)
+  useEffect(() => {
+    if (!suscripcionesInstant || suscripcionesInstant.length === 0) return
+    
+    let ejecutado = false
+    
+    const actualizarFechasVencidas = async () => {
+      if (ejecutado) return
+      ejecutado = true
+      
+      const hoyLocal = new Date()
+      hoyLocal.setHours(0, 0, 0, 0)
+      
+      let actualizadas = 0
+      
+      console.log('🔍 Verificando fechas de suscripciones...')
+      
+      for (const sub of suscripcionesInstant) {
+        if (sub.estado !== 'Activo' || !sub.proximo_pago) continue
+        
+        const fechaProxima = new Date(sub.proximo_pago + 'T00:00:00')
+        
+        if (fechaProxima < hoyLocal) {
+          console.log(`⚠️ Fecha vencida detectada: ${sub.servicio} (${sub.proximo_pago})`)
+          
+          let nuevaFecha = new Date(sub.proximo_pago + 'T00:00:00')
+          
+          while (nuevaFecha < hoyLocal) {
+            if (sub.ciclo === 'Mensual') {
+              nuevaFecha.setMonth(nuevaFecha.getMonth() + 1)
+            } else if (sub.ciclo === 'Anual') {
+              nuevaFecha.setFullYear(nuevaFecha.getFullYear() + 1)
+            } else if (sub.ciclo === 'Semanal') {
+              nuevaFecha.setDate(nuevaFecha.getDate() + 7)
+            } else {
+              break
+            }
+          }
+          
+          const fechaActualizada = nuevaFecha.toISOString().split('T')[0]
+          
+          try {
+            await updateSuscripcion(sub.id, { proximo_pago: fechaActualizada })
+            console.log(`✅ ${sub.servicio}: ${sub.proximo_pago} → ${fechaActualizada}`)
+            actualizadas++
+            
+            // Actualizar estado local
+            setSuscripcionesInstant(prev => 
+              prev.map(s => 
+                s.id === sub.id 
+                  ? { ...s, proximo_pago: fechaActualizada }
+                  : s
+              )
+            )
+          } catch (error) {
+            console.error(`❌ Error actualizando ${sub.servicio}:`, error)
+          }
+        }
+      }
+      
+      if (actualizadas > 0) {
+        console.log(`📅 ${actualizadas} suscripciones actualizadas`)
+      } else {
+        console.log('✅ Todas las fechas están al día')
+      }
+    }
+    
+    const timeout = setTimeout(actualizarFechasVencidas, 3000)
+    return () => clearTimeout(timeout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // ← Ejecutar solo al montar
+
   useEffect(() => {
     if (usuario.email) {
       const nombre = usuario.email.split('@')[0]
@@ -1285,148 +1346,6 @@ const dataGraficaDona = useMemo(() =>
     dailyBudget
   }
 
-// 📊 Estadísticas de transición mensual
-const estadisticasTransicion = useMemo(() => {
-  return obtenerEstadisticasTransicion({
-    gastosVariables: gastosInstant,
-    ingresos: ingresosInstant
-  })
-}, [gastosInstant, ingresosInstant])
-
-// WIDGET DE TRANSICIÓN MENSUAL
-// WIDGET DE TRANSICIÓN MENSUAL
-const WidgetTransicionMensual = () => {
-  const [mostrarDetalles, setMostrarDetalles] = useState(false)
-  
-  if (estadisticasTransicion.totalGastosArchivados === 0 && 
-      estadisticasTransicion.ingresosRecurrentesGenerados === 0) {
-    return null
-  }
-
-  return (
-    <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4">
-      <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/30 rounded-xl">
-              <Calendar className="w-5 h-5 text-purple-300" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold">Transición Mensual Automática</h3>
-              <p className="text-purple-200 text-sm">Gestión inteligente de datos</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setMostrarDetalles(!mostrarDetalles)}
-            className="text-purple-300 hover:text-purple-200 transition-colors"
-          >
-            <ChevronRight className={`w-5 h-5 transform transition-transform ${mostrarDetalles ? 'rotate-90' : ''}`} />
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-black/20 rounded-xl p-3 text-center">
-            <div className="text-xl font-bold text-white">{estadisticasTransicion.totalGastosArchivados}</div>
-            <div className="text-xs text-purple-300">Gastos archivados</div>
-          </div>
-          
-          <div className="bg-black/20 rounded-xl p-3 text-center">
-            <div className="text-xl font-bold text-white">{estadisticasTransicion.ingresosRecurrentesGenerados}</div>
-            <div className="text-xs text-purple-300">Ingresos generados</div>
-          </div>
-          
-          <div className="bg-black/20 rounded-xl p-3 text-center">
-            <div className="text-xl font-bold text-green-400">
-              ${estadisticasTransicion.montoIngresosRecurrentes.toLocaleString()}
-            </div>
-            <div className="text-xs text-purple-300">Ingresos recurrentes</div>
-          </div>
-          
-          <div className="bg-black/20 rounded-xl p-3 text-center">
-            <div className="text-xl font-bold text-gray-400">
-              ${estadisticasTransicion.montoGastosArchivados.toLocaleString()}
-            </div>
-            <div className="text-xs text-purple-300">Gastos archivados</div>
-          </div>
-        </div>
-
-        {mostrarDetalles && (
-          <div className="mt-4 p-3 bg-black/30 rounded-xl">
-            <div className="text-sm text-purple-200 space-y-2">
-              <p><strong>📊 Resumen:</strong></p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>Gastos variables del mes anterior: <span className="text-white font-semibold">{estadisticasTransicion.gastosDelMesAnterior} archivados</span></li>
-                <li>Gastos fijos: <span className="text-white font-semibold">Reseteados para el nuevo mes</span></li>
-                <li>Ingresos recurrentes: <span className="text-white font-semibold">Auto-generados para este mes</span></li>
-                <li>Suscripciones: <span className="text-white font-semibold">Fechas actualizadas automáticamente</span></li>
-              </ul>
-              {estadisticasTransicion.fechaUltimaTransicion && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Última transición: {new Date(estadisticasTransicion.fechaUltimaTransicion).toLocaleDateString('es-MX')}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// INDICADOR DE DATOS ARCHIVADOS
-const IndicadorDatosArchivados = () => {
-  const tieneArchivados = hayDatosArchivados(gastosInstant)
-  const [mostrarArchivados, setMostrarArchivados] = useState(false)
-  
-  if (!tieneArchivados) return null
-
-  const gastosArchivados = gastosInstant.filter(g => g.archivado === true)
-  const montoArchivado = gastosArchivados.reduce((sum, g) => sum + (g.monto || 0), 0)
-
-  return (
-    <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4">
-      <div className="bg-gray-700/50 border border-gray-600/30 rounded-xl p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-gray-600/50 rounded-lg">
-              <Archive className="w-4 h-4 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-300">
-                <span className="font-semibold">{gastosArchivados.length}</span> gastos archivados
-                <span className="text-gray-500 ml-2">(${montoArchivado.toLocaleString()})</span>
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setMostrarArchivados(!mostrarArchivados)}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            {mostrarArchivados ? 'Ocultar' : 'Ver'}
-          </button>
-        </div>
-        
-        {mostrarArchivados && (
-          <div className="mt-3 pt-3 border-t border-gray-600/30">
-            <div className="grid gap-2 max-h-32 overflow-y-auto">
-              {gastosArchivados.slice(0, 5).map(gasto => (
-                <div key={gasto.id} className="flex justify-between text-xs text-gray-400">
-                  <span>{gasto.descripcion || gasto.categoria}</span>
-                  <span>${gasto.monto.toLocaleString()}</span>
-                </div>
-              ))}
-              {gastosArchivados.length > 5 && (
-                <div className="text-xs text-gray-500 text-center">
-                  ... y {gastosArchivados.length - 5} más
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
   // ============================================
   // RENDERIZADO UI MODERNA
   // ============================================
@@ -1515,7 +1434,7 @@ const IndicadorDatosArchivados = () => {
         setVistaActiva={setVistaActiva}
         hoy={hoy}
       />
-<WidgetTransicionMensual />
+
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
@@ -1607,6 +1526,64 @@ const IndicadorDatosArchivados = () => {
               >
                 📊 Stats
               </button>
+<button 
+                onClick={async () => {
+                  try {
+                    const hoyLocal = new Date()
+                    hoyLocal.setHours(0, 0, 0, 0)
+                    let actualizadas = 0
+                    
+                    console.log('🔄 Forzando actualización manual...')
+                    
+                    for (const sub of suscripcionesInstant) {
+                      if (sub.estado !== 'Activo' || !sub.proximo_pago) continue
+                      
+                      const fechaProxima = new Date(sub.proximo_pago + 'T00:00:00')
+                      if (fechaProxima >= hoyLocal) {
+                        console.log(`✓ ${sub.servicio} está al día (${sub.proximo_pago})`)
+                        continue
+                      }
+                      
+                      let nuevaFecha = new Date(sub.proximo_pago + 'T00:00:00')
+                      while (nuevaFecha < hoyLocal) {
+                        if (sub.ciclo === 'Mensual') nuevaFecha.setMonth(nuevaFecha.getMonth() + 1)
+                        else if (sub.ciclo === 'Anual') nuevaFecha.setFullYear(nuevaFecha.getFullYear() + 1)
+                        else if (sub.ciclo === 'Semanal') nuevaFecha.setDate(nuevaFecha.getDate() + 7)
+                        else break
+                      }
+                      
+                      const fechaActualizada = nuevaFecha.toISOString().split('T')[0]
+                      
+                      console.log(`📅 Actualizando ${sub.servicio}: ${sub.proximo_pago} → ${fechaActualizada}`)
+                      
+                      await updateSuscripcion(sub.id, { proximo_pago: fechaActualizada })
+                      
+                      // Actualizar estado local
+                      setSuscripcionesInstant(prev => 
+                        prev.map(s => 
+                          s.id === sub.id 
+                            ? { ...s, proximo_pago: fechaActualizada }
+                            : s
+                        )
+                      )
+                      
+                      actualizadas++
+                    }
+                    
+                    if (actualizadas > 0) {
+                      alert(`✅ ${actualizadas} suscripciones actualizadas correctamente`)
+                    } else {
+                      alert('✅ Todas las fechas ya están al día')
+                    }
+                  } catch (error) {
+                    console.error('❌ Error:', error)
+                    alert('❌ Error al actualizar fechas: ' + error.message)
+                  }
+                }} 
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600/80 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-orange-500/50 shadow-lg shadow-orange-900/20"
+              >
+                📅 Actualizar Fechas
+              </button>
             </>
           )}
         </div>
@@ -1650,8 +1627,7 @@ const IndicadorDatosArchivados = () => {
           <Notificaciones alertas={alertas} onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)} />
         </div>
         
-        {/* INDICADOR DE DATOS ARCHIVADOS */}
-        <IndicadorDatosArchivados />
+     
       </div>
         {/* ASISTENTE FINANCIERO */}
         <div className="animate-in fade-in delay-300">
