@@ -113,6 +113,7 @@ export default function DashboardCompleto()  {
   // ESTADO DUAL DE VISTA (Definido aquí para evitar duplicados)
   const [vistaActiva, setVistaActiva] = useState('real') // 'real' o 'proyectado'
 
+
   const pasosTutorialConfig = [
     {
       titulo: "¡Bienvenido a FinGuide! 👋",
@@ -681,48 +682,57 @@ useEffect(() => {
     return nuevaFecha.toISOString().split('T')[0];
   };
 
-  const handlePagoManual = async (sub) => {
-    if (!sub.cuenta_id) {
-      alert('⚠️ Esta suscripción no tiene una cuenta de pago asignada.')
-      setSuscripcionEditando(sub)
-      setShowModal('suscripcion')
-      return
+ const handlePagoManual = async (sub) => {
+  if (!sub.cuenta_id) {
+    alert('⚠️ Esta suscripción no tiene una cuenta de pago asignada.')
+    setSuscripcionEditando(sub)
+    setShowModal('suscripcion')
+    return
+  }
+  
+  try {
+    const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
+    if (!cuenta) return
+    
+    const nuevoBalance = Number(cuenta.balance) - Number(sub.costo)
+    await updateCuenta(cuenta.id, { balance: nuevoBalance })
+    
+    await addGasto({
+      fecha: hoyStr,
+      monto: sub.costo,
+      categoria: '📅 Suscripciones',
+      descripcion: `Pago Manual: ${sub.servicio}`,
+      cuenta_id: cuenta.id,
+      metodo: 'Manual'
+    })
+    
+    await registrarMovimientoEnHistorial({
+      tipo: 'gasto',
+      monto: Number(sub.costo),
+      ref: `Suscripción (Manual): ${sub.servicio}`,
+      cuentaId: cuenta.id,
+      cuentaNombre: cuenta.nombre
+    })
+
+    // ✨ CALCULAR PRÓXIMO PAGO desde HOY (no desde la fecha vieja)
+    const nuevoProximoPago = calcularProximoPago(hoyStr, sub.ciclo)
+    
+    console.log('📅 Actualizando próximo pago:', {
+      servicio: sub.servicio,
+      fechaAnterior: sub.proximo_pago,
+      fechaNueva: nuevoProximoPago
+    })
+    
+    if (updateSuscripcion) {
+      await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
     }
     
-    try {
-      const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-      if (!cuenta) return
-      
-      const nuevoBalance = Number(cuenta.balance) - Number(sub.costo)
-      await updateCuenta(cuenta.id, { balance: nuevoBalance })
-      
-      await addGasto({
-        fecha: hoyStr,
-        monto: sub.costo,
-        categoria: '📅 Suscripciones',
-        descripcion: `Pago Manual: ${sub.servicio}`,
-        cuenta_id: cuenta.id,
-        metodo: 'Manual'
-      })
-      
-      await registrarMovimientoEnHistorial({
-        tipo: 'gasto',
-        monto: Number(sub.costo),
-        ref: `Suscripción (Manual): ${sub.servicio}`,
-        cuentaId: cuenta.id,
-        cuentaNombre: cuenta.nombre
-      })
-
-      const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
-      if (updateSuscripcion) {
-        await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
-      }
-      
-      alert('✅ Pago registrado correctamente.')
-    } catch (error) {
-      console.error('❌ Error en pago manual:', error)
-    }
+    alert(`✅ Pago registrado correctamente.\n\nPróximo pago: ${new Date(nuevoProximoPago).toLocaleDateString('es-MX')}`)
+  } catch (error) {
+    console.error('❌ Error en pago manual:', error)
+    alert('❌ Error al registrar el pago')
   }
+}
 
   const handleGuardarDeuda = async (data) => {
     try {
@@ -1196,20 +1206,29 @@ const overviewData = useMemo(() => {
     }
     }, [alertas, permission, hoy, showLocalNotification])
 
-  const gastosPorCategoria = useMemo(() => {
-    const categorias = {}
-    ;[...gastosFijosInstant, ...gastosInstant, ...suscripcionesInstant.filter(s => s.estado === 'Activo')].forEach(item => {
-      const cat = item.categoria || '📦 Otros'
-      const monto = validarMonto(item.monto || item.costo)
-      categorias[cat] = (categorias[cat] || 0) + monto
-    })
-    return categorias
-  }, [gastosFijosInstant, gastosInstant, suscripcionesInstant])
+const gastosPorCategoria = useMemo(() => {
+  const categorias = {}
+  
+  // Mostrar todos los gastos activos
+  const gastosAMostrar = [
+    ...gastosFijosInstant,
+    ...gastosInstant,
+    ...suscripcionesInstant.filter(s => s.estado === 'Activo')
+  ]
+  
+  gastosAMostrar.forEach(item => {
+    const cat = item.categoria || '📦 Otros'
+    const monto = validarMonto(item.monto || item.costo)
+    categorias[cat] = (categorias[cat] || 0) + monto
+  })
+  
+  return categorias
+}, [gastosFijosInstant, gastosInstant, suscripcionesInstant])
 
-  const dataGraficaDona = useMemo(() => 
-    Object.entries(gastosPorCategoria).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8),
-    [gastosPorCategoria]
-  )
+const dataGraficaDona = useMemo(() => 
+  Object.entries(gastosPorCategoria).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8),
+  [gastosPorCategoria]
+)
 
   // --- LÓGICA DE INTELIGENCIA FINANCIERA ---
   const financialHealth = useMemo(() => {
@@ -1660,20 +1679,20 @@ const IndicadorDatosArchivados = () => {
           <SavedPlansList refreshSignal={planUpdateCounter} />
         </div>
 
-        {/* GRÁFICAS */}
-        <div id="graficas-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in delay-500">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-            <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-            <GraficaBarras 
-              ingresos={ingresosDelMes}
-              gastos={gastosDelMes}
-              gastosFijos={gastosFijosInstant}
-              suscripciones={suscripcionesInstant}
-            />
-          </div>
-        </div>
+       {/* GRÁFICAS */}
+<div id="graficas-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in delay-500">
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+    <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
+  </div>
+  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+    <GraficaBarras 
+      ingresos={ingresosDelMes}
+      gastos={gastosDelMes}
+      gastosFijos={gastosFijosInstant}
+      suscripciones={suscripcionesInstant}
+    />
+  </div>
+</div>
 
         {/* INGRESOS */}
         <div className="animate-in fade-in delay-500">
@@ -1703,9 +1722,9 @@ const IndicadorDatosArchivados = () => {
               <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
-              <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length}</div>
-              <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
-            </div>
+  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosDelMes.length}</div>
+  <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
+</div>
           </div>
         </div>
 

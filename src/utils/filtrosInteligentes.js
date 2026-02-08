@@ -67,17 +67,27 @@ const filtrarIngresos = (ingresos, tipoFiltro) => {
 }
 
 /**
- * 🛒 Filtra gastos variables (EXCLUYE archivados automáticamente)
+ * 🛒 Filtra gastos variables (EXCLUYE archivados Y autopagos de suscripciones)
  */
 const filtrarGastosVariables = (gastos, tipoFiltro) => {
   const rango = obtenerRangoFechas(tipoFiltro)
   
-  // SIEMPRE excluir gastos archivados
-  const gastosNoArchivados = gastos.filter(gasto => !gasto.archivado)
+  // ✨ NUEVO: Filtrar autopagos de suscripciones para evitar duplicados
+  const gastosLimpios = gastos.filter(gasto => {
+    // Excluir gastos archivados
+    if (gasto.archivado) return false
+    
+    // ✅ Excluir autopagos de suscripciones (ya están en la tabla de suscripciones)
+    if (gasto.metodo === 'Autopago' && gasto.categoria === '📅 Suscripciones') {
+      return false
+    }
+    
+    return true
+  })
   
-  if (!rango) return gastosNoArchivados
+  if (!rango) return gastosLimpios
 
-  return gastosNoArchivados.filter(gasto => {
+  return gastosLimpios.filter(gasto => {
     if (!gasto.fecha) return false
     const fechaGasto = new Date(gasto.fecha + 'T00:00:00')
     return fechaGasto >= rango.inicio && fechaGasto <= rango.fin

@@ -19,12 +19,10 @@ export const useMonthlyTransition = () => {
     const fuente = (ingreso.fuente || '').toLowerCase()
     const descripcion = (ingreso.descripcion || '').toLowerCase()
     
-    // Verificar si ya está marcado como recurrente
     if (ingreso.es_recurrente === true || ingreso.tipo === 'recurrente') {
       return true
     }
 
-    // Verificar por palabras clave
     return fuentesRecurrentes.some(keyword => 
       fuente.includes(keyword) || descripcion.includes(keyword)
     )
@@ -54,47 +52,79 @@ export const useMonthlyTransition = () => {
   }, [])
 
   /**
-   * 📦 Archiva gastos variables del mes anterior
+   * 📦 Archiva gastos variables que NO son del mes actual
    */
   const archivarGastosVariablesAnteriores = useCallback(async (userId) => {
     const hoy = new Date()
-    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
-    const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
+    const mesActual = hoy.getMonth()
+    const añoActual = hoy.getFullYear()
+    const inicioMesActual = new Date(añoActual, mesActual, 1)
 
-    const { error } = await supabase
+    console.log('📦 Archivando gastos variables que NO son del mes actual...')
+    console.log(`📅 Mes actual: ${mesActual + 1}/${añoActual}`)
+
+    const { data: gastosArchivados, error } = await supabase
       .from('gastos_variables')
       .update({ 
         archivado: true, 
         fecha_archivado: new Date().toISOString() 
       })
       .eq('user_id', userId)
-      .gte('fecha', mesAnterior.toISOString().split('T')[0])
-      .lte('fecha', finMesAnterior.toISOString().split('T')[0])
-      .is('archivado', false)
+      .lt('fecha', inicioMesActual.toISOString().split('T')[0])
+      .or('archivado.is.null,archivado.eq.false')
+      .select()
 
-    if (error) throw error
-    console.log('📦 Gastos variables archivados')
+    if (error) {
+      console.error('❌ Error archivando gastos:', error)
+      throw error
+    }
+
+    console.log(`✅ ${gastosArchivados?.length || 0} gastos archivados`)
+    
+    if (gastosArchivados && gastosArchivados.length > 0) {
+      gastosArchivados.forEach(g => {
+        console.log('🗄️ Archivado:', g.descripcion || g.categoria, '→', g.fecha)
+      })
+    }
+
+    return gastosArchivados?.length || 0
   }, [])
 
   /**
    * 🔄 Resetea gastos fijos para el nuevo mes
    */
   const resetearGastosFijosParaNuevoMes = useCallback(async (userId) => {
-    const { error } = await supabase
+    console.log('🔄 Reseteando gastos fijos...')
+    
+    const { data: gastosReseteados, error } = await supabase
       .from('gastos_fijos')
       .update({ estado: 'Pendiente' })
       .eq('user_id', userId)
       .eq('estado', 'Pagado')
+      .select()
 
-    if (error) throw error
-    console.log('🔄 Gastos fijos reseteados')
+    if (error) {
+      console.error('❌ Error reseteando gastos fijos:', error)
+      throw error
+    }
+
+    console.log(`✅ ${gastosReseteados?.length || 0} gastos fijos reseteados`)
+    
+    if (gastosReseteados && gastosReseteados.length > 0) {
+      gastosReseteados.forEach(gf => {
+        console.log('🔄 Reseteado:', gf.nombre, '→ Pendiente')
+      })
+    }
+
+    return gastosReseteados?.length || 0
   }, [])
 
   /**
    * 💰 Genera ingresos recurrentes para el mes actual
    */
   const generarIngresosRecurrentes = useCallback(async (userId) => {
-    // Obtener ingresos del mes anterior
+    console.log('💰 Generando ingresos recurrentes...')
+    
     const hoy = new Date()
     const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
     const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
@@ -106,7 +136,10 @@ export const useMonthlyTransition = () => {
       .gte('fecha', mesAnterior.toISOString().split('T')[0])
       .lte('fecha', finMesAnterior.toISOString().split('T')[0])
 
-    if (errorQuery) throw errorQuery
+    if (errorQuery) {
+      console.error('❌ Error consultando ingresos anteriores:', errorQuery)
+      throw errorQuery
+    }
 
     const ingresosRecurrentes = []
     
@@ -125,16 +158,33 @@ export const useMonthlyTransition = () => {
         }
         
         ingresosRecurrentes.push(nuevoIngreso)
+        console.log('💵 Ingreso recurrente detectado:', ingreso.fuente, '→', ingreso.monto)
       }
     }
 
     if (ingresosRecurrentes.length > 0) {
-      const { error } = await supabase
+      const { data: ingresosCreados, error } = await supabase
         .from('ingresos')
         .insert(ingresosRecurrentes)
+        .select()
 
-      if (error) throw error
-      console.log(`💰 ${ingresosRecurrentes.length} ingresos recurrentes generados`)
+      if (error) {
+        console.error('❌ Error creando ingresos recurrentes:', error)
+        throw error
+      }
+
+      console.log(`✅ ${ingresosCreados?.length || 0} ingresos recurrentes generados`)
+      
+      if (ingresosCreados && ingresosCreados.length > 0) {
+        ingresosCreados.forEach(ing => {
+          console.log('💰 Generado:', ing.fuente, '→ $', ing.monto)
+        })
+      }
+
+      return ingresosCreados?.length || 0
+    } else {
+      console.log('ℹ️ No hay ingresos recurrentes para generar')
+      return 0
     }
   }, [esIngresoRecurrente])
 
@@ -142,6 +192,8 @@ export const useMonthlyTransition = () => {
    * 🔄 Actualiza suscripciones vencidas
    */
   const actualizarSuscripcionesVencidas = useCallback(async (userId) => {
+    console.log('🔄 Actualizando suscripciones vencidas...')
+    
     const hoy = new Date().toISOString().split('T')[0]
     
     const { data: suscripciones, error: errorQuery } = await supabase
@@ -151,7 +203,12 @@ export const useMonthlyTransition = () => {
       .eq('estado', 'Activo')
       .lte('proximo_pago', hoy)
 
-    if (errorQuery) throw errorQuery
+    if (errorQuery) {
+      console.error('❌ Error consultando suscripciones:', errorQuery)
+      throw errorQuery
+    }
+
+    let actualizadas = 0
 
     for (const sub of suscripciones || []) {
       const nuevaFecha = calcularProximoPago(sub.proximo_pago, sub.ciclo)
@@ -161,33 +218,76 @@ export const useMonthlyTransition = () => {
         .update({ proximo_pago: nuevaFecha })
         .eq('id', sub.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error actualizando suscripción:', error)
+        throw error
+      }
+
+      console.log('🔄 Suscripción actualizada:', sub.servicio, '→', nuevaFecha)
+      actualizadas++
     }
 
-    if (suscripciones?.length > 0) {
-      console.log(`🔄 ${suscripciones.length} suscripciones actualizadas`)
+    if (actualizadas > 0) {
+      console.log(`✅ ${actualizadas} suscripciones actualizadas`)
+    } else {
+      console.log('ℹ️ No hay suscripciones vencidas para actualizar')
     }
+
+    return actualizadas
   }, [calcularProximoPago])
 
   /**
    * 🛠️ Procesa la transición completa
    */
   const procesarTransicionCompleta = useCallback(async (userId) => {
-    // 1. Archivar gastos variables del mes anterior
-    await archivarGastosVariablesAnteriores(userId)
+    console.log('🔄 ========================================')
+    console.log('🔄 INICIANDO TRANSICIÓN MENSUAL COMPLETA')
+    console.log('🔄 ========================================')
     
-    // 2. Resetear gastos fijos
-    await resetearGastosFijosParaNuevoMes(userId)
-    
-    // 3. Generar ingresos recurrentes
-    await generarIngresosRecurrentes(userId)
-    
-    // 4. Actualizar suscripciones vencidas
-    await actualizarSuscripcionesVencidas(userId)
-  }, [archivarGastosVariablesAnteriores, resetearGastosFijosParaNuevoMes, generarIngresosRecurrentes, actualizarSuscripcionesVencidas])
+    const estadisticas = {
+      gastosArchivados: 0,
+      gastosFijosReseteados: 0,
+      ingresosGenerados: 0,
+      suscripcionesActualizadas: 0
+    }
+
+    try {
+      console.log('\n📦 PASO 1: Archivando gastos variables...')
+      estadisticas.gastosArchivados = await archivarGastosVariablesAnteriores(userId)
+      
+      console.log('\n🔄 PASO 2: Reseteando gastos fijos...')
+      estadisticas.gastosFijosReseteados = await resetearGastosFijosParaNuevoMes(userId)
+      
+      console.log('\n💰 PASO 3: Generando ingresos recurrentes...')
+      estadisticas.ingresosGenerados = await generarIngresosRecurrentes(userId)
+      
+      console.log('\n🔄 PASO 4: Actualizando suscripciones...')
+      estadisticas.suscripcionesActualizadas = await actualizarSuscripcionesVencidas(userId)
+
+      console.log('\n✅ ========================================')
+      console.log('✅ TRANSICIÓN MENSUAL COMPLETADA')
+      console.log('✅ ========================================')
+      console.log('📊 Estadísticas:')
+      console.log(`   - Gastos archivados: ${estadisticas.gastosArchivados}`)
+      console.log(`   - Gastos fijos reseteados: ${estadisticas.gastosFijosReseteados}`)
+      console.log(`   - Ingresos generados: ${estadisticas.ingresosGenerados}`)
+      console.log(`   - Suscripciones actualizadas: ${estadisticas.suscripcionesActualizadas}`)
+
+      return estadisticas
+      
+    } catch (error) {
+      console.error('❌ Error en transición mensual:', error)
+      throw error
+    }
+  }, [
+    archivarGastosVariablesAnteriores, 
+    resetearGastosFijosParaNuevoMes, 
+    generarIngresosRecurrentes, 
+    actualizarSuscripcionesVencidas
+  ])
 
   /**
-   * 📋 Fuerza la transición mensual (para testing)
+   * 📋 Fuerza la transición mensual (para testing/debugging)
    */
   const forzarTransicion = useCallback(async () => {
     try {
@@ -195,11 +295,17 @@ export const useMonthlyTransition = () => {
       if (!user) throw new Error('Usuario no autenticado')
 
       console.log('🔄 Iniciando transición mensual forzada...')
+      console.log('👤 Usuario:', user.email)
       
-      // Procesar todas las operaciones de transición
-      await procesarTransicionCompleta(user.id)
+      const estadisticas = await procesarTransicionCompleta(user.id)
       
-      console.log('✅ Transición mensual completada')
+      const hoy = new Date()
+      const mesActual = `${hoy.getFullYear()}-${hoy.getMonth() + 1}`
+      localStorage.setItem('ultima_transicion_mensual', mesActual)
+      
+      console.log('✅ Transición mensual forzada completada exitosamente')
+      
+      return estadisticas
       
     } catch (error) {
       console.error('❌ Error en transición forzada:', error)
