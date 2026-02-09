@@ -92,6 +92,39 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
       return sum + costo
     }, 0)
   
+// ✨ NUEVO: CALCULAR GASTOS PAGADOS (para visualización)
+const gastosPagados = 
+  // Gastos variables ya están pagados (todos los registrados)
+  gastosVariablesReales +
+  // Gastos fijos marcados como "Pagado"
+  gastosFijos
+    .filter(gf => {
+      if (!gf.dia_venc) return false
+      const vencimiento = new Date(fin.getFullYear(), fin.getMonth(), gf.dia_venc)
+      return vencimiento <= fin && gf.estado === 'Pagado'
+    })
+    .reduce((sum, gf) => sum + safeNumber(gf.monto), 0) +
+  // ✅ CORRECCIÓN: Suscripciones cuyo próximo pago está en el MES SIGUIENTE
+  suscripciones
+    .filter(s => {
+      if (s.estado !== 'Activo' || !s.proximo_pago) return false
+      const proxPago = new Date(s.proximo_pago + 'T00:00:00')
+      proxPago.setHours(0, 0, 0, 0)
+      
+      // Si próximo pago es en el mes SIGUIENTE, significa que ya se pagó ESTE mes
+      const esMesSiguiente = (
+        proxPago.getFullYear() > fin.getFullYear() ||
+        (proxPago.getFullYear() === fin.getFullYear() && proxPago.getMonth() > fin.getMonth())
+      )
+      
+      return esMesSiguiente
+    })
+    .reduce((sum, s) => {
+      const costo = safeNumber(s.costo)
+      if (s.ciclo === 'Anual') return sum + (costo / 12)
+      return sum + costo
+    }, 0)
+  
   const totalGastos = gastosVariablesReales + gastosFijosReales + suscripcionesReales
   const saldo = ingresosReales - totalGastos
   const tasaAhorro = ingresosReales > 0 ? ((ingresosReales - totalGastos) / ingresosReales) * 100 : 0
@@ -102,6 +135,7 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
     gastosFijos: gastosFijosReales,
     suscripciones: suscripcionesReales,
     totalGastos,
+    gastosPagados, // ✨ NUEVO
     saldo,
     tasaAhorro,
     tipo: 'real'
@@ -162,6 +196,11 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
   const saldo = totalIngresosProyectados - totalGastos
   const tasaAhorro = totalIngresosProyectados > 0 ? ((totalIngresosProyectados - totalGastos) / totalIngresosProyectados) * 100 : 0
   
+  // ✨ NUEVO: GASTOS PAGADOS PROYECTADOS (estimación)
+  const gastosPagadosProyectados = 
+    gastosVariablesActuales +
+    gastosFijos.filter(gf => gf.estado === 'Pagado').reduce((sum, gf) => sum + safeNumber(gf.monto), 0)
+  
   // Objeto de desglose
   const desglose = {
     ingresosDelMes,
@@ -177,6 +216,7 @@ const calcularBalanceProyectado = (ingresos, gastos, gastosFijos, suscripciones,
     gastosFijos: gastosFijosProyectados,
     suscripciones: suscripcionesProyectadas,
     totalGastos,
+    gastosPagados: gastosPagadosProyectados, // ✨ NUEVO
     saldo,
     tasaAhorro,
     tipo: 'proyectado',

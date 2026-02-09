@@ -18,6 +18,7 @@ import { calcularBalanceInteligente } from '../utils/financialCalculations'
 import { useMonthlyTransition } from '../hooks/useMonthlyTransition'
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados'
 
+
 // --- COMPONENTES ---
 import ModalIngreso from './ModalIngreso'
 import ModalGastos from './ModalGastos'
@@ -769,7 +770,9 @@ const handlePagoManual = async (sub) => {
 // ===========================================
 // 🔄 DESHACER PAGO DE SUSCRIPCIÓN
 // ===========================================
-const handleDeshacerPago = async (item, type) => {
+const handleDeshacerPago = useCallback(async (item, type) => {
+  console.log('🔄 Iniciando deshacer pago...', item);
+  
   // Solo aplica para suscripciones pagadas
   if (type !== ITEM_TYPES.SUSCRIPCION) {
     showLocalNotification('⚠️ Operación no permitida', {
@@ -791,6 +794,12 @@ const handleDeshacerPago = async (item, type) => {
     (proximoPago.getFullYear() === hoy.getFullYear() && proximoPago.getMonth() > hoy.getMonth())
   );
   
+  console.log('📅 Verificando estado:', {
+    hoy: hoy.toISOString().split('T')[0],
+    proximoPago: item.proximo_pago,
+    esMesSiguiente
+  });
+  
   if (!esMesSiguiente) {
     showLocalNotification('⚠️ No se puede deshacer', {
       body: 'Esta suscripción no ha sido pagada este mes',
@@ -808,9 +817,14 @@ const handleDeshacerPago = async (item, type) => {
     `⚠️ Esta acción no se puede deshacer automáticamente.`
   );
 
-  if (!confirmar) return;
+  if (!confirmar) {
+    console.log('❌ Usuario canceló la operación');
+    return;
+  }
 
   try {
+    console.log('🚀 Ejecutando deshacer pago...');
+    
     // 1. Obtener la cuenta asociada
     if (!item.cuenta_id) {
       throw new Error('La suscripción no tiene cuenta asociada');
@@ -821,44 +835,55 @@ const handleDeshacerPago = async (item, type) => {
       throw new Error('Cuenta no encontrada');
     }
 
+    console.log('💳 Cuenta encontrada:', cuenta.nombre);
+
     // 2. DEVOLVER EL DINERO A LA CUENTA
     const nuevoBalance = Number(cuenta.balance) + Number(item.costo);
     await updateCuenta(cuenta.id, { balance: nuevoBalance });
-    console.log(`💰 Devuelto $${item.costo} a ${cuenta.nombre}`);
+    console.log(`💰 Devuelto $${item.costo} a ${cuenta.nombre}. Nuevo balance: $${nuevoBalance}`);
 
     // 3. RETROCEDER LA FECHA DE PRÓXIMO PAGO
-    // Calcular fecha anterior según el ciclo
     const fechaAnterior = calcularFechaAnterior(item.proximo_pago, item.ciclo);
-    await updateSuscripcion(item.id, { proximo_pago: fechaAnterior });
-    console.log(`📅 Próximo pago retrocedido a: ${fechaAnterior}`);
+    console.log(`📅 Calculando fecha anterior: ${item.proximo_pago} (${item.ciclo}) → ${fechaAnterior}`);
+    
+    const resultadoUpdate = await updateSuscripcion(item.id, { proximo_pago: fechaAnterior });
+    console.log(`✅ Resultado de updateSuscripcion:`, resultadoUpdate);
+    
+    // FORZAR ACTUALIZACIÓN DEL ESTADO LOCAL
+    setSuscripcionesInstant(prev => 
+      prev.map(s => 
+        s.id === item.id 
+          ? { ...s, proximo_pago: fechaAnterior }
+          : s
+      )
+    );
+    console.log(`🔄 Estado local actualizado`);
 
-    // 4. ELIMINAR DEL HISTORIAL BANCARIO (opcional pero recomendado)
-    // Buscar la última transacción de esta suscripción en el historial
-  // ✅ CORRECTO:
-const historialActualizado = movimientosBancarios.filter(h => {
-  const esEstaSuscripcion = (
-    h.tipo === 'gasto' &&
-    h.cuentaId === cuenta.id &&
-    h.ref?.includes(item.servicio) &&
-    Math.abs(h.monto - Number(item.costo)) < 0.01
-  );
-  return !esEstaSuscripcion;
-});
+    // 4. ELIMINAR DEL HISTORIAL BANCARIO
+    const historialActualizado = movimientosBancarios.filter(h => {
+      const esEstaSuscripcion = (
+        h.tipo === 'gasto' &&
+        h.cuentaId === cuenta.id &&
+        h.ref?.includes(item.servicio) &&
+        Math.abs(h.monto - Number(item.costo)) < 0.01
+      );
+      return !esEstaSuscripcion;
+    });
 
-setMovimientosBancarios(historialActualizado);
-localStorage.setItem('historial_bancarios_v2', JSON.stringify(historialActualizado));
-console.log(`🗑️ Eliminado registro del historial`);
+    setMovimientosBancarios(historialActualizado);
+    localStorage.setItem('historial_bancarios_v2', JSON.stringify(historialActualizado));
+    console.log(`🗑️ Eliminado del historial (antes: ${movimientosBancarios.length}, después: ${historialActualizado.length})`);
 
-// 5. NOTIFICAR ÉXITO
-showLocalNotification('✅ Pago Deshecho', {
-  body: `${item.servicio}: $${Number(item.costo).toFixed(2)} devuelto a ${cuenta.nombre}`,
-  icon: '/favicon.ico',
-  tag: 'deshacer-pago'
-});
+    // 5. NOTIFICAR ÉXITO
+    showLocalNotification('✅ Pago Deshecho', {
+      body: `${item.servicio}: $${Number(item.costo).toFixed(2)} devuelto a ${cuenta.nombre}`,
+      icon: '/favicon.ico',
+      tag: 'deshacer-pago'
+    });
 
-// 6. CERRAR MODAL
-setShowModal(null);
-setItemSeleccionado(null);
+    // 6. CERRAR MODAL
+    setShowModal(null);
+    setItemSeleccionado(null);
 
     console.log(`✅ Pago deshecho exitosamente: ${item.servicio}`);
 
@@ -868,8 +893,8 @@ setItemSeleccionado(null);
       body: `No se pudo deshacer el pago: ${error.message}`,
       icon: '/favicon.ico'
     });
-  }
-};
+}
+}, [cuentas, movimientosBancarios, updateCuenta, updateSuscripcion, showLocalNotification, setMovimientosBancarios, setSuscripcionesInstant, setShowModal, setItemSeleccionado]);
 
   const handleGuardarDeuda = async (data) => {
     try {
@@ -1109,7 +1134,7 @@ const overviewData = useMemo(() => {
     return (deudaId) => deudasPagadasEsteMesSet.has(deudaId)
   }, [deudasPagadasEsteMesSet])
   
-  const diaDeHoy = hoy.getDate()
+
 
 
   // Exponer función de deshacer pago globalmente para el modal
@@ -1118,8 +1143,7 @@ useEffect(() => {
   return () => {
     delete window.deshacerPagoSuscripcion;
   };
-}, [cuentas, movimientosBancarios, updateCuenta, updateSuscripcion, showLocalNotification]);
-
+}, [handleDeshacerPago]);
 
 // ===========================================
 // 🤖 SISTEMA DE AUTOPAGO AUTOMÁTICO MEJORADO
@@ -1127,6 +1151,36 @@ useEffect(() => {
 useEffect(() => {
   let mounted = true;
   let intervalId = null;
+  let timeoutId = null;
+
+  // ✅ LEER REGISTRO DE AUTOPAGOS EJECUTADOS HOY
+  const getAutopagosHoy = () => {
+    const hoyLocal = new Date().toISOString().split('T')[0];
+    const registroStr = localStorage.getItem('autopagos_ejecutados');
+    
+    if (!registroStr) return { fecha: hoyLocal, items: [] };
+    
+    const registro = JSON.parse(registroStr);
+    
+    // Si la fecha cambió, limpiar registro
+    if (registro.fecha !== hoyLocal) {
+      return { fecha: hoyLocal, items: [] };
+    }
+    
+    return registro;
+  };
+
+  // ✅ GUARDAR ITEM COMO PAGADO HOY
+  const marcarAutopagado = (itemId, tipo) => {
+    const registro = getAutopagosHoy();
+    const key = `${tipo}-${itemId}`;
+    
+    if (!registro.items.includes(key)) {
+      registro.items.push(key);
+      localStorage.setItem('autopagos_ejecutados', JSON.stringify(registro));
+      console.log(`✅ Marcado como pagado hoy: ${key}`);
+    }
+  };
 
   const processAutopago = async () => {
     if (!mounted) return;
@@ -1136,11 +1190,22 @@ useEffect(() => {
     
     console.log(`🔄 Ejecutando verificación de autopagos: ${ahora.toLocaleTimeString('es-MX')}`);
     
+    // ✅ OBTENER REGISTRO DE PAGOS YA EJECUTADOS HOY
+    const registroHoy = getAutopagosHoy();
+    console.log(`📋 Autopagos ya ejecutados hoy:`, registroHoy.items);
+    
     let autopagosEjecutados = [];
 
     // ---1. PROCESAR AUTOPAGO DE SUSCRIPCIONES ---
     if (suscripcionesInstant.length > 0) {
       for (const sub of suscripcionesInstant) {
+        // ✅ VERIFICAR SI YA FUE PAGADA HOY
+        const keyItem = `suscripcion-${sub.id}`;
+        if (registroHoy.items.includes(keyItem)) {
+          console.log(`⏭️ Ya pagada hoy: ${sub.servicio} (${keyItem})`);
+          continue;
+        }
+
         // Solo si coincide la fecha exacta, está activo, tiene cuenta asignada y autopago activado
         if (
           sub.estado !== 'Activo' || 
@@ -1179,7 +1244,10 @@ useEffect(() => {
           // 4. Actualizar la suscripción en BD
           await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago });
           
-          // ✅ NUEVO: Agregar a lista de autopagos ejecutados
+          // ✅ 5. MARCAR COMO PAGADA HOY (EVITAR DUPLICADOS)
+          marcarAutopagado(sub.id, 'suscripcion');
+          
+          // 6. Agregar a lista de autopagos ejecutados
           autopagosEjecutados.push({
             tipo: 'suscripcion',
             nombre: sub.servicio,
@@ -1200,6 +1268,13 @@ useEffect(() => {
       const diaDeHoy = ahora.getDate();
       
       for (const gf of gastosFijosInstant) {
+        // ✅ VERIFICAR SI YA FUE PAGADO HOY
+        const keyItem = `gasto_fijo-${gf.id}`;
+        if (registroHoy.items.includes(keyItem)) {
+          console.log(`⏭️ Ya pagado hoy: ${gf.nombre} (${keyItem})`);
+          continue;
+        }
+
         // Verificar: Día de vencimiento coincide HOY, tiene autopago, cuenta asignada y está Pendiente
         if (
           gf.dia_venc !== diaDeHoy || 
@@ -1235,7 +1310,10 @@ useEffect(() => {
           // 3. Marcar como PAGADO
           await updateGastoFijo(gf.id, { estado: 'Pagado' });
 
-          // ✅ NUEVO: Agregar a lista de autopagos ejecutados
+          // ✅ 4. MARCAR COMO PAGADO HOY (EVITAR DUPLICADOS)
+          marcarAutopagado(gf.id, 'gasto_fijo');
+
+          // 5. Agregar a lista de autopagos ejecutados
           autopagosEjecutados.push({
             tipo: 'gasto_fijo',
             nombre: gf.nombre,
@@ -1251,7 +1329,7 @@ useEffect(() => {
       }
     }
 
-    // ✅ NUEVO: ENVIAR NOTIFICACIÓN SI HUBO AUTOPAGOS
+    // ✅ ENVIAR NOTIFICACIÓN SI HUBO AUTOPAGOS
     if (autopagosEjecutados.length > 0 && showLocalNotification) {
       const totalAutopagos = autopagosEjecutados.reduce((sum, ap) => sum + ap.monto, 0);
       
@@ -1278,13 +1356,15 @@ useEffect(() => {
     }
   };
 
-  // ✅ NUEVO: Ejecutar inmediatamente al cargar
-  const timeoutId = setTimeout(processAutopago, 2000);
+  // ✅ Ejecutar inmediatamente al cargar (después de 2 segundos)
+  timeoutId = setTimeout(processAutopago, 2000);
+  
+  // ✅ Ejecutar cada 5 minutos
   intervalId = setInterval(processAutopago, 5 * 60 * 1000);
   
   return () => {
     mounted = false;
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
     if (intervalId) clearInterval(intervalId);
   };
 }, [
