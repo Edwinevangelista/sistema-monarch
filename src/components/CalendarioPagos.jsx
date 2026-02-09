@@ -446,7 +446,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
             </div>
           </div>
         </>,
-        document.body  // 👈 Renderizar en el body, fuera del componente
+        document.body  
       )}
     </div>
   )
