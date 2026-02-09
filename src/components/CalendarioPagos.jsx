@@ -349,118 +349,99 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         })}
       </div>
       
-      {/* DETALLE DEL DÍA: MODAL RESPONSIVE (BOTTOM SHEET) */}
-      {diaSeleccionado && eventosDelDia && (
-        <>
-          {/* Overlay oscuro */}
-          <div 
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 md:bg-black/80"
-            onClick={() => setDiaSeleccionado(null)}
-          />
-          
-          {/* Contenedor del Modal */}
-          <div 
-            className="fixed z-50 bg-gray-900 border-t border-white/10 md:border md:border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 md:inset-0 md:flex md:items-center md:justify-center"
-            style={{ 
-              top: 'auto',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              width: '100%',
-              height: 'auto',
-              maxHeight: '75vh',
-              borderRadius: '24px 24px 0 0'
-            }}
-          >
-            <style>{`
-              @media (min-width: 768px) {
-                .sheet-content {
-                  border-radius: 24px;
-                  max-width: 400px;
-                  width: 100%;
-                  margin: 0 auto;
-                  max-height: 80vh;
-                }
-              }
-              @media (max-width: 767px) {
-                .sheet-content {
-                  border-radius: 24px 24px 0 0;
-                  height: auto;
-                  max-height: 75vh;
-                }
-              }
-            `}</style>
+{/* DETALLE DEL DÍA: MODAL RESPONSIVE (BOTTOM SHEET) */}
+{diaSeleccionado && eventosDelDia && (
+  <>
+    {/* Overlay oscuro */}
+    <div 
+      className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 md:bg-black/80"
+      onClick={() => setDiaSeleccionado(null)}
+    />
+    
+    {/* Contenedor del Modal */}
+    <div 
+      className="fixed z-[9999] left-0 right-0 md:inset-0 md:flex md:items-center md:justify-center pointer-events-none"
+      style={{ 
+        bottom: 0,
+        top: 'auto'
+      }}
+    >
+      <div 
+        className="bg-gray-900 border-t border-white/10 md:border md:border-white/10 shadow-2xl w-full md:max-w-[400px] md:mx-auto animate-in slide-in-from-bottom-10 duration-300 pointer-events-auto"
+        style={{
+          borderRadius: '24px 24px 0 0',
+          maxHeight: '75vh'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabecera móvil (Handle) */}
+        <div className="md:hidden w-full flex justify-center pt-3 pb-1">
+          <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
+        </div>
 
-            <div className="sheet-content flex flex-col bg-gray-900 w-full h-full">
-              {/* Cabecera móvil (Handle) */}
-              <div className="md:hidden w-full flex justify-center pt-3 pb-1">
-                <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
-              </div>
-
-              {/* Header */}
-              <div className="p-5 pb-2 flex justify-between items-center border-b border-white/5">
-                <div>
-                  <h4 className="text-lg font-bold text-white">
-                    {diaSeleccionado} de {meses[mesActual.getMonth()]}
-                  </h4>
-                  <p className="text-xs text-gray-400">
-                    {diasSemana[new Date(mesActual.getFullYear(), mesActual.getMonth(), diaSeleccionado).getDay()]}
-                  </p>
-                </div>
-                <div className={`text-right ${netoDia >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  <div className="text-xs font-medium uppercase tracking-wider">Neto</div>
-                  <div className="text-xl font-bold">
-                    ${netoDia >= 0 ? '+' : ''}{netoDia.toLocaleString(undefined, {maximumFractionDigits:0})}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Lista de Eventos Scrollable */}
-              <div className="p-4 overflow-y-auto space-y-3 flex-1">
-                {eventosDelDia.eventos.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Sin movimientos
-                  </div>
-                ) : (
-                  eventosDelDia.eventos.map((evento) => (
-                    <div 
-                      key={evento.id}
-                      className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${evento.color}`}
-                    >
-                      <div className={`p-2 bg-black/20 rounded-lg text-white/90`}>
-                        {evento.icono}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-semibold text-white truncate">{evento.nombre}</div>
-                          {/* Indicador de proyección */}
-                          {evento.esRecurrente && (
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
-                              📊 Proyectado
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-gray-300 capitalize opacity-80">{evento.tipo.replace('_', ' ')}</div>
-                      </div>
-                      <div className="text-sm font-bold text-white whitespace-nowrap">
-                        ${evento.monto.toFixed(2)}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Botón Cerrar */}
-              <button 
-                onClick={() => setDiaSeleccionado(null)}
-                className="md:hidden absolute top-3 right-3 p-2 text-gray-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
+        {/* Header */}
+        <div className="p-5 pb-2 flex justify-between items-center border-b border-white/5">
+          <div>
+            <h4 className="text-lg font-bold text-white">
+              {diaSeleccionado} de {meses[mesActual.getMonth()]}
+            </h4>
+            <p className="text-xs text-gray-400">
+              {diasSemana[new Date(mesActual.getFullYear(), mesActual.getMonth(), diaSeleccionado).getDay()]}
+            </p>
+          </div>
+          <div className={`text-right ${netoDia >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className="text-xs font-medium uppercase tracking-wider">Neto</div>
+            <div className="text-xl font-bold">
+              ${netoDia >= 0 ? '+' : ''}{netoDia.toLocaleString(undefined, {maximumFractionDigits:0})}
             </div>
           </div>
-        </>
-      )}
+        </div>
+        
+        {/* Lista de Eventos Scrollable */}
+        <div className="p-4 overflow-y-auto space-y-3" style={{ maxHeight: 'calc(75vh - 120px)' }}>
+          {eventosDelDia.eventos.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Sin movimientos
+            </div>
+          ) : (
+            eventosDelDia.eventos.map((evento) => (
+              <div 
+                key={evento.id}
+                className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${evento.color}`}
+              >
+                <div className={`p-2 bg-black/20 rounded-lg text-white/90`}>
+                  {evento.icono}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold text-white truncate">{evento.nombre}</div>
+                    {evento.esRecurrente && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
+                        📊 Proyectado
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-gray-300 capitalize opacity-80">{evento.tipo.replace('_', ' ')}</div>
+                </div>
+                <div className="text-sm font-bold text-white whitespace-nowrap">
+                  ${evento.monto.toFixed(2)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Botón Cerrar */}
+        <button 
+          onClick={() => setDiaSeleccionado(null)}
+          className="absolute top-3 right-3 p-2 text-gray-400 hover:text-white bg-gray-800/50 rounded-full backdrop-blur-sm"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      </div>
+    </div>
+  </>
+)}
     </div>
   )
 }

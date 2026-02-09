@@ -324,7 +324,34 @@ useEffect(() => {
       }, 1500)
     }
   }, [])
-
+// ===========================================
+// 🚫 BLOQUEAR SCROLL DEL FONDO CON MODALES ABIERTOS
+// ===========================================
+useEffect(() => {
+  const tieneModalAbierto = showModal || itemSeleccionado || showDetallesCategorias || 
+                            showDebtPlanner || showSavingsPlanner || showSpendingControl || 
+                            showExportacion;
+  
+  if (tieneModalAbierto) {
+    // Guardar posición actual del scroll
+    const scrollY = window.scrollY;
+    
+    // Bloquear scroll del body
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    return () => {
+      // Restaurar scroll cuando se cierra el modal
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
+  }
+}, [showModal, itemSeleccionado, showDetallesCategorias, showDebtPlanner, showSavingsPlanner, showSpendingControl, showExportacion]);
   const cerrarTutorial = () => {
     setTutorialActivo(false)
     localStorage.setItem('finguide_tutorial_visto_v2', 'true')
@@ -1640,7 +1667,7 @@ const dataGraficaDona = useMemo(() =>
   // RENDERIZADO UI MODERNA
   // ============================================
   return (
-     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-24 md:pb-4 relative text-gray-100 selection:bg-purple-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30">
       
       {/* FONDO AMBIENTAL */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
