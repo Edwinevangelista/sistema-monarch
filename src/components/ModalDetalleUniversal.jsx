@@ -279,7 +279,9 @@ const isPagado = isGastoFijoPagado || isSuscripcionPagada
           isPagado ? (
             // Si ya está pagada, mostramos botón de edición
             <button
-              onClick={() => onEditar ? onEditar(item, type) : null}
+              onClick={() => {
+                 if (onEditar) onEditar(item, type)
+              }}
               disabled={isPagando}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-all border border-gray-600 active:scale-95"
             >
@@ -342,12 +344,14 @@ const isPagado = isGastoFijoPagado || isSuscripcionPagada
           </button>
         )}
 
-        {/* BOTÓN SECUNDARIO (Editar) */}
+        {/* BOTÓN SECUNDARIO (Editar / Desmarcar) */}
         {type === ITEM_TYPES.SUSCRIPCION && isPagado ? (
            // Texto informativo para suscripciones pagadas
-           <button className="w-full text-xs text-gray-500 hover:text-gray-300 transition-colors">
-             (Si pagaste por error, usa el botón de arriba para ajustar la fecha)
-           </button>
+           <div className="text-center w-full px-2">
+             <button className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+               (Para desmarcar, presiona "Gestionar Ciclo" arriba)
+             </button>
+           </div>
         ) : (
            // Botón Editar Normal para el resto
            <button

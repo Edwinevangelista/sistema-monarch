@@ -681,7 +681,37 @@ useEffect(() => {
     else if (ciclo === 'Semanal') nuevaFecha.setDate(nuevaFecha.getDate() + 7);
     return nuevaFecha.toISOString().split('T')[0];
   };
-
+// ===========================================
+// 📅 CALCULAR FECHA ANTERIOR (para deshacer)
+// ===========================================
+const calcularFechaAnterior = (fechaActual, ciclo) => {
+  const fecha = new Date(fechaActual + 'T00:00:00');
+  
+  switch (ciclo) {
+    case 'Semanal':
+      fecha.setDate(fecha.getDate() - 7);
+      break;
+    case 'Quincenal':
+      fecha.setDate(fecha.getDate() - 15);
+      break;
+    case 'Mensual':
+      fecha.setMonth(fecha.getMonth() - 1);
+      break;
+    case 'Trimestral':
+      fecha.setMonth(fecha.getMonth() - 3);
+      break;
+    case 'Semestral':
+      fecha.setMonth(fecha.getMonth() - 6);
+      break;
+    case 'Anual':
+      fecha.setFullYear(fecha.getFullYear() - 1);
+      break;
+    default:
+      fecha.setMonth(fecha.getMonth() - 1); // Default: Mensual
+  }
+  
+  return fecha.toISOString().split('T')[0];
+};
 // MODIFICADO: Agrega feedback de carga y cierra modal al terminar
 const handlePagoManual = async (sub) => {
   if (!sub.cuenta_id) {
@@ -736,30 +766,110 @@ const handlePagoManual = async (sub) => {
   }
 }
 
-// NUEVO: Función para desmarcar pago
-// eslint-disable-next-line no-unused-vars
-const handleDeshacerPago = async (sub) => {
-  if (!window.confirm(`¿Deshacer el pago de ${sub.servicio}?\n\nEsto regresará la fecha de cobro y asumiremos que cancelaste el pago. Deberás eliminar el gasto manualmente si ya se registró.`)) return;
+// ===========================================
+// 🔄 DESHACER PAGO DE SUSCRIPCIÓN
+// ===========================================
+const handleDeshacerPago = async (item, type) => {
+  // Solo aplica para suscripciones pagadas
+  if (type !== ITEM_TYPES.SUSCRIPCION) {
+    showLocalNotification('⚠️ Operación no permitida', {
+      body: 'Solo se puede deshacer el pago de suscripciones',
+      icon: '/favicon.ico'
+    });
+    return;
+  }
+
+  // Verificar que la suscripción esté pagada (proximo_pago en mes siguiente)
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const proximoPago = new Date(item.proximo_pago + 'T00:00:00');
+  proximoPago.setHours(0, 0, 0, 0);
+  
+  const esMesSiguiente = (
+    proximoPago.getFullYear() > hoy.getFullYear() ||
+    (proximoPago.getFullYear() === hoy.getFullYear() && proximoPago.getMonth() > hoy.getMonth())
+  );
+  
+  if (!esMesSiguiente) {
+    showLocalNotification('⚠️ No se puede deshacer', {
+      body: 'Esta suscripción no ha sido pagada este mes',
+      icon: '/favicon.ico'
+    });
+    return;
+  }
+
+  // Confirmar con el usuario
+  const confirmar = window.confirm(
+    `¿Deshacer el pago de "${item.servicio}"?\n\n` +
+    `• Se devolverá $${Number(item.costo).toFixed(2)} a la cuenta\n` +
+    `• La fecha de próximo pago retrocederá\n` +
+    `• Se eliminará el registro del historial\n\n` +
+    `⚠️ Esta acción no se puede deshacer automáticamente.`
+  );
+
+  if (!confirmar) return;
 
   try {
-    // Lógica simple: Restar 1 ciclo a la fecha actual de proximo_pago
-    let fechaReferencia = new Date(sub.proximo_pago)
-    
-    if (sub.ciclo === 'Mensual') fechaReferencia.setMonth(fechaReferencia.getMonth() - 1)
-    else if (sub.ciclo === 'Anual') fechaReferencia.setFullYear(fechaReferencia.getFullYear() - 1)
-    else if (sub.ciclo === 'Semanal') fechaReferencia.setDate(fechaReferencia.getDate() - 7)
-    
-    const nuevaFecha = fechaReferencia.toISOString().split('T')[0]
-    
-    await updateSuscripcion(sub.id, { proximo_pago: nuevaFecha })
-    
-    alert('🔄 Pago desmarcado. La fecha se ha regresado. Recuerda revisar tus gastos.')
-    setItemSeleccionado(null) // Cierra para actualizar vista
+    // 1. Obtener la cuenta asociada
+    if (!item.cuenta_id) {
+      throw new Error('La suscripción no tiene cuenta asociada');
+    }
+
+    const cuenta = cuentas.find(c => c.id === item.cuenta_id);
+    if (!cuenta) {
+      throw new Error('Cuenta no encontrada');
+    }
+
+    // 2. DEVOLVER EL DINERO A LA CUENTA
+    const nuevoBalance = Number(cuenta.balance) + Number(item.costo);
+    await updateCuenta(cuenta.id, { balance: nuevoBalance });
+    console.log(`💰 Devuelto $${item.costo} a ${cuenta.nombre}`);
+
+    // 3. RETROCEDER LA FECHA DE PRÓXIMO PAGO
+    // Calcular fecha anterior según el ciclo
+    const fechaAnterior = calcularFechaAnterior(item.proximo_pago, item.ciclo);
+    await updateSuscripcion(item.id, { proximo_pago: fechaAnterior });
+    console.log(`📅 Próximo pago retrocedido a: ${fechaAnterior}`);
+
+    // 4. ELIMINAR DEL HISTORIAL BANCARIO (opcional pero recomendado)
+    // Buscar la última transacción de esta suscripción en el historial
+  // ✅ CORRECTO:
+const historialActualizado = movimientosBancarios.filter(h => {
+  const esEstaSuscripcion = (
+    h.tipo === 'gasto' &&
+    h.cuentaId === cuenta.id &&
+    h.ref?.includes(item.servicio) &&
+    Math.abs(h.monto - Number(item.costo)) < 0.01
+  );
+  return !esEstaSuscripcion;
+});
+
+setMovimientosBancarios(historialActualizado);
+localStorage.setItem('historial_bancarios_v2', JSON.stringify(historialActualizado));
+console.log(`🗑️ Eliminado registro del historial`);
+
+// 5. NOTIFICAR ÉXITO
+showLocalNotification('✅ Pago Deshecho', {
+  body: `${item.servicio}: $${Number(item.costo).toFixed(2)} devuelto a ${cuenta.nombre}`,
+  icon: '/favicon.ico',
+  tag: 'deshacer-pago'
+});
+
+// 6. CERRAR MODAL
+setShowModal(null);
+setItemSeleccionado(null);
+
+    console.log(`✅ Pago deshecho exitosamente: ${item.servicio}`);
+
   } catch (error) {
-    console.error('Error deshaciendo:', error)
-    alert('Error al deshacer pago.')
+    console.error('❌ Error al deshacer pago:', error);
+    showLocalNotification('❌ Error', {
+      body: `No se pudo deshacer el pago: ${error.message}`,
+      icon: '/favicon.ico'
+    });
   }
-}
+};
 
   const handleGuardarDeuda = async (data) => {
     try {
@@ -1001,107 +1111,194 @@ const overviewData = useMemo(() => {
   
   const diaDeHoy = hoy.getDate()
 
-  useEffect(() => {
-    let mounted = true
-    const processAutopago = async () => {
-      if (!mounted) return
 
-      // ---1. PROCESAR AUTOPAGO DE SUSCRIPCIONES ---
-      if (suscripcionesInstant.length > 0) {
-        for (const sub of suscripcionesInstant) {
-          // Solo si coincide la fecha exacta, está activo, tiene cuenta asignada y activo el autopago
-          if (sub.estado !== 'Activo' || !sub.autopago || !sub.cuenta_id || sub.proximo_pago !== hoyStr) continue
-
-          const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
-          if (!cuenta) continue
-
-          try {
-            console.log(`🤖 Autopago Suscripción: ${sub.servicio} ($${sub.costo})`)
-
-            // 1. Restar saldo de la cuenta
-            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
-
-        
-
-            // 3. Actualizar historial bancario local
-            actualizarHistorial({
-              id: Date.now(),
-              tipo: 'gasto',
-              monto: Number(sub.costo),
-              ref: `Suscripción: ${sub.servicio}`,
-              fecha: hoyStr,
-              cuentaId: cuenta.id,
-              cuentaNombre: cuenta.nombre
-            })
-
-            // 4. Calcular próxima fecha
-            const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo)
-            
-            // 5. Actualizar la suscripción en BD (mover fecha)
-            await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
-            
-          } catch (error) {
-            console.error("❌ Error en autopago suscripción:", error)
-          }
-        }
-      }
-
-      // ---2. PROCESAR AUTOPAGO DE GASTOS FIJOS ---
-      if (gastosFijosInstant.length > 0) {
-        for (const gf of gastosFijosInstant) {
-          // Verificar: Día de vencimiento coincide HOY, tiene autopago, cuenta asignada y está Pendiente
-          if (gf.dia_venc !== diaDeHoy || !gf.autopago || !gf.cuenta_id || gf.estado !== 'Pendiente') continue
-
-          const cuenta = cuentas.find(c => c.id === gf.cuenta_id)
-          if (!cuenta) continue
-
-          try {
-            console.log(`🤖 Autopago Gasto Fijo: ${gf.nombre} ($${gf.monto})`)
-
-            // 1. Restar saldo de la cuenta
-            await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(gf.monto) })
+  // Exponer función de deshacer pago globalmente para el modal
+useEffect(() => {
+  window.deshacerPagoSuscripcion = handleDeshacerPago;
+  return () => {
+    delete window.deshacerPagoSuscripcion;
+  };
+}, [cuentas, movimientosBancarios, updateCuenta, updateSuscripcion, showLocalNotification]);
 
 
-            // 3. Actualizar historial bancario local
-            actualizarHistorial({
-              id: Date.now(),
-              tipo: 'gasto',
-              monto: Number(gf.monto),
-              ref: `Gasto Fijo: ${gf.nombre}`,
-              fecha: hoyStr,
-              cuentaId: cuenta.id,
-              cuentaNombre: cuenta.nombre
-            })
+// ===========================================
+// 🤖 SISTEMA DE AUTOPAGO AUTOMÁTICO MEJORADO
+// ===========================================
+useEffect(() => {
+  let mounted = true;
+  let intervalId = null;
 
-            // 4. Marcar como PAGADO en la tabla de gastos fijos
-            await updateGastoFijo(gf.id, { estado: 'Pagado' })
+  const processAutopago = async () => {
+    if (!mounted) return;
 
-          } catch (error) {
-            console.error("❌ Error en autopago gasto fijo:", error)
-          }
-        }
-      }
-    }
-
-    const timeoutId = setTimeout(processAutopago, 1500)
+    const ahora = new Date();
+    const hoyLocal = ahora.toISOString().split('T')[0];
     
-    return () => {
-      mounted = false
-      clearTimeout(timeoutId)
+    console.log(`🔄 Ejecutando verificación de autopagos: ${ahora.toLocaleTimeString('es-MX')}`);
+    
+    let autopagosEjecutados = [];
+
+    // ---1. PROCESAR AUTOPAGO DE SUSCRIPCIONES ---
+    if (suscripcionesInstant.length > 0) {
+      for (const sub of suscripcionesInstant) {
+        // Solo si coincide la fecha exacta, está activo, tiene cuenta asignada y autopago activado
+        if (
+          sub.estado !== 'Activo' || 
+          !sub.autopago || 
+          !sub.cuenta_id || 
+          sub.proximo_pago !== hoyLocal
+        ) continue;
+
+        const cuenta = cuentas.find(c => c.id === sub.cuenta_id);
+        if (!cuenta) {
+          console.warn(`⚠️ Cuenta no encontrada para ${sub.servicio}`);
+          continue;
+        }
+
+        try {
+          console.log(`🤖 Ejecutando autopago: ${sub.servicio} ($${sub.costo})`);
+
+          // 1. Restar saldo de la cuenta
+          const nuevoBalance = Number(cuenta.balance) - Number(sub.costo);
+          await updateCuenta(cuenta.id, { balance: nuevoBalance });
+
+          // 2. Actualizar historial bancario local
+          actualizarHistorial({
+            id: Date.now(),
+            tipo: 'gasto',
+            monto: Number(sub.costo),
+            ref: `Suscripción: ${sub.servicio}`,
+            fecha: hoyLocal,
+            cuentaId: cuenta.id,
+            cuentaNombre: cuenta.nombre
+          });
+
+          // 3. Calcular próxima fecha
+          const nuevoProximoPago = calcularProximoPago(sub.proximo_pago, sub.ciclo);
+          
+          // 4. Actualizar la suscripción en BD
+          await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago });
+          
+          // ✅ NUEVO: Agregar a lista de autopagos ejecutados
+          autopagosEjecutados.push({
+            tipo: 'suscripcion',
+            nombre: sub.servicio,
+            monto: Number(sub.costo),
+            cuenta: cuenta.nombre
+          });
+          
+          console.log(`✅ Autopago exitoso: ${sub.servicio} → Próximo: ${nuevoProximoPago}`);
+          
+        } catch (error) {
+          console.error(`❌ Error en autopago ${sub.servicio}:`, error);
+        }
+      }
     }
-  }, [
-    suscripcionesInstant, 
-    gastosFijosInstant,
-    cuentas, 
-    hoyStr, 
-    hoy, // ✅ Agregado para corregir missing dependency
-    diaDeHoy, // ✅ Reemplaza la expresión compleja hoy.getDate()
-    addGasto, 
-    updateCuenta, 
-    updateSuscripcion,
-    updateGastoFijo,
-    actualizarHistorial
-  ])
+
+    // ---2. PROCESAR AUTOPAGO DE GASTOS FIJOS ---
+    if (gastosFijosInstant.length > 0) {
+      const diaDeHoy = ahora.getDate();
+      
+      for (const gf of gastosFijosInstant) {
+        // Verificar: Día de vencimiento coincide HOY, tiene autopago, cuenta asignada y está Pendiente
+        if (
+          gf.dia_venc !== diaDeHoy || 
+          !gf.autopago || 
+          !gf.cuenta_id || 
+          gf.estado !== 'Pendiente'
+        ) continue;
+
+        const cuenta = cuentas.find(c => c.id === gf.cuenta_id);
+        if (!cuenta) {
+          console.warn(`⚠️ Cuenta no encontrada para ${gf.nombre}`);
+          continue;
+        }
+
+        try {
+          console.log(`🤖 Ejecutando autopago gasto fijo: ${gf.nombre} ($${gf.monto})`);
+
+          // 1. Restar saldo de la cuenta
+          const nuevoBalance = Number(cuenta.balance) - Number(gf.monto);
+          await updateCuenta(cuenta.id, { balance: nuevoBalance });
+
+          // 2. Actualizar historial bancario local
+          actualizarHistorial({
+            id: Date.now(),
+            tipo: 'gasto',
+            monto: Number(gf.monto),
+            ref: `Gasto Fijo: ${gf.nombre}`,
+            fecha: hoyLocal,
+            cuentaId: cuenta.id,
+            cuentaNombre: cuenta.nombre
+          });
+
+          // 3. Marcar como PAGADO
+          await updateGastoFijo(gf.id, { estado: 'Pagado' });
+
+          // ✅ NUEVO: Agregar a lista de autopagos ejecutados
+          autopagosEjecutados.push({
+            tipo: 'gasto_fijo',
+            nombre: gf.nombre,
+            monto: Number(gf.monto),
+            cuenta: cuenta.nombre
+          });
+          
+          console.log(`✅ Autopago exitoso: ${gf.nombre}`);
+
+        } catch (error) {
+          console.error(`❌ Error en autopago ${gf.nombre}:`, error);
+        }
+      }
+    }
+
+    // ✅ NUEVO: ENVIAR NOTIFICACIÓN SI HUBO AUTOPAGOS
+    if (autopagosEjecutados.length > 0 && showLocalNotification) {
+      const totalAutopagos = autopagosEjecutados.reduce((sum, ap) => sum + ap.monto, 0);
+      
+      if (autopagosEjecutados.length === 1) {
+        // Notificación individual
+        const ap = autopagosEjecutados[0];
+        showLocalNotification('🤖 Autopago Ejecutado', {
+          body: `${ap.nombre}: $${ap.monto.toLocaleString()} descontado de ${ap.cuenta}`,
+          icon: '/favicon.ico',
+          tag: 'autopago',
+          requireInteraction: false
+        });
+      } else {
+        // Notificación múltiple
+        showLocalNotification('🤖 Autopagos Ejecutados', {
+          body: `${autopagosEjecutados.length} pagos automáticos por $${totalAutopagos.toLocaleString()}`,
+          icon: '/favicon.ico',
+          tag: 'autopago',
+          requireInteraction: false
+        });
+      }
+      
+      console.log(`📢 Notificación enviada: ${autopagosEjecutados.length} autopago(s)`);
+    }
+  };
+
+  // ✅ NUEVO: Ejecutar inmediatamente al cargar
+  const timeoutId = setTimeout(processAutopago, 2000);
+  intervalId = setInterval(processAutopago, 5 * 60 * 1000);
+  
+  return () => {
+    mounted = false;
+    clearTimeout(timeoutId);
+    if (intervalId) clearInterval(intervalId);
+  };
+}, [
+  suscripcionesInstant, 
+  gastosFijosInstant,
+  cuentas, 
+  hoyStr,
+  hoy,
+  updateCuenta, 
+  updateSuscripcion,
+  updateGastoFijo,
+  actualizarHistorial,
+  showLocalNotification
+]);
 
 // 📅 ACTUALIZAR FECHAS VENCIDAS DE SUSCRIPCIONES (AL CARGAR)
   useEffect(() => {
@@ -1995,7 +2192,7 @@ const dataGraficaDona = useMemo(() =>
       `}</style>
     </div>
   )
-}
+} 
 
 // COMPONENTE AUXILIAR PARA MODALES
 function ModalWrapper({ show, onClose, children }) {
