@@ -737,6 +737,7 @@ const handlePagoManual = async (sub) => {
 }
 
 // NUEVO: Función para desmarcar pago
+// eslint-disable-next-line no-unused-vars
 const handleDeshacerPago = async (sub) => {
   if (!window.confirm(`¿Deshacer el pago de ${sub.servicio}?\n\nEsto regresará la fecha de cobro y asumiremos que cancelaste el pago. Deberás eliminar el gasto manualmente si ya se registró.`)) return;
 
