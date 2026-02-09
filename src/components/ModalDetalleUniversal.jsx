@@ -8,7 +8,8 @@ import {
   Info,
   Wallet,
   FileText,
-  Repeat
+  Repeat,
+  Loader2 
 } from 'lucide-react'
 
 export default function ModalDetalleUniversal({
@@ -17,7 +18,8 @@ export default function ModalDetalleUniversal({
   status,
   onClose,
   onEditar,
-  onPagar
+  onPagar,
+  isPagando = false
 }) {
   // =========================
   // Helpers seguros
@@ -55,16 +57,43 @@ export default function ModalDetalleUniversal({
 
   const IconComponent = currentTheme.icon
 
-  // =========================
-  // Lógica de Estado
-  // =========================
-  const isPagado = (type === ITEM_TYPES.FIJO && item.estado === 'Pagado')
+// =========================
+// Lógica de Estado
+// =========================
+
+// 1. Estado estándar (Gastos Fijos)
+const isGastoFijoPagado = (type === ITEM_TYPES.FIJO && item.estado === 'Pagado')
+
+// 2. Estado Dinámico (Suscripciones) - LÓGICA PROFESIONAL
+let isSuscripcionPagada = false
+
+if (type === ITEM_TYPES.SUSCRIPCION) {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const proximoPagoStr = item.proximo_pago || hoy.toISOString().split('T')[0];
+  const proximoPago = new Date(proximoPagoStr + 'T00:00:00');
+  proximoPago.setHours(0, 0, 0, 0);
+  
+  // ✅ LÓGICA CORRECTA: Está pagada si proximo_pago está en mes/año siguiente
+  // Ejemplos (hoy = 8 feb):
+  // - proximo_pago = 15 feb → NO pagada (mismo mes)
+  // - proximo_pago = 8 mar → SÍ pagada (mes siguiente)
+  // - proximo_pago = 8 feb → NO pagada (mismo día)
+  const esMesSiguiente = (
+    proximoPago.getFullYear() > hoy.getFullYear() ||
+    (proximoPago.getFullYear() === hoy.getFullYear() && proximoPago.getMonth() > hoy.getMonth())
+  );
+  
+  isSuscripcionPagada = esMesSiguiente;
+}
+
+// Estado global
+const isPagado = isGastoFijoPagado || isSuscripcionPagada
 
   // =========================
   // Render
   // =========================
-  // ✅ CAMBIO CLAVE: Eliminamos el "fixed inset-0 z-[100] ..."
-  // Ahora este componente es solo el "Body" que se inserta dentro del Modal del padre.
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-full">
       
@@ -223,41 +252,113 @@ export default function ModalDetalleUniversal({
       </div>
 
       {/* --- BOTONES DE ACCIÓN --- */}
-      <div className="p-6 bg-gray-900/80 border-t border-gray-700 grid grid-cols-2 gap-4 shrink-0">
+      <div className="p-6 bg-gray-900/80 border-t border-gray-700 grid grid-cols-1 gap-4 shrink-0">
         
-        {/* Botón Secundario (Editar) */}
-        <button
-          onClick={() => onEditar(item, type)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-all border border-gray-600 active:scale-95"
-        >
-          <Edit2 className="w-4 h-4" />
-          Editar
-        </button>
+        {/* Mensaje de Estado (Si está pagado) */}
+        {type === ITEM_TYPES.SUSCRIPCION && isPagado && (
+          <div className="w-full p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <div>
+                <p className="text-xs text-green-300 font-semibold uppercase">Pagado en</p>
+                <p className="text-white text-sm font-medium">{item.cuenta_nombre || 'Cuenta Asociada'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onEditar ? onEditar(item, type) : null}
+              className="text-xs text-gray-400 hover:text-white underline transition-colors"
+            >
+              Ver cuenta
+            </button>
+          </div>
+        )}
 
-        {/* Botón Primario (Pagar / Gestionar) */}
-        <button
-          onClick={() => onPagar ? onPagar(item, type) : onEditar(item, type)}
-          disabled={isPagado}
-          className={`
-            w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-            ${isPagado 
-              ? 'bg-green-600/20 text-green-400 border-green-600/30 cursor-default' 
-              : `${currentTheme.bg} ${currentTheme.border} hover:opacity-90 text-white cursor-pointer`
-            }
-          `}
-        >
-          {isPagado ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              Pagado
-            </>
+        {/* BOTÓN PRINCIPAL (Pagar / Registrar) */}
+        {type === ITEM_TYPES.SUSCRIPCION ? (
+          // --- BOTÓN ESPECIAL PARA SUSCRIPCIÓN ---
+          isPagado ? (
+            // Si ya está pagada, mostramos botón de edición
+            <button
+              onClick={() => onEditar ? onEditar(item, type) : null}
+              disabled={isPagando}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-all border border-gray-600 active:scale-95"
+            >
+              <Repeat className="w-4 h-4" />
+              Gestionar Ciclo / Editar
+            </button>
           ) : (
-            <>
-              {type === ITEM_TYPES.DEUDA ? <CreditCard className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-              {type === ITEM_TYPES.DEUDA ? 'Registrar Pago' : (type === ITEM_TYPES.FIJO ? 'Marcar Pagado' : 'Gestionar')}
-            </>
-          )}
-        </button>
+            // Si está pendiente, mostramos botón PAGAR
+            <button
+              onClick={() => onPagar ? onPagar(item, type) : null}
+              disabled={isPagando}
+              className={`
+                w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95
+                ${currentTheme.bg} ${currentTheme.border} ${currentTheme.color} 
+                ${isPagando ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}
+              `}
+            >
+              {isPagando ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Procesando pago...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Pagar
+                </>
+              )}
+            </button>
+          )
+        ) : (
+          // --- BOTÓN ESTÁNDAR PARA DEMÁS (DEUDAS, FIJOS, VARIABLES) ---
+          <button
+            onClick={() => onPagar ? onPagar(item, type) : onEditar(item, type)}
+            disabled={isPagado || isPagando}
+            className={`
+              w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+              ${isPagado 
+                ? 'bg-green-600/20 text-green-400 border-green-600/30 cursor-default' 
+                : `${currentTheme.bg} ${currentTheme.border} hover:opacity-90 text-white cursor-pointer`
+              }
+            `}
+          >
+            {isPagando ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Procesando...
+              </>
+            ) : isPagado ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Pagado
+              </>
+            ) : (
+              <>
+                {type === ITEM_TYPES.DEUDA ? <CreditCard className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                {type === ITEM_TYPES.DEUDA ? 'Registrar Pago' : (type === ITEM_TYPES.FIJO ? 'Marcar Pagado' : 'Registrar Pago')}
+              </>
+            )}
+          </button>
+        )}
+
+        {/* BOTÓN SECUNDARIO (Editar) */}
+        {type === ITEM_TYPES.SUSCRIPCION && isPagado ? (
+           // Texto informativo para suscripciones pagadas
+           <button className="w-full text-xs text-gray-500 hover:text-gray-300 transition-colors">
+             (Si pagaste por error, usa el botón de arriba para ajustar la fecha)
+           </button>
+        ) : (
+           // Botón Editar Normal para el resto
+           <button
+            onClick={() => onEditar(item, type)}
+            disabled={isPagando}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-all border border-gray-600 active:scale-95 disabled:opacity-50"
+           >
+             <Edit2 className="w-4 h-4" />
+             Editar Datos
+           </button>
+        )}
       </div>
 
     </div>

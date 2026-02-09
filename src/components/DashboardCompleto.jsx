@@ -89,6 +89,9 @@ export default function DashboardCompleto()  {
 
   const [overviewMode, setOverviewMode] = useState('ALL')
   const [itemSeleccionado, setItemSeleccionado] = useState(null)
+
+  const [isPagandoSuscripcion, setIsPagandoSuscripcion] = useState(false)
+
   const [showModal, setShowModal] = useState(null)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
@@ -679,55 +682,81 @@ useEffect(() => {
     return nuevaFecha.toISOString().split('T')[0];
   };
 
- const handlePagoManual = async (sub) => {
+// MODIFICADO: Agrega feedback de carga y cierra modal al terminar
+const handlePagoManual = async (sub) => {
   if (!sub.cuenta_id) {
-    alert('⚠️ Esta suscripción no tiene una cuenta de pago asignada.')
+    alert('⚠️ Esta suscripción no tiene una cuenta de pago asignada. Asígna una en editar.')
     setSuscripcionEditando(sub)
     setShowModal('suscripcion')
     return
   }
   
   try {
+    setIsPagandoSuscripcion(true)
+
     const cuenta = cuentas.find(c => c.id === sub.cuenta_id)
     if (!cuenta) return
     
-    const nuevoBalance = Number(cuenta.balance) - Number(sub.costo)
+    const montoPagar = Number(sub.costo)
+    
+    // 1. RESTAR SALDO DE LA CUENTA
+    const nuevoBalance = Number(cuenta.balance) - montoPagar
     await updateCuenta(cuenta.id, { balance: nuevoBalance })
     
-    await addGasto({
-      fecha: hoyStr,
-      monto: sub.costo,
-      categoria: '📅 Suscripciones',
-      descripcion: `Pago Manual: ${sub.servicio}`,
-      cuenta_id: cuenta.id,
-      metodo: 'Manual'
-    })
-    
-    await registrarMovimientoEnHistorial({
+    // ❌ ELIMINADO: Ya NO creamos un gasto variable en la lista general
+    // await addGasto({ ... }) 
+
+    // 2. REGISTRAR EN HISTORIAL (Solo para el registro bancario)
+    actualizarHistorial({
+      id: Date.now(),
       tipo: 'gasto',
-      monto: Number(sub.costo),
-      ref: `Suscripción (Manual): ${sub.servicio}`,
+      monto: montoPagar,
+      ref: `Suscripción: ${sub.servicio}`,
+      fecha: hoyStr,
       cuentaId: cuenta.id,
       cuentaNombre: cuenta.nombre
     })
 
-    // ✨ CALCULAR PRÓXIMO PAGO desde HOY (no desde la fecha vieja)
+    // 3. CALCULAR Y ACTUALIZAR PRÓXIMA FECHA
     const nuevoProximoPago = calcularProximoPago(hoyStr, sub.ciclo)
     
-    console.log('📅 Actualizando próximo pago:', {
-      servicio: sub.servicio,
-      fechaAnterior: sub.proximo_pago,
-      fechaNueva: nuevoProximoPago
-    })
+    await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
     
-    if (updateSuscripcion) {
-      await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
-    }
+    alert(`✅ Pago registrado correctamente.\n\n💳 Descontado de: ${cuenta.nombre}\n💰 Monto: $${montoPagar.toLocaleString()}\n📅 Próximo cobro: ${new Date(nuevoProximoPago).toLocaleDateString('es-MX')}`)
     
-    alert(`✅ Pago registrado correctamente.\n\nPróximo pago: ${new Date(nuevoProximoPago).toLocaleDateString('es-MX')}`)
+    // Cerrar modal
+    setItemSeleccionado(null)
+    setSuscripcionEditando(null)
+    
   } catch (error) {
     console.error('❌ Error en pago manual:', error)
     alert('❌ Error al registrar el pago')
+  } finally {
+    setIsPagandoSuscripcion(false)
+  }
+}
+
+// NUEVO: Función para desmarcar pago
+const handleDeshacerPago = async (sub) => {
+  if (!window.confirm(`¿Deshacer el pago de ${sub.servicio}?\n\nEsto regresará la fecha de cobro y asumiremos que cancelaste el pago. Deberás eliminar el gasto manualmente si ya se registró.`)) return;
+
+  try {
+    // Lógica simple: Restar 1 ciclo a la fecha actual de proximo_pago
+    let fechaReferencia = new Date(sub.proximo_pago)
+    
+    if (sub.ciclo === 'Mensual') fechaReferencia.setMonth(fechaReferencia.getMonth() - 1)
+    else if (sub.ciclo === 'Anual') fechaReferencia.setFullYear(fechaReferencia.getFullYear() - 1)
+    else if (sub.ciclo === 'Semanal') fechaReferencia.setDate(fechaReferencia.getDate() - 7)
+    
+    const nuevaFecha = fechaReferencia.toISOString().split('T')[0]
+    
+    await updateSuscripcion(sub.id, { proximo_pago: nuevaFecha })
+    
+    alert('🔄 Pago desmarcado. La fecha se ha regresado. Recuerda revisar tus gastos.')
+    setItemSeleccionado(null) // Cierra para actualizar vista
+  } catch (error) {
+    console.error('Error deshaciendo:', error)
+    alert('Error al deshacer pago.')
   }
 }
 
@@ -991,15 +1020,7 @@ const overviewData = useMemo(() => {
             // 1. Restar saldo de la cuenta
             await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(sub.costo) })
 
-            // 2. Registrar como gasto variable (Historial/Gráficas)
-            await addGasto({
-              fecha: hoyStr,
-              monto: sub.costo,
-              categoria: '📅 Suscripciones',
-              descripcion: `Autopago: ${sub.servicio}`,
-              cuenta_id: cuenta.id,
-              metodo: 'Autopago'
-            })
+        
 
             // 3. Actualizar historial bancario local
             actualizarHistorial({
@@ -1039,15 +1060,6 @@ const overviewData = useMemo(() => {
             // 1. Restar saldo de la cuenta
             await updateCuenta(cuenta.id, { balance: Number(cuenta.balance) - Number(gf.monto) })
 
-            // 2. Registrar como gasto variable (Historial/Gráficas)
-            await addGasto({
-              fecha: hoyStr,
-              monto: gf.monto,
-              categoria: gf.categoria || '📥 Gastos Fijos',
-              descripcion: `Autopago: ${gf.nombre}`,
-              cuenta_id: cuenta.id,
-              metodo: 'Autopago'
-            })
 
             // 3. Actualizar historial bancario local
             actualizarHistorial({
@@ -1734,6 +1746,7 @@ const dataGraficaDona = useMemo(() =>
               }}
               onEditar={handleEditarUniversal}
               onPagar={handlePagarUniversal}
+              isPagando={isPagandoSuscripcion} 
             />
           </div>
         </div>
