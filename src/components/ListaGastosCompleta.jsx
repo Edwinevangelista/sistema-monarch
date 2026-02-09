@@ -10,7 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ITEM_TYPES } from '../constants/itemTypes';
-
+import { getEstadoTarjeta } from '../utils/tarjetasCalculos'
 export default function ListaGastosCompleta({
   deudas = [],
   gastosFijos = [],
@@ -138,6 +138,31 @@ const renderCard = (item, type) => {
                 </span>
               )}
               
+<h3 className="text-white font-semibold text-sm md:text-base truncate">{title}</h3>
+
+{/* 👉 BADGES PARA TARJETAS/DEUDAS (AGREGAR AQUÍ) */}
+{type === ITEM_TYPES.DEUDA && (() => {
+  const estadoTarjeta = getEstadoTarjeta(item.saldo, item.ultimo_pago)
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 shrink-0 ${
+      estadoTarjeta.color === 'green' 
+        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+        : estadoTarjeta.color === 'red' 
+        ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+        : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+    }`}>
+      {estadoTarjeta.badge}
+    </span>
+  )
+})()}
+
+{/* BADGES PARA SUSCRIPCIONES */}
+{type === ITEM_TYPES.SUSCRIPCION && estadoSuscripcion === 'pagada' && (
+  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+    <CheckCircle className="w-2.5 h-2.5" /> PAGADA
+  </span>
+)}
+
               {type === ITEM_TYPES.SUSCRIPCION && estadoSuscripcion === 'pendiente' && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center gap-1 shrink-0">
                   ⏳ PENDIENTE
@@ -156,12 +181,7 @@ const renderCard = (item, type) => {
                 </span>
               )}
               
-              {/* BADGES PARA OTROS TIPOS */}
-              {type !== ITEM_TYPES.SUSCRIPCION && isPaid && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
-                  <CheckCircle className="w-2.5 h-2.5" /> PAGADO
-                </span>
-              )}
+             BADGES PARA OTROS TIPOS */}
               
             </div>
             <p className="text-gray-400 text-xs md:text-sm">{subtitle}</p>

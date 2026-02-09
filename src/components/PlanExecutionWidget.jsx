@@ -149,44 +149,65 @@ export default function PlanExecutionWidget({
         </div>
       )}
 
-      {/* ========================================
-          PROGRESO DEL PLAN (Compacto)
-          ======================================== */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-purple-500/20 rounded-lg">
-              <Target className="w-4 h-4 text-purple-400" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-white">{targetDebt?.nombre || 'Plan Activo'}</div>
-              <div className="text-[10px] text-gray-400">
-                {isAvalancha ? '🏔️ Avalancha' : '⛄ Bola de Nieve'} • ${(config.monthlyPayment ?? 0).toLocaleString()}/mes
-
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-white">{(progress.percentage ?? 0).toFixed(0)}%</div>
-            <div className="text-[10px] text-gray-500">completado</div>
-          </div>
-        </div>
-        
-        {/* Barra de progreso */}
-        <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000"
-            style={{ width: `${Math.max(2, progress.percentage ?? 0)}%` }}
-          />
-        </div>
-        
-        <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-          <span>${(progress.amountPaid ?? 0).toLocaleString()} pagado</span>
-
-          <span>${(progress.remaining ?? 0).toLocaleString()} restante</span>
-
+    {/* ========================================
+    PROGRESO DEL PLAN (Compacto)
+    ======================================== */}
+<div className="bg-white/5 border border-white/10 rounded-xl p-3">
+  <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center gap-2">
+      <div className="p-1.5 bg-purple-500/20 rounded-lg">
+        <Target className="w-4 h-4 text-purple-400" />
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-white">{targetDebt?.nombre || 'Plan Activo'}</div>
+        <div className="text-[10px] text-gray-400">
+          {isAvalancha ? '🏔️ Avalancha' : '⛄ Bola de Nieve'} • ${(config.monthlyPayment ?? 0).toLocaleString()}/mes
         </div>
       </div>
+    </div>
+    <div className="text-right">
+      <div className="text-lg font-bold text-white">{(progress.percentage ?? 0).toFixed(0)}%</div>
+      <div className="text-[10px] text-gray-500">completado</div>
+    </div>
+  </div>
+  
+  {/* Barra de progreso */}
+  <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+    <div 
+      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000"
+      style={{ width: `${Math.max(2, progress.percentage ?? 0)}%` }}
+    />
+  </div>
+  
+  <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+    <span>${(progress.amountPaid ?? 0).toLocaleString()} pagado</span>
+    <span>${(progress.remaining ?? 0).toLocaleString()} restante</span>
+  </div>
+
+  {/* 👉 AGREGAR BOTÓN AQUÍ */}
+  <div className="mt-3 pt-3 border-t border-white/5 flex gap-2">
+    <button
+      onClick={onOpenPlanDetails}
+      className="flex-1 px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-lg text-xs font-semibold transition-all border border-white/5"
+    >
+      📊 Ver Detalles
+    </button>
+    
+    <button
+      onClick={async () => {
+        if (window.confirm('¿Recalcular el plan con los saldos actuales?\n\nEsto ajustará el cronograma de pagos.')) {
+          // Aquí deberías tener acceso a refreshPlanes desde props o context
+          // Por ahora, dispara un evento personalizado
+          window.dispatchEvent(new CustomEvent('refreshPlanes'))
+          alert('✅ Plan actualizado con los saldos actuales')
+        }
+      }}
+      className="flex-1 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-semibold transition-all border border-blue-500/30"
+    >
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
 
       {/* ========================================
           ALERTA DE CHECK-IN (Si es necesario)

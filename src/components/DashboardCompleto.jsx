@@ -963,77 +963,80 @@ const handleDeshacerPago = useCallback(async (item, type) => {
     }
   }
 
-  const handleRegistrarPagoTarjeta = async (pago) => {
-    try {
-      const deuda = deudasInstant.find(d => d.id === pago.deuda_id)
-      if (!deuda) throw new Error('Deuda no encontrada')
+const handleRegistrarPagoTarjeta = async (pago) => {
+  try {
+    const deuda = deudasInstant.find(d => d.id === pago.deuda_id)
+    if (!deuda) throw new Error('Deuda no encontrada')
 
-      const principal = Number(pago.a_principal || 0)
-      const intereses = Number(pago.intereses || 0)
-      const total = Number(pago.monto_total || 0)
+    const principal = Number(pago.a_principal || 0)
+    const intereses = Number(pago.intereses || 0)
+    const total = Number(pago.monto_total || 0)
 
-      if (principal > deuda.saldo) {
-        alert(`El pago a capital ($${principal.toFixed(2)}) no puede ser mayor al saldo pendiente ($${deuda.saldo.toFixed(2)}).`)
-        return
-      }
-
-      if (pago.metodo === 'Débito' && pago.cuenta_id) {
-        const cuenta = cuentas.find(c => c.id === pago.cuenta_id)
-        if (!cuenta) {
-          alert('❌ Cuenta bancaria no encontrada')
-          return
-        }
-
-        if (Number(cuenta.balance) < total) {
-          alert(`❌ Fondos insuficientes\n\nSaldo: $${Number(cuenta.balance).toFixed(2)}\nRequerido: $${total.toFixed(2)}`)
-          return
-        }
-
-        const nuevoBalance = Number(cuenta.balance) - total
-        await updateCuenta(cuenta.id, { balance: nuevoBalance })
-        
-        await registrarMovimientoEnHistorial({
-          tipo: 'pago',
-          monto: total,
-          ref: `Pago Tarjeta: ${deuda.cuenta}`,
-          cuentaId: cuenta.id,
-          cuentaNombre: cuenta.nombre
-        })
-      }
-
-      await addPago({
-        user_id: deuda.user_id,
-        deuda_id: deuda.id,
-        fecha: pago.fecha,
-        tarjeta: deuda.cuenta,
-        monto: total,
-        principal,
-        interes: intereses,
-        metodo: pago.metodo || null,
-        notas: pago.notas || null,
-      })
-
-      const nuevoSaldo = Math.max(0, Number(deuda.saldo) - principal)
-      
-      await updateDebt(deuda.id, {
-        saldo: nuevoSaldo,
-        ultimo_pago: pago.fecha,
-      })
-
-      await refreshPagos()
-      await refreshDeudas()
-      if (pago.cuenta_id) await refreshCuentas()
-
-      alert('✅ Pago registrado correctamente')
-      
-      setShowModal(null)
-      setDeudaEditando(null)
-
-    } catch (err) {
-      console.error('❌ Error registrando pago:', err)
-      alert('Error registrando el pago: ' + (err.message || 'Error desconocido'))
+    // Validaciones
+    if (principal < 0 || intereses < 0 || total <= 0) {
+      throw new Error('Montos inválidos')
     }
+
+    // Detectar pago completo
+    const esPagoCompleto = total >= deuda.saldo
+
+    // Calcular nuevo saldo
+    const nuevoSaldo = esPagoCompleto 
+      ? 0 
+      : Math.max(0, Number(deuda.saldo) - principal)
+
+    // Función para calcular pago mínimo
+    const calcularPagoMinimo = (saldo, apr = 0) => {
+      if (saldo <= 0) return 0
+      const porcentaje = saldo * 0.02
+      return Math.max(porcentaje, 25)
+    }
+
+    const nuevoPagoMinimo = calcularPagoMinimo(nuevoSaldo, deuda.apr)
+
+    console.log('📊 Actualizando tarjeta:', {
+      nuevoSaldo,
+      nuevoPagoMinimo,
+      esPagoCompleto
+    })
+
+    // Registrar el pago
+    await addPago(pago)
+
+    // Actualizar la deuda
+    await updateDebt(deuda.id, {
+      saldo: nuevoSaldo,
+      pago_minimo: nuevoPagoMinimo,
+      ultimo_pago: pago.fecha,
+    })
+
+    // Refrescar datos
+    await refreshPagos()
+    await refreshDeudas()
+    if (pago.cuenta_id) await refreshCuentas()
+
+    // Actualizar planes si existen
+    if (planDeudaActivo) {
+      console.log('🔄 Recalculando plan de deudas...')
+      await refreshPlanes()
+      setPlanUpdateCounter(prev => prev + 1)
+    }
+
+    // Mensaje personalizado
+    if (esPagoCompleto) {
+      alert(`🎉 ¡Felicidades!\n\n💳 ${deuda.cuenta} está SALDADA\n💰 Saldo final: $0.00\n\n${planDeudaActivo ? '📊 Tu plan de deudas se ha actualizado.' : ''}`)
+    } else {
+      alert(`✅ Pago registrado\n\n💳 ${deuda.cuenta}\n💰 Nuevo saldo: $${nuevoSaldo.toFixed(2)}\n💵 Pago mínimo: $${nuevoPagoMinimo.toFixed(2)}`)
+    }
+
+    setShowModal(null)
+    setDeudaEditando(null)
+
+  } catch (err) {
+    console.error('❌ Error registrando pago:', err)
+    alert('Error registrando el pago: ' + (err.message || 'Error desconocido'))
   }
+}
 
   const handleEliminarIngreso = async (id) => {
     try {
@@ -1544,12 +1547,15 @@ useEffect(() => {
     })
     
     // 3. Deudas
-    deudasInstant.forEach(d => {
-      if (!d.vence) return
-      const vence = new Date(d.vence)
-      const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5) {
+// 3. Deudas (Excluir saldadas)
+deudasInstant.forEach(d => {
+  // ✅ NO generar alertas para tarjetas saldadas
+  if (!d.vence || Number(d.saldo || 0) <= 0) return
+  
+  const vence = new Date(d.vence)
+  const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
+  
+  if (diff <= 5) {
         const mensaje = diff < 0 
           ? `💳 Pago de ${d.cuenta} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
           : diff === 0 

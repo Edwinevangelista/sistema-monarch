@@ -12,6 +12,8 @@ import {
   Loader2 
 } from 'lucide-react'
 
+import { getEstadoTarjeta } from '../utils/tarjetasCalculos'
+
 export default function ModalDetalleUniversal({
   item,
   type,
@@ -95,18 +97,37 @@ export default function ModalDetalleUniversal({
       
       {/* --- HEADER --- */}
       <div className="bg-gray-800/50 border-b border-gray-700 p-5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-xl shadow-sm ${currentTheme.bg} ${currentTheme.border}`}>
-            <IconComponent className={`w-6 h-6 ${currentTheme.color}`} />
-          </div>
-          <div>
-            <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{currentTheme.label}</span>
-            <h2 className="text-xl font-bold text-white leading-tight mt-0.5">
-              {getTitle()}
-            </h2>
-            <p className="text-sm text-gray-400">{getSubtitle()}</p>
-          </div>
-        </div>
+<div className="flex items-center gap-4">
+  <div className={`p-3 rounded-xl shadow-sm ${currentTheme.bg} ${currentTheme.border}`}>
+    <IconComponent className={`w-6 h-6 ${currentTheme.color}`} />
+  </div>
+  <div className="flex-1">
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{currentTheme.label}</span>
+      
+      {/* 👉 BADGE DE ESTADO PARA TARJETAS */}
+      {type === ITEM_TYPES.DEUDA && (() => {
+        const estadoTarjeta = getEstadoTarjeta(item.saldo, item.ultimo_pago)
+        return (
+          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+            estadoTarjeta.color === 'green' 
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+              : estadoTarjeta.color === 'red' 
+              ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+              : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+          }`}>
+            {estadoTarjeta.badge}
+          </span>
+        )
+      })()}
+    </div>
+    
+    <h2 className="text-xl font-bold text-white leading-tight mt-0.5">
+      {getTitle()}
+    </h2>
+    <p className="text-sm text-gray-400">{getSubtitle()}</p>
+  </div>
+</div>
         <button
           onClick={onClose}
           className="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg transition-colors"

@@ -34,25 +34,45 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
     return deuda.saldo * tasaMensual
   }, [])
 
-  const distribuirPago = useCallback((montoPago, deuda) => {
-    if (!montoPago || montoPago <= 0) {
-      return { principal: 0, interes: 0 }
-    }
+const distribuirPago = useCallback((montoPago, deuda) => {
+  if (!montoPago || montoPago <= 0) {
+    return { principal: 0, interes: 0 }
+  }
 
-    const interesMensual = calcularInteresMensual(deuda)
+  const saldoActual = Number(deuda.saldo || 0)
+  const montoNum = Number(montoPago)
+
+  // ✅ CASO 1: PAGO COMPLETO (paga todo el saldo)
+  if (montoNum >= saldoActual) {
+    console.log('💰 PAGO COMPLETO detectado:', {
+      monto: montoNum,
+      saldo: saldoActual,
+      nuevoSaldo: 0
+    })
     
-    if (montoPago <= interesMensual) {
-      return {
-        interes: montoPago,
-        principal: 0
-      }
-    } else {
-      return {
-        interes: interesMensual,
-        principal: montoPago - interesMensual
-      }
+    return {
+      interes: 0,           // No hay intereses separados
+      principal: saldoActual // Todo va a principal (salda la deuda)
     }
-  }, [calcularInteresMensual])
+  }
+
+  // ✅ CASO 2: PAGO PARCIAL (no alcanza para todo)
+  const interesMensual = calcularInteresMensual(deuda)
+  
+  if (montoNum <= interesMensual) {
+    // Pago solo cubre intereses
+    return {
+      interes: montoNum,
+      principal: 0
+    }
+  } else {
+    // Pago cubre intereses + algo de principal
+    return {
+      interes: interesMensual,
+      principal: montoNum - interesMensual
+    }
+  }
+}, [calcularInteresMensual])
 
   useEffect(() => {
     if (formData.monto && formData.tarjeta) {
