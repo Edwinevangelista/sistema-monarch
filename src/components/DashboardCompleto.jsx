@@ -2008,7 +2008,7 @@ const dataGraficaDona = useMemo(() =>
                     alert('❌ Error al actualizar fechas: ' + error.message)
                   }
                 }} 
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600/80 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border border-orange-500/50 shadow-lg shadow-orange-900/20"
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600/80 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-orange-500/50 shadow-lg shadow-orange-900/20"
               >
                 📅 Actualizar Fechas
               </button>
@@ -2080,7 +2080,15 @@ const dataGraficaDona = useMemo(() =>
               <Plus className="w-3 h-3 md:w-4 md:h-4" /> Nuevo Plan
             </button>
           </div>
-          <SavedPlansList refreshSignal={planUpdateCounter} />
+          <SavedPlansList 
+  refreshSignal={planUpdateCounter} 
+  realFinancialData={{
+    ingresos: ingresosInstant,
+    gastos: gastosInstant,
+    gastosFijos: gastosFijosInstant,
+    deudas: deudasInstant
+  }}
+/>
         </div>
 
        {/* GRÁFICAS */}
@@ -2263,7 +2271,7 @@ const dataGraficaDona = useMemo(() =>
           </div>
           <div className="space-y-3">
             <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-4 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">📝 Registrar Tarjeta</button>
-            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
+            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
           </div>
         </div>
       </ModalWrapper>
@@ -2298,9 +2306,14 @@ const dataGraficaDona = useMemo(() =>
         <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       </ModalWrapper>
 
-      <ModalWrapper show={showSavingsPlanner} onClose={() => setShowSavingsPlanner(false)}>
-        <SavingsPlannerModal kpis={kpis} onClose={() => setShowSavingsPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-      </ModalWrapper>
+      {/* ✅ FIX: REMOVED WRAPPER FOR SAVINGS PLANNER TO PREVENT BOTTOM SHEET BEHAVIOR ON MOBILE */}
+      {showSavingsPlanner && (
+        <SavingsPlannerModal 
+          kpis={kpis} 
+          onClose={() => setShowSavingsPlanner(false)} 
+          onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} 
+        />
+      )}
 
       <ModalWrapper show={showSpendingControl} onClose={() => setShowSpendingControl(false)}>
         <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosDelMes} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
@@ -2416,8 +2429,8 @@ const dataGraficaDona = useMemo(() =>
 function ModalWrapper({ show, onClose, children }) {
   if (!show) return null
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-      <div className="bg-gray-900 w-full md:max-w-lg h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/10 animate-slide-in-from-bottom-10">
+    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+      <div className="bg-gray-900 w-full md:max-w-lg max-h-[calc(100dvh-3.5rem)] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/10 animate-slide-in-from-bottom-10">
         <div className="flex justify-end p-4 border-b border-white/5 md:hidden">
           <button onClick={onClose} className="text-gray-400 hover:text-white p-2"><X className="w-6 h-6" /></button>
         </div>

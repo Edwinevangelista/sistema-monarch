@@ -1253,7 +1253,8 @@ function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onC
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-slate-900 border border-white/10 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-slate-900 border border-white/10 w-full sm:max-w-md max-h-[calc(100dvh-3.5rem)] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+ onClick={(e) => e.stopPropagation()}>
         
         <div className="p-6 border-b border-white/10">
           <div className="flex justify-between items-center mb-2">
@@ -1267,7 +1268,8 @@ function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onC
           </p>
         </div>
 
-        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+        <div className="p-4 flex-1 min-h-0 overflow-y-auto space-y-2 pb-6">
+
           {objetivos.map((obj) => {
             const esRecomendado = obj.key === recomendado;
             const esActual = obj.key === objetivoActual;
