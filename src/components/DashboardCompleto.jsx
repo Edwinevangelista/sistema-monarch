@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target, Download } from 'lucide-react'
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target, Download, Calendar } from 'lucide-react';
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -1786,74 +1786,90 @@ const dataGraficaDona = useMemo(() =>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
       </div>
 
-      {/* HEADER INTELIGENTE */}
-  {/* HEADER INTELIGENTE */}
+{/* HEADER INTELIGENTE MEJORADO */}
 <div className="max-w-7xl mx-auto mb-4 md:mb-6 px-3 md:px-4 pt-4 md:pt-6 animate-in fade-in slide-in-from-top-4">
   <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-2xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
     <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
     
-    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 relative z-10">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30">
-          <Wallet className="w-6 h-6 md:w-8 md:h-8 text-white" />
-        </div>
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            {textoHora}, {usuario.nombre}
-          </h1>
-          <div className="flex items-center gap-2 text-sm md:text-base text-gray-400 mt-1">
-            {icono}
-            <span className="italic text-gray-300">{frase}</span>
-            <span className="hidden md:inline mx-2 text-white/20">|</span>
-            <span className="hidden md:inline-flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full border border-white/5">
-              <Activity className="w-3 h-3 text-green-400" />
-              Score: {kpis.financialHealth}/100
-            </span>
+    <div className="flex flex-col gap-4 relative z-10">
+      {/* Fila Superior: Saludo y Nombre */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30">
+            <Wallet className="w-6 h-6 md:w-8 md:h-8 text-white" />
           </div>
-          
-          {/* INFORMACIÓN DEL MES */}
-          <div className="hidden md:flex items-center gap-4 mt-2">
-            <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
-              <span className="text-white/70">Vista:</span>
-              <span className={`font-bold ${vistaActiva === 'real' ? 'text-blue-400' : 'text-purple-400'}`}>
-                {vistaActiva === 'real' ? '📊 Real' : '🔮 Proyectado'}
+          <div>
+            <h1 className="text-xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              {textoHora}, {usuario.nombre}
+            </h1>
+            {/* NUEVA SECCIÓN: Smart Bar Mobile-First */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 md:hidden">
+              
+              {/* 1. Fecha Formateada */}
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-xs font-medium text-gray-300">
+                  {hoy.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                </span>
+              </div>
+
+              {/* 2. Presupuesto Diario (El dato más valioso) */}
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                <Wallet className={`w-3.5 h-3.5 ${dailyBudget > 0 ? 'text-green-400' : 'text-red-400'}`} />
+                <span className="text-xs font-medium text-gray-300">
+                  ${dailyBudget.toLocaleString()} <span className="text-gray-500 font-normal">/día</span>
+                </span>
+              </div>
+
+              {/* 3. Día del mes */}
+              <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                <Activity className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-medium text-gray-300">
+                  {hoy.getDate()}/{new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()}
+                </span>
+              </div>
+            </div>
+
+            {/* Texto de ánimo y Score (Solo Desktop) */}
+            <div className="hidden md:flex items-center gap-2 text-sm md:text-base text-gray-400 mt-1">
+              {icono}
+              <span className="italic text-gray-300">{frase}</span>
+              <span className="mx-2 text-white/20">|</span>
+              <span className="flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full border border-white/5">
+                <Activity className="w-3 h-3 text-green-400" />
+                Score: {kpis.financialHealth}/100
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
-              <span className="text-white/70">Día:</span>
-              <span className="text-white font-bold">{hoy.getDate()}/{new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()}</span>
-            </div>
+          </div>
+          
+          {/* Controles del Header */}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowExportacion(true)}
+              className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full border border-green-500/30 text-emerald-300 hover:text-emerald-200 transition-all group relative"
+              title="Exportar Datos Financieros"
+            >
+              <Download className="w-5 h-5" />
+              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Exportar datos
+              </div>
+            </button>
+            
+            <button 
+              onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
+              className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
+              title="Repetir Tutorial"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            
+            <div className="hidden md:block"><LogoutButton /></div>
           </div>
         </div>
-      </div>
-      
-      {/* CONTROLES DEL HEADER */}
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => setShowExportacion(true)}
-          className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 rounded-full border border-green-500/30 text-emerald-300 hover:text-emerald-200 transition-all group relative"
-          title="Exportar Datos Financieros"
-        >
-          <Download className="w-5 h-5" />
-          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Exportar datos
-          </div>
-        </button>
-        
-        <button 
-          onClick={() => { setTutorialActivo(true); setPasoTutorial(0) }}
-          className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 text-gray-400 transition-colors"
-          title="Repetir Tutorial"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </button>
-        
-        <div className="hidden md:block"><LogoutButton /></div>
       </div>
     </div>
   </div>
 </div>
-
       {/* WIDGET DE PRESUPUESTO INTELIGENTE CON VISTA DUAL */}
       <WidgetBalanceDual
         calculosReales={calculosReales}
