@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Trash2, Calendar, AlertCircle, CheckCircle, X, TrendingUp, DollarSign, Clock, CheckSquare, CreditCard } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Target, Trash2, Calendar, AlertCircle, CheckCircle, X, TrendingUp, DollarSign, Clock, CheckSquare } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
-// ⚠️ PROPS NUEVAS: Recibe realFinancialData para calcular el estado real
 export default function SavedPlansList({ refreshSignal = 0, realFinancialData = {} }) {
   const { planes, loading, deletePlan, updatePlan, refresh } = usePlanesGuardados();
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
@@ -13,24 +12,14 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshSignal]);
 
-  useEffect(() => {
-    console.log('📋 Planes actuales:', planes);
-  }, [planes]);
-
-  // ==========================================
-  // ✅ LÓGICA DE SYNC EN TIEMPO REAL
-  // ==========================================
-  // Esta función calcula el progreso REAL usando las deudas actuales,
-  // no solo el número guardado en el plan.
-  const getPlanRealStats = (plan) => {
-    // Por defecto, usamos los datos estáticos del plan
+  // LÓGICA DE SYNC EN TIEMPO REAL
+  const getPlanRealStats = useCallback((plan) => {
     let meta = Number(plan.monto_objetivo) || 0;
     let actual = Number(plan.monto_actual) || 0;
     let progreso = meta > 0 ? ((actual / meta) * 100).toFixed(1) : 0;
     let esDeuda = false;
     let deudaPendiente = 0;
 
-    // Si es un PLAN DE DEUDA, forzamos el cálculo con los datos de Supabase
     if (plan.tipo?.toLowerCase().includes('deuda')) {
       esDeuda = true;
       const orderedDebts = plan.configuracion?.plan?.orderedDebts || [];
@@ -41,39 +30,38 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
         let saldoActualTotal = 0;
 
         orderedDebts.forEach(d => {
-          // Buscar la deuda real actualizada
           const deudaReal = deudasReales.find(dr => 
             dr.id === d.id || dr.cuenta === d.nombre
           );
 
           const original = Number(d.balance || d.saldo || 0);
-          const actual = deudaReal ? Number(deudaReal.saldo || 0) : original;
+          const actualDeuda = deudaReal ? Number(deudaReal.saldo || 0) : original;
 
           saldoOriginalTotal += original;
-          saldoActualTotal += actual;
+          saldoActualTotal += actualDeuda;
         });
 
-        // Para deudas, 'actual' es lo PAGADO, no lo que falta
         const pagado = Math.max(0, saldoOriginalTotal - saldoActualTotal);
+        const nuevoProgreso = saldoOriginalTotal > 0 ? ((pagado / saldoOriginalTotal) * 100).toFixed(1) : 0;
+
         meta = saldoOriginalTotal;
-        actual = pagado; // Mostramos el progreso como "Cuanto hemos pagado"
+        actual = pagado;
         deudaPendiente = saldoActualTotal;
-        progreso = meta > 0 ? ((pagado / meta) * 100).toFixed(1) : 0;
+        progreso = nuevoProgreso;
       }
     }
 
     return { meta, actual, progreso, esDeuda, deudaPendiente };
-  };
+  }, [realFinancialData]);
 
-  // Pre-calculamos las estadísticas para todos los planes
-  const planesConStats = useMemo(() => {
+  const plansConStats = useMemo(() => {
+    // Ensure 'planes' is used here, not 'plans'
     if (!planes || planes.length === 0) return [];
     return planes.map(p => ({
       ...p,
       stats: getPlanRealStats(p)
     }));
-  }, [planes, realFinancialData]);
-
+  }, [planes, getPlanRealStats]);
 
   if (loading) {
     return (
@@ -96,11 +84,11 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {planesConStats.map((plan) => (
+        {plansConStats.map((plan) => (
           <PlanCard 
             key={plan.id} 
             plan={plan} 
-            stats={plan.stats} // <--- PASAMOS LAS ESTADÍSTICAS REALES
+            stats={plan.stats} 
             onDelete={async (id) => {
               await deletePlan(id);
               await refresh();
@@ -110,11 +98,10 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
         ))}
       </div>
 
-      {/* Modal de Detalles */}
       {planSeleccionado && (
         <ModalDetallesPlan
           plan={planSeleccionado}
-          stats={planSeleccionado.stats} // <--- PASAMOS STATS AL MODAL TAMBIÉN
+          stats={planSeleccionado.stats}
           onClose={() => setPlanSeleccionado(null)}
           onDelete={async (id) => {
             await deletePlan(id);
@@ -144,9 +131,7 @@ function PlanCard({ plan, stats, onDelete, onClick }) {
   };
 
   const { bg, border, icon, color } = getInfo(plan.tipo);
-  
-  // Usamos 'stats' que ya tiene los valores calculados
-  const { progreso, meta, actual, esDeuda, deudaPendiente } = stats;
+  const { meta, actual, progreso, esDeuda } = stats;
 
   return (
     <div 
@@ -219,13 +204,12 @@ function PlanCard({ plan, stats, onDelete, onClick }) {
         </span>
         <span>
           {esDeuda 
-            ? `Pagado: $${actual.toLocaleString()} / Meta: $${meta.toLocaleString()}`
+            ? `$${actual.toLocaleString()} / Meta: $${meta.toLocaleString()}`
             : `$${actual.toLocaleString()} / $${meta.toLocaleString()}`
           }
         </span>
       </div>
 
-      {/* Indicador de toque */}
       <div className="absolute top-2 right-2 opacity-50">
         <div className="text-xs text-gray-400">👆 Toca para ver detalles</div>
       </div>
@@ -243,12 +227,8 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
   };
 
   const { bg, icon, color } = getInfo(plan.tipo);
+  const { meta, actual, progreso, esDeuda, deudaPendiente } = stats;
   
-  // Usamos stats recibidos
-  const { progreso, meta, actual, deudaPendiente } = stats;
-  const faltante = Math.max(0, meta - actual); // En deudas, esto podría ser negativo si pagaste de mas, ajustamos abajo
-
-  // Calcular días transcurridos y restantes
   const fechaInicio = plan.fecha_inicio ? new Date(plan.fecha_inicio) : new Date();
   const hoy = new Date();
   const diasTranscurridos = Math.floor((hoy - fechaInicio) / (1000 * 60 * 60 * 24));
@@ -262,7 +242,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
         
-        {/* Header */}
         <div className={`bg-gradient-to-r ${bg} p-6 rounded-t-2xl relative`}>
           <button 
             onClick={onClose}
@@ -284,10 +263,8 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
           </div>
         </div>
 
-        {/* Contenido */}
         <div className="p-6 space-y-6">
           
-          {/* Progreso Principal */}
           <div className="bg-gray-800/50 rounded-xl p-4">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-gray-400">Progreso del Plan</span>
@@ -305,13 +282,11 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             </div>
           </div>
 
-          {/* Estadísticas Principales */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Ajustamos etiquetas según si es deuda o ahorro */}
             <div className="bg-gray-800/50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-5 h-5 text-green-400" />
-                <span className="text-sm text-gray-400">{plan.tipo?.toLowerCase().includes('deuda') ? 'Pagado' : 'Monto Actual'}</span>
+                <span className="text-sm text-gray-400">{esDeuda ? 'Pagado' : 'Monto Actual'}</span>
               </div>
               <p className="text-2xl font-bold text-white">${actual.toLocaleString()}</p>
             </div>
@@ -327,10 +302,10 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             <div className="bg-gray-800/50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-5 h-5 text-orange-400" />
-                <span className="text-sm text-gray-400">{plan.tipo?.toLowerCase().includes('deuda') ? 'Pendiente' : 'Faltante'}</span>
+                <span className="text-sm text-gray-400">{esDeuda ? 'Pendiente' : 'Faltante'}</span>
               </div>
               <p className="text-2xl font-bold text-orange-400">
-                ${plan.tipo?.toLowerCase().includes('deuda') ? deudaPendiente.toLocaleString() : Math.max(0, meta - actual).toLocaleString()}
+                {esDeuda ? deudaPendiente.toLocaleString() : Math.max(0, meta - actual).toLocaleString()}
               </p>
             </div>
 
@@ -343,7 +318,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             </div>
           </div>
 
-          {/* Línea de Tiempo */}
           <div className="bg-gray-800/50 rounded-xl p-4">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-cyan-400" />
@@ -368,7 +342,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
                 <span className="text-cyan-400 font-semibold">{diasRestantes} días</span>
               </div>
 
-              {/* Barra de progreso de tiempo */}
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-gray-400 mb-1">
                   <span>Progreso del tiempo</span>
@@ -384,7 +357,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             </div>
           </div>
 
-          {/* Detalles según tipo de plan */}
           {plan.tipo?.toLowerCase().includes('ahorro') && (
             <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-4">
               <h3 className="text-green-400 font-bold mb-2">📈 Plan de Ahorro</h3>
@@ -392,6 +364,10 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Ahorro mensual sugerido:</span>
                   <span className="text-white font-semibold">${(meta / plazoMeses).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Ahorro semanal:</span>
+                  <span className="text-white font-semibold">{(meta / plazoMeses / 4).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -418,7 +394,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             </div>
           )}
 
-          {/* Notas */}
           {plan.notas && (
             <div className="bg-gray-800/50 rounded-xl p-4">
               <h3 className="text-sm font-bold text-gray-400 mb-2">📝 Notas</h3>
@@ -426,7 +401,6 @@ function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
             </div>
           )}
 
-          {/* Acciones */}
           <div className="flex gap-3">
             <button
               onClick={() => {
