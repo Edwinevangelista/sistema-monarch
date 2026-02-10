@@ -189,14 +189,26 @@ const {
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
   const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
-  const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
+const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
 
-  const planDeudaActivo = useMemo(() => {
-    if (!planesActivos || planesActivos.length === 0) return null;
-    return planesActivos.find(p => 
-      p.tipo === 'deudas' && p.activo && !p.completado
-    ) || null;
-  }, [planesActivos]);
+// ✅ DEBE estar DESPUÉS de planesActivos
+const planDeudaActivo = useMemo(() => {
+  return planesActivos.find(p => p.tipo === 'deudas' && p.activo) || null;
+}, [planesActivos]);
+
+
+// ✅ EXPONER refreshPlanes globalmente para el botón de actualizar
+useEffect(() => {
+  window.refreshPlanesGlobally = async () => {
+    await refreshPlanes()
+    setPlanUpdateCounter(prev => prev + 1)
+  }
+  return () => {
+    delete window.refreshPlanesGlobally
+  }
+}, [refreshPlanes])
+
+
 
   const { permission, showLocalNotification } = useNotifications()
 
@@ -1015,12 +1027,105 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     await refreshDeudas()
     if (pago.cuenta_id) await refreshCuentas()
 
-    // Actualizar planes si existen
-    if (planDeudaActivo) {
-      console.log('🔄 Recalculando plan de deudas...')
+// ✅ ACTUALIZAR PLAN ACTIVO CON NUEVOS SALDOS
+if (planDeudaActivo) {
+  console.log('🔄 Recalculando plan de deudas con nuevo saldo...')
+  
+  try {
+    const planConfig = planDeudaActivo.configuracion
+    
+    if (planConfig?.plan?.orderedDebts) {
+      // 1. ESPERAR A QUE LAS DEUDAS SE ACTUALICEN EN BD
+      await refreshDeudas()
+      
+      // 2. OBTENER DEUDAS ACTUALIZADAS DIRECTAMENTE DE SUPABASE
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: deudasActualizadas, error: deudasError } = await supabase
+        .from('deudas')
+        .select('*')
+        .eq('user_id', user.id)
+      
+      if (deudasError) {
+        console.error('❌ Error obteniendo deudas:', deudasError)
+        throw deudasError
+      }
+      
+      console.log('📋 Deudas actualizadas de BD:', deudasActualizadas)
+      
+      // 3. RECALCULAR META TOTAL CON SALDOS REALES
+      let nuevaMetaTotal = 0
+      let montoPagadoTotal = 0
+      
+      const metaOriginal = planConfig.plan.orderedDebts.reduce((sum, d) => 
+        sum + Number(d.balance || d.saldo || 0), 0
+      )
+      
+      const orderedDebtsActualizado = planConfig.plan.orderedDebts.map(deudaPlan => {
+        // Buscar deuda real actualizada
+        const deudaReal = deudasActualizadas.find(d => 
+          d.id === deudaPlan.id || d.cuenta === deudaPlan.nombre
+        )
+        
+        const saldoActual = deudaReal ? Number(deudaReal.saldo || 0) : 0
+        const saldoOriginal = Number(deudaPlan.balance || deudaPlan.saldo || 0)
+        
+        nuevaMetaTotal += saldoActual
+        montoPagadoTotal += Math.max(0, saldoOriginal - saldoActual)
+        
+        console.log(`💳 ${deudaPlan.nombre}: $${saldoOriginal} → $${saldoActual}`)
+        
+        return {
+          ...deudaPlan,
+          balance: saldoActual,
+          saldo: saldoActual
+        }
+      })
+      
+      // 4. CALCULAR NUEVO PROGRESO
+      const nuevoProgreso = metaOriginal > 0 
+        ? ((montoPagadoTotal / metaOriginal) * 100)
+        : 0
+      
+      console.log('📊 Recalculando plan:', {
+        metaOriginal: `$${metaOriginal.toFixed(2)}`,
+        nuevaMetaTotal: `$${nuevaMetaTotal.toFixed(2)}`,
+        montoPagado: `$${montoPagadoTotal.toFixed(2)}`,
+        progreso: `${nuevoProgreso.toFixed(2)}%`
+      })
+      
+      // 5. ACTUALIZAR PLAN EN SUPABASE
+      const { error: updateError } = await supabase
+        .from('planes_guardados')
+        .update({
+          configuracion: {
+            ...planConfig,
+            plan: {
+              ...planConfig.plan,
+              orderedDebts: orderedDebtsActualizado,
+              totalDebt: nuevaMetaTotal
+            }
+          },
+          progreso: nuevoProgreso
+        })
+        .eq('id', planDeudaActivo.id)
+      
+      if (updateError) {
+        console.error('❌ Error actualizando plan en BD:', updateError)
+        throw updateError
+      }
+      
+      console.log('✅ Plan actualizado en BD exitosamente')
+      
+      // 6. REFRESCAR PLANES EN UI
       await refreshPlanes()
       setPlanUpdateCounter(prev => prev + 1)
+      
+      console.log('✅ UI actualizada')
     }
+  } catch (error) {
+    console.error('❌ Error completo en recálculo del plan:', error)
+  }
+}
 
     // Mensaje personalizado
     if (esPagoCompleto) {

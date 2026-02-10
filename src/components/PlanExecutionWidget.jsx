@@ -193,19 +193,27 @@ export default function PlanExecutionWidget({
       📊 Ver Detalles
     </button>
     
-    <button
-      onClick={async () => {
-        if (window.confirm('¿Recalcular el plan con los saldos actuales?\n\nEsto ajustará el cronograma de pagos.')) {
-          // Aquí deberías tener acceso a refreshPlanes desde props o context
-          // Por ahora, dispara un evento personalizado
-          window.dispatchEvent(new CustomEvent('refreshPlanes'))
+<button
+  onClick={async () => {
+    if (window.confirm('¿Recalcular el plan con los saldos actuales?\n\nEsto ajustará el cronograma de pagos.')) {
+      try {
+        // Forzar recálculo desde el hook
+        if (window.refreshPlanesGlobally) {
+          await window.refreshPlanesGlobally()
           alert('✅ Plan actualizado con los saldos actuales')
+        } else {
+          alert('⚠️ Recarga la página para actualizar el plan')
         }
-      }}
-      className="flex-1 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-semibold transition-all border border-blue-500/30"
-    >
-      🔄 Actualizar
-    </button>
+      } catch (error) {
+        console.error('Error actualizando plan:', error)
+        alert('❌ Error al actualizar: ' + error.message)
+      }
+    }
+  }}
+  className="flex-1 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-semibold transition-all border border-blue-500/30"
+>
+  🔄 Actualizar
+</button>
   </div>
 </div>
 

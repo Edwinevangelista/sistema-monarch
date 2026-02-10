@@ -1,7 +1,7 @@
 // src/hooks/usePlanExecution.js
 // ============================================
 // VERSIÓN HÍBRIDA FINAL CON INTEGRACIÓN IA
-// Combina: IA Financiera en Tiempo Real + Estructura de Plan de Deuda + Notificaciones Smart
+// + SYNC EN TIEMPO REAL DE DEUDAS
 // ============================================
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -54,29 +54,29 @@ function calculateRealFinancialHealth(realData, today) {
     deudas = [] 
   } = realData;
 
-  // 1. Ingresos del mes actual
+  //1. Ingresos del mes actual
   const ingresosMes = ingresos
     .filter(i => i && i.fecha && new Date(i.fecha).getMonth() === today.getMonth())
     .reduce((sum, i) => sum + (i.monto || 0), 0);
 
-  // 2. Gastos Variables del mes actual
+  //2. Gastos Variables del mes actual
   const gastosVariablesMes = gastos
     .filter(g => g && g.fecha && new Date(g.fecha).getMonth() === today.getMonth())
     .reduce((sum, g) => sum + (g.monto || 0), 0);
 
-  // 3. Gastos Fijos Totales (Compromisos)
+  //3. Gastos Fijos Totales (Compromisos)
   const compromisosFijos = gastosFijos.reduce((sum, gf) => sum + (gf.monto || 0), 0);
   
-  // 4. Pagos Mínimos de Deuda (Obligaciones)
+  //4. Pagos Mínimos de Deuda (Obligaciones)
   const pagosDeuda = deudas.reduce((sum, d) => sum + (d.pago_minimo || 0), 0);
 
-  // 5. Gasto de HOY (Usamos 'today' recibido por parámetro)
+  //5. Gasto de HOY (Usamos 'today' recibido por parámetro)
   const hoyStr = today.toISOString().split('T')[0];
   const gastoHoy = gastos
     .filter(g => g && g.fecha === hoyStr)
     .reduce((sum, g) => sum + (g.monto || 0), 0);
 
-  // 6. Cálculo del Margen Disponible
+  //6. Cálculo del Margen Disponible
   const diasRestantes = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
   const margenTotal = ingresosMes - compromisosFijos - pagosDeuda - gastosVariablesMes;
   const presupuestoDiario = diasRestantes > 0 ? margenTotal / diasRestantes : 0;
@@ -344,29 +344,84 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
     return calculateRealFinancialHealth(realFinancialData, new Date());
   }, [realFinancialData]);
 
+  // ✅ NUEVO: Lista de Deudas en Tiempo Real (Sync con Supabase)
+  const realTimeDebts = useMemo(() => {
+    if (!activePlan?.configuracion?.plan?.orderedDebts) return [];
+    
+    const orderedDebts = activePlan.configuracion.plan.orderedDebts;
+    
+    return orderedDebts.map(debtPlan => {
+      // Buscar la deuda real actualizada en realFinancialData
+      const deudaReal = realFinancialData?.deudas?.find(d => 
+        d.id === debtPlan.id || d.cuenta === debtPlan.nombre
+      );
+      
+      // Obtener el saldo ACTUAL (si existe) o usar el plan (fallback)
+      const saldoActual = deudaReal ? Number(deudaReal.saldo || 0) : Number(debtPlan.balance || debtPlan.saldo || 0);
+      
+      // Obtener el saldo ORIGINAL (cuando se creó el plan)
+      const saldoOriginal = Number(debtPlan.balance || debtPlan.saldo || 0);
+      
+      // Calcular progreso individual
+      const pagadoIndividual = Math.max(0, saldoOriginal - saldoActual);
+      const progresoIndividual = saldoOriginal > 0 ? (pagadoIndividual / saldoOriginal) * 100 : 0;
+      
+      return {
+        id: debtPlan.id,
+        nombre: debtPlan.nombre,
+        cuenta: debtPlan.nombre, // Alias para compatibilidad
+        saldoOriginal,
+        saldoActual,
+        pagadoIndividual,
+        progresoIndividual,
+        estaPagado: saldoActual <= 0,
+        diferencia: saldoOriginal - saldoActual
+      };
+    });
+  }, [activePlan, realFinancialData]);
+
   // Tareas Híbridas
   const dailyTasks = useMemo(() => {
     if (!activePlan) return [];
     return generateHybridTasks(activePlan, realFinancialData, completedTaskIds);
   }, [activePlan, realFinancialData, completedTaskIds]);
 
-  // Progreso del Plan (Basado en pagos logueados)
+  // ✅ MEJORADO: Progreso del Plan (Usando realTimeDebts para mayor precisión)
   const progress = useMemo(() => {
-    if (!activePlan?.configuracion) return { percentage: 0, monthsCompleted: 0, amountPaid: 0 };
+    if (realTimeDebts.length === 0) {
+      return { 
+        percentage: 0, 
+        amountPaid: 0, 
+        remaining: 0,
+        monthsCompleted: 0 
+      };
+    }
     
-    const totalDebt = activePlan.monto_objetivo || 0;
-    const amountPaid = paymentsLogged
-      .filter(p => p.planId === activePlan.id)
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-      
-    const percentage = totalDebt > 0 ? Math.min(100, (amountPaid / totalDebt) * 100) : 0;
+    // Calculamos totales basados en las deudas sincronizadas
+    const totalDebtOriginal = realTimeDebts.reduce((sum, d) => sum + d.saldoOriginal, 0);
+    const totalDebtCurrent = realTimeDebts.reduce((sum, d) => sum + d.saldoActual, 0);
+    
+    // Cálculo robusto de pago
+    const amountPaid = Math.max(0, totalDebtOriginal - totalDebtCurrent);
+    
+    // Calcular porcentaje
+    const percentage = totalDebtOriginal > 0 
+      ? Math.min(100, (amountPaid / totalDebtOriginal) * 100) 
+      : 0;
+    
+    // Calcular meses completados
+    const monthlyPayment = activePlan.configuracion.monthlyPayment || 1;
+    const monthsCompleted = Math.floor(amountPaid / monthlyPayment);
+    
+    console.log(`📊 Plan Progress Update: Paid $${amountPaid.toFixed(2)} / $${totalDebtOriginal.toFixed(2)} (${percentage.toFixed(1)}%)`);
     
     return {
       percentage: Math.round(percentage * 10) / 10,
       amountPaid,
-      monthsCompleted: Math.floor(amountPaid / (activePlan.configuracion.monthlyPayment || 1))
+      remaining: Math.max(0, totalDebtCurrent),
+      monthsCompleted
     };
-  }, [activePlan, paymentsLogged]);
+  }, [activePlan, realTimeDebts]);
 
   // Estadísticas
   const stats = useMemo(() => {
@@ -378,9 +433,10 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
       tasksCompletedToday: todayCompletedCount,
       totalTasksToday,
       streak: streakData.current || 0,
-      financialHealth: financialHealth // Exportar salud al widget
+      financialHealth: financialHealth, // Exportar salud al widget
+      realTimeDebts // ✅ NUEVO: Exportar lista sincronizada
     };
-  }, [completedTaskIds, dailyTasks, streakData, financialHealth]);
+  }, [completedTaskIds, dailyTasks, streakData, financialHealth, realTimeDebts]);
 
   // ==========================================
   // ACCIONES
@@ -460,7 +516,6 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
     if (!activePlan || !showLocalNotification) return;
     
     // Ejecutar el cerebro de notificaciones
-    // Pasamos 'financialHealth' que calculamos en el useMemo anterior
     getSmartNotifications(
       activePlan, 
       financialHealth, 
@@ -468,8 +523,6 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
       getStoredData, 
       setStoredData
     );
-  // ✅ CORRECCIÓN: Eliminamos getStoredData y setStoredData de las dependencias
-  // porque son funciones constantes definidas fuera del componente.
   }, [activePlan, financialHealth, showLocalNotification]);
 
   // ==========================================

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Target, Trash2, Calendar, AlertCircle, CheckCircle, X, TrendingUp, DollarSign, Clock, CheckSquare } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Target, Trash2, Calendar, AlertCircle, CheckCircle, X, TrendingUp, DollarSign, Clock, CheckSquare, CreditCard } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
-export default function SavedPlansList({ refreshSignal = 0 }) {
+// ⚠️ PROPS NUEVAS: Recibe realFinancialData para calcular el estado real
+export default function SavedPlansList({ refreshSignal = 0, realFinancialData = {} }) {
   const { planes, loading, deletePlan, updatePlan, refresh } = usePlanesGuardados();
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
 
@@ -15,6 +16,64 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
   useEffect(() => {
     console.log('📋 Planes actuales:', planes);
   }, [planes]);
+
+  // ==========================================
+  // ✅ LÓGICA DE SYNC EN TIEMPO REAL
+  // ==========================================
+  // Esta función calcula el progreso REAL usando las deudas actuales,
+  // no solo el número guardado en el plan.
+  const getPlanRealStats = (plan) => {
+    // Por defecto, usamos los datos estáticos del plan
+    let meta = Number(plan.monto_objetivo) || 0;
+    let actual = Number(plan.monto_actual) || 0;
+    let progreso = meta > 0 ? ((actual / meta) * 100).toFixed(1) : 0;
+    let esDeuda = false;
+    let deudaPendiente = 0;
+
+    // Si es un PLAN DE DEUDA, forzamos el cálculo con los datos de Supabase
+    if (plan.tipo?.toLowerCase().includes('deuda')) {
+      esDeuda = true;
+      const orderedDebts = plan.configuracion?.plan?.orderedDebts || [];
+      const deudasReales = realFinancialData.deudas || [];
+
+      if (orderedDebts.length > 0) {
+        let saldoOriginalTotal = 0;
+        let saldoActualTotal = 0;
+
+        orderedDebts.forEach(d => {
+          // Buscar la deuda real actualizada
+          const deudaReal = deudasReales.find(dr => 
+            dr.id === d.id || dr.cuenta === d.nombre
+          );
+
+          const original = Number(d.balance || d.saldo || 0);
+          const actual = deudaReal ? Number(deudaReal.saldo || 0) : original;
+
+          saldoOriginalTotal += original;
+          saldoActualTotal += actual;
+        });
+
+        // Para deudas, 'actual' es lo PAGADO, no lo que falta
+        const pagado = Math.max(0, saldoOriginalTotal - saldoActualTotal);
+        meta = saldoOriginalTotal;
+        actual = pagado; // Mostramos el progreso como "Cuanto hemos pagado"
+        deudaPendiente = saldoActualTotal;
+        progreso = meta > 0 ? ((pagado / meta) * 100).toFixed(1) : 0;
+      }
+    }
+
+    return { meta, actual, progreso, esDeuda, deudaPendiente };
+  };
+
+  // Pre-calculamos las estadísticas para todos los planes
+  const planesConStats = useMemo(() => {
+    if (!planes || planes.length === 0) return [];
+    return planes.map(p => ({
+      ...p,
+      stats: getPlanRealStats(p)
+    }));
+  }, [planes, realFinancialData]);
+
 
   if (loading) {
     return (
@@ -37,10 +96,11 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {planes.map((plan) => (
+        {planesConStats.map((plan) => (
           <PlanCard 
             key={plan.id} 
             plan={plan} 
+            stats={plan.stats} // <--- PASAMOS LAS ESTADÍSTICAS REALES
             onDelete={async (id) => {
               await deletePlan(id);
               await refresh();
@@ -54,6 +114,7 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
       {planSeleccionado && (
         <ModalDetallesPlan
           plan={planSeleccionado}
+          stats={planSeleccionado.stats} // <--- PASAMOS STATS AL MODAL TAMBIÉN
           onClose={() => setPlanSeleccionado(null)}
           onDelete={async (id) => {
             await deletePlan(id);
@@ -72,21 +133,20 @@ export default function SavedPlansList({ refreshSignal = 0 }) {
 }
 
 // --- COMPONENTE DE TARJETA ---
-function PlanCard({ plan, onDelete, onClick }) {
+function PlanCard({ plan, stats, onDelete, onClick }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const getInfo = (tipo) => {
-    if (!tipo) return { bg: 'bg-blue-900/40', border: 'border-blue-500/30', icon: <CheckCircle className="w-6 h-6 text-blue-400" /> };
-    if (tipo.toLowerCase().includes('ahorro')) return { bg: 'from-green-900/40 to-green-800/20', border: 'border-green-500/30', icon: <Target className="w-6 h-6 text-green-400" /> };
-    if (tipo.toLowerCase().includes('deuda')) return { bg: 'from-red-900/40 to-red-800/20', border: 'border-red-500/30', icon: <AlertCircle className="w-6 h-6 text-red-400" /> };
-    return { bg: 'from-purple-900/40 to-purple-800/20', border: 'border-purple-500/30', icon: <CheckCircle className="w-6 h-6 text-purple-400" /> };
+    if (!tipo) return { bg: 'bg-blue-900/40', border: 'border-blue-500/30', icon: <CheckCircle className="w-6 h-6 text-blue-400" />, color: 'blue' };
+    if (tipo.toLowerCase().includes('ahorro')) return { bg: 'from-green-900/40 to-green-800/20', border: 'border-green-500/30', icon: <Target className="w-6 h-6 text-green-400" />, color: 'green' };
+    if (tipo.toLowerCase().includes('deuda')) return { bg: 'from-red-900/40 to-red-800/20', border: 'border-red-500/30', icon: <AlertCircle className="w-6 h-6 text-red-400" />, color: 'red' };
+    return { bg: 'from-purple-900/40 to-purple-800/20', border: 'border-purple-500/30', icon: <CheckCircle className="w-6 h-6 text-purple-400" />, color: 'purple' };
   };
 
-  const { bg, border, icon } = getInfo(plan.tipo);
+  const { bg, border, icon, color } = getInfo(plan.tipo);
   
-  const meta = Number(plan.monto_objetivo) || 0;
-  const actual = Number(plan.monto_actual) || 0;
-  const progreso = meta > 0 ? ((actual / meta) * 100).toFixed(0) : 0;
+  // Usamos 'stats' que ya tiene los valores calculados
+  const { progreso, meta, actual, esDeuda, deudaPendiente } = stats;
 
   return (
     <div 
@@ -145,7 +205,7 @@ function PlanCard({ plan, onDelete, onClick }) {
         <div className="w-full bg-gray-900/50 rounded-full h-2 overflow-hidden">
           <div 
             className={`h-full transition-all ${
-              Number(progreso) >= 100 ? 'bg-green-500' : 'bg-purple-500'
+              Number(progreso) >= 100 ? 'bg-green-500' : `bg-${color}-500`
             }`}
             style={{ width: `${Math.min(100, progreso)}%` }}
           />
@@ -157,7 +217,12 @@ function PlanCard({ plan, onDelete, onClick }) {
           <Calendar className="w-3 h-3" />
           {plan.fecha_inicio ? plan.fecha_inicio.split('T')[0] : '-'}
         </span>
-        <span>${actual.toLocaleString()} / ${meta.toLocaleString()}</span>
+        <span>
+          {esDeuda 
+            ? `Pagado: $${actual.toLocaleString()} / Meta: $${meta.toLocaleString()}`
+            : `$${actual.toLocaleString()} / $${meta.toLocaleString()}`
+          }
+        </span>
       </div>
 
       {/* Indicador de toque */}
@@ -169,7 +234,7 @@ function PlanCard({ plan, onDelete, onClick }) {
 }
 
 // --- MODAL DE DETALLES ---
-function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
+function ModalDetallesPlan({ plan, stats, onClose, onDelete, onComplete }) {
   const getInfo = (tipo) => {
     if (!tipo) return { bg: 'from-blue-900/40 to-blue-800/20', icon: <CheckCircle className="w-8 h-8 text-blue-400" />, color: 'blue' };
     if (tipo.toLowerCase().includes('ahorro')) return { bg: 'from-green-900/40 to-green-800/20', icon: <Target className="w-8 h-8 text-green-400" />, color: 'green' };
@@ -179,10 +244,9 @@ function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
 
   const { bg, icon, color } = getInfo(plan.tipo);
   
-  const meta = Number(plan.monto_objetivo) || 0;
-  const actual = Number(plan.monto_actual) || 0;
-  const progreso = meta > 0 ? ((actual / meta) * 100).toFixed(1) : 0;
-  const faltante = Math.max(0, meta - actual);
+  // Usamos stats recibidos
+  const { progreso, meta, actual, deudaPendiente } = stats;
+  const faltante = Math.max(0, meta - actual); // En deudas, esto podría ser negativo si pagaste de mas, ajustamos abajo
 
   // Calcular días transcurridos y restantes
   const fechaInicio = plan.fecha_inicio ? new Date(plan.fecha_inicio) : new Date();
@@ -193,10 +257,6 @@ function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
   const diasTotales = plazoMeses * 30;
   const diasRestantes = Math.max(0, diasTotales - diasTranscurridos);
   const progresoTiempo = ((diasTranscurridos / diasTotales) * 100).toFixed(1);
-
-  // Calcular velocidad de ahorro
-  const ahorroMensual = plan.ahorro_mensual || (meta / plazoMeses);
-  const pagoMensual = plan.pago_mensual || 0;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -247,10 +307,11 @@ function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
 
           {/* Estadísticas Principales */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Ajustamos etiquetas según si es deuda o ahorro */}
             <div className="bg-gray-800/50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-5 h-5 text-green-400" />
-                <span className="text-sm text-gray-400">Monto Actual</span>
+                <span className="text-sm text-gray-400">{plan.tipo?.toLowerCase().includes('deuda') ? 'Pagado' : 'Monto Actual'}</span>
               </div>
               <p className="text-2xl font-bold text-white">${actual.toLocaleString()}</p>
             </div>
@@ -266,9 +327,11 @@ function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
             <div className="bg-gray-800/50 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-5 h-5 text-orange-400" />
-                <span className="text-sm text-gray-400">Faltante</span>
+                <span className="text-sm text-gray-400">{plan.tipo?.toLowerCase().includes('deuda') ? 'Pendiente' : 'Faltante'}</span>
               </div>
-              <p className="text-2xl font-bold text-orange-400">${faltante.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-orange-400">
+                ${plan.tipo?.toLowerCase().includes('deuda') ? deudaPendiente.toLocaleString() : Math.max(0, meta - actual).toLocaleString()}
+              </p>
             </div>
 
             <div className="bg-gray-800/50 rounded-xl p-4">
@@ -328,46 +391,27 @@ function ModalDetallesPlan({ plan, onClose, onDelete, onComplete }) {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Ahorro mensual sugerido:</span>
-                  <span className="text-white font-semibold">${ahorroMensual.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Ahorro semanal:</span>
-                  <span className="text-white font-semibold">${(ahorroMensual / 4).toFixed(2)}</span>
+                  <span className="text-white font-semibold">${(meta / plazoMeses).toFixed(2)}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {plan.tipo?.toLowerCase().includes('deuda') && plan.estrategia && (
+          {plan.tipo?.toLowerCase().includes('deuda') && (
             <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
-              <h3 className="text-red-400 font-bold mb-2">💳 Plan de Deuda</h3>
+              <h3 className="text-red-400 font-bold mb-2">💳 Plan de Deuda (Actualizado)</h3>
+              <p className="text-xs text-gray-400 mb-2">
+                Este estado se calcula en tiempo real con los saldos actuales de tus tarjetas.
+              </p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Estrategia:</span>
-                  <span className="text-white font-semibold">{plan.estrategia}</span>
+                  <span className="text-white font-semibold">{plan.estrategia || 'Avalancha'}</span>
                 </div>
-                {pagoMensual > 0 && (
+                {plan.pago_mensual > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-400">Pago mensual:</span>
-                    <span className="text-white font-semibold">${pagoMensual.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {plan.tipo?.toLowerCase().includes('gasto') && plan.categoria && (
-            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
-              <h3 className="text-yellow-400 font-bold mb-2">🎯 Control de Gastos</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Categoría:</span>
-                  <span className="text-white font-semibold">{plan.categoria}</span>
-                </div>
-                {plan.limite_mensual && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Límite mensual:</span>
-                    <span className="text-white font-semibold">${plan.limite_mensual.toLocaleString()}</span>
+                    <span className="text-white font-semibold">${plan.pago_mensual.toLocaleString()}</span>
                   </div>
                 )}
               </div>
