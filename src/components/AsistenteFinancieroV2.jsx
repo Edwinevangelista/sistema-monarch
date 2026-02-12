@@ -1,6 +1,7 @@
 // src/components/AsistenteFinancieroV2.jsx
 // 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente
 // Arquetipos Dinámicos | Objetivos Personalizados | Análisis en Tiempo Real
+// ✅ V3: Integrado con motor de cálculo central (calcularBalanceInteligente)
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { 
@@ -9,7 +10,7 @@ import {
   Shield, PiggyBank, CreditCard,
   Trash2, TrendingUp, TrendingDown,
   ChevronRight, ChevronDown, ChevronUp, Play,
-  Sparkles, HeartPulse
+  Sparkles, HeartPulse, Eye, EyeOff
 } from "lucide-react";
 
 // --- CONSTANTES ---
@@ -132,12 +133,18 @@ const PATRONES_FUGAS = [
 ];
 
 // --- COMPONENTE PRINCIPAL ---
-export default function AsistenteFinancieroV2({ // Cambiado nombre de export por el archivo
+export default function AsistenteFinancieroV2({
+  // Datos crudos (para análisis detallado de patrones)
   ingresos = [],
   gastosFijos = [],
   gastosVariables = [],
   suscripciones = [],
   deudas = [],
+  // ✅ NUEVO: KPIs pre-calculados del dashboard (fuente de verdad)
+  dashboardKpis = null,
+  calculosReales = null,
+  calculosProyectados = null,
+  // Callbacks
   onOpenDebtPlanner,
   onOpenSavingsPlanner,
   onOpenSpendingControl,
@@ -151,7 +158,6 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     const saved = localStorage.getItem('finGuideObjetivo');
     return saved || 'diagnostico';
   });
-  // Corrección: Removido el setter no usado para evitar warning
   const [pilotoAutomatico] = useState(() => {
     const saved = localStorage.getItem('finGuidePiloto');
     return saved ? JSON.parse(saved) : false;
@@ -159,6 +165,8 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
   const [ultimoAnalisis, setUltimoAnalisis] = useState(null);
   const [showAnalysisAnimation, setShowAnalysisAnimation] = useState(false);
   const [expandedAdvanced, setExpandedAdvanced] = useState(false);
+  // ✅ NUEVO: Toggle para ver vista Real vs Proyectada en el asistente
+  const [vistaIA, setVistaIA] = useState('real'); // 'real' | 'proyectado'
 
   const analysisTimeoutRef = useRef(null);
 
@@ -171,22 +179,60 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     localStorage.setItem('finGuidePiloto', JSON.stringify(pilotoAutomatico));
   }, [pilotoAutomatico]);
 
-  // --- MOTOR DE INTELIGENCIA COMPLETO ---
+  // --- ✅ MOTOR DE INTELIGENCIA INTEGRADO CON DASHBOARD ---
   const analisis = useMemo(() => {
-    const totalIngresos = ingresos.reduce((sum, i) => sum + Number(i.monto || 0), 0);
-    const totalGastosFijos = gastosFijos.reduce((sum, g) => sum + Number(g.monto || 0), 0);
-    const totalGastosVariables = gastosVariables.reduce((sum, g) => sum + Number(g.monto || 0), 0);
-    const totalSuscripciones = suscripciones
-      .filter(s => s.estado === 'Activo')
-      .reduce((sum, s) => sum + Number(s.costo || 0), 0);
-    const totalDeudas = deudas.reduce((sum, d) => sum + Number(d.saldo || 0), 0);
+    // =============================================
+    // 🧠 FUENTE DE VERDAD: Usar KPIs del dashboard
+    // Si no hay dashboardKpis, fallback a cálculo propio
+    // =============================================
     
-    const gastosTotales = totalGastosFijos + totalGastosVariables + totalSuscripciones;
-    const disponible = totalIngresos - gastosTotales;
-    const tasaAhorro = totalIngresos > 0 ? (disponible / totalIngresos) : 0;
+    let totalIngresos, totalGastosFijos, totalGastosVariables, totalSuscripciones;
+    let totalDeudas, gastosTotales, disponible, tasaAhorro;
+    
+    const datosCalculo = vistaIA === 'real' ? calculosReales : calculosProyectados;
+    
+    if (dashboardKpis && datosCalculo) {
+      // ✅ USAR DATOS DEL DASHBOARD (misma fuente que el widget de balance)
+      totalIngresos = datosCalculo.totalIngresos || 0;
+      totalGastosFijos = datosCalculo.gastosFijos || 0;
+      totalGastosVariables = datosCalculo.gastosVariables || 0;
+      totalSuscripciones = datosCalculo.suscripciones || 0;
+      totalDeudas = dashboardKpis.totalDeudas || 0;
+      gastosTotales = datosCalculo.totalGastos || 0;
+      disponible = datosCalculo.saldo || 0;
+      // tasaAhorro del dashboard viene en %, convertir a decimal
+      tasaAhorro = (datosCalculo.tasaAhorro || 0) / 100;
+      
+      console.log(`🧠 FinGuide AI usando datos ${vistaIA.toUpperCase()} del dashboard:`, {
+        totalIngresos,
+        gastosTotales,
+        disponible,
+        tasaAhorro: `${(tasaAhorro * 100).toFixed(1)}%`,
+        totalDeudas,
+        fuente: 'dashboard'
+      });
+    } else {
+      // ⚠️ FALLBACK: Cálculo propio (solo si no hay dashboard)
+      totalIngresos = ingresos.reduce((sum, i) => sum + Number(i.monto || 0), 0);
+      totalGastosFijos = gastosFijos.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+      totalGastosVariables = gastosVariables.reduce((sum, g) => sum + Number(g.monto || 0), 0);
+      totalSuscripciones = suscripciones
+        .filter(s => s.estado === 'Activo')
+        .reduce((sum, s) => sum + Number(s.costo || 0), 0);
+      totalDeudas = deudas.reduce((sum, d) => sum + Number(d.saldo || 0), 0);
+      gastosTotales = totalGastosFijos + totalGastosVariables + totalSuscripciones;
+      disponible = totalIngresos - gastosTotales;
+      tasaAhorro = totalIngresos > 0 ? (disponible / totalIngresos) : 0;
+      
+      console.log('⚠️ FinGuide AI usando cálculo propio (sin dashboard):', {
+        totalIngresos, gastosTotales, disponible,
+        tasaAhorro: `${(tasaAhorro * 100).toFixed(1)}%`,
+        fuente: 'fallback'
+      });
+    }
 
     // 🎭 DETERMINAR ARQUETIPO (SCORE MEJORADO)
-    let scoreHealth = 50; // Base neutral
+    let scoreHealth = 50;
     
     // FACTOR 1: Tasa de Ahorro (peso: 35 puntos)
     if (tasaAhorro > 0.30) scoreHealth += 35;
@@ -195,50 +241,66 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     else if (tasaAhorro > 0.10) scoreHealth += 20;
     else if (tasaAhorro > 0.05) scoreHealth += 10;
     else if (tasaAhorro > 0) scoreHealth += 5;
-    else if (tasaAhorro < 0) scoreHealth -= 30; // Déficit es grave
+    else if (tasaAhorro < 0) scoreHealth -= 30;
     
     // FACTOR 2: Nivel de Deudas (peso: 25 puntos)
     if (totalDeudas === 0) {
-      scoreHealth += 25; // Sin deudas es excelente
+      scoreHealth += 25;
     } else if (totalDeudas < totalIngresos * 0.5) {
-      scoreHealth += 15; // Deuda manejable
+      scoreHealth += 15;
     } else if (totalDeudas < totalIngresos * 2) {
-      scoreHealth += 5; // Deuda moderada
+      scoreHealth += 5;
     } else if (totalDeudas > totalIngresos * 5) {
-      scoreHealth -= 25; // Deuda crítica
+      scoreHealth -= 25;
     } else if (totalDeudas > totalIngresos * 3) {
-      scoreHealth -= 15; // Deuda alta
+      scoreHealth -= 15;
     }
     
     // FACTOR 3: Control de Gastos (peso: 15 puntos)
     const ratioGastos = totalIngresos > 0 ? (gastosTotales / totalIngresos) : 1;
-    if (ratioGastos < 0.60) scoreHealth += 15; // Gastos muy controlados
-    else if (ratioGastos < 0.70) scoreHealth += 10; // Gastos controlados
-    else if (ratioGastos < 0.80) scoreHealth += 5; // Gastos aceptables
-    else if (ratioGastos > 1.0) scoreHealth -= 20; // Gastando más de lo que ganas
+    if (ratioGastos < 0.60) scoreHealth += 15;
+    else if (ratioGastos < 0.70) scoreHealth += 10;
+    else if (ratioGastos < 0.80) scoreHealth += 5;
+    else if (ratioGastos > 1.0) scoreHealth -= 20;
     
     // FACTOR 4: Bonus por Balance Positivo
-    if (disponible > totalIngresos * 0.20) scoreHealth += 10; // Excelente margen
-    else if (disponible > 0) scoreHealth += 5; // Margen positivo
+    if (disponible > totalIngresos * 0.20) scoreHealth += 10;
+    else if (disponible > 0) scoreHealth += 5;
+    
+    // ✅ NUEVO FACTOR 5: Contexto temporal inteligente
+    // Si estamos viendo "real" y es inicio de mes, no penalizar tanto
+    if (vistaIA === 'real' && datosCalculo) {
+      const hoy = new Date();
+      const diaDelMes = hoy.getDate();
+      const diasEnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+      const progresoPorcentual = diaDelMes / diasEnMes;
+      
+      // Si es inicio de mes y pocos ingresos registrados, usar proyectado como referencia
+      if (progresoPorcentual < 0.15 && totalIngresos < 100 && calculosProyectados) {
+        const ingresosProyectados = calculosProyectados.totalIngresos || 0;
+        if (ingresosProyectados > totalIngresos * 3) {
+          // Ajustar score: no penalizar tanto, hay ingresos por venir
+          scoreHealth = Math.max(scoreHealth, 45); // Mínimo neutral
+        }
+      }
+    }
     
     scoreHealth = Math.max(0, Math.min(100, scoreHealth));
-
-    // 🔍 DEBUG: Ver cálculos en consola
-    console.log('📊 FinGuide Debug:', {
-      totalIngresos,
-      gastosTotales,
-      disponible,
-      tasaAhorro: `${(tasaAhorro * 100).toFixed(1)}%`,
-      totalDeudas,
-      scoreHealth,
-      ratioGastos: `${(ratioGastos * 100).toFixed(1)}%`
-    });
 
     let arquetipo;
     if (scoreHealth >= ARQUETIPOS.VISIONARIO.min) arquetipo = ARQUETIPOS.VISIONARIO;
     else if (scoreHealth >= ARQUETIPOS.CONSTRUCTOR.min) arquetipo = ARQUETIPOS.CONSTRUCTOR;
     else if (scoreHealth >= ARQUETIPOS.DEFENSOR.min) arquetipo = ARQUETIPOS.DEFENSOR;
     else arquetipo = ARQUETIPOS.CRISIS;
+
+    // ✅ NUEVO: Mensaje contextual inteligente según vista
+    let mensajeContextual = arquetipo.mensaje;
+    if (vistaIA === 'real' && calculosProyectados && disponible < 0) {
+      const saldoProyectado = calculosProyectados.saldo || 0;
+      if (saldoProyectado > 0) {
+        mensajeContextual = `Hoy estás en déficit temporal, pero con tus ingresos esperados terminarás el mes con ${formatMoney(saldoProyectado)} positivos. ¡No te alarmes!`;
+      }
+    }
 
     // COMPARACIÓN CON PROMEDIOS
     const vsPromedio = {
@@ -247,18 +309,19 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       suscripciones: ((suscripciones.filter(s => s.estado === 'Activo').length - PROMEDIOS_NACIONALES.numeroSuscripciones) / PROMEDIOS_NACIONALES.numeroSuscripciones) * 100
     };
 
-    // PREDICCIÓN 3 MESES
+    // PREDICCIÓN 3 MESES (basada en proyectado para ser más precisa)
+    const baseProyeccion = calculosProyectados || { totalIngresos, totalGastos: gastosTotales, saldo: disponible };
     const prediccion3Meses = {
-      ingresos: totalIngresos * 3,
-      gastos: gastosTotales * 3,
-      ahorro: disponible * 3,
-      deudaRestante: Math.max(0, totalDeudas - (disponible * 0.3 * 3))
+      ingresos: (baseProyeccion.totalIngresos || totalIngresos) * 3,
+      gastos: (baseProyeccion.totalGastos || gastosTotales) * 3,
+      ahorro: (baseProyeccion.saldo || disponible) * 3,
+      deudaRestante: Math.max(0, totalDeudas - ((baseProyeccion.saldo || disponible) * 0.3 * 3))
     };
 
     // PREDICCIÓN LIBERTAD FINANCIERA
     let mesesLibertad = 0;
     let fechaLibertad = null;
-    const capacidadPago = disponible * 0.5;
+    const capacidadPago = Math.max(0, disponible * 0.5);
 
     if (totalDeudas > 0) {
       if (capacidadPago > 0) {
@@ -273,7 +336,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       fechaLibertad = new Date();
     }
 
-    // DETECTOR DE FUGAS
+    // DETECTOR DE FUGAS (usa datos crudos para análisis detallado)
     const fugasDetectadas = [];
     PATRONES_FUGAS.forEach(patron => {
       const gastosRelacionados = gastosVariables.filter(gasto => {
@@ -308,7 +371,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     const eventosFinancieros = [];
 
     gastosFijos.forEach(gasto => {
-      const diaVencimiento = gasto.diaVencimiento || 1;
+      const diaVencimiento = gasto.dia_venc || gasto.diaVencimiento || 1;
       const proximaFecha = new Date(hoy.getFullYear(), hoy.getMonth(), diaVencimiento);
       if (proximaFecha < hoy) {
         proximaFecha.setMonth(proximaFecha.getMonth() + 1);
@@ -317,19 +380,16 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       eventosFinancieros.push({
         fecha: proximaFecha,
         tipo: 'gasto_fijo',
-        descripcion: gasto.categoria || gasto.descripcion || 'Gasto fijo',
+        descripcion: gasto.nombre || gasto.categoria || gasto.descripcion || 'Gasto fijo',
         monto: Number(gasto.monto || 0),
-        estado: disponible >= Number(gasto.monto || 0) ? 'ok' : 'alerta',
+        estado: gasto.estado === 'Pagado' ? 'pagado' : disponible >= Number(gasto.monto || 0) ? 'ok' : 'alerta',
         icono: '💳'
       });
     });
 
     suscripciones.filter(s => s.estado === 'Activo').forEach(sub => {
-      const diaRenovacion = sub.diaRenovacion || 1;
-      const proximaFecha = new Date(hoy.getFullYear(), hoy.getMonth(), diaRenovacion);
-      if (proximaFecha < hoy) {
-        proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-      }
+      if (!sub.proximo_pago) return;
+      const proximaFecha = new Date(sub.proximo_pago + 'T00:00:00');
 
       eventosFinancieros.push({
         fecha: proximaFecha,
@@ -401,18 +461,16 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       suscripcionesOptimizables,
       ahorroTotalOptimizable,
       deudas,
-      arquetipo
+      arquetipo,
+      // ✅ NUEVO: Pasar contexto temporal
+      vistaIA,
+      calculosProyectados
     });
 
-    // ESTRATEGIA MAESTRA (según arquetipo)
+    // ESTRATEGIA MAESTRA
     const estrategia = generarEstrategiaMaestra({
       arquetipo,
-      kpis: {
-        totalIngresos,
-        totalDeudas,
-        disponible,
-        tasaAhorro
-      },
+      kpis: { totalIngresos, totalDeudas, disponible, tasaAhorro },
       mesesLibertad,
       totalFugasAhorro
     });
@@ -430,6 +488,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
         scoreHealth
       },
       arquetipo,
+      mensajeContextual,
       vsPromedio,
       prediccion3Meses,
       prediccionLibertad: { mesesLibertad, fechaLibertad, capacidadPago },
@@ -443,23 +502,22 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
       recomendaciones,
       estrategia
     };
-  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas, objetivoActual]);
+  }, [ingresos, gastosFijos, gastosVariables, suscripciones, deudas, objetivoActual, dashboardKpis, calculosReales, calculosProyectados, vistaIA]);
 
   const { 
-    kpis, arquetipo, prediccion3Meses, prediccionLibertad,
+    kpis, arquetipo, mensajeContextual, prediccion3Meses, prediccionLibertad,
     fugasDetectadas, totalFugasAhorro, eventosFinancieros, 
     requisitoLibertad, suscripcionesOptimizables, 
     ahorroTotalOptimizable, recomendaciones, estrategia 
   } = analisis;
 
-  // Función analizar - solo se ejecuta cuando el usuario presiona el botón
+  // Función analizar
   const analizar = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     
     setLoading(true);
     setShowAnalysisAnimation(true);
     
-    // Limpiar timeout anterior si existe
     if (analysisTimeoutRef.current) {
       clearTimeout(analysisTimeoutRef.current);
     }
@@ -479,13 +537,12 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     }, 600);
   }, [showLocalNotification]); 
 
-  // Auto-analizar SOLO en el montaje inicial (una vez)
+  // Auto-analizar SOLO en el montaje inicial
   const hasInitialized = useRef(false);
   
   useEffect(() => {
     if (!hasInitialized.current && (ingresos.length || gastosFijos.length || gastosVariables.length)) {
       hasInitialized.current = true;
-      // Pequeño delay para evitar flash inicial
       const timer = setTimeout(() => {
         setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { 
           hour: '2-digit', 
@@ -499,7 +556,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
   const objetivoConfig = OBJETIVOS.find(o => o.key === objetivoActual) || OBJETIVOS[0];
 
   // Estado vacío
-  if (ingresos.length === 0 && gastosFijos.length === 0 && gastosVariables.length === 0) {
+  if (ingresos.length === 0 && gastosFijos.length === 0 && gastosVariables.length === 0 && !dashboardKpis) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
@@ -516,6 +573,9 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
     );
   }
 
+  // ✅ HELPER: Indica si los datos vienen del dashboard
+  const usandoDashboard = !!dashboardKpis;
+
   // RENDERIZADO PRINCIPAL
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white relative overflow-hidden pb-24">
@@ -528,7 +588,6 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
         
         {/* 1. CABECERA DINÁMICA CON ARQUETIPO */}
         <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${arquetipo.color} p-6 shadow-2xl`}>
-          {/* Pattern de fondo */}
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.3),transparent)]"></div>
           
           <div className="relative z-10">
@@ -539,12 +598,28 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
                 </span>
                 <HeartPulse className="w-4 h-4 text-white/80 animate-pulse" />
               </div>
-              {pilotoAutomatico && (
-                <div className="px-2 py-1 rounded-lg text-[10px] font-bold bg-green-500/30 text-white flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  Piloto
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {/* ✅ NUEVO: Toggle Real/Proyectado */}
+                {usandoDashboard && (
+                  <button
+                    onClick={() => setVistaIA(prev => prev === 'real' ? 'proyectado' : 'real')}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
+                      vistaIA === 'real' 
+                        ? 'bg-blue-500/30 text-white' 
+                        : 'bg-purple-500/30 text-white'
+                    }`}
+                  >
+                    {vistaIA === 'real' ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    {vistaIA === 'real' ? 'Real' : 'Proyección'}
+                  </button>
+                )}
+                {pilotoAutomatico && (
+                  <div className="px-2 py-1 rounded-lg text-[10px] font-bold bg-green-500/30 text-white flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    Piloto
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-start justify-between">
@@ -554,7 +629,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
                   {arquetipo.nombre}
                 </h2>
                 <p className="text-white/90 text-sm max-w-sm font-medium leading-relaxed">
-                  {arquetipo.mensaje}
+                  {mensajeContextual}
                 </p>
               </div>
               
@@ -566,13 +641,21 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
               </div>
             </div>
 
+            {/* ✅ NUEVO: Indicador de fuente de datos */}
+            {usandoDashboard && (
+              <div className="mt-2 text-[10px] text-white/50 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Datos sincronizados con Balance {vistaIA === 'real' ? 'Real' : 'Proyectado'}
+              </div>
+            )}
+
             {/* Selector de Objetivo */}
             <button
               onClick={() => setShowSelectorObjetivos(true)}
               className="w-full mt-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 transition-all flex items-center justify-between group"
             >
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-xl`}>
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-xl">
                   {objetivoConfig.emoji}
                 </div>
                 <div className="text-left">
@@ -668,7 +751,7 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
           onOpenOptimizer={() => setShowOptimizer(true)}
         />
 
-        {/* 5. ESTRATEGIA MAESTRA (PLAN INTELIGENTE) */}
+        {/* 5. ESTRATEGIA MAESTRA */}
         {estrategia.length > 0 && (
           <div className={`rounded-2xl border ${arquetipo.bg} ${arquetipo.border} overflow-hidden`}>
             <button
@@ -782,8 +865,18 @@ export default function AsistenteFinancieroV2({ // Cambiado nombre de export por
 
 // --- FUNCIONES AUXILIARES ---
 function generarRecomendacionesPorObjetivo(params) {
-  const { objetivoActual, kpis, fugasDetectadas, totalFugasAhorro, suscripcionesOptimizables, ahorroTotalOptimizable, deudas } = params;
+  const { objetivoActual, kpis, fugasDetectadas, totalFugasAhorro, suscripcionesOptimizables, ahorroTotalOptimizable, deudas, vistaIA, calculosProyectados } = params;
   const recomendaciones = [];
+
+  // ✅ NUEVO: Contexto inteligente - si vista real muestra déficit pero proyectado no
+  if (vistaIA === 'real' && kpis.disponible < 0 && calculosProyectados && calculosProyectados.saldo > 0) {
+    recomendaciones.push({
+      titulo: '📅 Déficit Temporal',
+      descripcion: `Hoy tu balance es ${formatMoney(kpis.disponible)}, pero con ingresos esperados terminarás con ${formatMoney(calculosProyectados.saldo)}`,
+      accion: 'Esto es normal a inicio de mes si tus ingresos llegan después',
+      pasos: ['Verifica fechas de cobro', 'Revisa vista "Proyección" para ver el panorama completo']
+    });
+  }
 
   switch (objetivoActual) {
     case 'controlar_gastos':
@@ -795,7 +888,7 @@ function generarRecomendacionesPorObjetivo(params) {
           pasos: fugasDetectadas.slice(0, 3).map(f => `${f.emoji} ${f.tipo}: ${f.solucion}`)
         });
       }
-      if (kpis.totalGastosVariables > kpis.totalIngresos * 0.3) {
+      if (kpis.totalGastosVariables > kpis.totalIngresos * 0.3 && kpis.totalIngresos > 0) {
         recomendaciones.push({
           titulo: '📊 Gastos Variables Altos',
           descripcion: `Tus gastos variables son ${formatPct(kpis.totalGastosVariables / kpis.totalIngresos)} (ideal: 30%)`,
@@ -806,13 +899,13 @@ function generarRecomendacionesPorObjetivo(params) {
       break;
 
     case 'ahorrar_mas':
-      if (kpis.tasaAhorro < 0.20) {
+      if (kpis.tasaAhorro < 0.20 && kpis.totalIngresos > 0) {
         const metaAhorro = kpis.totalIngresos * 0.20;
         const diferencia = metaAhorro - kpis.disponible;
         recomendaciones.push({
           titulo: '💰 Aumenta tu Ahorro',
           descripcion: `Ahorro actual: ${formatPct(kpis.tasaAhorro)} | Meta: 20%`,
-          accion: `Necesitas ahorrar ${formatMoney(diferencia)} más`,
+          accion: diferencia > 0 ? `Necesitas ahorrar ${formatMoney(diferencia)} más` : '¡Vas bien! Sigue así',
           pasos: ['Automatiza 20% a ahorro', 'Regla 50/30/20', 'Busca ingreso adicional']
         });
       }
@@ -820,12 +913,14 @@ function generarRecomendacionesPorObjetivo(params) {
 
     case 'pagar_deudas':
       if (kpis.totalDeudas > 0) {
-        const pagoSugerido = kpis.disponible * 0.5;
+        const pagoSugerido = Math.max(0, kpis.disponible * 0.5);
         const meses = pagoSugerido > 0 ? Math.ceil(kpis.totalDeudas / pagoSugerido) : 999;
         recomendaciones.push({
           titulo: '💳 Elimina Deudas',
           descripcion: `Debes ${formatMoney(kpis.totalDeudas)} total`,
-          accion: `Paga ${formatMoney(pagoSugerido)}/mes → Libre en ~${meses}m`,
+          accion: pagoSugerido > 0 
+            ? `Paga ${formatMoney(pagoSugerido)}/mes → Libre en ~${meses}m`
+            : 'Sin margen actual para pagos extra',
           pasos: ['Método bola de nieve', 'Prioriza tasa alta', 'Congela nuevas']
         });
       }
@@ -854,9 +949,7 @@ function generarRecomendacionesPorObjetivo(params) {
       break;
   }
 
-  // Silenciar warning de deudas no usado directamente (se usa via kpis.totalDeudas)
   void deudas;
-
   return recomendaciones;
 }
 
@@ -904,7 +997,6 @@ function generarEstrategiaMaestra(params) {
 }
 
 // --- COMPONENTES UI ---
-// FIX: Removido 'deudas' y 'arquetipo' del destructuring ya que no se usan directamente aquí
 function ContenidoPorObjetivo(props) {
   const { objetivo } = props;
   
@@ -1037,7 +1129,7 @@ function ControlGastosView({ fugasDetectadas, totalFugasAhorro, recomendaciones,
 
 function AhorroView({ kpis, recomendaciones, onOpenSavingsPlanner }) {
   const metaAhorro = kpis.totalIngresos * 0.20;
-  const progreso = (kpis.disponible / metaAhorro) * 100;
+  const progreso = metaAhorro > 0 ? (kpis.disponible / metaAhorro) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -1053,7 +1145,7 @@ function AhorroView({ kpis, recomendaciones, onOpenSavingsPlanner }) {
         <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden">
           <div 
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all"
-            style={{ width: `${Math.min(progreso, 100)}%` }}
+            style={{ width: `${Math.min(Math.max(progreso, 0), 100)}%` }}
           />
         </div>
         <div className="mt-3 text-center">
@@ -1209,7 +1301,7 @@ function DeudaCardCompact({ deuda }) {
   return (
     <div className="bg-white/5 rounded-lg p-2">
       <div className="flex justify-between items-center">
-        <span className="text-white text-xs font-semibold">{deuda.nombre || 'Deuda'}</span>
+        <span className="text-white text-xs font-semibold">{deuda.nombre || deuda.cuenta || 'Deuda'}</span>
         <span className="text-red-400 text-xs font-bold">{formatMoney(deuda.saldo)}</span>
       </div>
     </div>
@@ -1254,7 +1346,7 @@ function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onC
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-slate-900 border border-white/10 w-full sm:max-w-md max-h-[calc(100dvh-3.5rem)] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
- onClick={(e) => e.stopPropagation()}>
+        onClick={(e) => e.stopPropagation()}>
         
         <div className="p-6 border-b border-white/10">
           <div className="flex justify-between items-center mb-2">
@@ -1269,7 +1361,6 @@ function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onC
         </div>
 
         <div className="p-4 flex-1 min-h-0 overflow-y-auto space-y-2 pb-6">
-
           {objetivos.map((obj) => {
             const esRecomendado = obj.key === recomendado;
             const esActual = obj.key === objetivoActual;
@@ -1326,7 +1417,6 @@ function OptimizadorSuscripcionesReal({ suscripciones, suscripcionesOptimizables
     .filter(s => seleccionadas.includes(s.id))
     .reduce((sum, s) => sum + Number(s.costo), 0);
 
-  // Silenciar warning de suscripciones no usado directamente
   void suscripciones;
 
   return (

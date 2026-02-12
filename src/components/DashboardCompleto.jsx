@@ -2085,6 +2085,9 @@ const dataGraficaDona = useMemo(() =>
             onOpenDebtPlanner={() => setShowDebtPlanner(true)}
             onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
             onOpenSpendingControl={() => setShowSpendingControl(true)}
+              dashboardKpis={kpis}                     // ← NUEVO
+  calculosReales={calculosReales}           // ← NUEVO  
+  calculosProyectados={calculosProyectados} // ← NUEVO
           />
         </div>
 
