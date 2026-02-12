@@ -5,11 +5,11 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   X, TrendingDown, AlertTriangle, Zap, Save,
-  ChevronRight, ChevronDown, ChevronUp, CheckCircle2,
-  Target, Brain, Flame, Shield, Clock, Calendar,
-  ArrowRight, ArrowDown, PiggyBank, Eye, Sparkles,
-  BarChart3, Wallet, ShoppingCart, Star, Trophy,
-  Play, Pause, RotateCcw, Lock, Unlock, Info
+  ChevronDown, ChevronUp, CheckCircle2,
+  Target, Brain, Flame, Shield, Calendar,
+  ArrowRight, PiggyBank, Eye, Sparkles,
+  BarChart3, Wallet, Star, Trophy,
+  Play
 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
@@ -18,7 +18,6 @@ import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 // ═══════════════════════════════════════════════════
 
 const fmt = (v) => `$${Math.round(Number(v || 0)).toLocaleString('es-MX')}`;
-const fmtDec = (v) => `$${Number(v || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}`;
 const pct = (v) => `${(Number(v || 0)).toFixed(1)}%`;
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -681,15 +680,15 @@ export default function SpendingControlModal({
 // ═══════════════════════════════════════════════════
 
 function PasoDiagnostico({ motor }) {
-  const {
-    totalIngresos, totalGastos, velocidadDiaria, velocidadIdeal, 
-    semaforoVelocidad, ratioVelocidad, diasRestantes, diaDelMes, diasEnMes,
-    progresoMes, gastosPorDia, diaPico, maxPromDia, 
-    gastosPorSemana, semanaActual,
-    nivelUrgencia, mensajeCoach, emojiCoach,
-    proyeccionFinMes, categorias, totalHormiga, frecuenciaHormiga,
-    totalGastosFijos, totalGastosVariables, totalSuscripciones,
-  } = motor;
+const {
+  totalGastos, velocidadDiaria, velocidadIdeal, 
+  semaforoVelocidad, ratioVelocidad, diasRestantes, diaDelMes, diasEnMes,
+  gastosPorDia, diaPico, maxPromDia,
+  mensajeCoach, emojiCoach,
+  proyeccionFinMes, categorias, totalHormiga, frecuenciaHormiga,
+  totalGastosFijos, totalGastosVariables, totalSuscripciones,
+} = motor;
+
 
   const semaforoColors = {
     verde: { bg: 'from-emerald-500/20 to-green-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', label: 'Controlado' },
@@ -1075,7 +1074,8 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
 // ═══════════════════════════════════════════════════
 
 function PasoRetos({ motor, retosAceptados, onToggleReto }) {
-  const { retos, nivelUrgencia } = motor;
+  const { retos } = motor;
+
 
   if (retos.length === 0) {
     return (
@@ -1116,103 +1116,14 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
 
       {/* Lista de Retos */}
       <div className="space-y-3">
-        {retos.map((reto) => {
-          const aceptado = retosAceptados.includes(reto.id);
-          const [expanded, setExpanded] = useState(false);
-          
-          const dificultadColors = {
-            alta: 'bg-red-500/20 text-red-300 border-red-500/30',
-            media: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-            baja: 'bg-green-500/20 text-green-300 border-green-500/30',
-          };
-
-          return (
-            <div key={reto.id} className={`rounded-2xl border-2 overflow-hidden transition-all ${
-              aceptado 
-                ? 'bg-emerald-500/10 border-emerald-500/30' 
-                : 'bg-white/5 border-white/10'
-            }`}>
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">{reto.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h5 className="text-white font-bold text-sm">{reto.titulo}</h5>
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full border ${dificultadColors[reto.dificultad]}`}>
-                        {reto.dificultad}
-                      </span>
-                    </div>
-                    <p className="text-gray-300 text-xs mb-2">{reto.descripcion}</p>
-                    
-                    {/* Meta */}
-                    <div className="bg-white/10 rounded-lg p-2 mb-2">
-                      <p className="text-white text-xs font-semibold flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5 text-orange-400" />
-                        {reto.meta}
-                      </p>
-                    </div>
-
-                    {/* Impacto */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
-                        <PiggyBank className="w-3 h-3" />
-                        Ahorras: {reto.impacto}/mes
-                      </span>
-                      <span className="text-gray-500 text-[10px]">
-                        {reto.tipo === 'urgente' ? '⚡ Inmediato' : 
-                         reto.tipo === 'diario' ? '📅 Diario' :
-                         reto.tipo === 'semanal' ? '📆 Semanal' :
-                         reto.tipo === 'mensual' ? '🗓️ Mensual' : '🔄 Una vez'}
-                      </span>
-                    </div>
-
-                    {/* Pasos expandibles */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-                      className="text-orange-300 text-xs flex items-center gap-1 hover:text-orange-200 transition"
-                    >
-                      {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      {expanded ? 'Ocultar' : 'Ver'} pasos
-                    </button>
-
-                    {expanded && (
-                      <div className="mt-2 space-y-1.5 pl-1">
-                        {reto.pasos.map((paso, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs text-gray-300">
-                            <span className="text-orange-400 mt-0.5">→</span>
-                            <span>{paso}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Botón Aceptar */}
-              <button
-                onClick={() => onToggleReto(reto.id)}
-                className={`w-full py-2.5 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                  aceptado
-                    ? 'bg-emerald-600/50 text-white hover:bg-emerald-600/40'
-                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                }`}
-              >
-                {aceptado ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    Reto Aceptado ✓
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    Aceptar Reto
-                  </>
-                )}
-              </button>
-            </div>
-          );
-        })}
+        {retos.map((reto) => (
+          <RetoCard 
+            key={reto.id} 
+            reto={reto} 
+            aceptado={retosAceptados.includes(reto.id)} 
+            onToggle={() => onToggleReto(reto.id)} 
+          />
+        ))}
       </div>
     </div>
   );
@@ -1223,7 +1134,8 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
 // ═══════════════════════════════════════════════════
 
 function PasoGuardar({ motor, presupuestosEditados, retosAceptados, onGuardar }) {
-  const { categorias, totalGastos, totalIngresos, retos, proyeccionFinMes, totalAhorroPotencial } = motor;
+const { categorias, totalGastos, totalIngresos, retos } = motor;
+
   
   const totalPresupuestado = categorias.reduce((s, c) => 
     s + (presupuestosEditados[c.nombre] ?? c.presupuestoSugerido), 0
@@ -1336,6 +1248,107 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados, onGuardar })
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// 🎯 RETO CARD (extracted for hooks compliance)
+// ═══════════════════════════════════════════════════
+
+function RetoCard({ reto, aceptado, onToggle }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const dificultadColors = {
+    alta: 'bg-red-500/20 text-red-300 border-red-500/30',
+    media: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    baja: 'bg-green-500/20 text-green-300 border-green-500/30',
+  };
+
+  return (
+    <div className={`rounded-2xl border-2 overflow-hidden transition-all ${
+      aceptado 
+        ? 'bg-emerald-500/10 border-emerald-500/30' 
+        : 'bg-white/5 border-white/10'
+    }`}>
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">{reto.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h5 className="text-white font-bold text-sm">{reto.titulo}</h5>
+              <span className={`text-[9px] px-2 py-0.5 rounded-full border ${dificultadColors[reto.dificultad]}`}>
+                {reto.dificultad}
+              </span>
+            </div>
+            <p className="text-gray-300 text-xs mb-2">{reto.descripcion}</p>
+            
+            {/* Meta */}
+            <div className="bg-white/10 rounded-lg p-2 mb-2">
+              <p className="text-white text-xs font-semibold flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-orange-400" />
+                {reto.meta}
+              </p>
+            </div>
+
+            {/* Impacto */}
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                <PiggyBank className="w-3 h-3" />
+                Ahorras: {reto.impacto}/mes
+              </span>
+              <span className="text-gray-500 text-[10px]">
+                {reto.tipo === 'urgente' ? '⚡ Inmediato' : 
+                 reto.tipo === 'diario' ? '📅 Diario' :
+                 reto.tipo === 'semanal' ? '📆 Semanal' :
+                 reto.tipo === 'mensual' ? '🗓️ Mensual' : '🔄 Una vez'}
+              </span>
+            </div>
+
+            {/* Pasos expandibles */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              className="text-orange-300 text-xs flex items-center gap-1 hover:text-orange-200 transition"
+            >
+              {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {expanded ? 'Ocultar' : 'Ver'} pasos
+            </button>
+
+            {expanded && (
+              <div className="mt-2 space-y-1.5 pl-1">
+                {reto.pasos.map((paso, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs text-gray-300">
+                    <span className="text-orange-400 mt-0.5">→</span>
+                    <span>{paso}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Botón Aceptar */}
+      <button
+        onClick={onToggle}
+        className={`w-full py-2.5 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+          aceptado
+            ? 'bg-emerald-600/50 text-white hover:bg-emerald-600/40'
+            : 'bg-white/5 text-gray-300 hover:bg-white/10'
+        }`}
+      >
+        {aceptado ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" />
+            Reto Aceptado ✓
+          </>
+        ) : (
+          <>
+            <Play className="w-4 h-4" />
+            Aceptar Reto
+          </>
+        )}
+      </button>
     </div>
   );
 }
