@@ -341,7 +341,7 @@ export default function ModalUsuario({
       if (user) {
         const tablasAEliminar = [
           'ingresos', 'gastos', 'gastos_fijos', 'suscripciones', 'deudas', 
-          'pagos_tarjeta', 'planes_guardados', 'cuentas_bancarias', 
+          'pagos_tarjetas', 'planes_guardados', 'cuentas_bancarias',
           'movimientos_bancarios', 'perfiles', 'push_subscriptions'
         ];
         
@@ -389,7 +389,7 @@ export default function ModalUsuario({
         preferencias: preferencias
       };
 
-      const tablas = ['ingresos', 'gastos', 'gastos_fijos', 'suscripciones', 'deudas', 'pagos_tarjeta', 'planes_guardados', 'cuentas_bancarias'];
+      const tablas = ['ingresos', 'gastos', 'gastos_fijos', 'suscripciones', 'deudas', 'pagos_tarjetas', 'planes_guardados', 'cuentas_bancarias'];
       
       for (const tabla of tablas) {
         try {

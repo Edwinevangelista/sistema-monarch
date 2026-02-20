@@ -7,7 +7,7 @@ export const usePagosTarjeta = (lazyLoad = false) => {
     addRecord,
     refresh,
     initialize,
-  } = useSupabaseData("pagos_tarjeta", {
+  } = useSupabaseData("pagos_tarjetas", {  // ✅ tabla real en Supabase
     lazyLoad,
     orderBy: "fecha",
     ascending: false,
