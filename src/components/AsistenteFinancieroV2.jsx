@@ -698,17 +698,21 @@ export default function AsistenteFinancieroV2({
           </div>
 
           <div className="relative z-10 text-center space-y-6">
-            <div className="relative inline-block">
-              {/* Aura del cerebro */}
-              <div className="absolute inset-0 bg-purple-500 rounded-full blur-3xl opacity-40 animate-ping" />
-              <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-30 animate-pulse" style={{ animationDelay: '0.5s' }} />
-              
-              {/* Cerebro brillante */}
-              <Brain className="w-24 h-24 text-white relative z-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.8)] animate-bounce" />
-              
-              {/* Círculo orbital */}
-              <div className="absolute inset-0 border-2 border-dashed border-white/30 rounded-full animate-[spin_10s_linear_infinite]" style={{ width: '160px', height: '160px', top: '-18px', left: '-18px' }} />
-              <div className="absolute inset-0 border border-white/10 rounded-full animate-[spin_15s_linear_infinite_reverse]" style={{ width: '200px', height: '200px', top: '-38px', left: '-38px' }} />
+            {/* Contenedor fijo 200px para centrar perfectamente cerebro + círculos */}
+            <div className="relative mx-auto flex items-center justify-center" style={{ width: '200px', height: '200px' }}>
+              {/* Aura glow central */}
+              <div className="absolute inset-0 bg-purple-500 rounded-full blur-3xl opacity-30 animate-ping" />
+              <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-20 animate-pulse" style={{ animationDelay: '0.5s' }} />
+
+              {/* Círculo orbital exterior — centrado con translate */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-white/15 rounded-full animate-[spin_15s_linear_infinite_reverse]"
+                style={{ width: '196px', height: '196px' }} />
+              {/* Círculo orbital interior — centrado con translate */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-dashed border-white/30 rounded-full animate-[spin_10s_linear_infinite]"
+                style={{ width: '152px', height: '152px' }} />
+
+              {/* Cerebro — centrado naturalmente por flex */}
+              <Brain className="w-20 h-20 text-white relative z-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.9)] animate-bounce" />
             </div>
             
             <div className="space-y-2">
@@ -1168,37 +1172,107 @@ function SelectorObjetivosModal({ objetivos, objetivoActual, kpis, onSelect, onC
     return 'diagnostico';
   }, [kpis]);
 
+  // 🔒 Bloqueo de scroll al abrir
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-slate-900 border border-white/10 w-full sm:max-w-md max-h-[calc(100dvh-3.5rem)] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="p-6 border-b border-white/10">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-bold text-white">Objetivo Financiero</h2>
-            <button onClick={onClose} className="text-white/50 hover:text-white"><X className="w-6 h-6" /></button>
-          </div>
-          <p className="text-sm text-gray-400">Selecciona tu enfoque principal para este mes.</p>
-        </div>
-        <div className="p-4 flex-1 min-h-0 overflow-y-auto space-y-2 pb-6">
-          {objetivos.map((obj) => {
-            const esRecomendado = obj.key === recomendado;
-            const esActual = obj.key === objetivoActual;
-            return (
-              <button key={obj.key} onClick={() => onSelect(obj.key)} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border-2 text-left ${esActual ? 'bg-purple-600 border-purple-500 shadow-lg' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${obj.color} flex items-center justify-center text-2xl`}>{obj.emoji}</div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`font-bold text-sm ${esActual ? 'text-white' : 'text-white/90'}`}>{obj.label}</span>
-                    {esRecomendado && !esActual && <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold">⭐ Recomendado</span>}
-                  </div>
-                  <p className={`text-xs ${esActual ? 'text-purple-200' : 'text-white/50'}`}>{obj.descripcion}</p>
-                </div>
-                {esActual && <CheckCircle2 className="w-5 h-5 text-white" />}
+    <>
+      {/* OVERLAY */}
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+        style={{ zIndex: 99998 }}
+        onClick={onClose}
+      />
+      {/* MODAL */}
+      <div
+        className="fixed inset-0 flex items-end md:items-center md:justify-center"
+        style={{ zIndex: 99999 }}
+      >
+        <div
+          className="w-full md:w-[95%] md:max-w-md
+                     bg-slate-900 rounded-t-3xl md:rounded-2xl shadow-2xl
+                     border-t md:border border-white/10
+                     flex flex-col overflow-hidden"
+          style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 12px)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* HEADER */}
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10">
+            {/* Pill indicator mobile */}
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-xl font-bold text-white">Objetivo Financiero</h2>
+              <button onClick={onClose} className="p-2 -mr-2 text-white/50 hover:text-white rounded-xl transition-colors">
+                <X className="w-5 h-5" />
               </button>
-            );
-          })}
+            </div>
+            <p className="text-sm text-gray-400">Selecciona tu enfoque principal para este mes.</p>
+          </div>
+
+          {/* LISTA SCROLLEABLE */}
+          <div
+            className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)'
+            }}
+          >
+            {objetivos.map((obj) => {
+              const esRecomendado = obj.key === recomendado;
+              const esActual = obj.key === objetivoActual;
+              return (
+                <button
+                  key={obj.key}
+                  onClick={() => onSelect(obj.key)}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all border-2 text-left active:scale-[0.98] touch-manipulation ${
+                    esActual
+                      ? 'bg-purple-600 border-purple-500 shadow-lg shadow-purple-500/20'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${obj.color} flex items-center justify-center text-2xl flex-shrink-0`}>
+                    {obj.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`font-bold text-sm ${esActual ? 'text-white' : 'text-white/90'}`}>
+                        {obj.label}
+                      </span>
+                      {esRecomendado && !esActual && (
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold whitespace-nowrap">
+                          ⭐ Recomendado
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs leading-relaxed ${esActual ? 'text-purple-200' : 'text-white/50'}`}>
+                      {obj.descripcion}
+                    </p>
+                  </div>
+                  {esActual && <CheckCircle2 className="w-5 h-5 text-white flex-shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

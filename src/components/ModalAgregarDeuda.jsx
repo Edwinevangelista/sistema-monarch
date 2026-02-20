@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { CreditCard, X } from 'lucide-react'
+import { CreditCard, X, ChevronLeft, Loader2, DollarSign, Percent, Calendar } from 'lucide-react'
 
 const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
   const esEdicion = Boolean(deudaInicial)
-
-  // --- ESTADOS ---
-  // ✅ FIX: Aseguramos que 'loading' esté definido
   const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -20,10 +17,28 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
     estado: 'Activa'
   })
 
-  // --- EFECTOS ---
+  // 🔒 Bloqueo de scroll
+  useEffect(() => {
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.width = '100%'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      document.body.style.width = ''
+      document.body.style.overflow = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [])
+
   useEffect(() => {
     if (deudaInicial) {
-      console.log("Editando deuda:", deudaInicial)
       setFormData({
         id: deudaInicial.id,
         cuenta: deudaInicial.cuenta || '',
@@ -36,7 +51,6 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
         estado: deudaInicial.estado || 'Activa'
       })
     } else {
-      console.log("Modo Creación")
       setFormData({
         id: null,
         cuenta: '',
@@ -56,10 +70,7 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
       alert('Por favor completa el nombre y el saldo.')
       return
     }
-
     setLoading(true)
-    console.log("Enviando payload:", formData)
-
     try {
       const payload = {
         cuenta: formData.cuenta,
@@ -71,161 +82,236 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
         vence: formData.vence,
         estado: formData.estado
       }
-
-      // ✅ FIX: Solo adjuntamos el ID si estamos editando
       if (esEdicion && deudaInicial) {
         payload.id = deudaInicial.id
       } else {
-        // Si es nueva, nos aseguramos de no enviar ID
         delete payload.id
       }
-
       await onSave(payload)
       onClose()
     } catch (e) {
-      console.error("Error al guardar deuda:", e)
+      console.error('Error al guardar deuda:', e)
       alert('Ocurrió un error al guardar la deuda')
     } finally {
       setLoading(false)
     }
   }
 
+  const inputClass = "w-full bg-gray-800 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 placeholder-gray-600 transition-all"
+  const selectClass = "w-full bg-gray-800 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all"
+  const labelClass = "block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5"
+
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-red-500/50 max-h-[90vh] overflow-y-auto">
-        
-        {/* HEADER */}
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-            <CreditCard className="w-7 h-7 text-red-400" />
-            {esEdicion ? 'Editar Deuda' : 'Agregar Tarjeta / Deuda'}
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <>
+      {/* OVERLAY */}
+      <div
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        style={{ zIndex: 99998 }}
+        onClick={onClose}
+      />
 
-        {/* FORM */}
-        <div className="space-y-4">
-          {/* Nombre */}
-          <div>
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium">
-              <CreditCard className="w-4 h-4" /> Nombre de la Tarjeta/Cuenta *
-            </label>
-            <input
-              type="text"
-              placeholder="Ej: Visa, Banco Azul"
-              value={formData.cuenta}
-              onChange={(e) => setFormData({ ...formData, cuenta: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-          </div>
+      {/* MODAL */}
+      <div
+        className="fixed inset-0 flex items-end md:items-center md:justify-center"
+        style={{ zIndex: 99999 }}
+      >
+        <div
+          className="w-full md:w-[95%] md:max-w-md
+                     bg-gray-900 rounded-t-3xl md:rounded-2xl shadow-2xl
+                     border-t md:border border-white/10
+                     flex flex-col overflow-hidden"
+          style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 12px)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
 
-          {/* Tipo */}
-          <div>
-            <label className="block text-gray-300 mb-2 text-sm">Tipo</label>
-            <select
-              value={formData.tipo}
-              onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="Tarjeta">Tarjeta de Crédito</option>
-              <option value="Préstamo">Préstamo Personal</option>
-              <option value="Crédito Personal">Crédito Personal</option>
-              <option value="Hipoteca">Hipoteca</option>
-              <option value="Auto">Auto</option>
-            </select>
-          </div>
-
-          {/* Saldo y APR */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium">
-                💵 Saldo Actual *
-              </label>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={formData.saldo}
-                onChange={(e) => setFormData({ ...formData, saldo: e.target.value })}
-                className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium">
-                % APR
-              </label>
-              <input
-                type="number"
-                placeholder="Ej: 15.5"
-                value={formData.apr}
-                onChange={(e) => setFormData({ ...formData, apr: e.target.value })}
-                className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
+          {/* HEADER */}
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-red-950/40 to-gray-900">
+            {/* Pill indicator mobile */}
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={onClose}
+                  className="p-2 -ml-2 text-gray-400 hover:text-white rounded-xl transition-colors md:hidden"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <div className="p-2.5 bg-red-600 rounded-xl shadow-lg shadow-red-600/30">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {esEdicion ? 'Editar Deuda' : 'Agregar Tarjeta / Deuda'}
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {esEdicion ? 'Modifica los datos de tu tarjeta' : 'Registra una nueva deuda o tarjeta'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="hidden md:flex p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          {/* Pago Mínimo y Vencimiento */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium">
-                ⬇️ Pago Mínimo
-              </label>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={formData.pago_minimo}
-                onChange={(e) => setFormData({ ...formData, pago_minimo: e.target.value })}
-                className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-300 mb-2 flex items-center gap-2 font-medium">
-                📅 Fecha de Vencimiento
-              </label>
-              <input
-                type="date"
-                value={formData.vence}
-                onChange={(e) => setFormData({ ...formData, vence: e.target.value })}
-                className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-gray-300 mb-2 text-sm">Estado</label>
-            <select
-              value={formData.estado}
-              onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              <option value="Activa">Activa</option>
-              <option value="Pagada">Pagada</option>
-              <option value="Cerrada">Cerrada</option>
-            </select>
-          </div>
-        </div>
-
-        {/* ACTIONS */}
-        <div className="flex gap-3 mt-6 pt-4 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50"
+          {/* FORM SCROLLEABLE */}
+          <div
+            className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-4"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 80px)'
+            }}
           >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            {/* Nombre */}
+            <div>
+              <label className={labelClass}>Nombre de la Tarjeta / Cuenta *</label>
+              <input
+                type="text"
+                placeholder="Ej: Visa Platinum, Crédito BBVA..."
+                value={formData.cuenta}
+                onChange={(e) => setFormData({ ...formData, cuenta: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <label className={labelClass}>Tipo de Deuda</label>
+              <select
+                value={formData.tipo}
+                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                className={selectClass}
+              >
+                <option value="Tarjeta">💳 Tarjeta de Crédito</option>
+                <option value="Préstamo">🏦 Préstamo Personal</option>
+                <option value="Crédito Personal">💰 Crédito Personal</option>
+                <option value="Hipoteca">🏠 Hipoteca</option>
+                <option value="Auto">🚗 Auto</option>
+              </select>
+            </div>
+
+            {/* Saldo y APR */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>
+                  <DollarSign className="w-3 h-3 inline mr-1" />
+                  Saldo Actual *
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={formData.saldo}
+                  onChange={(e) => setFormData({ ...formData, saldo: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  <Percent className="w-3 h-3 inline mr-1" />
+                  APR Anual
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="Ej: 36.5"
+                  value={formData.apr}
+                  onChange={(e) => setFormData({ ...formData, apr: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            {/* Pago Mínimo y Vencimiento */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Pago Mínimo</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={formData.pago_minimo}
+                  onChange={(e) => setFormData({ ...formData, pago_minimo: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  <Calendar className="w-3 h-3 inline mr-1" />
+                  Fecha de Corte
+                </label>
+                <input
+                  type="date"
+                  value={formData.vence}
+                  onChange={(e) => setFormData({ ...formData, vence: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className={labelClass}>Estado</label>
+              <select
+                value={formData.estado}
+                onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                className={selectClass}
+              >
+                <option value="Activa">🟢 Activa</option>
+                <option value="Pagada">✅ Pagada</option>
+                <option value="Cerrada">🔴 Cerrada</option>
+              </select>
+            </div>
+
+            {/* Preview info si tiene saldo y APR */}
+            {formData.saldo && formData.apr && (
+              <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-3">
+                <p className="text-xs text-gray-400 mb-1 font-semibold">Interés mensual estimado:</p>
+                <p className="text-base font-bold text-red-400">
+                  ${(parseFloat(formData.saldo) * (parseFloat(formData.apr) / 100) / 12).toFixed(2)} / mes
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  Con APR {formData.apr}% sobre saldo de ${parseFloat(formData.saldo).toFixed(2)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* FOOTER */}
+          <div className="flex-shrink-0 p-4 border-t border-white/10 bg-gray-900"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
           >
-            {loading ? 'Guardando...' : (esEdicion ? 'Guardar Cambios' : 'Guardar Deuda')}
-          </button>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1 py-3.5 bg-gray-800 hover:bg-gray-700 active:scale-[0.98] text-white rounded-xl font-semibold transition-all touch-manipulation disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 py-3.5 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white rounded-xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  esEdicion ? 'Guardar Cambios' : '+ Agregar Deuda'
+                )}
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
