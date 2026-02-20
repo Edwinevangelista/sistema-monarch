@@ -659,13 +659,13 @@ export default function AsistenteFinancieroV2({
         onClick={analizar}
         disabled={loading}
         className={`
-          w-full mt-2 py-4 rounded-2xl
+          relative w-full mt-2 py-4 rounded-2xl
           bg-gradient-to-br ${arquetipo.color}
           text-white shadow-2xl shadow-purple-500/40
           flex items-center justify-center gap-3 z-10
           transition-all duration-300 disabled:opacity-50
           ${loading ? 'scale-[1.02]' : 'hover:scale-[1.02] active:scale-95'}
-          border border-white/20 font-bold text-base
+          border border-white/20 font-bold text-base touch-manipulation
         `}
       >
         <Brain className={`w-6 h-6 ${loading ? 'animate-bounce' : ''}`} />
