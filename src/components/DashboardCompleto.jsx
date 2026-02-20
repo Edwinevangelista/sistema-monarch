@@ -278,9 +278,10 @@ useEffect(() => {
 
 useEffect(() => {
   // ✅ Sincronizar gastos del hook → estado instant.
-  // Si el hook tiene datos del servidor (length > 0), siempre aplicar
-  // para que los nuevos gastos del servidor reemplacen el estado local.
-  if (!Array.isArray(gastos) || gastos.length === 0) return
+  // SIEMPRE actualizar cuando el hook cambia (incluso si viene vacío del servidor)
+  // NUNCA bloquear con length === 0 porque podría ser un refresh legítimo
+  if (!Array.isArray(gastos)) return
+  // Solo actualizar si hay datos O si el hook ya terminó de cargar (no bloquear con vacío inicial)
   setGastosInstant(gastos)
   localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
 }, [gastos]);
@@ -656,12 +657,16 @@ useEffect(() => {
         const result = await addGasto(data)
         console.log('✅ Gasto creado, result:', result)
 
-        // Usar el registro con ID real del servidor, o fallback temporal
-        const nuevoGasto = result?.data?.[0] ?? { ...data, id: `temp_${Date.now()}` }
+        // Si falló el insert, abortar — no hacer optimistic update falso
+        if (!result?.success || !result?.data?.[0]) {
+          console.error('❌ addGasto falló:', result?.error)
+          throw new Error(result?.error?.message || 'Error al guardar en base de datos')
+        }
 
-        // ✅ Actualización optimista INMEDIATA — usar función de seteo para closure fresco
+        const nuevoGasto = result.data[0]
+
+        // ✅ Actualización optimista INMEDIATA con el registro real del servidor
         setGastosInstant(prev => {
-          // Evitar duplicados: quitar temp ID si ya existe
           const sinDuplicados = prev.filter(g => g.id !== nuevoGasto.id)
           const updated = [nuevoGasto, ...sinDuplicados]
           localStorage.setItem('gastos_cache_v2', JSON.stringify(updated))
@@ -700,11 +705,12 @@ useEffect(() => {
       setShowModal(null)
       setGastoEditando(null)
 
-      // ✅ Forzar refresh del hook para sincronizar con servidor
-      // (limpia la caché interna y trae datos reales)
+      // ✅ Forzar refresh: limpiar TODAS las cachés de gastos y traer datos frescos del servidor
+      localStorage.removeItem('gastos_variables_cache')  // caché interna del hook
+      localStorage.removeItem('gastos_cache_v2')          // caché del dashboard
       setTimeout(() => {
-        refreshGastos()
-      }, 500)
+        refreshGastos(true)  // force=true para saltarse caché
+      }, 300)
     } catch (e) {
       console.error('❌ Error al guardar gasto:', e)
       alert('Error al guardar el gasto')

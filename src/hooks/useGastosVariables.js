@@ -7,7 +7,9 @@ export const useGastosVariables = (lazyLoad = false) => {
       lazyLoad,
       orderBy: 'fecha',
       ascending: false,
-      select: '*'  // ✅ 
+      select: '*',
+      limit: 500,               // ✅ Aumentado para no perder registros recientes
+      cacheDuration: 60 * 1000  // ✅ Cache de 1 min (antes 5 min) para datos más frescos
     }
   )
 

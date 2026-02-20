@@ -7,7 +7,7 @@ export const usePagosTarjeta = (lazyLoad = false) => {
     addRecord,
     refresh,
     initialize,
-  } = useSupabaseData("pagos_tarjetas", {
+  } = useSupabaseData("pagos_tarjeta", {
     lazyLoad,
     orderBy: "fecha",
     ascending: false,
