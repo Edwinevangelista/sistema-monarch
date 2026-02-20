@@ -482,16 +482,16 @@ export default function AsistenteFinancieroV2({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white relative overflow-hidden pb-24">
-      
+    <div className="text-white relative pb-6">
+
       {/* FONDO DINÁMICO */}
-      <div className="fixed inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-3xl">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-900/20 rounded-full blur-[120px]" />
         <div className="absolute top-[40%] left-[40%] w-[20%] h-[20%] bg-indigo-500/10 rounded-full blur-[80px]" />
       </div>
 
-      <div className="relative z-10 p-4 max-w-lg mx-auto space-y-4 pt-6">
+      <div className="relative z-10 max-w-lg mx-auto space-y-4">
         
         {/* 1. HEADER INTELIGENTE */}
         <div className={`relative overflow-hidden rounded-3xl bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 shadow-2xl`}>
@@ -659,16 +659,17 @@ export default function AsistenteFinancieroV2({
         onClick={analizar}
         disabled={loading}
         className={`
-          fixed bottom-24 right-6 w-16 h-16 rounded-full 
-          bg-gradient-to-br ${arquetipo.color} 
-          text-white shadow-2xl shadow-purple-500/40 
-          flex items-center justify-center z-40
+          w-full mt-2 py-4 rounded-2xl
+          bg-gradient-to-br ${arquetipo.color}
+          text-white shadow-2xl shadow-purple-500/40
+          flex items-center justify-center gap-3 z-10
           transition-all duration-300 disabled:opacity-50
-          ${loading ? 'scale-110' : 'hover:scale-110 active:scale-95'}
-          border border-white/20
+          ${loading ? 'scale-[1.02]' : 'hover:scale-[1.02] active:scale-95'}
+          border border-white/20 font-bold text-base
         `}
       >
-        <Brain className={`w-7 h-7 ${loading ? 'animate-bounce' : ''}`} />
+        <Brain className={`w-6 h-6 ${loading ? 'animate-bounce' : ''}`} />
+        {loading ? 'Analizando...' : ultimoAnalisis ? 'Re-analizar' : 'Analizar mis finanzas'}
         {ultimoAnalisis && !loading && (
           <div className="absolute -top-1 -right-1 bg-green-500 text-white text-[9px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
             ✓
