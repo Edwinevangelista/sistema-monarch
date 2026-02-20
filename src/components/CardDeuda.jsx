@@ -1,69 +1,127 @@
-import { CreditCard, Edit2, Trash2 } from 'lucide-react';
+import { CreditCard, Edit2, Trash2, TrendingDown, Calendar, Percent } from 'lucide-react';
 
 export default function CardDeuda({ deuda, onEditar, onEliminar }) {
-  const getPorcentajePagado = () => {
-    if (!deuda.balance || !deuda.saldo) return 0;
-    return ((deuda.balance - deuda.saldo) / deuda.balance) * 100;
-  };
+  const saldo = Number(deuda.saldo || 0)
+  const limite = Number(deuda.balance || 0)  // balance = límite de la tarjeta
+  const pagoMinimo = Number(deuda.pago_minimo || 0)
+  const apr = Number(deuda.apr || 0)
 
-  const porcentaje = getPorcentajePagado();
+  // Solo mostrar barra de uso si tiene límite registrado
+  const tieneBalance = limite > 0
+  const porcentajeUso = tieneBalance ? Math.min((saldo / limite) * 100, 100) : 0
+
+  const colorUso =
+    porcentajeUso > 80 ? 'bg-red-500' :
+    porcentajeUso > 50 ? 'bg-yellow-500' :
+    'bg-emerald-500'
+
+  const urgente = deuda.vence
+    ? Math.ceil((new Date(deuda.vence) - new Date()) / (1000 * 60 * 60 * 24))
+    : null
 
   return (
-    <div className="border-2 border-purple-500/30 bg-purple-500/10 rounded-xl p-4 hover:shadow-lg transition-shadow">
+    <div className={`rounded-2xl p-4 border-2 transition-all ${
+      saldo <= 0
+        ? 'border-emerald-500/30 bg-emerald-500/5'
+        : urgente !== null && urgente <= 3
+        ? 'border-red-500/40 bg-red-500/5'
+        : 'border-purple-500/30 bg-purple-500/5'
+    }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="text-white font-bold text-lg">{deuda.cuenta}</h3>
-          <p className="text-red-400 text-2xl font-bold mt-1">
-            ${deuda.saldo?.toFixed(2)}
-          </p>
-          <p className="text-sm text-gray-400">
-            de ${deuda.balance?.toFixed(2)}
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="text-white font-bold text-base truncate">{deuda.cuenta}</h3>
+            {saldo <= 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full font-bold whitespace-nowrap">
+                ✅ SALDADA
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400">{deuda.tipo || 'Tarjeta de Crédito'}</p>
         </div>
-        <div className="bg-purple-600 p-2 rounded-lg">
-          <CreditCard className="w-5 h-5 text-white" />
+        <div className="p-2 bg-purple-600/20 border border-purple-500/30 rounded-xl ml-2">
+          <CreditCard className="w-4 h-4 text-purple-400" />
         </div>
       </div>
 
-      {/* Progreso */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between text-sm mb-1">
-          <span className="text-gray-400">Progreso de pago</span>
-          <span className="text-green-400 font-semibold">{porcentaje.toFixed(0)}%</span>
-        </div>
-        <div className="w-full bg-gray-700 rounded-full h-3">
-          <div
-            className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all"
-            style={{ width: `${porcentaje}%` }}
-          />
-        </div>
+      {/* Saldo */}
+      <div className="mb-3">
+        <p className={`text-2xl font-bold ${saldo <= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          ${saldo.toFixed(2)}
+        </p>
+        {tieneBalance && (
+          <p className="text-xs text-gray-500">de ${limite.toFixed(2)} límite</p>
+        )}
       </div>
+
+      {/* Barra de uso (solo si tiene límite) */}
+      {tieneBalance && saldo > 0 && (
+        <div className="mb-3">
+          <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+            <span>Uso</span>
+            <span className={porcentajeUso > 80 ? 'text-red-400 font-bold' : ''}>{porcentajeUso.toFixed(0)}%</span>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${colorUso}`}
+              style={{ width: `${porcentajeUso}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Info */}
-      <div className="space-y-1 mb-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Pago mínimo:</span>
-          <span className="text-yellow-400 font-semibold">
-            ${deuda.pago_minimo?.toFixed(2)}
-          </span>
-        </div>
+      <div className="space-y-1.5 mb-3 text-sm">
+        {pagoMinimo > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 flex items-center gap-1">
+              <TrendingDown className="w-3.5 h-3.5" />
+              Pago mínimo
+            </span>
+            <span className="text-yellow-400 font-semibold">${pagoMinimo.toFixed(2)}</span>
+          </div>
+        )}
+        {apr > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 flex items-center gap-1">
+              <Percent className="w-3.5 h-3.5" />
+              APR
+            </span>
+            <span className="text-orange-400 font-semibold">{(apr * 100).toFixed(1)}%</span>
+          </div>
+        )}
+        {deuda.vence && urgente !== null && (
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              Vencimiento
+            </span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              urgente <= 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+              urgente <= 5 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+              'bg-gray-700 text-gray-300'
+            }`}>
+              {urgente <= 0 ? 'VENCIDO' : `en ${urgente} días`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Acciones */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
         <button
           onClick={onEditar}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm text-white transition-colors flex items-center justify-center gap-2"
+          className="py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/40 active:scale-95 rounded-xl text-blue-300 text-xs font-semibold transition-all touch-manipulation flex items-center justify-center gap-1.5"
         >
-          <Edit2 className="w-4 h-4" />
+          <Edit2 className="w-3.5 h-3.5" />
           Editar
         </button>
         <button
           onClick={onEliminar}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm text-white transition-colors flex items-center justify-center gap-2"
+          className="py-2 bg-red-600/20 border border-red-500/30 hover:bg-red-600/40 active:scale-95 rounded-xl text-red-400 text-xs font-semibold transition-all touch-manipulation flex items-center justify-center gap-1.5"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-3.5 h-3.5" />
           Eliminar
         </button>
       </div>

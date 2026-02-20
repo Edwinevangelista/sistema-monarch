@@ -25,6 +25,7 @@ import ModalGastos from './ModalGastos'
 import ModalSuscripcion from './ModalSuscripcion'
 import ModalPagoTarjeta from './ModalPagoTarjeta'
 import ModalAgregarDeuda from './ModalAgregarDeuda'
+import CardDeuda from './CardDeuda'
 import LectorEstadoCuenta from './LectorEstadoCuenta'
 import Notificaciones from './Notificaciones'
 import GraficaDona from './GraficaDona'
@@ -1046,14 +1047,16 @@ const handleRegistrarPagoTarjeta = async (pago) => {
       ? 0 
       : Math.max(0, Number(deuda.saldo) - principal)
 
-    // Función para calcular pago mínimo
-    const calcularPagoMinimo = (saldo, apr = 0) => {
-      if (saldo <= 0) return 0
+    // Calcular nuevo pago mínimo:
+    // - Si saldo queda en 0 → resetear a 0 (tarjeta saldada)
+    // - Si saldo baja → recalcular 2% del nuevo saldo (mínimo $25 si aún hay deuda)
+    const calcularPagoMinimo = (saldo) => {
+      if (saldo <= 0) return 0           // ✅ Reset a 0 cuando saldo = 0
       const porcentaje = saldo * 0.02
-      return Math.max(porcentaje, 25)
+      return Math.max(porcentaje, 25)   // Mínimo $25 si hay deuda
     }
 
-    const nuevoPagoMinimo = calcularPagoMinimo(nuevoSaldo, deuda.apr)
+    const nuevoPagoMinimo = calcularPagoMinimo(nuevoSaldo)
 
     console.log('📊 Actualizando tarjeta:', {
       nuevoSaldo,
@@ -1064,14 +1067,25 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     // Registrar el pago
     await addPago(pago)
 
-    // Actualizar la deuda
+    // Actualizar la deuda en BD
     await updateDebt(deuda.id, {
       saldo: nuevoSaldo,
       pago_minimo: nuevoPagoMinimo,
       ultimo_pago: pago.fecha,
     })
 
-    // Refrescar datos
+    // ✅ Actualización optimista del estado local para reflejo inmediato en UI
+    setDeudasInstant(prev => {
+      const updated = prev.map(d =>
+        d.id === deuda.id
+          ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha }
+          : d
+      )
+      localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
+      return updated
+    })
+
+    // Refrescar datos desde servidor
     await refreshPagos()
     await refreshDeudas()
     if (pago.cuenta_id) await refreshCuentas()
@@ -2441,14 +2455,88 @@ const dataGraficaDona = useMemo(() =>
       </ModalWrapper>
 
       <ModalWrapper show={showModal === 'tarjetas'} onClose={() => setShowModal(null)}>
-        <div className="bg-gray-900 rounded-t-3xl md:rounded-2xl p-4 md:p-6 max-w-md w-full m-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white">Gestión de Tarjetas</h2>
-            <button onClick={() => setShowModal(null)} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
+        {/* ── MODAL GESTIÓN DE TARJETAS ── */}
+        <div
+          className="w-full md:max-w-md bg-gray-900 rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden"
+          style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top,0px) - 12px)' }}
+        >
+          {/* HEADER */}
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-purple-950/50 to-gray-900">
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg shadow-purple-600/30">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Tarjetas de Crédito</h2>
+                  <p className="text-xs text-gray-400">{deudasInstant.length} {deudasInstant.length === 1 ? 'tarjeta' : 'tarjetas'} registradas</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModal(null)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <div className="space-y-3">
-            <button onClick={() => setShowModal('agregarDeuda')} className="w-full p-4 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">📝 Registrar Tarjeta</button>
-            <button onClick={() => setShowModal('pagoTarjeta')} className="w-full p-4 bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600/30 text-white rounded-2xl font-semibold transition-all touch-manipulation">💳 Pagar Tarjeta</button>
+
+          {/* BOTONES ACCIÓN */}
+          <div className="flex-shrink-0 flex gap-3 px-5 pt-4 pb-3">
+            <button
+              onClick={() => { setDeudaEditando(null); setShowModal('agregarDeuda') }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white rounded-2xl font-semibold transition-all touch-manipulation text-sm shadow-lg shadow-purple-900/30"
+            >
+              <Plus className="w-4 h-4" /> Nueva Tarjeta
+            </button>
+            <button
+              onClick={() => { setDeudaEditando(null); setShowModal('pagoTarjeta') }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-2xl font-semibold transition-all touch-manipulation text-sm shadow-lg shadow-emerald-900/30"
+            >
+              <CreditCard className="w-4 h-4" /> Pagar
+            </button>
+          </div>
+
+          {/* RESUMEN TOTAL */}
+          {deudasInstant.length > 0 && (
+            <div className="flex-shrink-0 mx-5 mb-3 bg-red-950/30 border border-red-500/20 rounded-2xl px-4 py-3 flex justify-between items-center">
+              <span className="text-sm text-gray-400">Total adeudado</span>
+              <span className="text-xl font-bold text-red-400">
+                ${deudasInstant.reduce((s, d) => s + Number(d.saldo || 0), 0).toFixed(2)}
+              </span>
+            </div>
+          )}
+
+          {/* LISTA DE TARJETAS */}
+          <div
+            className="flex-1 overflow-y-auto overscroll-contain px-5 pb-5 space-y-3"
+            style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom,16px) + 20px)' }}
+          >
+            {deudasInstant.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CreditCard className="w-8 h-8 text-purple-400/50" />
+                </div>
+                <p className="text-gray-400 font-medium">No hay tarjetas registradas</p>
+                <p className="text-gray-500 text-sm mt-1">Agrega tu primera tarjeta de crédito</p>
+              </div>
+            ) : (
+              deudasInstant.map((deuda) => (
+                <CardDeuda
+                  key={deuda.id}
+                  deuda={deuda}
+                  onEditar={() => { setDeudaEditando(deuda); setShowModal('agregarDeuda') }}
+                  onEliminar={async () => {
+                    if (window.confirm(`¿Eliminar ${deuda.cuenta}?`)) {
+                      await deleteDebt(deuda.id)
+                      setDeudasInstant(prev => {
+                        const updated = prev.filter(d => d.id !== deuda.id)
+                        localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
+                        return updated
+                      })
+                    }
+                  }}
+                />
+              ))
+            )}
           </div>
         </div>
       </ModalWrapper>
