@@ -633,28 +633,40 @@ useEffect(() => {
   const handleGuardarGasto = async (data) => {
     try {
       if (!data.fecha) data.fecha = hoyStr
-      
+
       if (data.id) {
         await updateGasto(data.id, data)
         console.log('✅ Gasto actualizado')
       } else {
         await addGasto(data)
         console.log('✅ Gasto creado')
-        
-        if (data.cuenta_id && data.monto > 0) {
+
+        const monto = Number(data.monto)
+
+        // 🏦 Cuenta bancaria → RESTAR del balance
+        if (data.cuenta_id && monto > 0) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            const nuevoBalance = Number(cuenta.balance) - Number(data.monto)
+            const nuevoBalance = Number(cuenta.balance) - monto
             await updateCuenta(cuenta.id, { balance: nuevoBalance })
-            console.log('💳 Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
-            
+            console.log('🏦 Cuenta debitada:', cuenta.nombre, '→', nuevoBalance)
             await registrarMovimientoEnHistorial({
               tipo: 'gasto',
-              monto: Number(data.monto),
+              monto,
               ref: `Gasto: ${data.descripcion || data.categoria || 'Variable'}`,
               cuentaId: cuenta.id,
               cuentaNombre: cuenta.nombre
             })
+          }
+        }
+
+        // 💳 Tarjeta de crédito → SUMAR al saldo (deuda)
+        if (data.deuda_id && monto > 0) {
+          const deuda = deudasInstant.find(d => d.id === data.deuda_id)
+          if (deuda) {
+            const nuevoSaldo = Number(deuda.saldo || 0) + monto
+            await updateDebt(deuda.id, { saldo: nuevoSaldo })
+            console.log('💳 Tarjeta cargada:', deuda.cuenta, '→ saldo:', nuevoSaldo)
           }
         }
       }
@@ -679,20 +691,34 @@ useEffect(() => {
         if (data.estado === 'Pagado') mostrarEnHistorial = true
       }
       
-      if (mostrarEnHistorial && data.cuenta_id && data.monto > 0) {
-        const cuenta = cuentas.find(c => c.id === data.cuenta_id)
-        if (cuenta) {
-          const nuevoBalance = Number(cuenta.balance) - Number(data.monto)
-          await updateCuenta(cuenta.id, { balance: nuevoBalance })
-          console.log('💳 Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
-          
-          await registrarMovimientoEnHistorial({
-            tipo: 'gasto',
-            monto: Number(data.monto),
-            ref: `Gasto Fijo: ${data.nombre}`,
-            cuentaId: cuenta.id,
-            cuentaNombre: cuenta.nombre
-          })
+      if (mostrarEnHistorial) {
+        const monto = Number(data.monto)
+
+        // 🏦 Cuenta bancaria → RESTAR del balance
+        if (data.cuenta_id && monto > 0) {
+          const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+          if (cuenta) {
+            const nuevoBalance = Number(cuenta.balance) - monto
+            await updateCuenta(cuenta.id, { balance: nuevoBalance })
+            console.log('🏦 Cuenta debitada (fijo):', cuenta.nombre, '→', nuevoBalance)
+            await registrarMovimientoEnHistorial({
+              tipo: 'gasto',
+              monto,
+              ref: `Gasto Fijo: ${data.nombre}`,
+              cuentaId: cuenta.id,
+              cuentaNombre: cuenta.nombre
+            })
+          }
+        }
+
+        // 💳 Tarjeta de crédito → SUMAR al saldo (deuda)
+        if (data.deuda_id && monto > 0) {
+          const deuda = deudasInstant.find(d => d.id === data.deuda_id)
+          if (deuda) {
+            const nuevoSaldo = Number(deuda.saldo || 0) + monto
+            await updateDebt(deuda.id, { saldo: nuevoSaldo })
+            console.log('💳 Tarjeta cargada (fijo):', deuda.cuenta, '→ saldo:', nuevoSaldo)
+          }
         }
       }
 
@@ -1761,16 +1787,34 @@ deudasInstant.forEach(d => {
     }
     }, [alertas, permission, hoy, showLocalNotification])
 
-  // Mostrar modal de proyección 3 días una vez al día al tener datos cargados
+  // Mostrar modal de proyección 3 días solo si hay cargos con riesgo, una vez al día
   useEffect(() => {
     if (cuentas.length === 0) return
+    // Calcular si hay cuentas en riesgo en los próximos 3 días
+    const hoy3 = new Date()
+    hoy3.setDate(hoy3.getDate() + 3)
+    const hayRiesgo3d = cuentas.some(cuenta => {
+      const cargos3d = [
+        ...gastosFijosInstant.filter(gf =>
+          gf.cuenta_id === cuenta.id && gf.auto_pago && gf.estado !== 'Pagado' && gf.dia_venc &&
+          (() => { const f = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc); const fn = new Date(hoy.getFullYear(), hoy.getMonth()+1, gf.dia_venc); const fc = f >= hoy ? f : fn; return fc <= hoy3 })()
+        ).map(gf => Number(gf.monto || 0)),
+        ...suscripcionesInstant.filter(sub =>
+          sub.cuenta_id === cuenta.id && sub.autopago && sub.estado !== 'Cancelado' && sub.proximo_pago &&
+          (() => { const f = new Date(sub.proximo_pago + 'T00:00:00'); return f >= hoy && f <= hoy3 })()
+        ).map(sub => Number(sub.costo || 0))
+      ]
+      const total = cargos3d.reduce((s, m) => s + m, 0)
+      return total > 0 && total > Number(cuenta.balance || 0)
+    })
+    if (!hayRiesgo3d) return  // Sin riesgo → no molestar al usuario
     const key = 'proyeccion3d_ultima_fecha'
     const hoyStr = new Date().toDateString()
     if (localStorage.getItem(key) !== hoyStr) {
       setShowProyeccion3d(true)
       localStorage.setItem(key, hoyStr)
     }
-  }, [cuentas])
+  }, [cuentas, gastosFijosInstant, suscripcionesInstant])
 
 const gastosPorCategoria = useMemo(() => {
   const categorias = {}
