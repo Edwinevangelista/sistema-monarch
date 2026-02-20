@@ -108,6 +108,7 @@ export default function DashboardCompleto()  {
 
   // Proyección 3 días: se muestra una vez por día al entrar
   const [showProyeccion3d, setShowProyeccion3d] = useState(false)
+  const [tarjetaExpandidaId, setTarjetaExpandidaId] = useState(null) // historial expandido por tarjeta
 
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   
@@ -190,7 +191,7 @@ const {
 } = useMonthlyTransition()
 
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
-  const { gastos, addGasto, updateGasto, deleteGasto } = useGastosVariables()
+  const { gastos, addGasto, updateGasto, deleteGasto, refresh: refreshGastos } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
   const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
@@ -276,18 +277,12 @@ useEffect(() => {
 }, [ingresos]);
 
 useEffect(() => {
-  // ✅ SYNC ROBUSTO: Sincronizar cuando el hook actualiza su estado interno.
-  // Se compara con el estado actual para no sobreescribir si son iguales.
-  // Se acepta array vacío SOLO si gastosInstant ya estaba vacío (primera carga).
-  if (!Array.isArray(gastos)) return
-  if (gastos.length === 0) return  // Ignorar vaciados del hook (caché expirada antes de fetch)
-
-  setGastosInstant(prev => {
-    // Solo actualizar si los datos son diferentes (evitar re-renders innecesarios)
-    if (JSON.stringify(gastos) === JSON.stringify(prev)) return prev
-    localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
-    return gastos
-  })
+  // ✅ Sincronizar gastos del hook → estado instant.
+  // Si el hook tiene datos del servidor (length > 0), siempre aplicar
+  // para que los nuevos gastos del servidor reemplacen el estado local.
+  if (!Array.isArray(gastos) || gastos.length === 0) return
+  setGastosInstant(gastos)
+  localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
 }, [gastos]);
 
 useEffect(() => {
@@ -704,6 +699,12 @@ useEffect(() => {
       }
       setShowModal(null)
       setGastoEditando(null)
+
+      // ✅ Forzar refresh del hook para sincronizar con servidor
+      // (limpia la caché interna y trae datos reales)
+      setTimeout(() => {
+        refreshGastos()
+      }, 500)
     } catch (e) {
       console.error('❌ Error al guardar gasto:', e)
       alert('Error al guardar el gasto')
@@ -2533,18 +2534,20 @@ const dataGraficaDona = useMemo(() =>
               </div>
             ) : (
               deudasInstant.map((deuda) => {
-                // Compras cargadas a esta tarjeta (gastos variables con deuda_id)
-                const comprasDeEstaTarjeta = gastosInstant
+                // Compras cargadas a esta tarjeta
+                const compras = gastosInstant
                   .filter(g => g.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-
-                // Pagos registrados a esta tarjeta
-                const pagosDeEstaTarjeta = pagos
+                // Pagos a esta tarjeta
+                const pagosTarjeta = pagos
                   .filter(p => p.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
 
+                const totalMovimientos = compras.length + pagosTarjeta.length
+                const expandido = tarjetaExpandidaId === deuda.id
+
                 return (
-                  <div key={deuda.id} className="space-y-2">
+                  <div key={deuda.id}>
                     <CardDeuda
                       deuda={deuda}
                       onEditar={() => { setDeudaEditando(deuda); setShowModal('agregarDeuda') }}
@@ -2560,16 +2563,26 @@ const dataGraficaDona = useMemo(() =>
                       }}
                     />
 
-                    {/* HISTORIAL DE TRANSACCIONES DE ESTA TARJETA */}
-                    {(comprasDeEstaTarjeta.length > 0 || pagosDeEstaTarjeta.length > 0) && (
-                      <div className="ml-2 border-l-2 border-purple-500/20 pl-3 space-y-1.5">
+                    {/* BOTÓN VER MOVIMIENTOS — oculto si no hay */}
+                    {totalMovimientos > 0 && (
+                      <button
+                        onClick={() => setTarjetaExpandidaId(expandido ? null : deuda.id)}
+                        className="w-full mt-1.5 py-2 flex items-center justify-center gap-2 text-xs font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/15 rounded-xl transition-all touch-manipulation"
+                      >
+                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expandido ? 'rotate-90' : ''}`} />
+                        {expandido ? 'Ocultar movimientos' : `Ver ${totalMovimientos} movimiento${totalMovimientos !== 1 ? 's' : ''}`}
+                      </button>
+                    )}
+
+                    {/* HISTORIAL — solo visible al expandir */}
+                    {expandido && (
+                      <div className="mt-2 ml-2 border-l-2 border-purple-500/20 pl-3 space-y-1.5">
                         <p className="text-[10px] font-bold text-purple-400/60 uppercase tracking-widest mb-2">
-                          Historial de movimientos
+                          Movimientos recientes
                         </p>
 
-                        {/* PAGOS */}
-                        {pagosDeEstaTarjeta.slice(0, 3).map(pago => (
-                          <div key={`pago-${pago.id}`} className="flex items-center justify-between bg-emerald-500/8 border border-emerald-500/15 rounded-xl px-3 py-2">
+                        {pagosTarjeta.slice(0, 3).map(pago => (
+                          <div key={`pago-${pago.id}`} className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/15 rounded-xl px-3 py-2">
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-[10px]">💳</span>
@@ -2583,11 +2596,10 @@ const dataGraficaDona = useMemo(() =>
                           </div>
                         ))}
 
-                        {/* COMPRAS */}
-                        {comprasDeEstaTarjeta.slice(0, 5).map(gasto => (
+                        {compras.slice(0, 5).map(gasto => (
                           <div key={`gasto-${gasto.id}`} className="flex items-center justify-between bg-red-500/5 border border-red-500/10 rounded-xl px-3 py-2">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-red-500/15 rounded-full flex items-center justify-center flex-shrink-0">
+                              <div className="w-6 h-6 bg-red-500/10 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-[10px]">🛍️</span>
                               </div>
                               <div>
@@ -2601,9 +2613,9 @@ const dataGraficaDona = useMemo(() =>
                           </div>
                         ))}
 
-                        {(comprasDeEstaTarjeta.length + pagosDeEstaTarjeta.length) > 8 && (
+                        {totalMovimientos > 8 && (
                           <p className="text-[10px] text-gray-600 text-center pt-1">
-                            +{(comprasDeEstaTarjeta.length + pagosDeEstaTarjeta.length) - 8} movimientos más
+                            +{totalMovimientos - 8} movimientos más
                           </p>
                         )}
                       </div>

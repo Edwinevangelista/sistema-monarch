@@ -944,23 +944,36 @@ export default function ModalUsuario({
                       </button>
                     </div>
 
+                    {/* ✅ Clases Tailwind completas y hardcodeadas (no interpoladas) para que no sean purgadas en prod */}
                     {[
-                      { key: 'gastos', label: 'Alertas de gastos', desc: 'Límite mensual', color: 'red', icon: Target },
-                      { key: 'deudas', label: 'Alertas de deudas', desc: 'Fechas de corte', color: 'purple', icon: CreditCard },
-                      { key: 'suscripciones', label: 'Renovaciones', desc: 'Suscripciones', color: 'blue', icon: Repeat },
+                      {
+                        key: 'gastos', label: 'Alertas de gastos', desc: 'Límite mensual', icon: Target,
+                        onCls: 'bg-red-500/10 border-red-500/30 text-red-300',
+                        iconBg: 'bg-red-500/20', iconTxt: 'text-red-400'
+                      },
+                      {
+                        key: 'deudas', label: 'Alertas de deudas', desc: 'Fechas de corte', icon: CreditCard,
+                        onCls: 'bg-purple-500/10 border-purple-500/30 text-purple-300',
+                        iconBg: 'bg-purple-500/20', iconTxt: 'text-purple-400'
+                      },
+                      {
+                        key: 'suscripciones', label: 'Renovaciones', desc: 'Suscripciones', icon: Repeat,
+                        onCls: 'bg-blue-500/10 border-blue-500/30 text-blue-300',
+                        iconBg: 'bg-blue-500/20', iconTxt: 'text-blue-400'
+                      },
                     ].map(item => (
                       <button
                         key={item.key}
                         onClick={() => toggleNotificacion(item.key)}
                         className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                          prefsNotificaciones[item.key] 
-                            ? `bg-${item.color}-500/10 border-${item.color}-500/30 text-${item.color}-300` 
+                          prefsNotificaciones[item.key]
+                            ? item.onCls
                             : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 bg-${item.color}-500/20 rounded-lg`}>
-                            <item.icon className={`w-4 h-4 text-${item.color}-400`} />
+                          <div className={`p-2 rounded-lg ${item.iconBg}`}>
+                            <item.icon className={`w-4 h-4 ${item.iconTxt}`} />
                           </div>
                           <div className="text-left">
                             <p className="text-sm font-medium">{item.label}</p>
