@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { ShoppingCart, X, Calendar, DollarSign, FileText, Tag, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { useDeudas } from '../hooks/useDeudas'
 
 const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null }) => {
   const { cuentas } = useCuentasBancarias()
+  const { deudas } = useDeudas()
   
   const [tipoGasto, setTipoGasto] = useState('variable')
   const [formData, setFormData] = useState({
@@ -12,7 +14,8 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
     descripcion: '',
     monto: '',
     metodo: 'Efectivo',
-    cuenta_id: '', 
+    cuenta_id: '',
+    deuda_id: '',
     nombre: '',
     dia_venc: '',
     estado: 'Pendiente'
@@ -45,6 +48,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
         monto: gastoInicial.monto?.toString() || '',
         metodo: gastoInicial.metodo || 'Efectivo',
         cuenta_id: gastoInicial.cuenta_id || '',
+        deuda_id: gastoInicial.deuda_id || '',
         nombre: gastoInicial.nombre || '',
         dia_venc: gastoInicial.dia_venc?.toString() || '',
         estado: gastoInicial.estado || 'Pendiente'
@@ -57,7 +61,8 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
         descripcion: '',
         monto: '',
         metodo: 'Efectivo',
-        cuenta_id: '', 
+        cuenta_id: '',
+        deuda_id: '',
         nombre: '',
         dia_venc: '',
         estado: 'Pendiente'
@@ -90,24 +95,26 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
           descripcion: formData.descripcion,
           monto: parseFloat(formData.monto),
           metodo: formData.metodo,
-          cuenta_id: formData.cuenta_id || null
+          cuenta_id: formData.cuenta_id || null,
+          deuda_id: formData.deuda_id || null
         }
-        
+
         if (gastoInicial?.id) {
           payload.id = gastoInicial.id
         }
-        
+
         await onSaveVariable(payload)
         alert('✅ Gasto variable registrado correctamente')
       } else {
         await onSaveFijo({
-          id: gastoInicial?.id, 
+          id: gastoInicial?.id,
           nombre: formData.nombre,
           categoria: formData.categoria,
           monto: parseFloat(formData.monto),
           dia_venc: parseInt(formData.dia_venc),
           estado: formData.estado,
-          cuenta_id: formData.cuenta_id || null
+          cuenta_id: formData.cuenta_id || null,
+          deuda_id: formData.deuda_id || null
         })
         alert('✅ Gasto fijo registrado correctamente')
       }
@@ -266,66 +273,48 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                 />
               </div>
               
-              {/* CUENTA */}
+              {/* CUENTA / TARJETA DE CRÉDITO */}
               <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta de pago</label>
-                <select 
-                  value={formData.cuenta_id || ''} 
+                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta o tarjeta de pago</label>
+                <select
+                  value={formData.deuda_id || formData.cuenta_id || ''}
                   onChange={(e) => {
-                    const cuentaId = e.target.value
-                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO (MEJORADA)
-                    const cuentaSeleccionada = cuentas.find(c => c.id === cuentaId)
-                    let metodoCalculado = 'Efectivo' // Default
-
-                    if (cuentaSeleccionada) {
-                      const nombre = cuentaSeleccionada.nombre.toLowerCase()
-                      const tipo = (cuentaSeleccionada.tipo || '').toLowerCase()
-                      
-                      // Buscamos palabras clave tanto en Español como en Inglés (e.g. "Debit business")
-                      if (
-                        nombre.includes('visa') || 
-                        nombre.includes('master') || 
-                        nombre.includes('amex') ||
-                        nombre.includes('tarjeta') ||
-                        nombre.includes('credit') || // Inglés
-                        nombre.includes('debit') ||  // Inglés
-                        nombre.includes('card') ||   // Inglés
-                        tipo.includes('credit') ||
-                        tipo.includes('debit') ||
-                        tipo.includes('credito') || 
-                        tipo.includes('debito') || 
-                        nombre.includes('banc')
-                      ) {
-                        metodoCalculado = 'Tarjeta'
-                      } 
-                      // Detectar Efectivo
-                      else if (
-                        nombre.includes('efectivo') || 
-                        nombre.includes('cash') ||
-                        nombre.includes('wallet') ||
-                        nombre.includes('billetera') ||
-                        tipo.includes('efectivo')
-                      ) {
-                        metodoCalculado = 'Efectivo'
-                      }
-                    }
-                    
-                    setFormData({ 
-                      ...formData, 
-                      cuenta_id: cuentaId, 
-                      metodo: metodoCalculado 
+                    const val = e.target.value
+                    const esCuenta = cuentas.some(c => c.id === val)
+                    const esTarjeta = deudas.some(d => d.id === val)
+                    let metodo = formData.metodo
+                    if (esCuenta || esTarjeta) metodo = 'Tarjeta'
+                    else if (!val) metodo = 'Efectivo'
+                    setFormData({
+                      ...formData,
+                      cuenta_id: esCuenta ? val : '',
+                      deuda_id: esTarjeta ? val : '',
+                      metodo
                     })
-                  }} 
+                  }}
                   disabled={loading}
                   className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg disabled:opacity-50 text-sm md:text-base border border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                   style={{ fontSize: '16px' }}
                 >
-                  <option value="">Seleccionar cuenta</option>
-                  {cuentas.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre} (${Number(c.balance).toFixed(2)})
-                    </option>
-                  ))}
+                  <option value="">Sin cuenta vinculada (Efectivo)</option>
+                  {cuentas.length > 0 && (
+                    <optgroup label="🏦 Cuentas bancarias">
+                      {cuentas.map(c => (
+                        <option key={`cuenta-${c.id}`} value={c.id}>
+                          {c.nombre} — ${Number(c.balance || 0).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {deudas.filter(d => d.estado !== 'Saldada').length > 0 && (
+                    <optgroup label="💳 Tarjetas de crédito">
+                      {deudas.filter(d => d.estado !== 'Saldada').map(d => (
+                        <option key={`deuda-${d.id}`} value={d.id}>
+                          {d.cuenta} — Saldo: ${Number(d.saldo || 0).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
@@ -415,64 +404,48 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
                 </div>
               </div>
               
-              {/* CUENTA */}
+              {/* CUENTA / TARJETA DE CRÉDITO - FIJO */}
               <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta de pago</label>
-                <select 
-                  value={formData.cuenta_id || ''} 
+                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta o tarjeta de pago</label>
+                <select
+                  value={formData.deuda_id || formData.cuenta_id || ''}
                   onChange={(e) => {
-                    const cuentaId = e.target.value
-                    // ✅ LÓGICA AUTOMÁTICA DE DETECCIÓN DE MÉTODO (MEJORADA - Versión Fijo)
-                    const cuentaSeleccionada = cuentas.find(c => c.id === cuentaId)
-                    let metodoCalculado = 'Efectivo'
-
-                    if (cuentaSeleccionada) {
-                      const nombre = cuentaSeleccionada.nombre.toLowerCase()
-                      const tipo = (cuentaSeleccionada.tipo || '').toLowerCase()
-                      
-                      if (
-                        nombre.includes('visa') || 
-                        nombre.includes('master') || 
-                        nombre.includes('amex') ||
-                        nombre.includes('tarjeta') ||
-                        nombre.includes('credit') || // Inglés
-                        nombre.includes('debit') ||  // Inglés
-                        nombre.includes('card') ||   // Inglés
-                        tipo.includes('credit') ||
-                        tipo.includes('debit') ||
-                        tipo.includes('credito') || 
-                        tipo.includes('debito') || 
-                        nombre.includes('banc')
-                      ) {
-                        metodoCalculado = 'Tarjeta'
-                      } 
-                      else if (
-                        nombre.includes('efectivo') || 
-                        nombre.includes('cash') ||
-                        nombre.includes('wallet') ||
-                        nombre.includes('billetera') ||
-                        tipo.includes('efectivo')
-                      ) {
-                        metodoCalculado = 'Efectivo'
-                      }
-                    }
-                    
-                    setFormData({ 
-                      ...formData, 
-                      cuenta_id: cuentaId, 
-                      metodo: metodoCalculado 
+                    const val = e.target.value
+                    const esCuenta = cuentas.some(c => c.id === val)
+                    const esTarjeta = deudas.some(d => d.id === val)
+                    let metodo = formData.metodo
+                    if (esCuenta || esTarjeta) metodo = 'Tarjeta'
+                    else if (!val) metodo = 'Efectivo'
+                    setFormData({
+                      ...formData,
+                      cuenta_id: esCuenta ? val : '',
+                      deuda_id: esTarjeta ? val : '',
+                      metodo
                     })
-                  }} 
+                  }}
                   disabled={loading}
                   className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg disabled:opacity-50 text-sm md:text-base border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   style={{ fontSize: '16px' }}
                 >
-                  <option value="">Seleccionar cuenta</option>
-                  {cuentas.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre} (${Number(c.balance).toFixed(2)})
-                    </option>
-                  ))}
+                  <option value="">Sin cuenta vinculada (Efectivo)</option>
+                  {cuentas.length > 0 && (
+                    <optgroup label="🏦 Cuentas bancarias">
+                      {cuentas.map(c => (
+                        <option key={`cuenta-${c.id}`} value={c.id}>
+                          {c.nombre} — ${Number(c.balance || 0).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {deudas.filter(d => d.estado !== 'Saldada').length > 0 && (
+                    <optgroup label="💳 Tarjetas de crédito">
+                      {deudas.filter(d => d.estado !== 'Saldada').map(d => (
+                        <option key={`deuda-${d.id}`} value={d.id}>
+                          {d.cuenta} — Saldo: ${Number(d.saldo || 0).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
