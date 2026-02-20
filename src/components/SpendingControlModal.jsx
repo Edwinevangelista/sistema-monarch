@@ -1,15 +1,16 @@
 // src/components/SpendingControlModal.jsx
-// 🧠 Coach Inteligente de Control de Gastos v3
-// Motor de análisis + Presupuestos adaptativos + Retos semanales + Plan guiado
+// 🧠 Coach Inteligente de Control de Gastos v4 (Real-World Logic Edition)
+// Integración de Safe-to-Spend, Suelos Vitales y Detección de Crisis Estructural
+// Correcciones de compilación aplicadas.
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  X, TrendingDown, AlertTriangle, Zap, Save,
+  X, AlertTriangle, Save,
   ChevronDown, ChevronUp, CheckCircle2,
-  Target, Brain, Flame, Shield, Calendar,
-  ArrowRight, PiggyBank, Eye, Sparkles,
+  Target, Brain, Flame, Shield, Zap, Calendar,
+  ArrowRight, Eye, Sparkles,
   BarChart3, Wallet, Star, Trophy,
-  Play
+  Play, PiggyBank, TrendingDown // Iconos restaurados para evitar errores de compilación
 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 
@@ -22,20 +23,21 @@ const pct = (v) => `${(Number(v || 0)).toFixed(1)}%`;
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+// Configuración mejorada con límites de recorte realistas (Floor)
 const CATEGORIA_ICONOS = {
-  '🏠 Vivienda': { color: 'blue', esencial: true },
-  '🍔 Comida': { color: 'orange', esencial: true },
-  '🚗 Transporte': { color: 'cyan', esencial: true },
-  '💊 Salud': { color: 'red', esencial: true },
-  '📱 Servicios': { color: 'indigo', esencial: true },
-  '🎭 Entretenimiento': { color: 'purple', esencial: false },
-  '👕 Ropa': { color: 'pink', esencial: false },
-  '📅 Suscripciones': { color: 'violet', esencial: false },
-  '🎓 Educación': { color: 'emerald', esencial: true },
-  '🛍️ Compras': { color: 'amber', esencial: false },
-  '📦 Otros': { color: 'gray', esencial: false },
-  '☕ Cafés/Snacks': { color: 'yellow', esencial: false },
-  '🍕 Delivery': { color: 'rose', esencial: false },
+  '🏠 Vivienda': { color: 'blue', esencial: true, recortableMax: 0.05, etiqueta: 'Fijo' }, // Max 5% (renegociar)
+  '🍔 Comida': { color: 'orange', esencial: true, recortableMax: 0.15, etiqueta: 'Variable' }, // Max 15% (cocinar)
+  '🚗 Transporte': { color: 'cyan', esencial: true, recortableMax: 0.20, etiqueta: 'Variable' },
+  '💊 Salud': { color: 'red', esencial: true, recortableMax: 0.00, etiqueta: 'Fijo' }, // No recortable
+  '📱 Servicios': { color: 'indigo', esencial: true, recortableMax: 0.10, etiqueta: 'Fijo' },
+  '🎭 Entretenimiento': { color: 'purple', esencial: false, recortableMax: 0.80, etiqueta: 'Deseo' },
+  '👕 Ropa': { color: 'pink', esencial: false, recortableMax: 0.90, etiqueta: 'Deseo' },
+  '📅 Suscripciones': { color: 'violet', esencial: false, recortableMax: 0.50, etiqueta: 'Fijo' },
+  '🎓 Educación': { color: 'emerald', esencial: true, recortableMax: 0.00, etiqueta: 'Inversión' },
+  '🛍️ Compras': { color: 'amber', esencial: false, recortableMax: 0.70, etiqueta: 'Deseo' },
+  '📦 Otros': { color: 'gray', esencial: false, recortableMax: 0.60, etiqueta: 'Deseo' },
+  '☕ Cafés/Snacks': { color: 'yellow', esencial: false, recortableMax: 0.90, etiqueta: 'Hormiga' },
+  '🍕 Delivery': { color: 'rose', esencial: false, recortableMax: 0.85, etiqueta: 'Hormiga' },
 };
 
 const getColorClasses = (color) => {
@@ -59,14 +61,14 @@ const getColorClasses = (color) => {
 
 // PASOS DEL COACH
 const PASOS_COACH = [
-  { key: 'diagnostico', label: 'Diagnóstico', emoji: '🔍', desc: 'Escaneando tus gastos' },
-  { key: 'presupuesto', label: 'Plan', emoji: '📋', desc: 'Tu presupuesto inteligente' },
-  { key: 'retos', label: 'Retos', emoji: '🎯', desc: 'Acciones concretas' },
+  { key: 'diagnostico', label: 'Diagnóstico', emoji: '🔍', desc: 'Tu realidad financiera' },
+  { key: 'presupuesto', label: 'Plan', emoji: '📋', desc: 'Ajustes viables' },
+  { key: 'retos', label: 'Retos', emoji: '🎯', desc: 'Acciones prácticas' },
   { key: 'guardar', label: 'Guardar', emoji: '💾', desc: 'Activa tu plan' },
 ];
 
 // ═══════════════════════════════════════════════════
-// 🧠 MOTOR DE INTELIGENCIA (con ingreso inteligente)
+// 🧠 MOTOR DE INTELIGENCIA V4 (Logic Upgrade)
 // ═══════════════════════════════════════════════════
 
 function useMotorInteligencia({ gastosFijos, gastosVariables, suscripciones, kpis, calculosReales, calculosProyectados }) {
@@ -77,11 +79,7 @@ function useMotorInteligencia({ gastosFijos, gastosVariables, suscripciones, kpi
     const diasTranscurridos = Math.max(1, diaDelMes);
     const diasRestantes = diasEnMes - diaDelMes;
 
-    // ═══════════════════════════════════════════════════
-    // 🧠 INGRESO INTELIGENTE
-    // Si ingreso real es <20% del proyectado → es inicio de mes,
-    // los ingresos no han llegado. Usar proyectado como referencia.
-    // ═══════════════════════════════════════════════════
+    // ── 0. INGRESO INTELIGENTE ──
     const ingresosReal = Number(calculosReales?.totalIngresos) || Number(kpis?.totalIngresos) || 0;
     const ingresosProyectado = Number(calculosProyectados?.totalIngresos) || 0;
     const ingresosSospechosamenteBajos = ingresosProyectado > 0 && ingresosReal < (ingresosProyectado * 0.20);
@@ -101,305 +99,268 @@ function useMotorInteligencia({ gastosFijos, gastosVariables, suscripciones, kpi
       }, 0);
     const totalGastos = totalGastosFijos + totalGastosVariables + totalSuscripciones;
 
-    // ── 2. VELOCIDAD DE GASTO ──
+    // ── 2. LÓGICA REAL: LÍMITE SEGURO (Safe-to-Spend) ──
+    // ¿Cuánto me queda REALMENTE para gastar hoy?
+    const comprometidoFijo = totalGastosFijos + totalSuscripciones;
+    const saldoLibreReal = Math.max(0, totalIngresos - comprometidoFijo);
+    const limiteSeguroDiario = diasRestantes > 0 ? saldoLibreReal / diasRestantes : 0;
+
+    // Velocidad actual vs Realidad
     const velocidadDiaria = totalGastosVariables / diasTranscurridos;
-    const gastoProyectadoVariable = velocidadDiaria * diasEnMes;
-    const gastoProyectadoTotal = totalGastosFijos + gastoProyectadoVariable + totalSuscripciones;
-    
-    const presupuestoVariableIdeal = totalIngresos > 0 
-      ? (totalIngresos * 0.30)
-      : totalGastosVariables * 0.7;
-    const velocidadIdeal = presupuestoVariableIdeal / diasEnMes;
-    const ratioVelocidad = velocidadIdeal > 0 ? velocidadDiaria / velocidadIdeal : 1;
+    const margenDiario = velocidadDiaria - limiteSeguroDiario;
 
+    // Semaforización basada en Realidad
     let semaforoVelocidad = 'verde';
-    if (ratioVelocidad > 1.5) semaforoVelocidad = 'rojo';
-    else if (ratioVelocidad > 1.15) semaforoVelocidad = 'amarillo';
+    // CORRECCIÓN AQUÍ: usar velocidadDiaria en plural, no 'velocidadDiario'
+    if (velocidadDiaria > (totalIngresos * 0.05)) semaforoVelocidad = 'rojo'; 
+    else if (margenDiario > 0) semaforoVelocidad = 'amarillo';
 
-    // ── 3. PATRONES POR DÍA DE SEMANA ──
+    // ── 3. DÉFICIT ESTRUCTURAL ──
+    // Si los fijos consumen todo el ingreso, recortar cafes no sirve.
+    const ratioGastosFijos = totalIngresos > 0 ? comprometidoFijo / totalIngresos : 1;
+    const esDeficitEstructural = ratioGastosFijos > 0.75; // 75% o más en fijos
+
+    // ── 4. PATRONES POR DÍA ──
     const gastosPorDiaArr = [0, 0, 0, 0, 0, 0, 0];
-    const contadorPorDia = [0, 0, 0, 0, 0, 0, 0];
-    
     gastosVariables.forEach(g => {
       if (!g.fecha) return;
       const fecha = new Date(g.fecha + 'T00:00:00');
-      const dia = fecha.getDay();
-      gastosPorDiaArr[dia] += Number(g.monto) || 0;
-      contadorPorDia[dia]++;
+      gastosPorDiaArr[fecha.getDay()] += Number(g.monto) || 0;
     });
+    const maxPromDia = Math.max(...gastosPorDiaArr);
+    const diaPico = gastosPorDiaArr.indexOf(maxPromDia);
 
-    const promedioPorDia = gastosPorDiaArr.map((total, i) => 
-      contadorPorDia[i] > 0 ? total / contadorPorDia[i] : 0
-    );
-    
-    const diaPico = promedioPorDia.indexOf(Math.max(...promedioPorDia));
-    const maxPromDia = Math.max(...promedioPorDia);
-
-    // ── 5. CATEGORÍAS INTELIGENTES ──
+    // ── 5. CATEGORÍAS CON PISO VITAL (Floor) ──
     const categoriasMap = {};
-    
-    gastosFijos.forEach(g => {
+    [...gastosFijos, ...gastosVariables].forEach(g => {
       const cat = g.categoria || '📦 Otros';
-      if (!categoriasMap[cat]) categoriasMap[cat] = { total: 0, items: [], tipo: 'fijo', transacciones: 0 };
+      if (!categoriasMap[cat]) categoriasMap[cat] = { total: 0, items: [], esencial: false, tipo: 'fijo' };
       categoriasMap[cat].total += Number(g.monto) || 0;
       categoriasMap[cat].items.push(g);
-      categoriasMap[cat].transacciones++;
-    });
-
-    gastosVariables.forEach(g => {
-      const cat = g.categoria || '📦 Otros';
-      if (!categoriasMap[cat]) categoriasMap[cat] = { total: 0, items: [], tipo: 'variable', transacciones: 0 };
-      categoriasMap[cat].total += Number(g.monto) || 0;
-      categoriasMap[cat].items.push(g);
-      categoriasMap[cat].transacciones++;
     });
 
     const categorias = Object.entries(categoriasMap)
       .map(([nombre, data]) => {
-        const info = CATEGORIA_ICONOS[nombre] || { color: 'gray', esencial: false };
-        const porcentaje = totalGastos > 0 ? (data.total / totalGastos) * 100 : 0;
+        const config = CATEGORIA_ICONOS[nombre] || { color: 'gray', esencial: false, recortableMax: 0.50 };
         
-        let presupuestoSugerido;
-        if (info.esencial) {
-          presupuestoSugerido = data.total * 0.90;
-        } else {
-          const factorReduccion = porcentaje > 20 ? 0.60 : porcentaje > 10 ? 0.75 : 0.85;
-          presupuestoSugerido = data.total * factorReduccion;
+        // Lógica de Sugerencia con Suelo Vital
+        let factorReduccion = config.esencial ? 0 : 0.1; 
+        if (!config.esencial) {
+           factorReduccion = data.total > 5000 ? 0.20 : 0.15; 
         }
-
-        const itemsVariable = data.items.filter(i => !gastosFijos.includes(i));
-        const velocidadCat = itemsVariable.length > 0 
-          ? itemsVariable.reduce((s, i) => s + (Number(i.monto) || 0), 0) / diasTranscurridos
-          : 0;
+        
+        const presupuestoMinimo = data.total * (1 - config.recortableMax); 
+        let presupuestoSugerido = data.total * (1 - factorReduccion);
+        
+        // Forzar el suelo sugerido
+        presupuestoSugerido = Math.max(presupuestoMinimo, presupuestoSugerido);
 
         return {
           nombre,
           ...data,
-          ...info,
-          porcentaje,
+          ...config,
+          presupuestoMinimo, 
           presupuestoSugerido,
           ahorroPotencial: Math.max(0, data.total - presupuestoSugerido),
-          velocidadDiaria: velocidadCat,
-          esCritica: porcentaje > 15,
-          colorClasses: getColorClasses(info.color),
+          colorClasses: getColorClasses(config.color),
         };
       })
       .sort((a, b) => b.total - a.total);
 
     const totalAhorroPotencial = categorias.reduce((s, c) => s + c.ahorroPotencial, 0);
 
-    // ── 6. DETECTOR DE GASTOS HORMIGA ──
-    const gastosHormiga = gastosVariables
-      .filter(g => (Number(g.monto) || 0) < 100)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    
+    // ── 6. GASTOS HORMIGA ──
+    const gastosHormiga = gastosVariables.filter(g => (Number(g.monto) || 0) < 100);
     const totalHormiga = gastosHormiga.reduce((s, g) => s + (Number(g.monto) || 0), 0);
-    const frecuenciaHormiga = gastosHormiga.length;
 
-    // ── 7. NIVEL DE URGENCIA ──
+    // ── 7. DIAGNÓSTICO DE URGENCIA ──
     let nivelUrgencia = 'bajo';
     let mensajeCoach = '';
     let emojiCoach = '😊';
     
-    const ratioGasto = totalIngresos > 0 ? totalGastos / totalIngresos : 1;
-    
-    if (ratioGasto > 1) {
-      nivelUrgencia = 'critico';
-      mensajeCoach = `Estás gastando ${fmt(totalGastos - totalIngresos)} más de lo que ganas. Necesitamos un plan de choque inmediato.`;
-      emojiCoach = '🚨';
-    } else if (ratioGasto > 0.85) {
+    if (esDeficitEstructural) {
+      nivelUrgencia = 'critico_estructural';
+      mensajeCoach = `Tus gastos fijos consumen el ${pct(ratioGastosFijos * 100)} de tu ingreso. Recortar gastos pequeños no es suficiente.`;
+      emojiCoach = '🏗️'; 
+    } else if (velocidadDiaria > limiteSeguroDiario && limiteSeguroDiario > 0) {
       nivelUrgencia = 'alto';
-      mensajeCoach = `Solo te queda ${pct((1 - ratioGasto) * 100)} de margen. Un imprevisto te pondría en rojo.`;
+      mensajeCoach = `Gastas ${fmt(velocidadDiaria)}/día, pero solo puedes permitirte ${fmt(limiteSeguroDiario)}/día.`;
       emojiCoach = '⚠️';
-    } else if (ratioGasto > 0.70) {
-      nivelUrgencia = 'medio';
-      mensajeCoach = `Gastas ${pct(ratioGasto * 100)} de tus ingresos. Hay espacio para mejorar y crear un colchón.`;
-      emojiCoach = '💡';
+    } else if (totalGastos > totalIngresos) {
+      nivelUrgencia = 'critico';
+      mensajeCoach = `Déficit de ${fmt(totalGastos - totalIngresos)}. Acción inmediata requerida.`;
+      emojiCoach = '🚨';
     } else {
-      mensajeCoach = `Buen control. Gastas ${pct(ratioGasto * 100)} de tus ingresos. Veamos cómo optimizar aún más.`;
+      mensajeCoach = `Tienes un superávit proyectado de ${fmt(totalIngresos - totalGastos)}. Buen control.`;
       emojiCoach = '✅';
     }
 
-    // ── 8. GENERAR RETOS SEMANALES ──
-    const retos = generarRetos({
+    // ── 8. GENERAR RETOS REALISTAS ──
+    const retos = generarRetosRealistas({
       nivelUrgencia,
+      esDeficitEstructural,
       categorias,
+      limiteSeguroDiario,
       velocidadDiaria,
-      velocidadIdeal,
-      gastosHormiga,
-      totalHormiga,
-      diaPico,
-      totalIngresos,
-      totalGastos,
+      diasRestantes,
       totalSuscripciones,
       suscripciones,
-      diasRestantes,
+      totalIngresos,
+      DIAS_SEMANA,
+      diaPico,
+      totalHormiga,
+      gastosHormiga
     });
 
-    // ── 9. PRESUPUESTO INTELIGENTE 50/30/20 ADAPTADO ──
-    const presupuestoIdeal = {
-      necesidades: totalIngresos * 0.50,
-      deseos: totalIngresos * 0.30,
-      ahorro: totalIngresos * 0.20,
-    };
+    // ── 9. PROYECCIÓN FIN DE MES ──
+    const gastoProyectadoVariable = velocidadDiaria * diasEnMes;
+    const gastoProyectadoTotal = totalGastosFijos + gastoProyectadoVariable + totalSuscripciones;
 
-    const gastosNecesidades = categorias
-      .filter(c => c.esencial)
-      .reduce((s, c) => s + c.total, 0);
-    const gastosDeseos = categorias
-      .filter(c => !c.esencial)
-      .reduce((s, c) => s + c.total, 0) + totalSuscripciones;
-
-    const presupuestoReal = {
-      necesidades: gastosNecesidades,
-      deseos: gastosDeseos,
-      ahorro: Math.max(0, totalIngresos - totalGastos),
-    };
-
-    // ── 10. PROYECCIÓN FIN DE MES ──
-    const proyeccionFinMes = {
-      gastosEstimados: gastoProyectadoTotal,
-      saldoEstimado: totalIngresos - gastoProyectadoTotal,
-      enRiesgo: gastoProyectadoTotal > totalIngresos,
-      exceso: Math.max(0, gastoProyectadoTotal - totalIngresos),
-      diasParaCorregir: diasRestantes,
-      reduccionDiariaRequerida: diasRestantes > 0
-        ? Math.max(0, (gastoProyectadoTotal - totalIngresos) / diasRestantes)
-        : 0,
-    };
+    // ── 10. DATOS 50/30/20 (Para compatibilidad UI) ──
+    const presupuestoIdeal = { necesidades: totalIngresos * 0.50, deseos: totalIngresos * 0.30, ahorro: totalIngresos * 0.20 };
+    const gastosNecesidades = categorias.filter(c => c.esencial).reduce((s, c) => s + c.total, 0);
+    const gastosDeseos = categorias.filter(c => !c.esencial).reduce((s, c) => s + c.total, 0) + totalSuscripciones;
+    const presupuestoReal = { necesidades: gastosNecesidades, deseos: gastosDeseos, ahorro: Math.max(0, totalIngresos - totalGastos) };
 
     return {
       totalIngresos, totalGastos, totalGastosFijos, totalGastosVariables, totalSuscripciones,
       usandoProyeccion,
-      velocidadDiaria, velocidadIdeal, ratioVelocidad, semaforoVelocidad,
-      gastoProyectadoTotal, gastoProyectadoVariable,
+      velocidadDiaria, 
+      limiteSeguroDiario, 
+      margenDiario, 
+      semaforoVelocidad,
+      gastoProyectadoTotal,
       diaDelMes, diasEnMes, diasTranscurridos, diasRestantes,
-      gastosPorDia: promedioPorDia, diaPico, maxPromDia,
+      gastosPorDia: gastosPorDiaArr, diaPico, maxPromDia,
       categorias, totalAhorroPotencial,
-      gastosHormiga, totalHormiga, frecuenciaHormiga,
+      gastosHormiga, totalHormiga, frecuenciaHormiga: gastosHormiga.length,
       nivelUrgencia, mensajeCoach, emojiCoach,
       retos,
       presupuestoIdeal, presupuestoReal,
-      proyeccionFinMes,
-      ratioGasto,
+      proyeccionFinMes: {
+        gastosEstimados: gastoProyectadoTotal,
+        saldoEstimado: totalIngresos - gastoProyectadoTotal,
+        enRiesgo: gastoProyectadoTotal > totalIngresos,
+        exceso: Math.max(0, gastoProyectadoTotal - totalIngresos),
+        diasParaCorregir: diasRestantes,
+        reduccionDiariaRequerida: diasRestantes > 0 ? Math.max(0, (gastoProyectadoTotal - totalIngresos) / diasRestantes) : 0,
+      },
+      ratioGasto: totalIngresos > 0 ? totalGastos / totalIngresos : 1,
+      esDeficitEstructural, 
     };
   }, [gastosFijos, gastosVariables, suscripciones, kpis, calculosReales, calculosProyectados]);
 }
 
-// ── GENERADOR DE RETOS ──
-function generarRetos({ nivelUrgencia, categorias, velocidadDiaria, velocidadIdeal, gastosHormiga, totalHormiga, diaPico, totalIngresos, totalGastos, totalSuscripciones, suscripciones, diasRestantes }) {
+// ── GENERADOR DE RETOS REALISTAS ──
+function generarRetosRealistas({ nivelUrgencia, esDeficitEstructural, categorias, limiteSeguroDiario, velocidadDiaria, diasRestantes, totalSuscripciones, suscripciones, totalIngresos, DIAS_SEMANA, diaPico, totalHormiga, gastosHormiga }) {
   const retos = [];
 
-  if (velocidadDiaria > velocidadIdeal) {
-    const reduccionNecesaria = velocidadDiaria - velocidadIdeal;
+  // 1. Prioridad: Ingresos (Estructural)
+  if (esDeficitEstructural) {
     retos.push({
-      id: 'velocidad',
-      emoji: '🏎️',
-      titulo: 'Frena el Gasto Diario',
-      descripcion: `Gastas ${fmt(velocidadDiaria)}/día. Tu meta: ${fmt(velocidadIdeal)}/día`,
-      meta: `Reduce ${fmt(reduccionNecesaria)} por día los próximos ${diasRestantes} días`,
-      impacto: fmt(reduccionNecesaria * diasRestantes),
-      dificultad: reduccionNecesaria > 100 ? 'alta' : reduccionNecesaria > 50 ? 'media' : 'baja',
+      id: 'ingresos_extra',
+      emoji: '💼',
+      titulo: 'Plan Ingresos Urgente',
+      descripcion: 'Tus fijos son muy altos para tu ingreso.',
+      meta: 'Vende algo innecesario o busca 1 extra este fin de semana',
+      impacto: 'Variable',
+      dificultad: 'alta',
+      tipo: 'única',
+      pasos: ['Revisa ropa o electrónica para vender', 'Ofrece servicios freelance por una hora', 'Considera renta temporal de espacio']
+    });
+  }
+
+  // 2. Prioridad: Velocidad (Control Diario)
+  if (velocidadDiaria > limiteSeguroDiario && limiteSeguroDiario > 0 && !esDeficitEstructural) {
+    const reduccion = velocidadDiaria - limiteSeguroDiario;
+    retos.push({
+      id: 'tope_diario',
+      emoji: '🛑',
+      titulo: 'Tope Diario Efectivo',
+      descripcion: `Tu límite real es ${fmt(limiteSeguroDiario)}/día.`,
+      meta: `Retira solo ${fmt(limiteSeguroDiario)} en efectivo cada mañana`,
+      impacto: fmt(reduccion * diasRestantes),
+      dificultad: 'media',
       tipo: 'diario',
-      pasos: [
-        `Antes de cada compra pregúntate: ¿Lo necesito HOY?`,
-        `Establece un máximo de ${fmt(velocidadIdeal)} para mañana`,
-        `Registra todo — lo que no se mide no se controla`
-      ]
+      pasos: ['Deja la tarjeta en casa', 'Usa el efectivo solo para comida y transporte', 'Si se acaba, problemas resueltos']
     });
   }
 
-  const catNoEsencial = categorias.find(c => !c.esencial && c.total > 0);
-  if (catNoEsencial && catNoEsencial.ahorroPotencial > 0) {
+  // 3. Delivery (Alto impacto común)
+  const catDelivery = categorias.find(c => c.nombre.includes('Delivery'));
+  if (catDelivery && catDelivery.total > 0) {
     retos.push({
-      id: 'categoria',
+      id: 'detox_delivery',
+      emoji: '👨‍🍳',
+      titulo: 'Detox de Delivery',
+      descripcion: `Gastas ${fmt(catDelivery.total)} en apps de comida.`,
+      meta: 'Cocina una olla grande este domingo (Meal Prep)',
+      impacto: fmt(catDelivery.total * 0.6),
+      dificultad: 'media',
+      tipo: 'semanal',
+      pasos: ['Compra ingredientes el domingo', 'Cocina estofado/pasta para 3 días', 'Borra temporalmente las apps de comida']
+    });
+  }
+
+  // 4. Suscripciones
+  const subsActivas = suscripciones.filter(s => s.estado === 'Activo');
+  if (subsActivas.length >= 2 && totalSuscripciones > totalIngresos * 0.03) {
+    retos.push({
+      id: 'cancela_1',
       emoji: '✂️',
-      titulo: `Recorta ${catNoEsencial.nombre}`,
-      descripcion: `Gastas ${fmt(catNoEsencial.total)} (${pct(catNoEsencial.porcentaje)}) en esta categoría`,
-      meta: `Reduce a ${fmt(catNoEsencial.presupuestoSugerido)} este mes`,
-      impacto: fmt(catNoEsencial.ahorroPotencial),
-      dificultad: catNoEsencial.porcentaje > 20 ? 'alta' : 'media',
-      tipo: 'mensual',
-      pasos: [
-        `Identifica los 3 gastos más grandes en ${catNoEsencial.nombre}`,
-        `Elimina o sustituye al menos 1 esta semana`,
-        `Meta semanal: máximo ${fmt(catNoEsencial.presupuestoSugerido / 4)}`
-      ]
+      titulo: 'La Regla del 1',
+      descripcion: `${subsActivas.length} suscripciones activas.`,
+      meta: 'Cancela la que menos usaste el mes pasado',
+      impacto: fmt(totalSuscripciones / subsActivas),
+      dificultad: 'baja',
+      tipo: 'única',
+      pasos: ['Revisa historial de uso', 'Cancela al menos 1 hoy', 'Busca alternativas gratuitas']
     });
   }
 
-  if (diaPico >= 0) {
+  // 5. Gastos Hormiga
+  if (totalHormiga > 200 && gastosHormiga.length > 5) {
     retos.push({
+      id: 'hormiga_realista',
+      emoji: '🐜',
+      titulo: 'Frena los Pequeños',
+      descripcion: `${gastosHormiga.length} compras < $100 suman ${fmt(totalHormiga)}.`,
+      meta: 'Aplica la regla de las 24h para compras < $200',
+      impacto: fmt(totalHormiga * 0.4),
+      dificultad: 'baja',
+      tipo: 'semanal',
+      pasos: ['Si lo quieres, espera 24h antes de comprar', 'Lleva lista de compras al super', 'Evita pasillos de tentación']
+    });
+  }
+  
+  // 6. Día Pico
+  if (diaPico >= 0) {
+     retos.push({
       id: 'dia_pico',
       emoji: '📅',
       titulo: `Domina los ${DIAS_SEMANA[diaPico]}`,
-      descripcion: `Los ${DIAS_SEMANA[diaPico]} son tu día de mayor gasto`,
-      meta: `Este ${DIAS_SEMANA[diaPico]} gasta 30% menos que el anterior`,
+      descripcion: `Tus gastos más altos son los ${DIAS_SEMANA[diaPico]}.`,
+      meta: `Este ${DIAS_SEMANA[diaPico]} no gastes nada fuera de lo planeado`,
       impacto: 'Variable',
       dificultad: 'media',
       tipo: 'semanal',
-      pasos: [
-        `Planifica las compras del ${DIAS_SEMANA[diaPico]} con anticipación`,
-        `Lleva efectivo limitado ese día`,
-        `Evita apps de delivery los ${DIAS_SEMANA[diaPico]}`
-      ]
+      pasos: [`Planifica el ${DIAS_SEMANA[diaPico]} el día anterior`, `Lleva solo el efectivo necesario`, `Evita apps de delivery ese día`]
     });
   }
 
-  if (totalHormiga > 200 && gastosHormiga.length > 5) {
-    retos.push({
-      id: 'hormiga',
-      emoji: '🐜',
-      titulo: 'Elimina Gastos Hormiga',
-      descripcion: `${gastosHormiga.length} compras pequeñas suman ${fmt(totalHormiga)}`,
-      meta: `Reduce las compras de <$100 un 50% esta semana`,
-      impacto: fmt(totalHormiga * 0.5),
-      dificultad: 'baja',
-      tipo: 'semanal',
-      pasos: [
-        'Espera 24 horas antes de compras impulsivas',
-        'Lleva una lista de compras fija',
-        'Usa la regla del 10%: si cuesta <10% de tu ingreso diario, piénsalo dos veces'
-      ]
-    });
-  }
-
-  const subsActivas = suscripciones.filter(s => s.estado === 'Activo');
-  if (subsActivas.length > 3 && totalSuscripciones > totalIngresos * 0.05) {
-    retos.push({
-      id: 'suscripciones',
-      emoji: '🔄',
-      titulo: 'Auditoría de Suscripciones',
-      descripcion: `${subsActivas.length} suscripciones activas = ${fmt(totalSuscripciones)}/mes`,
-      meta: `Cancela al menos 1 suscripción esta semana`,
-      impacto: fmt(totalSuscripciones * 0.3),
-      dificultad: 'baja',
-      tipo: 'única',
-      pasos: [
-        'Revisa cuáles usaste en los últimos 30 días',
-        'Cancela la que menos uses',
-        'Busca alternativas gratuitas'
-      ]
-    });
-  }
-
-  if (nivelUrgencia === 'critico') {
-    const exceso = totalGastos - totalIngresos;
+  // 7. Plan de Choque (Urgencia)
+  if (nivelUrgencia === 'critico' && !esDeficitEstructural) {
+    const exceso = categorias.reduce((s,c) => s+c.total, 0) - totalIngresos;
     retos.unshift({
-      id: 'choque',
+      id: 'choque_real',
       emoji: '🚨',
-      titulo: 'Plan de Choque: 7 Días',
-      descripcion: `Gastas ${fmt(exceso)} más de lo que ganas. Acción inmediata.`,
-      meta: `Reduce ${fmt(exceso / 4)} esta semana con estas acciones`,
+      titulo: 'Modo Supervivencia 7 Días',
+      descripcion: 'Déficit inminente. Congela gastos.',
+      meta: `Reduce ${fmt(exceso / 4)} esta semana`,
       impacto: fmt(exceso),
       dificultad: 'alta',
       tipo: 'urgente',
-      pasos: [
-        '🔴 Congela gastos no esenciales 7 días',
-        '🔴 Solo compra alimentos y necesidades básicas',
-        '🔴 Cancela todas las suscripciones no vitales',
-        '🔴 Busca un ingreso extra esta semana'
-      ]
+      pasos: ['🔴 Congela gastos no esenciales', '🔴 Solo alimentos básicos', '🔴 Cancela suscripciones temporales']
     });
   }
 
@@ -442,8 +403,12 @@ export default function SpendingControlModal({
   }, []);
 
   const editarPresupuesto = useCallback((catNombre, valor) => {
-    setPresupuestosEditados(prev => ({ ...prev, [catNombre]: Number(valor) || 0 }));
-  }, []);
+    const cat = motor.categorias.find(c => c.nombre === catNombre);
+    if (cat) {
+      const valorFinal = Math.max(cat.presupuestoMinimo, Number(valor) || 0);
+      setPresupuestosEditados(prev => ({ ...prev, [catNombre]: valorFinal }));
+    }
+  }, [motor.categorias]);
 
   const toggleReto = useCallback((retoId) => {
     setRetosAceptados(prev => 
@@ -465,12 +430,11 @@ export default function SpendingControlModal({
       await addPlan({
         tipo: 'gastos',
         nombre,
-        descripcion: `Plan inteligente: reduce de ${fmt(motor.totalGastos)} a ${fmt(presupuestos.reduce((s, p) => s + p.presupuesto, 0))}`,
+        descripcion: `Plan realista: ${motor.esDeficitEstructural ? 'Reestructuración' : 'Control de flujo'}`,
         configuracion: {
           presupuestos,
           retosActivos,
-          velocidadIdeal: motor.velocidadIdeal,
-          velocidadActual: motor.velocidadDiaria,
+          limiteDiario: motor.limiteSeguroDiario,
           nivelUrgencia: motor.nivelUrgencia,
           proyeccion: motor.proyeccionFinMes,
           fechaCalculo: new Date().toISOString(),
@@ -486,7 +450,7 @@ export default function SpendingControlModal({
         completado: false,
       });
 
-      if (showLocalNotification) showLocalNotification('✅ Plan de control guardado', 'success');
+      if (showLocalNotification) showLocalNotification('✅ Plan guardado con éxito', 'success');
       if (onPlanGuardado) onPlanGuardado();
       onClose();
     } catch (error) {
@@ -500,20 +464,20 @@ export default function SpendingControlModal({
       <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50" onClick={onClose}>
         <div className="flex flex-col items-center gap-6 animate-pulse" onClick={e => e.stopPropagation()}>
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-2xl shadow-orange-500/30">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
               <Brain className="w-12 h-12 text-white animate-bounce" />
             </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center animate-ping">
+            <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center animate-ping">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
           </div>
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-white mb-2">Analizando tus gastos...</h2>
-            <p className="text-orange-300/70 text-sm">Detectando patrones y oportunidades</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Analizando realidad...</h2>
+            <p className="text-blue-300/70 text-sm">Calculando tu límite seguro diario</p>
           </div>
           <div className="flex gap-1">
             {[0, 1, 2, 3, 4].map(i => (
-              <div key={i} className="w-2 h-2 rounded-full bg-orange-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              <div key={i} className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
             ))}
           </div>
         </div>
@@ -527,15 +491,15 @@ export default function SpendingControlModal({
         className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 w-full sm:max-w-lg max-h-[calc(100dvh-2rem)] sm:max-h-[90vh] rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 border-b border-white/10">
+        <div className="flex-shrink-0 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-b border-white/10">
           <div className="flex items-center justify-between p-4 pb-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Coach de Gastos</h2>
-                <p className="text-orange-300/60 text-[11px]">
+                <h2 className="text-lg font-bold text-white">Coach Financiero</h2>
+                <p className="text-blue-300/60 text-[11px]">
                   {PASOS_COACH[pasoActual].emoji} {PASOS_COACH[pasoActual].desc}
                 </p>
               </div>
@@ -551,7 +515,7 @@ export default function SpendingControlModal({
                 onClick={() => irAPaso(idx)}
                 className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
                   idx <= pasoActual 
-                    ? 'bg-gradient-to-r from-orange-500 to-red-500' 
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
                     : 'bg-white/10'
                 }`}
               />
@@ -586,12 +550,12 @@ export default function SpendingControlModal({
               </button>
             )}
             {pasoActual < PASOS_COACH.length - 1 ? (
-              <button onClick={() => irAPaso(pasoActual + 1)} className="flex-1 py-3 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-orange-500/20">
-                {pasoActual === 0 ? 'Ver Mi Plan' : 'Siguiente'}
+              <button onClick={() => irAPaso(pasoActual + 1)} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-500/20">
+                {pasoActual === 0 ? 'Ver Análisis' : 'Siguiente'}
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
-              <button onClick={() => setShowConfirmacion(true)} className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-green-500/20">
+              <button onClick={() => setShowConfirmacion(true)} className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
                 <Save className="w-4 h-4" /> Activar Plan
               </button>
             )}
@@ -607,18 +571,18 @@ export default function SpendingControlModal({
 }
 
 // ═══════════════════════════════════════════════════
-// 📊 PASO 1: DIAGNÓSTICO EXPRESS
+// 📊 PASO 1: DIAGNÓSTICO (Real-World Data)
 // ═══════════════════════════════════════════════════
 
 function PasoDiagnostico({ motor }) {
   const {
-    totalGastos, velocidadDiaria, velocidadIdeal, 
-    semaforoVelocidad, ratioVelocidad, diasRestantes, diaDelMes, diasEnMes,
+    totalGastos, velocidadDiaria, limiteSeguroDiario, margenDiario,
+    semaforoVelocidad, diasRestantes, diaDelMes, diasEnMes,
     gastosPorDia, diaPico, maxPromDia,
     mensajeCoach, emojiCoach,
     proyeccionFinMes, categorias, totalHormiga, frecuenciaHormiga,
     totalGastosFijos, totalGastosVariables, totalSuscripciones,
-    usandoProyeccion,
+    usandoProyeccion, esDeficitEstructural, ratioGasto
   } = motor;
 
   const semaforoColors = {
@@ -637,14 +601,21 @@ function PasoDiagnostico({ motor }) {
           <span className="text-3xl">{emojiCoach}</span>
           <div className="flex-1">
             <p className="text-white text-sm font-medium leading-relaxed">{mensajeCoach}</p>
+            {esDeficitEstructural && (
+              <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+                <p className="text-red-300 text-xs">
+                  ⚠️ Déficit Estructural: Tus gastos fijos son muy altos para tu ingreso actual.
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${sem.bg} ${sem.text} border ${sem.border}`}>
                 <Flame className="w-3 h-3" />
-                Urgencia: {sem.label}
+                Estado: {sem.label}
               </div>
               {usandoProyeccion && (
                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                  📊 Ingresos: proyección mensual
+                  📊 Ingresos: proyección
                 </div>
               )}
             </div>
@@ -652,45 +623,40 @@ function PasoDiagnostico({ motor }) {
         </div>
       </div>
 
-      {/* Velocímetro */}
+      {/* Velocímetro Realista */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${sem.bg} flex items-center justify-center`}>
             <Zap className={`w-4 h-4 ${sem.text}`} />
           </div>
           <div>
-            <h4 className="text-white font-bold text-sm">Velocidad de Gasto</h4>
+            <h4 className="text-white font-bold text-sm">Límite Diario Seguro</h4>
             <p className="text-gray-400 text-[11px]">Día {diaDelMes} de {diasEnMes} · {diasRestantes} días restantes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="bg-white/5 rounded-xl p-3">
-            <div className="text-[10px] text-gray-400 uppercase mb-1">Tu velocidad</div>
-            <div className={`text-xl font-bold ${sem.text}`}>{fmt(velocidadDiaria)}<span className="text-xs text-gray-400">/día</span></div>
+            <div className="text-[10px] text-gray-400 uppercase mb-1">Gastas ahora</div>
+            <div className={`text-xl font-bold ${semaforoVelocidad === 'verde' ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(velocidadDiaria)}<span className="text-xs text-gray-400">/día</span></div>
           </div>
           <div className="bg-white/5 rounded-xl p-3">
-            <div className="text-[10px] text-gray-400 uppercase mb-1">Ideal</div>
-            <div className="text-xl font-bold text-emerald-400">{fmt(velocidadIdeal)}<span className="text-xs text-gray-400">/día</span></div>
+            <div className="text-[10px] text-gray-400 uppercase mb-1">Máximo permitido</div>
+            <div className="text-xl font-bold text-blue-400">{fmt(limiteSeguroDiario)}<span className="text-xs text-gray-400">/día</span></div>
           </div>
         </div>
 
-        <div className="relative">
-          <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all duration-1000 ${
-                semaforoVelocidad === 'verde' ? 'bg-emerald-500' :
-                semaforoVelocidad === 'amarillo' ? 'bg-amber-500' : 'bg-red-500'
-              }`}
-              style={{ width: `${Math.min(100, ratioVelocidad * 50)}%` }}
-            />
-          </div>
-          <div className="absolute top-0 h-3 w-0.5 bg-white/70" style={{ left: '50%' }} />
-          <div className="flex justify-between mt-1">
-            <span className="text-[9px] text-gray-500">$0</span>
-            <span className="text-[9px] text-white/50">↑ Ideal</span>
-            <span className="text-[9px] text-gray-500">{fmt(velocidadIdeal * 2)}</span>
-          </div>
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3">
+          {margenDiario > 0 ? (
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          )}
+          <p className="text-xs text-gray-300">
+            {margenDiario > 0 
+              ? `Excedes tu límite por ${fmt(margenDiario)} diarios. Reduce gastos variables.` 
+              : `Vas dentro del límite. Tienes un colchón de seguridad.`}
+          </p>
         </div>
       </div>
 
@@ -702,17 +668,17 @@ function PasoDiagnostico({ motor }) {
       }`}>
         <div className="flex items-center gap-2 mb-3">
           <Eye className="w-4 h-4 text-white/70" />
-          <h4 className="text-white font-bold text-sm">A este ritmo, fin de mes...</h4>
+          <h4 className="text-white font-bold text-sm">Cierre de Mes Estimado</h4>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="text-[10px] text-gray-400 uppercase">Gastarás</div>
+            <div className="text-[10px] text-gray-400 uppercase">Gasto Total</div>
             <div className={`text-lg font-bold ${proyeccionFinMes.enRiesgo ? 'text-red-400' : 'text-white'}`}>
               {fmt(proyeccionFinMes.gastosEstimados)}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-400 uppercase">Te quedará</div>
+            <div className="text-[10px] text-gray-400 uppercase">Resultado</div>
             <div className={`text-lg font-bold ${proyeccionFinMes.saldoEstimado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmt(proyeccionFinMes.saldoEstimado)}
             </div>
@@ -731,7 +697,7 @@ function PasoDiagnostico({ motor }) {
       {/* Patrón Semanal */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-purple-400" />
+          <BarChart3 className="w-4 h-4 text-purple-400" />
           Tu Patrón Semanal
         </h4>
         <div className="flex items-end gap-1.5 h-20 mb-2">
@@ -763,7 +729,7 @@ function PasoDiagnostico({ motor }) {
         </div>
         <p className="text-gray-400 text-xs mt-3">
           📍 Los <span className="text-red-400 font-semibold">{DIAS_SEMANA[diaPico]}</span> gastas más. 
-          Planifica esos días con anticipación.
+          Planifica esos días.
         </p>
       </div>
 
@@ -771,12 +737,11 @@ function PasoDiagnostico({ motor }) {
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-blue-400" />
-          Distribución
+          Distribución de Flujo
         </h4>
         <div className="space-y-2">
-          <DistBar label="Fijos" monto={totalGastosFijos} total={totalGastos} color="bg-blue-500" />
-          <DistBar label="Variables" monto={totalGastosVariables} total={totalGastos} color="bg-orange-500" />
-          <DistBar label="Suscripciones" monto={totalSuscripciones} total={totalGastos} color="bg-purple-500" />
+          <DistBar label="Comprometido (Fijos/Subs)" monto={totalGastosFijos + totalSuscripciones} total={totalGastos} color="bg-blue-500" esCritico={esDeficitEstructural} />
+          <DistBar label="Variables (Decisión Tuya)" monto={totalGastosVariables} total={totalGastos} color="bg-orange-500" esCritico={false} />
         </div>
         
         {frecuenciaHormiga > 5 && totalHormiga > 200 && (
@@ -793,7 +758,7 @@ function PasoDiagnostico({ motor }) {
         <h4 className="text-white font-bold text-sm mb-3">Top Categorías</h4>
         <div className="space-y-2">
           {categorias.slice(0, 5).map((cat, idx) => (
-            <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg ${cat.esCritica ? 'bg-red-500/10' : 'bg-white/5'}`}>
+            <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg ${cat.esencial ? 'bg-blue-500/5' : 'bg-white/5'}`}>
               <span className="text-lg">{cat.nombre.split(' ')[0]}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between mb-1">
@@ -814,7 +779,7 @@ function PasoDiagnostico({ motor }) {
 }
 
 // ═══════════════════════════════════════════════════
-// 📋 PASO 2: PRESUPUESTO INTELIGENTE
+// 📋 PASO 2: PRESUPUESTO INTELIGENTE (Con Floors)
 // ═══════════════════════════════════════════════════
 
 function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, expandedCat, onToggleCat }) {
@@ -832,9 +797,9 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
         <p className="text-white text-sm font-medium flex items-start gap-2">
           <Brain className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
           <span>
-            Creé un presupuesto basado en tus patrones reales. 
+            He establecido <strong>suelos vitales</strong> (mínimos) en categorías esenciales. 
             {totalAhorroPotencial > 0 
-              ? ` Puedes reducir ${fmt(totalAhorroPotencial)}/mes ajustando estas categorías.` 
+              ? ` Puedes reducir ${fmt(totalAhorroPotencial)}/mes ajustando deseos.` 
               : ' Tus gastos están bien distribuidos.'
             }
           </span>
@@ -879,8 +844,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
           const presupuesto = presupuestosEditados[cat.nombre] ?? cat.presupuestoSugerido;
           const isExpanded = expandedCat === cat.nombre;
           const excede = cat.total > presupuesto;
-          const ahorro = Math.max(0, cat.total - presupuesto);
-
+          
           return (
             <div key={cat.nombre} className={`rounded-xl border overflow-hidden transition-all ${
               isExpanded ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/10'
@@ -893,13 +857,12 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-white text-xs font-semibold truncate">{cat.nombre.split(' ').slice(1).join(' ')}</span>
-                    {cat.esencial && <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">esencial</span>}
+                    {cat.esencial && <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/20">Esencial</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold ${excede ? 'text-red-400' : 'text-white'}`}>{fmt(cat.total)}</span>
                     <ArrowRight className="w-3 h-3 text-gray-500" />
                     <span className="text-xs font-bold text-emerald-400">{fmt(presupuesto)}</span>
-                    {ahorro > 0 && <span className="text-[10px] text-emerald-400">(-{fmt(ahorro)})</span>}
                   </div>
                 </div>
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -909,25 +872,34 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                 <div className="px-3 pb-3 space-y-3">
                   <div>
                     <div className="flex justify-between text-[10px] text-gray-400 mb-1">
-                      <span>Presupuesto</span>
+                      <span>Nuevo Presupuesto</span>
                       <span>{fmt(presupuesto)}</span>
                     </div>
+                    {/* Input Range con Suelo (Floor) */}
                     <input
                       type="range"
-                      min={0}
+                      min={cat.presupuestoMinimo}
                       max={Math.round(cat.total * 1.5)}
                       step={10}
                       value={presupuesto}
                       onChange={(e) => onEditarPresupuesto(cat.nombre, e.target.value)}
-                      className="w-full h-2 rounded-full appearance-none cursor-pointer accent-orange-500"
-                      style={{ background: `linear-gradient(to right, #f97316 ${(presupuesto / (cat.total * 1.5)) * 100}%, rgba(255,255,255,0.1) 0%)` }}
+                      className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500"
+                      style={{ background: `linear-gradient(to right, #3b82f6 ${((presupuesto - cat.presupuestoMinimo) / (cat.total * 1.5 - cat.presupuestoMinimo)) * 100}%, rgba(255,255,255,0.1) 0%)` }}
                     />
                     <div className="flex justify-between text-[9px] text-gray-500 mt-1">
-                      <span>$0</span>
-                      <span className="text-orange-400">Sugerido: {fmt(cat.presupuestoSugerido)}</span>
+                      <span className={presupuesto <= cat.presupuestoMinimo ? 'text-red-400' : ''}>{fmt(cat.presupuestoMinimo)} (Mín)</span>
+                      <span className="text-blue-400">Ideal: {fmt(cat.presupuestoSugerido)}</span>
                       <span>{fmt(cat.total * 1.5)}</span>
                     </div>
                   </div>
+
+                  {cat.esencial && presupuesto <= cat.presupuestoMinimo && (
+                    <div className="flex items-center gap-2 text-[10px] text-amber-300 bg-amber-500/10 p-1.5 rounded">
+                       <AlertTriangle className="w-3 h-3" />
+                       <span>Has llegado al límite vital de seguridad.</span>
+                    </div>
+                  )}
+
                   <div>
                     <div className="h-2 bg-white/10 rounded-full overflow-hidden relative">
                       <div className={`h-full rounded-full transition-all ${excede ? 'bg-red-500' : cat.colorClasses.bar}`} style={{ width: `${Math.min(100, (cat.total / (presupuesto || 1)) * 100)}%` }} />
@@ -972,7 +944,7 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
         <Trophy className="w-16 h-16 text-yellow-400 mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">¡Excelente Control!</h3>
         <p className="text-gray-400 text-sm text-center max-w-xs">
-          No detecté áreas urgentes que mejorar. Tus gastos están bien controlados.
+          No detecté áreas urgentes que mejorar. Tu flujo es saludable.
         </p>
       </div>
     );
@@ -984,7 +956,7 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
         <p className="text-white text-sm font-medium flex items-start gap-2">
           <Target className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <span>
-            Diseñé {retos.length} retos personalizados según tus patrones.
+            Diseñé {retos.length} acciones prácticas. 
             Acepta los que puedas cumplir — es mejor 1 reto cumplido que 5 ignorados.
           </span>
         </p>
@@ -1011,24 +983,18 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
 }
 
 // ═══════════════════════════════════════════════════
-// 💾 PASO 4: RESUMEN Y GUARDAR (números corregidos)
+// 💾 PASO 4: RESUMEN Y GUARDAR
 // ═══════════════════════════════════════════════════
 
 function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
-  const { categorias, totalGastos, totalIngresos, retos, usandoProyeccion } = motor;
+  const { categorias, totalGastos, totalIngresos, retos, usandoProyeccion, esDeficitEstructural } = motor;
   
   const totalPresupuestado = categorias.reduce((s, c) => 
     s + (presupuestosEditados[c.nombre] ?? c.presupuestoSugerido), 0
   );
-  // ✅ "reduccionGasto" = cuánto MENOS gastas vs actual (siempre ≥ 0)
   const reduccionGasto = Math.max(0, totalGastos - totalPresupuestado);
-  // "saldoConPlan" = ingreso - nuevo gasto (puede ser negativo)
   const saldoConPlan = totalIngresos - totalPresupuestado;
   const retosActivos = retos.filter(r => retosAceptados.includes(r.id));
-  const categoriasEditadas = categorias.filter(c => {
-    const pres = presupuestosEditados[c.nombre];
-    return pres !== undefined && pres !== c.presupuestoSugerido;
-  });
 
   return (
     <div className="p-4 space-y-4">
@@ -1037,15 +1003,17 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
         <p className="text-white text-sm font-medium flex items-start gap-2">
           <Shield className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
           <span>
-            {retosActivos.length > 0
-              ? `¡Excelente! Aceptaste ${retosActivos.length} reto${retosActivos.length > 1 ? 's' : ''}. Con tu plan ajustado, reduces ${fmt(reduccionGasto)}/mes en gastos.`
-              : reduccionGasto > 0
-                ? `Tu plan de presupuesto reduce tus gastos en ${fmt(reduccionGasto)}/mes. Guárdalo para hacer seguimiento.`
-                : `Los presupuestos sugeridos están alineados a tus gastos actuales. Ajusta categorías en el paso anterior para encontrar ahorros.`
+            {esDeficitEstructural
+              ? 'Este plan establece disciplina mientras reestructuras tus ingresos.'
+              : retosActivos.length > 0
+                ? `¡Excelente! Aceptaste ${retosActivos.length} reto${retosActivos.length > 1 ? 's' : ''}. Con tu plan, reduces ${fmt(reduccionGasto)}/mes.`
+                : reduccionGasto > 0
+                  ? `Tu plan reduce tus gastos en ${fmt(reduccionGasto)}/mes. Guárdalo para hacer seguimiento.`
+                  : `Los presupuestos sugeridos están alineados a tus gastos actuales.`
             }
             {usandoProyeccion && (
               <span className="block text-[10px] text-emerald-300/60 mt-1">
-                ℹ️ Ingresos basados en proyección mensual (es inicio de mes)
+                ℹ️ Ingresos basados en proyección mensual
               </span>
             )}
           </span>
@@ -1074,7 +1042,7 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
             </div>
           </div>
 
-          {/* Reducción de gasto (siempre positiva o cero) */}
+          {/* Reducción de gasto */}
           {reduccionGasto > 0 ? (
             <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
               <div className="text-[10px] text-emerald-300 uppercase">Reduces en gastos</div>
@@ -1084,7 +1052,7 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
           ) : (
             <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
               <div className="text-[10px] text-amber-300 uppercase">Sin reducción aún</div>
-              <div className="text-sm text-amber-200">Ajusta presupuestos por categoría en el paso anterior</div>
+              <div className="text-sm text-amber-200">Ajusta categorías en el paso anterior</div>
             </div>
           )}
 
@@ -1124,27 +1092,33 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
         )}
 
         {/* Categorías Ajustadas */}
-        {categoriasEditadas.length > 0 && (
+        {categorias.filter(c => presupuestosEditados[c.nombre] && presupuestosEditados[c.nombre] !== c.presupuestoSugerido).length > 0 && (
           <div className="p-4">
             <h5 className="text-white font-semibold text-xs mb-2 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5 text-orange-400" />
-              Presupuestos Personalizados ({categoriasEditadas.length})
+              Presupuestos Personalizados
             </h5>
             <div className="space-y-1.5">
-              {categoriasEditadas.map(cat => (
-                <div key={cat.nombre} className="flex items-center gap-2 text-xs">
-                  <span>{cat.nombre.split(' ')[0]}</span>
-                  <span className="text-gray-400 line-through">{fmt(cat.total)}</span>
-                  <ArrowRight className="w-3 h-3 text-gray-500" />
-                  <span className="text-emerald-400 font-semibold">{fmt(presupuestosEditados[cat.nombre])}</span>
-                </div>
-              ))}
+              {categorias.map(cat => {
+                const pres = presupuestosEditados[cat.nombre];
+                if (pres && pres !== cat.presupuestoSugerido) {
+                  return (
+                    <div key={cat.nombre} className="flex items-center gap-2 text-xs">
+                      <span>{cat.nombre.split(' ')[0]}</span>
+                      <span className="text-gray-400 line-through">{fmt(cat.total)}</span>
+                      <ArrowRight className="w-3 h-3 text-gray-500" />
+                      <span className="text-emerald-400 font-semibold">{fmt(pres)}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {/* Proyección (solo si hay reducción real) */}
+      {/* Proyección */}
       {reduccionGasto > 0 && (
         <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
           <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
@@ -1172,7 +1146,7 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
 }
 
 // ═══════════════════════════════════════════════════
-// 🎯 RETO CARD (extracted for hooks compliance)
+// 🎯 RETO CARD
 // ═══════════════════════════════════════════════════
 
 function RetoCard({ reto, aceptado, onToggle }) {
@@ -1207,9 +1181,6 @@ function RetoCard({ reto, aceptado, onToggle }) {
               <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
                 <PiggyBank className="w-3 h-3" /> Ahorras: {reto.impacto}/mes
               </span>
-              <span className="text-gray-500 text-[10px]">
-                {reto.tipo === 'urgente' ? '⚡ Inmediato' : reto.tipo === 'diario' ? '📅 Diario' : reto.tipo === 'semanal' ? '📆 Semanal' : reto.tipo === 'mensual' ? '🗓️ Mensual' : '🔄 Una vez'}
-              </span>
             </div>
             <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className="text-orange-300 text-xs flex items-center gap-1 hover:text-orange-200 transition">
               {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -1241,16 +1212,16 @@ function RetoCard({ reto, aceptado, onToggle }) {
 // 🔧 COMPONENTES AUXILIARES
 // ═══════════════════════════════════════════════════
 
-function DistBar({ label, monto, total, color }) {
+function DistBar({ label, monto, total, color, esCritico }) {
   const pctVal = total > 0 ? (monto / total) * 100 : 0;
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="text-gray-400">{label}</span>
-        <span className="text-white font-semibold">{fmt(monto)} ({pct(pctVal)})</span>
+        <span className={`${esCritico ? 'text-red-400' : 'text-white'} font-semibold`}>{fmt(monto)} ({pct(pctVal)})</span>
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pctVal}%` }} />
+        <div className={`h-full rounded-full ${esCritico ? 'bg-red-500' : color}`} style={{ width: `${Math.min(100, pctVal)}%` }} />
       </div>
     </div>
   );

@@ -72,26 +72,68 @@ const filtrarIngresos = (ingresos, tipoFiltro) => {
 const filtrarGastosVariables = (gastos, tipoFiltro) => {
   const rango = obtenerRangoFechas(tipoFiltro)
   
-  // ✨ NUEVO: Filtrar autopagos de suscripciones para evitar duplicados
+  console.log('🔍 Filtrando gastos variables:', {
+    total: gastos.length,
+    rango,
+    tipoFiltro
+  })
+  
+  // ✨ PASO 1: Filtrar autopagos de suscripciones Y archivados
   const gastosLimpios = gastos.filter(gasto => {
     // Excluir gastos archivados
-    if (gasto.archivado) return false
+    if (gasto.archivado === true) {
+      console.log('❌ Archivado:', gasto.descripcion)
+      return false
+    }
     
     // ✅ Excluir autopagos de suscripciones (ya están en la tabla de suscripciones)
     if (gasto.metodo === 'Autopago' && gasto.categoria === '📅 Suscripciones') {
+      console.log('❌ Autopago de suscripción:', gasto.descripcion)
+      return false
+    }
+    
+    // ✅ Excluir gastos con descripción de autopago (por si acaso)
+    if (gasto.descripcion?.includes('Autopago:') && gasto.categoria === '📅 Suscripciones') {
+      console.log('❌ Autopago detectado por descripción:', gasto.descripcion)
       return false
     }
     
     return true
   })
   
-  if (!rango) return gastosLimpios
+  console.log('✅ Después de limpiar archivados/autopagos:', gastosLimpios.length)
+  
+  // ✨ PASO 2: Filtrar por fecha si hay rango
+  if (!rango) {
+    console.log('ℹ️ Sin filtro de fecha, retornando todos los gastos limpios')
+    return gastosLimpios
+  }
 
-  return gastosLimpios.filter(gasto => {
-    if (!gasto.fecha) return false
+  const gastosFiltradosPorFecha = gastosLimpios.filter(gasto => {
+    if (!gasto.fecha) {
+      console.log('⚠️ Gasto sin fecha:', gasto.descripcion)
+      return false
+    }
+    
     const fechaGasto = new Date(gasto.fecha + 'T00:00:00')
-    return fechaGasto >= rango.inicio && fechaGasto <= rango.fin
+    const estaEnRango = fechaGasto >= rango.inicio && fechaGasto <= rango.fin
+    
+    if (!estaEnRango) {
+      console.log('❌ Fuera de rango:', {
+        descripcion: gasto.descripcion,
+        fecha: gasto.fecha,
+        fechaGasto: fechaGasto.toISOString(),
+        rangoInicio: rango.inicio.toISOString(),
+        rangoFin: rango.fin.toISOString()
+      })
+    }
+    
+    return estaEnRango
   })
+  
+  console.log('✅ Después de filtrar por fecha:', gastosFiltradosPorFecha.length)
+  
+  return gastosFiltradosPorFecha
 }
 
 /**
