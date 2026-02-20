@@ -7,7 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   X, AlertTriangle, Save,
   ChevronDown, ChevronUp, CheckCircle2,
-  Target, Brain, Flame, Shield, Zap, Calendar,
+  Target, Brain, Flame, Shield, Zap,
   ArrowRight, Eye, Sparkles,
   BarChart3, Wallet, Star, Trophy,
   Play, PiggyBank, TrendingDown // Iconos restaurados para evitar errores de compilación
@@ -582,7 +582,7 @@ function PasoDiagnostico({ motor }) {
     mensajeCoach, emojiCoach,
     proyeccionFinMes, categorias, totalHormiga, frecuenciaHormiga,
     totalGastosFijos, totalGastosVariables, totalSuscripciones,
-    usandoProyeccion, esDeficitEstructural, ratioGasto
+    usandoProyeccion, esDeficitEstructural
   } = motor;
 
   const semaforoColors = {
