@@ -2,14 +2,14 @@ import { useSupabaseData } from './useSupabaseData'
 
 export const useGastosVariables = (lazyLoad = false) => {
   const { data, loading, addRecord, updateRecord, deleteRecord, refresh, initialize } = useSupabaseData(
-    'gastos_variables',
+    'gastos',                   // ✅ Nombre real de la tabla en Supabase
     {
       lazyLoad,
       orderBy: 'fecha',
       ascending: false,
       select: '*',
       limit: 500,               // ✅ Aumentado para no perder registros recientes
-      cacheDuration: 60 * 1000  // ✅ Cache de 1 min (antes 5 min) para datos más frescos
+      cacheDuration: 60 * 1000  // ✅ Cache de 1 min para datos frescos
     }
   )
 

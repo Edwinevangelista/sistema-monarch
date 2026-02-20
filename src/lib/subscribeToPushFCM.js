@@ -225,18 +225,18 @@ async function _checkFinancialAlerts() {
     // Alertas de gastos fijos autopago próximos (3 días)
     const { data: gastosFijos } = await supabase
       .from('gastos_fijos')
-      .select('nombre, monto, dia_cobro')
+      .select('nombre, monto, dia_venc')   // ✅ campo correcto: dia_venc
       .eq('user_id', user.id)
-      .eq('auto_pago', true)
+      .eq('autopago', true)                // ✅ campo correcto: autopago
 
     if (gastosFijos && gastosFijos.length > 0) {
       const diaHoy = new Date().getDate()
       for (const gf of gastosFijos) {
-        const diasHastaCorbo = (gf.dia_cobro - diaHoy + 31) % 31
-        if (diasHastaCorbo >= 0 && diasHastaCorbo <= 2) {
+        const diasHastaVenc = (gf.dia_venc - diaHoy + 31) % 31  // ✅ dia_venc
+        if (diasHastaVenc >= 0 && diasHastaVenc <= 2) {
           await showNotificationViaSW(
             '⚡ Cobro Automático Próximo',
-            `${gf.nombre}: $${Number(gf.monto || 0).toFixed(2)} se cobra en ${diasHastaCorbo === 0 ? 'hoy' : diasHastaCorbo + ' día(s)'}`,
+            `${gf.nombre}: $${Number(gf.monto || 0).toFixed(2)} se cobra en ${diasHastaVenc === 0 ? 'hoy' : diasHastaVenc + ' día(s)'}`,
             { tag: 'autopago-' + (gf.nombre || '').replace(/\s/g, ''), requireInteraction: false }
           )
         }
