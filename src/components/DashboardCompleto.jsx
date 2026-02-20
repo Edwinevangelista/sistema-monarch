@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target, Download, Calendar } from 'lucide-react';
+import { Wallet, Plus, CreditCard, Repeat, Bell, Sun, Moon, Coffee, ScanLine, X, ChevronRight, HelpCircle, Activity, Target, Download, Calendar, ShieldAlert } from 'lucide-react';
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -54,6 +54,7 @@ import ListaGastosCompleta from './ListaGastosCompleta'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
+import ModalCoberturaCuentas from './ModalCoberturaCuentas'
 
 import VisualizacionDatos from './VisualizacionDatos'
 
@@ -1682,7 +1683,68 @@ deudasInstant.forEach(d => {
     return listaAlertas.sort((a, b) => a.dias - b.dias)
     
   }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
-    
+
+  // ============================================
+  // 🏦 ANÁLISIS DE COBERTURA DE CUENTAS BANCARIAS
+  // ============================================
+  const coberturaCuentas = useMemo(() => {
+    const hoy30 = new Date(hoy)
+    hoy30.setDate(hoy30.getDate() + 30)
+
+    return cuentas
+      .filter(c => Number(c.balance || 0) >= 0)
+      .map(cuenta => {
+        const cargosProximos = []
+
+        gastosFijosInstant.forEach(gf => {
+          if (gf.cuenta_id !== cuenta.id || !gf.auto_pago || gf.estado === 'Pagado' || !gf.dia_venc) return
+          const fechaEstesMes = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
+          const fechaSigMes   = new Date(hoy.getFullYear(), hoy.getMonth() + 1, gf.dia_venc)
+          const fechaCargo    = fechaEstesMes >= hoy ? fechaEstesMes : fechaSigMes
+          if (fechaCargo <= hoy30) {
+            cargosProximos.push({
+              nombre: gf.nombre,
+              monto: Number(gf.monto || 0),
+              fecha: fechaCargo,
+              dias: Math.ceil((fechaCargo - hoy) / 86400000),
+              tipo: 'fijo'
+            })
+          }
+        })
+
+        suscripcionesInstant.forEach(sub => {
+          if (sub.cuenta_id !== cuenta.id || !sub.autopago || sub.estado === 'Cancelado' || !sub.proximo_pago) return
+          const fechaCargo = new Date(sub.proximo_pago + 'T00:00:00')
+          if (fechaCargo >= hoy && fechaCargo <= hoy30) {
+            cargosProximos.push({
+              nombre: sub.servicio,
+              monto: Number(sub.costo || 0),
+              fecha: fechaCargo,
+              dias: Math.ceil((fechaCargo - hoy) / 86400000),
+              tipo: 'suscripcion'
+            })
+          }
+        })
+
+        const totalCargos = cargosProximos.reduce((s, c) => s + c.monto, 0)
+        const balance     = Number(cuenta.balance || 0)
+        const deficit     = totalCargos - balance
+        return {
+          cuenta,
+          cargosProximos: cargosProximos.sort((a, b) => a.dias - b.dias),
+          totalCargos,
+          balance,
+          deficit,
+          tieneProblem: deficit > 0
+        }
+      })
+      .filter(r => r.cargosProximos.length > 0)
+  }, [cuentas, gastosFijosInstant, suscripcionesInstant, hoy])
+
+  const cuentasEnRiesgo = useMemo(() =>
+    coberturaCuentas.filter(r => r.tieneProblem),
+  [coberturaCuentas])
+
   useEffect(() => {
     if (permission === 'granted' && alertas.length > 0) {
       const hoyDateStr = hoy.toDateString()
@@ -2038,9 +2100,20 @@ const dataGraficaDona = useMemo(() =>
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Bell className="w-4 h-4 text-yellow-400" /> Alertas
             </h3>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${alertas.length > 0 ? 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
-              {alertas.length}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${alertas.length > 0 ? 'bg-red-500/20 text-red-400 border-red-500/30 animate-pulse' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                {alertas.length}
+              </span>
+              {cuentasEnRiesgo.length > 0 && (
+                <button
+                  onClick={() => setShowModal('cobertura')}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold hover:bg-orange-500/25 active:scale-95 transition-all touch-manipulation"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  {cuentasEnRiesgo.length} en riesgo
+                </button>
+              )}
+            </div>
           </div>
           <div className="md:hidden overflow-x-auto pb-2 -mx-3 px-3 no-scrollbar">
             <div className="flex gap-3 min-w-max">
@@ -2261,6 +2334,13 @@ const dataGraficaDona = useMemo(() =>
         />
       )}
 
+      {showModal === 'cobertura' && (
+        <ModalCoberturaCuentas
+          coberturaCuentas={coberturaCuentas}
+          onClose={() => setShowModal(null)}
+        />
+      )}
+
       <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null); }}>        
         <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
       </ModalWrapper>
@@ -2413,12 +2493,13 @@ const dataGraficaDona = useMemo(() =>
 
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
       {/* NOTA PARA MENU INFERIOR: Asegúrate de que `MenuInferior.jsx` tenga acceso a la prop `onOpenExport` */}
-      <MenuInferior 
+      <MenuInferior
         onOpenModal={setShowModal}
-        alertasCount={alertas.length} 
-        nombreUsuario={usuario.nombre} 
-        onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }} 
-        onOpenExport={() => setShowExportacion(true)} // <--- Pasa la función aquí
+        alertasCount={alertas.length}
+        coberturaBadge={cuentasEnRiesgo.length}
+        nombreUsuario={usuario.nombre}
+        onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }}
+        onOpenExport={() => setShowExportacion(true)}
       />
 
       {/* ESTILOS ADICIONALES */}

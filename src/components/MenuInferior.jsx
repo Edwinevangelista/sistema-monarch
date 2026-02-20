@@ -14,7 +14,7 @@ import {
   Download
 } from 'lucide-react';
 
-export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, nombreUsuario = 'Usuario', onLogout }) {
+export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, coberturaBadge = 0, nombreUsuario = 'Usuario', onLogout }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const handleOpenModal = (modalName) => {
@@ -138,8 +138,11 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
                 {/* Cuentas */}
                 <button
                   onClick={() => handleOpenModal('cuentas')}
-                  className="p-3 bg-white/5 hover:bg-blue-600/20 rounded-xl transition-all border border-white/5 hover:border-blue-500/30 flex flex-col items-center gap-2 group active:scale-95"
+                  className="relative p-3 bg-white/5 hover:bg-blue-600/20 rounded-xl transition-all border border-white/5 hover:border-blue-500/30 flex flex-col items-center gap-2 group active:scale-95"
                 >
+                  {coberturaBadge > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-orange-500 rounded-full border border-gray-900 animate-pulse" />
+                  )}
                   <Wallet className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
                   <span className="text-[11px] font-medium text-white">Cuentas</span>
                 </button>
