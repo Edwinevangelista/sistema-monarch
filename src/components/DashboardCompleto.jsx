@@ -1814,6 +1814,7 @@ deudasInstant.forEach(d => {
       setShowProyeccion3d(true)
       localStorage.setItem(key, hoyStr)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuentas, gastosFijosInstant, suscripcionesInstant])
 
 const gastosPorCategoria = useMemo(() => {
