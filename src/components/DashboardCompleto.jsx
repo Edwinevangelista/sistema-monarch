@@ -276,13 +276,18 @@ useEffect(() => {
 }, [ingresos]);
 
 useEffect(() => {
-  // Sincronizar siempre que el hook tenga datos (incluso 1 solo registro nuevo)
-  if (Array.isArray(gastos)) {
-    if (gastos.length > 0) {
-      setGastosInstant(gastos);
-      localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos));
-    }
-  }
+  // ✅ SYNC ROBUSTO: Sincronizar cuando el hook actualiza su estado interno.
+  // Se compara con el estado actual para no sobreescribir si son iguales.
+  // Se acepta array vacío SOLO si gastosInstant ya estaba vacío (primera carga).
+  if (!Array.isArray(gastos)) return
+  if (gastos.length === 0) return  // Ignorar vaciados del hook (caché expirada antes de fetch)
+
+  setGastosInstant(prev => {
+    // Solo actualizar si los datos son diferentes (evitar re-renders innecesarios)
+    if (JSON.stringify(gastos) === JSON.stringify(prev)) return prev
+    localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
+    return gastos
+  })
 }, [gastos]);
 
 useEffect(() => {
@@ -300,11 +305,14 @@ useEffect(() => {
   }, [suscripciones]);
 
 useEffect(() => {
-    if (deudas.length > 0) {
-      setDeudasInstant(deudas);
-      localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
-    }
-  }, [deudas]);
+  // Sincronizar deudas del hook → estado instant
+  // Pero si acabamos de hacer un update optimista, los datos del servidor
+  // pueden tardar un ciclo: siempre aplicar si hay datos frescos del servidor
+  if (Array.isArray(deudas) && deudas.length > 0) {
+    setDeudasInstant(deudas);
+    localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
+  }
+}, [deudas]);
 
  // FUNCIÓN: Auto-ocultar menú inferior (inactividad)
 // Si quieres ocultarlo de verdad, agrega un estado showMenu y úsalo en el render del MenuInferior.
@@ -651,11 +659,16 @@ useEffect(() => {
         console.log('✅ Gasto actualizado')
       } else {
         const result = await addGasto(data)
-        console.log('✅ Gasto creado')
-        // ✅ Actualización optimista: agregar inmediatamente al estado visible
-        const nuevoGasto = result?.data?.[0] || { ...data, id: Date.now() }
+        console.log('✅ Gasto creado, result:', result)
+
+        // Usar el registro con ID real del servidor, o fallback temporal
+        const nuevoGasto = result?.data?.[0] ?? { ...data, id: `temp_${Date.now()}` }
+
+        // ✅ Actualización optimista INMEDIATA — usar función de seteo para closure fresco
         setGastosInstant(prev => {
-          const updated = [nuevoGasto, ...prev]
+          // Evitar duplicados: quitar temp ID si ya existe
+          const sinDuplicados = prev.filter(g => g.id !== nuevoGasto.id)
+          const updated = [nuevoGasto, ...sinDuplicados]
           localStorage.setItem('gastos_cache_v2', JSON.stringify(updated))
           return updated
         })
@@ -1074,18 +1087,18 @@ const handleRegistrarPagoTarjeta = async (pago) => {
       ultimo_pago: pago.fecha,
     })
 
-    // ✅ Actualización optimista del estado local para reflejo inmediato en UI
-    setDeudasInstant(prev => {
-      const updated = prev.map(d =>
-        d.id === deuda.id
-          ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha }
-          : d
-      )
-      localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
-      return updated
-    })
+    // ✅ Actualización optimista: actualiza UI al instante
+    const deudasActualizadas = deudasInstant.map(d =>
+      d.id === deuda.id
+        ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha }
+        : d
+    )
+    setDeudasInstant(deudasActualizadas)
+    // Limpiar caché para que el próximo refresh traiga datos frescos del servidor
+    localStorage.removeItem('deudas_cache')
+    localStorage.setItem('deudas_cache_v2', JSON.stringify(deudasActualizadas))
 
-    // Refrescar datos desde servidor
+    // Refrescar datos (el useEffect[deudas] recibirá los datos actualizados del servidor)
     await refreshPagos()
     await refreshDeudas()
     if (pago.cuenta_id) await refreshCuentas()
@@ -2505,9 +2518,9 @@ const dataGraficaDona = useMemo(() =>
             </div>
           )}
 
-          {/* LISTA DE TARJETAS */}
+          {/* LISTA DE TARJETAS + HISTORIAL */}
           <div
-            className="flex-1 overflow-y-auto overscroll-contain px-5 pb-5 space-y-3"
+            className="flex-1 overflow-y-auto overscroll-contain px-5 space-y-4"
             style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom,16px) + 20px)' }}
           >
             {deudasInstant.length === 0 ? (
@@ -2519,23 +2532,85 @@ const dataGraficaDona = useMemo(() =>
                 <p className="text-gray-500 text-sm mt-1">Agrega tu primera tarjeta de crédito</p>
               </div>
             ) : (
-              deudasInstant.map((deuda) => (
-                <CardDeuda
-                  key={deuda.id}
-                  deuda={deuda}
-                  onEditar={() => { setDeudaEditando(deuda); setShowModal('agregarDeuda') }}
-                  onEliminar={async () => {
-                    if (window.confirm(`¿Eliminar ${deuda.cuenta}?`)) {
-                      await deleteDebt(deuda.id)
-                      setDeudasInstant(prev => {
-                        const updated = prev.filter(d => d.id !== deuda.id)
-                        localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
-                        return updated
-                      })
-                    }
-                  }}
-                />
-              ))
+              deudasInstant.map((deuda) => {
+                // Compras cargadas a esta tarjeta (gastos variables con deuda_id)
+                const comprasDeEstaTarjeta = gastosInstant
+                  .filter(g => g.deuda_id === deuda.id)
+                  .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+                // Pagos registrados a esta tarjeta
+                const pagosDeEstaTarjeta = pagos
+                  .filter(p => p.deuda_id === deuda.id)
+                  .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+                return (
+                  <div key={deuda.id} className="space-y-2">
+                    <CardDeuda
+                      deuda={deuda}
+                      onEditar={() => { setDeudaEditando(deuda); setShowModal('agregarDeuda') }}
+                      onEliminar={async () => {
+                        if (window.confirm(`¿Eliminar ${deuda.cuenta}?`)) {
+                          await deleteDebt(deuda.id)
+                          setDeudasInstant(prev => {
+                            const updated = prev.filter(d => d.id !== deuda.id)
+                            localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
+                            return updated
+                          })
+                        }
+                      }}
+                    />
+
+                    {/* HISTORIAL DE TRANSACCIONES DE ESTA TARJETA */}
+                    {(comprasDeEstaTarjeta.length > 0 || pagosDeEstaTarjeta.length > 0) && (
+                      <div className="ml-2 border-l-2 border-purple-500/20 pl-3 space-y-1.5">
+                        <p className="text-[10px] font-bold text-purple-400/60 uppercase tracking-widest mb-2">
+                          Historial de movimientos
+                        </p>
+
+                        {/* PAGOS */}
+                        {pagosDeEstaTarjeta.slice(0, 3).map(pago => (
+                          <div key={`pago-${pago.id}`} className="flex items-center justify-between bg-emerald-500/8 border border-emerald-500/15 rounded-xl px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span className="text-[10px]">💳</span>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-emerald-300">Pago realizado</p>
+                                <p className="text-[10px] text-gray-500">{pago.fecha}</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-emerald-400">-${Number(pago.monto_total || 0).toFixed(2)}</span>
+                          </div>
+                        ))}
+
+                        {/* COMPRAS */}
+                        {comprasDeEstaTarjeta.slice(0, 5).map(gasto => (
+                          <div key={`gasto-${gasto.id}`} className="flex items-center justify-between bg-red-500/5 border border-red-500/10 rounded-xl px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-red-500/15 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span className="text-[10px]">🛍️</span>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-white/80 truncate max-w-[130px]">
+                                  {gasto.descripcion || gasto.categoria || 'Compra'}
+                                </p>
+                                <p className="text-[10px] text-gray-500">{gasto.fecha}</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-red-400">+${Number(gasto.monto || 0).toFixed(2)}</span>
+                          </div>
+                        ))}
+
+                        {(comprasDeEstaTarjeta.length + pagosDeEstaTarjeta.length) > 8 && (
+                          <p className="text-[10px] text-gray-600 text-center pt-1">
+                            +{(comprasDeEstaTarjeta.length + pagosDeEstaTarjeta.length) - 8} movimientos más
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
