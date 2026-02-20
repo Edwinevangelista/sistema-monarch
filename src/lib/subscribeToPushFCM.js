@@ -1,279 +1,296 @@
-// subscribeToPushFCM.js - VERSIÓN PRODUCCIÓN CON PERSISTENCIA
-import { supabase } from './supabaseClient';
+// subscribeToPushFCM.js — Sistema de notificaciones PWA via Service Worker
+// Funciona en: Desktop Chrome, Android Chrome PWA, iOS Safari PWA (iOS 16.4+)
+import { supabase } from './supabaseClient'
 
-// 🔄 AUTOACTIVAR al cargar la página
+// ============================================================
+// FUNCIÓN CENTRAL: Mostrar notificación via Service Worker
+// ✅ Funciona en Android PWA, iOS PWA y Desktop
+// ❌ new Notification() directo NO funciona en móvil PWA
+// ============================================================
+async function showNotificationViaSW(title, body, options = {}) {
+  if (Notification.permission !== 'granted') return false
+
+  try {
+    // Siempre usar SW para garantizar compatibilidad móvil
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      await registration.showNotification(title, {
+        body,
+        icon: '/icons/FinGuide_AppIcon_192.png',
+        badge: '/icons/FinGuide_AppIcon_192.png',
+        vibrate: [200, 100, 200],
+        requireInteraction: options.requireInteraction || false,
+        tag: options.tag || 'finguide-' + Date.now(),
+        silent: options.silent || false,
+        data: options.data || {}
+      })
+      return true
+    }
+  } catch (err) {
+    console.warn('SW notification failed, fallback to Notification API:', err)
+  }
+
+  // Fallback para desktop sin SW
+  try {
+    new Notification(title, { body, icon: '/icons/FinGuide_AppIcon_192.png', ...options })
+    return true
+  } catch (e) {
+    console.error('Notification API fallback failed:', e)
+    return false
+  }
+}
+
+// ============================================================
+// ACTIVAR SISTEMA AL CARGAR (sin pedir permisos de nuevo)
+// ============================================================
 export async function initializeNotificationsOnLoad() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return false
+    if (Notification.permission !== 'granted') return false
 
-    // Verificar si ya están activadas en BD
-    const { data: subscription } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+
+    // Verificar suscripción en BD
+    const { data: sub } = await supabase
       .from('push_subscriptions')
-      .select('*')
+      .select('id')
       .eq('user_id', user.id)
-      .single();
+      .single()
 
-    if (subscription && Notification.permission === 'granted') {
-      console.log('🔄 Reactivando notificaciones automáticamente...');
-      await reactivateNotificationSystem();
-      return true;
-    }
+    if (!sub) return false
 
-    return false;
-  } catch (error) {
-    console.warn('No se pudieron reactivar notificaciones automáticamente:', error);
-    return false;
+    // Activar función global (usa SW internamente)
+    _setupGlobalNotifier()
+    _setupPeriodicChecks()
+
+    console.log('🔔 Notificaciones reactivadas automáticamente')
+    return true
+  } catch (err) {
+    console.warn('No se pudieron reactivar notificaciones:', err)
+    return false
   }
 }
 
-// 🔧 Reactivar sistema sin solicitar permisos nuevamente
-async function reactivateNotificationSystem() {
-  // Configurar función global
-  window.showFinGuideNotification = function(title, body, options = {}) {
-    if (Notification.permission === 'granted') {
-      new Notification(title, {
-        body: body,
-        icon: options.icon || '/favicon.ico',
-        tag: options.tag || 'finguide',
-        requireInteraction: options.requireInteraction || false,
-        silent: options.silent || false
-      });
-    }
-  };
-
-  // Configurar checks automáticos
-  if (window.finGuideNotificationInterval) {
-    clearInterval(window.finGuideNotificationInterval);
-  }
-  
-  window.finGuideNotificationInterval = setInterval(async () => {
-    try {
-      await checkFinancialAlerts();
-    } catch (error) {
-      console.warn('Error en check automático:', error);
-    }
-  }, 30 * 60 * 1000); // 30 minutos
-
-  console.log('🔄 Sistema de notificaciones reactivado');
-}
-
+// ============================================================
+// SUSCRIBIR — Solicitar permisos y guardar en BD
+// ============================================================
 export async function subscribeToPushFCM() {
   try {
-    // Verificar soporte
     if (!('Notification' in window)) {
-      throw new Error('Navegador no soporta notificaciones');
+      throw new Error('Este navegador no soporta notificaciones')
     }
 
-    // Solicitar permisos
-    let permission = Notification.permission;
-    
+    // 1. Pedir permiso
+    let permission = Notification.permission
     if (permission === 'default') {
-      permission = await Notification.requestPermission();
+      permission = await Notification.requestPermission()
     }
-    
     if (permission === 'denied') {
-      throw new Error('Permisos de notificaciones denegados. Ve a configuración del navegador para activarlos.');
+      throw new Error('Permisos de notificaciones denegados. Actívalos en Configuración del navegador.')
     }
-    
     if (permission !== 'granted') {
-      throw new Error('Permisos de notificaciones no concedidos');
+      throw new Error('No se concedieron los permisos')
     }
 
-    // Detectar dispositivo
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    
-    let strategy = 'web';
-    
-    if (isIOS) {
-      strategy = isStandalone ? 'ios_pwa' : 'ios_web';
-    } else if (isAndroid) {
-      strategy = 'android_web';
+    // 2. Registrar Service Worker si no está registrado
+    let registration = null
+    if ('serviceWorker' in navigator) {
+      try {
+        registration = await navigator.serviceWorker.register('/service-worker.js')
+        await navigator.serviceWorker.ready
+        console.log('✅ Service Worker listo')
+      } catch (swErr) {
+        console.warn('SW registration warning:', swErr)
+      }
     }
 
-    // Generar token
-    const token = 'local_' + strategy + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // 3. Detectar tipo de dispositivo
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true
 
-    // Verificar usuario
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      throw new Error('Usuario no autenticado');
-    }
+    let strategy = 'web'
+    if (isIOS && isStandalone) strategy = 'ios_pwa'
+    else if (isIOS) strategy = 'ios_web'
+    else if (isAndroid && isStandalone) strategy = 'android_pwa'
+    else if (isAndroid) strategy = 'android_web'
 
-    // Guardar configuración en BD
+    // 4. Obtener usuario
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) throw new Error('Usuario no autenticado')
+
+    // 5. Guardar en BD
+    const token = 'sw_' + strategy + '_' + Date.now()
     const { error: dbError } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
         subscription: {
-          type: 'browser_local_persistent',
-          strategy: strategy,
-          token: token,
+          type: 'service_worker',
+          strategy,
+          token,
           permissions: permission,
-          device_info: {
-            isIOS: isIOS,
-            isAndroid: isAndroid,
-            isStandalone: isStandalone,
-            userAgent: navigator.userAgent,
-            platform: navigator.platform
-          },
-          features: {
-            auto_reactivate: true,
-            local_notifications: true,
-            financial_alerts: true,
-            persistence: true
-          },
+          sw_scope: registration?.scope || '/',
+          device: { isIOS, isAndroid, isStandalone, ua: navigator.userAgent.substring(0, 100) },
           timestamp: new Date().toISOString()
         },
-        endpoint: 'local://' + token,
+        endpoint: 'sw://' + token,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
+      }, { onConflict: 'user_id' })
 
-    if (dbError) {
-      throw dbError;
-    }
+    if (dbError) throw dbError
 
-    // Activar sistema
-    await reactivateNotificationSystem();
+    // 6. Activar el sistema
+    _setupGlobalNotifier()
+    _setupPeriodicChecks()
 
-    // Notificación de confirmación
+    // 7. Notificación de confirmación
     setTimeout(() => {
-      if (window.showFinGuideNotification) {
-        window.showFinGuideNotification(
-          '🎉 FinGuide Activado',
-          'Notificaciones activadas. Se reactivarán automáticamente al cargar la app.',
-          { requireInteraction: true, tag: 'activation' }
-        );
-      }
-    }, 1000);
-    
-    return {
-      success: true,
-      type: 'browser_local_persistent',
-      strategy: strategy,
-      token: token,
-      auto_reactivate: true
-    };
+      showNotificationViaSW(
+        '🎉 FinGuide Activado',
+        'Las notificaciones financieras están activas. Te avisaremos de cobros próximos y alertas.',
+        { requireInteraction: true, tag: 'activation' }
+      )
+    }, 800)
+
+    return { success: true, strategy, type: 'service_worker' }
 
   } catch (error) {
-    console.error('Error activando notificaciones:', error);
-    throw error;
+    console.error('Error activando notificaciones:', error)
+    throw error
   }
 }
 
-// Función para checks automáticos de alertas financieras
-async function checkFinancialAlerts() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+// ============================================================
+// HELPERS INTERNOS
+// ============================================================
+function _setupGlobalNotifier() {
+  // Exponer función global que usa SW (compatible con móvil)
+  window.showFinGuideNotification = async function(title, body, options = {}) {
+    await showNotificationViaSW(title, body, options)
+  }
+}
 
-    // Check deudas próximas a vencer (próximos 7 días)
-    const fechaLimite = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
+function _setupPeriodicChecks() {
+  // Limpiar intervalo previo si existe
+  if (window._finGuideCheckInterval) {
+    clearInterval(window._finGuideCheckInterval)
+  }
+
+  // Check inmediato al activar
+  setTimeout(() => _checkFinancialAlerts(), 3000)
+
+  // Check cada 30 minutos
+  window._finGuideCheckInterval = setInterval(() => {
+    _checkFinancialAlerts().catch(console.warn)
+  }, 30 * 60 * 1000)
+}
+
+async function _checkFinancialAlerts() {
+  try {
+    if (Notification.permission !== 'granted') return
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const hoy = new Date().toISOString().split('T')[0]
+    const en7Dias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+    // Alertas de deudas próximas a vencer
     const { data: deudas } = await supabase
       .from('deudas')
-      .select('nombre, saldo_actual, fecha_corte')
+      .select('cuenta, saldo, vence')
       .eq('user_id', user.id)
       .eq('estado', 'Activa')
-      .gte('fecha_corte', new Date().toISOString().split('T')[0])
-      .lte('fecha_corte', fechaLimite);
+      .gte('vence', hoy)
+      .lte('vence', en7Dias)
 
     if (deudas && deudas.length > 0) {
-      for (const deuda of deudas.slice(0, 2)) { // Máximo 2 alertas
-        const diasRestantes = Math.ceil((new Date(deuda.fecha_corte) - new Date()) / (1000 * 60 * 60 * 24));
-        
-        if (diasRestantes <= 3 && window.showFinGuideNotification) {
-          window.showFinGuideNotification(
-            '💳 Recordatorio de Pago',
-            `${deuda.nombre}: $${deuda.saldo_actual} vence en ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}`,
-            { tag: 'debt-reminder-' + deuda.nombre.replace(/\s/g, ''), requireInteraction: true }
-          );
+      for (const deuda of deudas.slice(0, 2)) {
+        const diasRestantes = Math.ceil(
+          (new Date(deuda.vence) - new Date()) / (1000 * 60 * 60 * 24)
+        )
+        if (diasRestantes <= 3) {
+          await showNotificationViaSW(
+            '💳 Fecha de Corte Próxima',
+            `${deuda.cuenta}: $${Number(deuda.saldo || 0).toFixed(2)} — vence en ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}`,
+            { tag: 'debt-' + (deuda.cuenta || '').replace(/\s/g, ''), requireInteraction: true }
+          )
         }
       }
     }
 
-    // Check suscripciones próximas a renovar
-    const { data: suscripciones } = await supabase
-      .from('suscripciones')
-      .select('nombre, precio, proxima_fecha')
+    // Alertas de gastos fijos autopago próximos (3 días)
+    const { data: gastosFijos } = await supabase
+      .from('gastos_fijos')
+      .select('nombre, monto, dia_cobro')
       .eq('user_id', user.id)
-      .eq('activa', true)
-      .lte('proxima_fecha', fechaLimite);
+      .eq('auto_pago', true)
 
-    if (suscripciones && suscripciones.length > 0) {
-      for (const sub of suscripciones.slice(0, 1)) { // Máximo 1 alerta
-        const dias = Math.ceil((new Date(sub.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24));
-        
-        if (dias <= 2 && window.showFinGuideNotification) {
-          window.showFinGuideNotification(
-            '🔄 Renovación Próxima',
-            `${sub.nombre}: $${sub.precio} se renovará en ${dias} día${dias !== 1 ? 's' : ''}`,
-            { tag: 'subscription-renewal', requireInteraction: true }
-          );
+    if (gastosFijos && gastosFijos.length > 0) {
+      const diaHoy = new Date().getDate()
+      for (const gf of gastosFijos) {
+        const diasHastaCorbo = (gf.dia_cobro - diaHoy + 31) % 31
+        if (diasHastaCorbo >= 0 && diasHastaCorbo <= 2) {
+          await showNotificationViaSW(
+            '⚡ Cobro Automático Próximo',
+            `${gf.nombre}: $${Number(gf.monto || 0).toFixed(2)} se cobra en ${diasHastaCorbo === 0 ? 'hoy' : diasHastaCorbo + ' día(s)'}`,
+            { tag: 'autopago-' + (gf.nombre || '').replace(/\s/g, ''), requireInteraction: false }
+          )
         }
       }
     }
 
-  } catch (error) {
-    console.warn('Error en check de alertas financieras:', error);
+  } catch (err) {
+    console.warn('Error en check de alertas financieras:', err)
   }
 }
 
+// ============================================================
+// DESUSCRIBIR
+// ============================================================
 export async function unsubscribeFromPushFCM() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      throw new Error('Usuario no autenticado');
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
 
-    // Eliminar de BD
     const { error } = await supabase
       .from('push_subscriptions')
       .delete()
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error
 
-    // Limpiar sistema local
-    if (window.finGuideNotificationInterval) {
-      clearInterval(window.finGuideNotificationInterval);
-      window.finGuideNotificationInterval = null;
+    if (window._finGuideCheckInterval) {
+      clearInterval(window._finGuideCheckInterval)
+      window._finGuideCheckInterval = null
     }
-    
-    if (window.showFinGuideNotification) {
-      window.showFinGuideNotification = null;
-    }
+    window.showFinGuideNotification = null
 
-    return true;
-    
-  } catch (error) {
-    console.error('Error desactivando notificaciones:', error);
-    throw error;
+    return true
+  } catch (err) {
+    console.error('Error desactivando notificaciones:', err)
+    throw err
   }
 }
 
+// ============================================================
+// ENVIAR NOTIFICACIÓN DE PRUEBA
+// ============================================================
 export function sendTestNotification(title, body) {
-  if (Notification.permission === 'granted' && window.showFinGuideNotification) {
-    window.showFinGuideNotification(
-      title || 'FinGuide Test',
-      body || 'Esta es una notificación de prueba',
-      { tag: 'test', requireInteraction: true }
-    );
-    return true;
+  if (Notification.permission === 'granted') {
+    showNotificationViaSW(
+      title || '🔔 FinGuide Test',
+      body || 'Las notificaciones funcionan correctamente en tu dispositivo',
+      { tag: 'test-' + Date.now(), requireInteraction: true }
+    )
+    return true
   }
-  return false;
+  return false
 }
 
 export function showNotification(title, body, options = {}) {
-  if (window.showFinGuideNotification) {
-    window.showFinGuideNotification(title, body, options);
-    return true;
-  }
-  return false;
+  return showNotificationViaSW(title, body, options)
 }

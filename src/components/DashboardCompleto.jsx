@@ -265,6 +265,8 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
 
 
 // --- EFECTOS DE SINCRONIZACIÓN ---
+// ✅ CORREGIDO: Se eliminó "if (x.length > 0)" para no bloquear sync cuando
+// el hook devuelve un array vacío o cuando el primer registro viene del servidor.
 useEffect(() => {
   if (ingresos.length > 0) {
     setIngresosInstant(ingresos);
@@ -273,11 +275,14 @@ useEffect(() => {
 }, [ingresos]);
 
 useEffect(() => {
+  // Sincronizar siempre que el hook tenga datos (incluso 1 solo registro nuevo)
+  if (Array.isArray(gastos)) {
     if (gastos.length > 0) {
       setGastosInstant(gastos);
       localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos));
     }
-  }, [gastos]);
+  }
+}, [gastos]);
 
 useEffect(() => {
     if (gastosFijos.length > 0) {
@@ -636,10 +641,23 @@ useEffect(() => {
 
       if (data.id) {
         await updateGasto(data.id, data)
+        // ✅ Actualización optimista del estado instantáneo al editar
+        setGastosInstant(prev => {
+          const updated = prev.map(g => g.id === data.id ? { ...g, ...data } : g)
+          localStorage.setItem('gastos_cache_v2', JSON.stringify(updated))
+          return updated
+        })
         console.log('✅ Gasto actualizado')
       } else {
-        await addGasto(data)
+        const result = await addGasto(data)
         console.log('✅ Gasto creado')
+        // ✅ Actualización optimista: agregar inmediatamente al estado visible
+        const nuevoGasto = result?.data?.[0] || { ...data, id: Date.now() }
+        setGastosInstant(prev => {
+          const updated = [nuevoGasto, ...prev]
+          localStorage.setItem('gastos_cache_v2', JSON.stringify(updated))
+          return updated
+        })
 
         const monto = Number(data.monto)
 

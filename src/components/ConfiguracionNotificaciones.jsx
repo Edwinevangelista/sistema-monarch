@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
+import { subscribeToPushFCM } from '../lib/subscribeToPushFCM';
 
 export default function ConfiguracionNotificaciones() {
-  const { 
-    supported, 
-    permission, 
-    requestPermission, 
-    subscribeToPush,
-    showLocalNotification 
+  const {
+    supported,
+    permission,
+    requestPermission,
+    showLocalNotification
   } = useNotifications();
 
   const [loading, setLoading] = useState(false);
@@ -36,16 +36,13 @@ export default function ConfiguracionNotificaciones() {
   const handleActivarNotificaciones = async () => {
     setLoading(true);
     try {
+      // requestPermission primero para que el hook actualice el estado
       const perm = await requestPermission();
-      
+
       if (perm === 'granted') {
-        await subscribeToPush();
-        
-        // Mostrar notificación de prueba
-        showLocalNotification('¡Notificaciones activadas!', {
-          body: 'Recibirás alertas sobre tus finanzas',
-          icon: '/logo192.png'
-        });
+        // Usar subscribeToPushFCM que activa el SW (funciona en Android/iOS)
+        await subscribeToPushFCM();
+        // La notificación de confirmación ya la lanza subscribeToPushFCM
       }
     } catch (error) {
       console.error('Error:', error);
