@@ -185,9 +185,9 @@ export default function ModuloCuentasBancarias({
     const saldoNum = parseFloat(formSaldo || 0);
 
     try {
+      // Nota: tipo_cuenta no existe en la BD — se guarda solo en memoria como formTipo
       const dataCuenta = {
         nombre: formNombre.trim(),
-        tipo_cuenta: formTipo,
         banco: formBanco.trim(),
         ultimos_digitos: formUltimosDigitos.trim(),
         balance: saldoNum

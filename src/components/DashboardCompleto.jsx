@@ -55,6 +55,7 @@ import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
 import ModalCoberturaCuentas from './ModalCoberturaCuentas'
+import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
 
@@ -103,6 +104,9 @@ export default function DashboardCompleto()  {
   
   // NUEVO: Estado de exportación
   const [showExportacion, setShowExportacion] = useState(false)
+
+  // Proyección 3 días: se muestra una vez por día al entrar
+  const [showProyeccion3d, setShowProyeccion3d] = useState(false)
 
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   
@@ -1757,6 +1761,17 @@ deudasInstant.forEach(d => {
     }
     }, [alertas, permission, hoy, showLocalNotification])
 
+  // Mostrar modal de proyección 3 días una vez al día al tener datos cargados
+  useEffect(() => {
+    if (cuentas.length === 0) return
+    const key = 'proyeccion3d_ultima_fecha'
+    const hoyStr = new Date().toDateString()
+    if (localStorage.getItem(key) !== hoyStr) {
+      setShowProyeccion3d(true)
+      localStorage.setItem(key, hoyStr)
+    }
+  }, [cuentas])
+
 const gastosPorCategoria = useMemo(() => {
   const categorias = {}
   
@@ -2489,6 +2504,16 @@ const dataGraficaDona = useMemo(() =>
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL PROYECCIÓN 3 DÍAS - aparece al entrar, una vez por día */}
+      {showProyeccion3d && (
+        <ModalProyeccion3Dias
+          cuentas={cuentas}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+          onClose={() => setShowProyeccion3d(false)}
+        />
       )}
 
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
