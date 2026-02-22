@@ -727,8 +727,8 @@ useEffect(() => {
       setGastoEditando(null)
 
       // ✅ Forzar refresh: limpiar TODAS las cachés de gastos y traer datos frescos del servidor
-      localStorage.removeItem('gastos_cache')      // caché interna del hook (tabla: gastos)
-      localStorage.removeItem('gastos_cache_v2')   // caché del dashboard
+      localStorage.removeItem('gastos_variables_cache') // caché interna del hook (useSupabaseData)
+      localStorage.removeItem('gastos_cache_v2')        // caché del dashboard
       setTimeout(() => {
         refreshGastos(true)  // force=true para saltarse caché
       }, 300)
