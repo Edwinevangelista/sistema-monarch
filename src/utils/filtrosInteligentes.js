@@ -71,69 +71,26 @@ const filtrarIngresos = (ingresos, tipoFiltro) => {
  */
 const filtrarGastosVariables = (gastos, tipoFiltro) => {
   const rango = obtenerRangoFechas(tipoFiltro)
-  
-  console.log('🔍 Filtrando gastos variables:', {
-    total: gastos.length,
-    rango,
-    tipoFiltro
-  })
-  
-  // ✨ PASO 1: Filtrar autopagos de suscripciones Y archivados
+
+  // PASO 1: Excluir archivados, importaciones bancarias y autopagos de suscripciones
   const gastosLimpios = gastos.filter(gasto => {
-    // Excluir gastos archivados
-    if (gasto.archivado === true) {
-      console.log('❌ Archivado:', gasto.descripcion)
-      return false
-    }
-    
-    // ✅ Excluir autopagos de suscripciones (ya están en la tabla de suscripciones)
-    if (gasto.metodo === 'Autopago' && gasto.categoria === '📅 Suscripciones') {
-      console.log('❌ Autopago de suscripción:', gasto.descripcion)
-      return false
-    }
-    
-    // ✅ Excluir gastos con descripción de autopago (por si acaso)
-    if (gasto.descripcion?.includes('Autopago:') && gasto.categoria === '📅 Suscripciones') {
-      console.log('❌ Autopago detectado por descripción:', gasto.descripcion)
-      return false
-    }
-    
+    if (gasto.archivado === true) return false
+    // Movimientos importados del estado de cuenta bancario (LectorEstadoCuenta)
+    if (gasto.metodo === 'Estado de Cuenta') return false
+    // Autopagos de suscripciones (ya aparecen en su propia sección)
+    if (gasto.metodo === 'Autopago' && gasto.categoria === '📅 Suscripciones') return false
+    if (gasto.descripcion?.includes('Autopago:') && gasto.categoria === '📅 Suscripciones') return false
     return true
   })
-  
-  console.log('✅ Después de limpiar archivados/autopagos:', gastosLimpios.length)
-  
-  // ✨ PASO 2: Filtrar por fecha si hay rango
-  if (!rango) {
-    console.log('ℹ️ Sin filtro de fecha, retornando todos los gastos limpios')
-    return gastosLimpios
-  }
 
-  const gastosFiltradosPorFecha = gastosLimpios.filter(gasto => {
-    if (!gasto.fecha) {
-      console.log('⚠️ Gasto sin fecha:', gasto.descripcion)
-      return false
-    }
-    
+  // PASO 2: Filtrar por rango de fechas
+  if (!rango) return gastosLimpios
+
+  return gastosLimpios.filter(gasto => {
+    if (!gasto.fecha) return false
     const fechaGasto = new Date(gasto.fecha + 'T00:00:00')
-    const estaEnRango = fechaGasto >= rango.inicio && fechaGasto <= rango.fin
-    
-    if (!estaEnRango) {
-      console.log('❌ Fuera de rango:', {
-        descripcion: gasto.descripcion,
-        fecha: gasto.fecha,
-        fechaGasto: fechaGasto.toISOString(),
-        rangoInicio: rango.inicio.toISOString(),
-        rangoFin: rango.fin.toISOString()
-      })
-    }
-    
-    return estaEnRango
+    return fechaGasto >= rango.inicio && fechaGasto <= rango.fin
   })
-  
-  console.log('✅ Después de filtrar por fecha:', gastosFiltradosPorFecha.length)
-  
-  return gastosFiltradosPorFecha
 }
 
 /**
@@ -155,8 +112,6 @@ const filtrarSuscripciones = (suscripciones, tipoFiltro) => {
  * 📊 FUNCIÓN PRINCIPAL: Obtiene datos filtrados con lógica inteligente
  */
 export const obtenerDatosFiltrados = (datos, tipoFiltro = FILTRO_TIPOS.MES_ACTUAL) => {
-  console.log('🔍 Filtrando datos con tipo:', tipoFiltro)
-  
   const {
     ingresos = [],
     gastosVariables = [],
@@ -165,16 +120,13 @@ export const obtenerDatosFiltrados = (datos, tipoFiltro = FILTRO_TIPOS.MES_ACTUA
     deudas = []
   } = datos
 
-  const resultado = {
+  return {
     ingresos: filtrarIngresos(ingresos, tipoFiltro),
     gastosVariables: filtrarGastosVariables(gastosVariables, tipoFiltro),
     gastosFijos: filtrarGastosFijos(gastosFijos, tipoFiltro),
     suscripciones: filtrarSuscripciones(suscripciones, tipoFiltro),
-    deudas // Las deudas no se filtran por fecha
+    deudas
   }
-  
-  console.log('✅ Datos filtrados:', resultado)
-  return resultado
 }
 
 /**
