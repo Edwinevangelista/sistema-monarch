@@ -1351,17 +1351,10 @@ const ingresosDelMes = datosFiltradosInteligentes.ingresos
 const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
 const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
 
-// ✅ GASTOS VARIABLES: todos los gastos manuales del usuario (sin filtro de fecha)
-// Excluye: archivados, importaciones bancarias, autopagos de suscripciones
+// ✅ GASTOS VARIABLES: todos los gastos manuales del usuario (sin filtro)
 const gastosDelMes = useMemo(() => {
-  const METODOS_BANCARIOS_EXCLUIR = ['Estado de Cuenta', 'Autopago']
-  return gastosInstant.filter(g => {
-    if (g.archivado === true) return false
-    if (g.metodo && METODOS_BANCARIOS_EXCLUIR.includes(g.metodo)) return false
-    if (g.categoria === '📅 Suscripciones') return false
-    if (g.descripcion?.includes('Autopago:')) return false
-    return true
-  })
+  // SIN FILTRO: mostrar absolutamente todos para diagnóstico
+  return [...gastosInstant]
 }, [gastosInstant])
 
 
