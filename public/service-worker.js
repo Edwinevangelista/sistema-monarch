@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'finguide-app-v1';
+const CACHE_NAME = 'finguide-app-v2';
 
 // ==============================
 // INSTALL
