@@ -2386,6 +2386,7 @@ const dataGraficaDona = useMemo(() =>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
   <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosDelMes.length}</div>
   <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
+  <div className="text-[9px] text-yellow-400">i:{gastosInstant.length} f:{gastosDelMes.length}</div>
 </div>
           </div>
         </div>
