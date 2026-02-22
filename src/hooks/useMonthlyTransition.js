@@ -64,7 +64,7 @@ export const useMonthlyTransition = () => {
     console.log(`📅 Mes actual: ${mesActual + 1}/${añoActual}`)
 
     const { data: gastosArchivados, error } = await supabase
-      .from('gastos_all')  // ✅ tabla real en Supabase
+      .from('gastos_variables')  // ✅ BASE TABLE real (gastos_all es VIEW de solo lectura)
       .update({ 
         archivado: true, 
         fecha_archivado: new Date().toISOString() 

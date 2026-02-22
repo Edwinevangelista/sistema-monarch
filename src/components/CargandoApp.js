@@ -69,7 +69,7 @@ export default function CargandoApp() {
           const user_id = session.user.id
           const tables = [
             { name: 'ingresos', table: 'ingresos' },
-            { name: 'gastos', table: 'gastos_all' },  // ✅ tabla real
+            { name: 'gastos', table: 'gastos_variables' },  // ✅ BASE TABLE real
             { name: 'gastos_fijos', table: 'gastos_fijos' },
             { name: 'suscripciones', table: 'suscripciones' },
             { name: 'deudas', table: 'deudas' },
