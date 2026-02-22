@@ -191,7 +191,7 @@ const {
 } = useMonthlyTransition()
 
   const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
-  const { gastos, addGasto, updateGasto, deleteGasto, refresh: refreshGastos } = useGastosVariables()
+  const { gastos, loading: gastosLoading, addGasto, updateGasto, deleteGasto, refresh: refreshGastos } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
   const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
@@ -278,13 +278,32 @@ useEffect(() => {
 
 useEffect(() => {
   // ✅ Sincronizar gastos del hook → estado instant.
-  // SIEMPRE actualizar cuando el hook cambia (incluso si viene vacío del servidor)
-  // NUNCA bloquear con length === 0 porque podría ser un refresh legítimo
+  // Solo cuando el hook terminó de cargar (gastosLoading=false)
   if (!Array.isArray(gastos)) return
-  // Solo actualizar si hay datos O si el hook ya terminó de cargar (no bloquear con vacío inicial)
-  setGastosInstant(gastos)
-  localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
-}, [gastos]);
+  if (gastosLoading) return
+
+  if (gastos.length > 0) {
+    // Hook tiene datos reales → aplicar
+    setGastosInstant(gastos)
+    localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
+  } else {
+    // Hook devolvió vacío → carga directa desde Supabase como fallback robusto
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('gastos').select('*')
+        .eq('user_id', user.id)
+        .order('fecha', { ascending: false })
+        .limit(500)
+        .then(({ data: gastosDB, error }) => {
+          if (error) { console.error('❌ Fallback gastos:', error); return }
+          const d = gastosDB || []
+          setGastosInstant(d)
+          localStorage.setItem('gastos_cache_v2', JSON.stringify(d))
+          console.log('✅ Gastos cargados directo de BD:', d.length)
+        })
+    })
+  }
+}, [gastos, gastosLoading]);
 
 useEffect(() => {
     if (gastosFijos.length > 0) {
@@ -654,13 +673,15 @@ useEffect(() => {
         })
         console.log('✅ Gasto actualizado')
       } else {
+        console.log('📤 Enviando gasto a BD:', JSON.stringify(data, null, 2))
         const result = await addGasto(data)
-        console.log('✅ Gasto creado, result:', result)
+        console.log('📥 Resultado addGasto:', JSON.stringify(result, null, 2))
 
         // Si falló el insert, abortar — no hacer optimistic update falso
         if (!result?.success || !result?.data?.[0]) {
           console.error('❌ addGasto falló:', result?.error)
-          throw new Error(result?.error?.message || 'Error al guardar en base de datos')
+          const errMsg = result?.error?.message || result?.error?.details || result?.error?.hint || JSON.stringify(result?.error) || 'Error al guardar en base de datos'
+          throw new Error(errMsg)
         }
 
         const nuevoGasto = result.data[0]
@@ -712,8 +733,9 @@ useEffect(() => {
         refreshGastos(true)  // force=true para saltarse caché
       }, 300)
     } catch (e) {
-      console.error('❌ Error al guardar gasto:', e)
-      alert('Error al guardar el gasto')
+      console.error('❌ Error al guardar gasto completo:', e)
+      const msg = e?.message || e?.error?.message || JSON.stringify(e) || 'Error desconocido'
+      alert('Error al guardar: ' + msg)
     }
   }
 
