@@ -682,6 +682,11 @@ useEffect(() => {
     try {
       if (!data.fecha) data.fecha = hoyStr
 
+      // Limpiar campos que NO existen en la tabla gastos_variables
+      // (deuda_id no es columna de gastos_variables — es de pagos_tarjetas)
+      const { deuda_id, ...dataLimpia } = data
+      data = dataLimpia
+
       if (data.id) {
         await updateGasto(data.id, data)
         // ✅ Actualización optimista del estado instantáneo al editar
