@@ -249,16 +249,13 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
 
   // 📅 FILTROS INTELIGENTES: Respetan transición mensual
   const datosFiltradosInteligentes = useMemo(() => {
-    console.log('🔍 datosFiltradosInteligentes → gastosInstant.length:', gastosInstant.length)
-    const resultado = obtenerDatosFiltrados({
+    return obtenerDatosFiltrados({
       ingresos: ingresosInstant,
       gastosVariables: gastosInstant,
       gastosFijos: gastosFijosInstant,
       suscripciones: suscripcionesInstant,
       deudas: deudasInstant
     }, FILTRO_TIPOS.MES_ACTUAL)
-    console.log('🔍 datosFiltradosInteligentes → gastosVariables filtrados:', resultado.gastosVariables.length)
-    return resultado
 
 }, [
   ingresosInstant,
@@ -1372,27 +1369,16 @@ const ingresosDelMes = datosFiltradosInteligentes.ingresos
 const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
 const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
 
-// ✅ GASTOS VARIABLES: calculado directamente de gastosInstant
-// Excluye importaciones bancarias y autopagos de suscripciones
-// Muestra todos los del mes actual (o todos si no hay filtro de fecha activo)
+// ✅ GASTOS VARIABLES: todos los gastos manuales del usuario (sin filtro de fecha)
+// Excluye: archivados, importaciones bancarias, autopagos de suscripciones
+const METODOS_BANCARIOS_EXCLUIR = ['Estado de Cuenta', 'Autopago']
 const gastosDelMes = useMemo(() => {
-  const METODOS_BANCARIOS = ['Estado de Cuenta', 'Autopago']
-  const ahora = new Date()
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
-  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59)
-
   return gastosInstant.filter(g => {
-    // Excluir archivados
     if (g.archivado === true) return false
-    // Excluir importaciones bancarias
-    if (g.metodo && METODOS_BANCARIOS.includes(g.metodo)) return false
-    // Excluir autopagos de suscripciones
+    if (g.metodo && METODOS_BANCARIOS_EXCLUIR.includes(g.metodo)) return false
     if (g.categoria === '📅 Suscripciones') return false
     if (g.descripcion?.includes('Autopago:')) return false
-    // Filtrar por mes actual
-    if (!g.fecha) return false
-    const fechaGasto = new Date(g.fecha + 'T00:00:00')
-    return fechaGasto >= inicioMes && fechaGasto <= finMes
+    return true
   })
 }, [gastosInstant])
 
@@ -2423,11 +2409,8 @@ const dataGraficaDona = useMemo(() =>
               <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
-  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length > 0 ? gastosDelMes.length : gastosInstant.length}</div>
+  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosDelMes.length}</div>
   <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
-  {process.env.NODE_ENV === 'development' && (
-    <div className="text-[9px] text-yellow-400 mt-1">BD:{gastosInstant.length} Mes:{gastosDelMes.length}</div>
-  )}
 </div>
           </div>
         </div>
