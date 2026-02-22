@@ -269,6 +269,36 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
 ])
 
 
+// --- CARGA DIRECTA DE GASTOS AL MONTAR (independiente del hook) ---
+useEffect(() => {
+  // Si ya tenemos datos en cache local, no sobreescribir todavía
+  // Pero siempre verificar con Supabase en background
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (!user) return
+    supabase.from('gastos_variables').select('*')
+      .eq('user_id', user.id)
+      .order('fecha', { ascending: false })
+      .limit(500)
+      .then(({ data: gastosDB, error }) => {
+        if (error) {
+          console.error('❌ Carga directa gastos al montar:', error)
+          return
+        }
+        const d = gastosDB || []
+        console.log('🚀 Carga directa al montar → gastos_variables:', d.length, 'registros')
+        if (d.length > 0) {
+          setGastosInstant(d)
+          localStorage.setItem('gastos_cache_v2', JSON.stringify(d))
+          localStorage.setItem('gastos_variables_cache', JSON.stringify({ data: d, timestamp: Date.now() }))
+        } else if (gastosInstant.length === 0) {
+          // La tabla realmente está vacía
+          console.warn('⚠️ gastos_variables tabla está vacía en Supabase para este user_id:', user.id)
+        }
+      })
+  })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []) // Solo al montar
+
 // --- EFECTOS DE SINCRONIZACIÓN ---
 // ✅ CORREGIDO: Se eliminó "if (x.length > 0)" para no bloquear sync cuando
 // el hook devuelve un array vacío o cuando el primer registro viene del servidor.
@@ -2370,8 +2400,11 @@ const dataGraficaDona = useMemo(() =>
               <div className="text-[10px] md:text-xs text-yellow-300 font-medium uppercase tracking-wide">Fijos</div>
             </div>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
-  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosDelMes.length}</div>
+  <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosInstant.length > 0 ? gastosDelMes.length : gastosInstant.length}</div>
   <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
+  {process.env.NODE_ENV === 'development' && (
+    <div className="text-[9px] text-yellow-400 mt-1">BD:{gastosInstant.length} Mes:{gastosDelMes.length}</div>
+  )}
 </div>
           </div>
         </div>
