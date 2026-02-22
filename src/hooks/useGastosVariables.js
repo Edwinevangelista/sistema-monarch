@@ -2,7 +2,7 @@ import { useSupabaseData } from './useSupabaseData'
 
 export const useGastosVariables = (lazyLoad = false) => {
   const { data, loading, addRecord, updateRecord, deleteRecord, refresh, initialize } = useSupabaseData(
-    'gastos',                   // ✅ Nombre real de la tabla en Supabase
+    'gastos_all',               // ✅ Nombre real de la tabla en Supabase
     {
       lazyLoad,
       orderBy: 'fecha',

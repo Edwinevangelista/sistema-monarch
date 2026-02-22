@@ -290,7 +290,7 @@ useEffect(() => {
     // Hook devolvió vacío → carga directa desde Supabase como fallback robusto
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      supabase.from('gastos').select('*')
+      supabase.from('gastos_all').select('*')
         .eq('user_id', user.id)
         .order('fecha', { ascending: false })
         .limit(500)
