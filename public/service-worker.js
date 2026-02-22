@@ -1,67 +1,84 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'finguide-app-v2';
+const CACHE_NAME = 'finguide-app-v3';
 
 // ==============================
-// INSTALL
+// INSTALL — tomar control inmediatamente
 // ==============================
-self.addEventListener('install', () => {
-  console.log('Service Worker: Instalando...');
-  self.skipWaiting();
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Instalando v3...');
+  // Forzar activación inmediata sin esperar que se cierren tabs viejas
+  event.waitUntil(self.skipWaiting());
 });
 
 // ==============================
-// ACTIVATE
+// ACTIVATE — limpiar caches viejos y tomar control
 // ==============================
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activado');
+  console.log('Service Worker: Activado v3');
   event.waitUntil(
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames.map((cacheName) => {
+          // Eliminar CUALQUIER cache viejo
           if (cacheName !== CACHE_NAME) {
+            console.log('SW: Eliminando cache viejo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       )
-    )
+    ).then(() => {
+      // Tomar control de todos los clientes inmediatamente
+      return self.clients.claim();
+    })
   );
-  self.clients.claim();
 });
 
 // ==============================
-// FETCH
+// FETCH — Network-first para JS/CSS, cache para imágenes
 // ==============================
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = event.request.url;
 
+  // Para scripts y estilos: SIEMPRE red primero (nunca servir JS viejo)
+  const isScript = url.includes('/static/js/') || url.includes('/static/css/');
+  if (isScript) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Para imágenes y otros assets estáticos: cache-first
   const isStaticAsset =
-    url.includes('/static/') ||
     url.includes('/branding/') ||
-    event.request.destination === 'image' ||
-    event.request.destination === 'style' ||
-    event.request.destination === 'script';
+    event.request.destination === 'image';
 
   if (!isStaticAsset) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
-
-      return fetch(event.request)
-        .then((response) => {
-          if (!response || response.status !== 200) return response;
-
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-
-          return response;
-        })
-        .catch(() => caches.match(event.request));
+      return fetch(event.request).then((response) => {
+        if (!response || response.status !== 200) return response;
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
+        return response;
+      });
     })
   );
 });
@@ -124,4 +141,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('Service Worker: Cargado');
+console.log('Service Worker v3: Cargado');
