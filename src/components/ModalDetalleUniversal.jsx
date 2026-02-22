@@ -102,7 +102,7 @@ export default function ModalDetalleUniversal({
     isSuscripcionPagada = pp.getFullYear() > hoy.getFullYear() || (pp.getFullYear() === hoy.getFullYear() && pp.getMonth() > hoy.getMonth())
   }
   const isGastoFijoPagado = type === ITEM_TYPES.FIJO && item.estado === 'Pagado'
-  const isPagado = isGastoFijoPagado || isSuscripcionPagada
+  
 
   // =========================
   // SHARED: Card de detalle pequeño
