@@ -72,14 +72,21 @@ const filtrarIngresos = (ingresos, tipoFiltro) => {
 const filtrarGastosVariables = (gastos, tipoFiltro) => {
   const rango = obtenerRangoFechas(tipoFiltro)
 
-  // PASO 1: Excluir archivados, importaciones bancarias y autopagos de suscripciones
+  // Métodos válidos para gastos variables manuales del usuario
+  const METODOS_MANUALES = ['Efectivo', 'Tarjeta', 'Transferencia', 'Cheque']
+
+  // PASO 1: Excluir archivados, importaciones bancarias y autopagos
   const gastosLimpios = gastos.filter(gasto => {
     if (gasto.archivado === true) return false
-    // Movimientos importados del estado de cuenta bancario (LectorEstadoCuenta)
-    if (gasto.metodo === 'Estado de Cuenta') return false
+
+    // Solo mostrar gastos con método manual explícito del usuario
+    // metodo=null o metodo='Estado de Cuenta' = importados del banco (versión vieja o nueva)
+    if (!gasto.metodo || !METODOS_MANUALES.includes(gasto.metodo)) return false
+
     // Autopagos de suscripciones (ya aparecen en su propia sección)
     if (gasto.metodo === 'Autopago' && gasto.categoria === '📅 Suscripciones') return false
     if (gasto.descripcion?.includes('Autopago:') && gasto.categoria === '📅 Suscripciones') return false
+
     return true
   })
 
