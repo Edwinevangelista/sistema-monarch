@@ -1369,9 +1369,32 @@ const handleForzarTransicionMensual = async () => {
   // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
 // DATOS FILTRADOS CON LÓGICA DE TRANSICIÓN
 const ingresosDelMes = datosFiltradosInteligentes.ingresos
-const gastosDelMes = datosFiltradosInteligentes.gastosVariables
 const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
 const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
+
+// ✅ GASTOS VARIABLES: calculado directamente de gastosInstant
+// Excluye importaciones bancarias y autopagos de suscripciones
+// Muestra todos los del mes actual (o todos si no hay filtro de fecha activo)
+const gastosDelMes = useMemo(() => {
+  const METODOS_BANCARIOS = ['Estado de Cuenta', 'Autopago']
+  const ahora = new Date()
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59)
+
+  return gastosInstant.filter(g => {
+    // Excluir archivados
+    if (g.archivado === true) return false
+    // Excluir importaciones bancarias
+    if (g.metodo && METODOS_BANCARIOS.includes(g.metodo)) return false
+    // Excluir autopagos de suscripciones
+    if (g.categoria === '📅 Suscripciones') return false
+    if (g.descripcion?.includes('Autopago:')) return false
+    // Filtrar por mes actual
+    if (!g.fecha) return false
+    const fechaGasto = new Date(g.fecha + 'T00:00:00')
+    return fechaGasto >= inicioMes && fechaGasto <= finMes
+  })
+}, [gastosInstant])
 
 
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
