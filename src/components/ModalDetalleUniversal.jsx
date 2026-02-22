@@ -1,15 +1,23 @@
 import { ITEM_TYPES } from '../constants/itemTypes'
-import { 
-  X, 
-  Edit2, 
-  CheckCircle, 
-  CreditCard, 
-  Calendar, 
+import {
+  X,
+  Edit2,
+  CheckCircle,
+  CreditCard,
+  Calendar,
   Info,
   Wallet,
   FileText,
   Repeat,
-  Loader2 
+  Loader2,
+  Tag,
+  Banknote,
+  ShoppingCart,
+  MapPin,
+  Clock,
+  TrendingDown,
+  ArrowDownCircle,
+  Receipt
 } from 'lucide-react'
 
 import { getEstadoTarjeta } from '../utils/tarjetasCalculos'
@@ -42,15 +50,15 @@ export default function ModalDetalleUniversal({
 
   // Colores y Estilos por Tipo
   const theme = {
-    debt: { color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: CreditCard, label: 'Deuda' },
-    fixed: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', icon: Calendar, label: 'Gasto Fijo' },
-    subscription: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: Repeat, label: 'Suscripción' },
-    income: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', icon: Wallet, label: 'Ingreso' },
-    variable: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', icon: FileText, label: 'Gasto' },
-    default: { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', icon: Info, label: 'Detalle' }
+    debt: { color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: CreditCard, label: 'Deuda', gradient: 'from-purple-900/30 to-gray-900' },
+    fixed: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', icon: Calendar, label: 'Gasto Fijo', gradient: 'from-yellow-900/20 to-gray-900' },
+    subscription: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: Repeat, label: 'Suscripción', gradient: 'from-blue-900/30 to-gray-900' },
+    income: { color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30', icon: Wallet, label: 'Ingreso', gradient: 'from-green-900/20 to-gray-900' },
+    variable: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: ShoppingCart, label: 'Gasto Variable', gradient: 'from-orange-900/20 to-gray-900' },
+    default: { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', icon: Info, label: 'Detalle', gradient: 'from-gray-800 to-gray-900' }
   }
 
-  const currentTheme = 
+  const currentTheme =
     type === ITEM_TYPES.DEUDA ? theme.debt :
     type === ITEM_TYPES.FIJO ? theme.fixed :
     type === ITEM_TYPES.SUSCRIPCION ? theme.subscription :
@@ -62,72 +70,241 @@ export default function ModalDetalleUniversal({
   // =========================
   // Lógica de Estado
   // =========================
-
-  // 1. Estado estándar (Gastos Fijos)
   const isGastoFijoPagado = (type === ITEM_TYPES.FIJO && item.estado === 'Pagado')
 
-  // 2. Estado Dinámico (Suscripciones) - LÓGICA PROFESIONAL
   let isSuscripcionPagada = false
-
   if (type === ITEM_TYPES.SUSCRIPCION) {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
     const proximoPagoStr = item.proximo_pago || hoy.toISOString().split('T')[0];
     const proximoPago = new Date(proximoPagoStr + 'T00:00:00');
     proximoPago.setHours(0, 0, 0, 0);
-    
-    // ✅ LÓGICA CORRECTA: Está pagada si proximo_pago está en mes/año siguiente
     const esMesSiguiente = (
       proximoPago.getFullYear() > hoy.getFullYear() ||
       (proximoPago.getFullYear() === hoy.getFullYear() && proximoPago.getMonth() > hoy.getMonth())
     );
-    
     isSuscripcionPagada = esMesSiguiente;
   }
 
-  // Estado global
   const isPagado = isGastoFijoPagado || isSuscripcionPagada
 
   // =========================
-  // Render
+  // Helpers de formato
+  // =========================
+  const formatFecha = (fechaStr) => {
+    if (!fechaStr) return null
+    const fecha = new Date(fechaStr + 'T00:00:00')
+    return fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  const getDiaSemana = (fechaStr) => {
+    if (!fechaStr) return null
+    const fecha = new Date(fechaStr + 'T00:00:00')
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    return dias[fecha.getDay()]
+  }
+
+  const getMetodoIcon = (metodo) => {
+    if (!metodo) return Banknote
+    if (metodo.toLowerCase().includes('débito') || metodo.toLowerCase().includes('debito')) return CreditCard
+    if (metodo.toLowerCase().includes('tarjeta') || metodo.toLowerCase().includes('crédito')) return CreditCard
+    if (metodo.toLowerCase().includes('transferencia')) return ArrowDownCircle
+    if (metodo.toLowerCase().includes('efectivo')) return Banknote
+    return Receipt
+  }
+
+  const getMetodoColor = (metodo) => {
+    if (!metodo) return 'text-gray-400'
+    if (metodo.toLowerCase().includes('débito') || metodo.toLowerCase().includes('debito')) return 'text-blue-400'
+    if (metodo.toLowerCase().includes('crédito') || metodo.toLowerCase().includes('tarjeta')) return 'text-purple-400'
+    if (metodo.toLowerCase().includes('efectivo')) return 'text-green-400'
+    if (metodo.toLowerCase().includes('transferencia')) return 'text-cyan-400'
+    return 'text-gray-300'
+  }
+
+  // =========================
+  // RENDER: GASTO VARIABLE (diseño especial)
+  // =========================
+  if (type === ITEM_TYPES.VARIABLE) {
+    const monto = getMonto()
+    const MetodoIcon = getMetodoIcon(item.metodo)
+    const metodoColor = getMetodoColor(item.metodo)
+
+    return (
+      <div className="bg-gray-900 rounded-2xl w-full overflow-hidden flex flex-col">
+
+        {/* HEADER compacto */}
+        <div className={`bg-gradient-to-r ${currentTheme.gradient} px-5 pt-5 pb-0 relative`}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${currentTheme.bg} border ${currentTheme.border}`}>
+                <ShoppingCart className={`w-5 h-5 ${currentTheme.color}`} />
+              </div>
+              <div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${currentTheme.color} opacity-80`}>Gasto Variable · Registrado</span>
+                <h2 className="text-white font-bold text-lg leading-tight">
+                  {item.descripcion || item.nombre || 'Gasto'}
+                </h2>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* MONTO HERO — compacto y con badge de estado */}
+          <div className="bg-black/20 rounded-2xl px-5 py-4 mb-0 flex items-center justify-between border border-white/5">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Monto gastado</p>
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-black text-white tracking-tight">
+                  ${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-sm text-gray-500 mb-1">MXN</span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/25 px-3 py-1.5 rounded-full">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-xs font-semibold text-green-400">Pagado</span>
+              </div>
+              {item.fecha && (
+                <span className="text-xs text-gray-500">{getDiaSemana(item.fecha)}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Línea divisoria con fade */}
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mt-4" />
+        </div>
+
+        {/* DETALLES — grid compacto */}
+        <div className="px-5 py-4 space-y-3">
+
+          {/* Fila 1: Fecha + Categoría */}
+          <div className="grid grid-cols-2 gap-3">
+            {item.fecha && (
+              <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Fecha</span>
+                </div>
+                <p className="text-white font-semibold text-sm">
+                  {new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            )}
+            {item.categoria && (
+              <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Tag className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Categoría</span>
+                </div>
+                <p className="text-white font-semibold text-sm truncate">{item.categoria}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Fila 2: Método de pago + Cuenta */}
+          <div className="grid grid-cols-2 gap-3">
+            {item.metodo && (
+              <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <MetodoIcon className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Método</span>
+                </div>
+                <p className={`font-semibold text-sm ${metodoColor}`}>{item.metodo}</p>
+              </div>
+            )}
+            {item.cuenta_nombre && (
+              <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Wallet className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Cuenta</span>
+                </div>
+                <p className="text-white font-semibold text-sm truncate">{item.cuenta_nombre}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Descripción / Notas (si existe y es diferente al título) */}
+          {item.descripcion && item.descripcion !== getTitle() && (
+            <div className="bg-gray-800/40 rounded-xl p-3 border border-white/5">
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-3.5 h-3.5 text-gray-500" />
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">{item.descripcion}</p>
+            </div>
+          )}
+
+          {/* Fila archivado (solo si aplica) */}
+          {item.archivado && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-700/30 rounded-xl border border-gray-600/30">
+              <Clock className="w-3.5 h-3.5 text-gray-500" />
+              <span className="text-xs text-gray-500">Archivado — mes anterior</span>
+            </div>
+          )}
+        </div>
+
+        {/* FOOTER — solo botón Editar */}
+        <div className="px-5 pb-5 pt-1">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/8 to-transparent mb-4" />
+          <button
+            onClick={() => onEditar && onEditar(item, type)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white rounded-xl font-semibold transition-all border border-white/8 hover:border-white/15 active:scale-95"
+          >
+            <Edit2 className="w-4 h-4" />
+            Editar Gasto
+          </button>
+        </div>
+
+      </div>
+    )
+  }
+
+  // =========================
+  // RENDER: RESTO DE TIPOS (original mejorado)
   // =========================
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-full">
-      
+
       {/* --- HEADER --- */}
       <div className="bg-gray-800/50 border-b border-gray-700 p-5 flex items-center justify-between shrink-0">
-<div className="flex items-center gap-4">
-  <div className={`p-3 rounded-xl shadow-sm ${currentTheme.bg} ${currentTheme.border}`}>
-    <IconComponent className={`w-6 h-6 ${currentTheme.color}`} />
-  </div>
-  <div className="flex-1">
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{currentTheme.label}</span>
-      
-      {/* 👉 BADGE DE ESTADO PARA TARJETAS */}
-      {type === ITEM_TYPES.DEUDA && (() => {
-        const estadoTarjeta = getEstadoTarjeta(item.saldo, item.ultimo_pago)
-        return (
-          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-            estadoTarjeta.color === 'green' 
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-              : estadoTarjeta.color === 'red' 
-              ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-              : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-          }`}>
-            {estadoTarjeta.badge}
-          </span>
-        )
-      })()}
-    </div>
-    
-    <h2 className="text-xl font-bold text-white leading-tight mt-0.5">
-      {getTitle()}
-    </h2>
-    <p className="text-sm text-gray-400">{getSubtitle()}</p>
-  </div>
-</div>
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-xl shadow-sm ${currentTheme.bg} ${currentTheme.border}`}>
+            <IconComponent className={`w-6 h-6 ${currentTheme.color}`} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{currentTheme.label}</span>
+
+              {/* BADGE DE ESTADO PARA TARJETAS */}
+              {type === ITEM_TYPES.DEUDA && (() => {
+                const estadoTarjeta = getEstadoTarjeta(item.saldo, item.ultimo_pago)
+                return (
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                    estadoTarjeta.color === 'green'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : estadoTarjeta.color === 'red'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                  }`}>
+                    {estadoTarjeta.badge}
+                  </span>
+                )
+              })()}
+            </div>
+
+            <h2 className="text-xl font-bold text-white leading-tight mt-0.5">
+              {getTitle()}
+            </h2>
+            <p className="text-sm text-gray-400">{getSubtitle()}</p>
+          </div>
+        </div>
         <button
           onClick={onClose}
           className="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg transition-colors"
@@ -149,9 +326,7 @@ export default function ModalDetalleUniversal({
 
       {/* --- DETALLES GRID --- */}
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/30 overflow-y-auto custom-scrollbar flex-1">
-        
-        {/* Detalles Específicos según Tipo */}
-        
+
         {/* 1. Suscripciones */}
         {type === ITEM_TYPES.SUSCRIPCION && (
           <>
@@ -218,8 +393,8 @@ export default function ModalDetalleUniversal({
           </>
         )}
 
-        {/* 4. Variables / Ingresos */}
-        {(type === ITEM_TYPES.VARIABLE || type === ITEM_TYPES.INGRESO) && item.fecha && (
+        {/* 4. Ingresos */}
+        {type === ITEM_TYPES.INGRESO && item.fecha && (
           <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl border border-gray-700 md:col-span-2">
             <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
             <div className="flex-1">
@@ -234,7 +409,7 @@ export default function ModalDetalleUniversal({
         {/* --- DESCRIPCIÓN / CUENTA (Full Width) --- */}
         <div className="col-span-1 md:col-span-2 mt-2">
           <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700 space-y-3">
-            
+
             {/* Cuenta */}
             {item.cuenta_nombre && (
               <div className="flex items-center gap-3">
@@ -245,7 +420,7 @@ export default function ModalDetalleUniversal({
                 </div>
               </div>
             )}
-            
+
             {/* Descripción */}
             {item.descripcion && (
               <div className="flex items-start gap-3 mt-2 pt-2 border-t border-gray-700">
@@ -270,7 +445,7 @@ export default function ModalDetalleUniversal({
 
       {/* --- BOTONES DE ACCIÓN --- */}
       <div className="p-6 bg-gray-900/80 border-t border-gray-700 grid grid-cols-1 gap-4 shrink-0">
-        
+
         {/* Mensaje de Estado (Si está pagado) */}
         {type === ITEM_TYPES.SUSCRIPCION && isPagado && (
           <div className="w-full p-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-between animate-in fade-in zoom-in duration-300">
@@ -294,13 +469,11 @@ export default function ModalDetalleUniversal({
         {type === ITEM_TYPES.SUSCRIPCION ? (
           // --- BOTÓN ESPECIAL PARA SUSCRIPCIÓN ---
           isPagado ? (
-            // ✅ SUSCRIPCIÓN PAGADA - Mostrar botón DESHACER
             <>
-              {/* BOTÓN DESHACER PAGO */}
               <button
                 onClick={() => {
                   if (window.confirm('¿Deshacer el pago de esta suscripción?\n\nEsto devolverá el dinero a tu cuenta y ajustará la fecha de próximo pago.')) {
-                    onClose(); // Cerrar modal primero
+                    onClose();
                     if (window.deshacerPagoSuscripcion) {
                       window.deshacerPagoSuscripcion(item, type);
                     } else {
@@ -315,7 +488,6 @@ export default function ModalDetalleUniversal({
                 Deshacer Pago (Revertir)
               </button>
 
-              {/* BOTÓN SECUNDARIO: Editar Datos */}
               <button
                 onClick={() => onEditar ? onEditar(item, type) : null}
                 disabled={isPagando}
@@ -326,14 +498,13 @@ export default function ModalDetalleUniversal({
               </button>
             </>
           ) : (
-            // Si está pendiente, mostramos botón PAGAR
             <>
               <button
                 onClick={() => onPagar ? onPagar(item, type) : null}
                 disabled={isPagando}
                 className={`
                   w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95
-                  ${currentTheme.bg} ${currentTheme.border} ${currentTheme.color} 
+                  ${currentTheme.bg} ${currentTheme.border} ${currentTheme.color}
                   ${isPagando ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}
                 `}
               >
@@ -350,7 +521,6 @@ export default function ModalDetalleUniversal({
                 )}
               </button>
 
-              {/* BOTÓN SECUNDARIO: Editar Datos */}
               <button
                 onClick={() => onEditar(item, type)}
                 disabled={isPagando}
@@ -362,15 +532,15 @@ export default function ModalDetalleUniversal({
             </>
           )
         ) : (
-          // --- BOTÓN ESTÁNDAR PARA DEMÁS (DEUDAS, FIJOS, VARIABLES) ---
+          // --- BOTÓN ESTÁNDAR PARA DEUDAS Y FIJOS ---
           <>
             <button
               onClick={() => onPagar ? onPagar(item, type) : onEditar(item, type)}
               disabled={isPagado || isPagando}
               className={`
                 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                ${isPagado 
-                  ? 'bg-green-600/20 text-green-400 border-green-600/30 cursor-default' 
+                ${isPagado
+                  ? 'bg-green-600/20 text-green-400 border-green-600/30 cursor-default'
                   : `${currentTheme.bg} ${currentTheme.border} hover:opacity-90 text-white cursor-pointer`
                 }
               `}
