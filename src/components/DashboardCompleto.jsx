@@ -249,13 +249,16 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
 
   // 📅 FILTROS INTELIGENTES: Respetan transición mensual
   const datosFiltradosInteligentes = useMemo(() => {
-    return obtenerDatosFiltrados({
+    console.log('🔍 datosFiltradosInteligentes → gastosInstant.length:', gastosInstant.length)
+    const resultado = obtenerDatosFiltrados({
       ingresos: ingresosInstant,
       gastosVariables: gastosInstant,
-      gastosFijos: gastosFijosInstant, 
+      gastosFijos: gastosFijosInstant,
       suscripciones: suscripcionesInstant,
       deudas: deudasInstant
     }, FILTRO_TIPOS.MES_ACTUAL)
+    console.log('🔍 datosFiltradosInteligentes → gastosVariables filtrados:', resultado.gastosVariables.length)
+    return resultado
 
 }, [
   ingresosInstant,
@@ -284,10 +287,16 @@ useEffect(() => {
 
   if (gastos.length > 0) {
     // Hook tiene datos reales → aplicar
+    console.log('✅ gastos del hook:', gastos.length, 'registros')
     setGastosInstant(gastos)
     localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
   } else {
-    // Hook devolvió vacío → carga directa desde Supabase como fallback robusto
+    // Hook devolvió vacío → limpiar cache corrompido y cargar directo desde Supabase
+    console.warn('⚠️ Hook de gastos devolvió vacío — iniciando fallback directo a BD')
+    // Limpiar caches que puedan tener [] guardado como "válido"
+    localStorage.removeItem('gastos_variables_cache')
+    localStorage.removeItem('gastos_cache_v2')
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       supabase.from('gastos_variables').select('*')
@@ -297,9 +306,10 @@ useEffect(() => {
         .then(({ data: gastosDB, error }) => {
           if (error) { console.error('❌ Fallback gastos:', error); return }
           const d = gastosDB || []
+          console.log('✅ Gastos cargados directo de BD (fallback):', d.length, 'registros')
+          console.log('🔍 Muestra metodo valores:', d.slice(0,5).map(g => ({ id: g.id, metodo: g.metodo, categoria: g.categoria })))
           setGastosInstant(d)
           localStorage.setItem('gastos_cache_v2', JSON.stringify(d))
-          console.log('✅ Gastos cargados directo de BD:', d.length)
         })
     })
   }

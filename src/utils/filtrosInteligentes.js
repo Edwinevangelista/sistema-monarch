@@ -77,15 +77,25 @@ const filtrarGastosVariables = (gastos, tipoFiltro) => {
 
   // PASO 1: Excluir archivados, importaciones bancarias y autopagos de suscripciones
   const gastosLimpios = gastos.filter(gasto => {
-    if (gasto.archivado === true) return false
-
+    if (gasto.archivado === true) {
+      console.log('❌ Excluido (archivado):', gasto.descripcion, gasto.metodo)
+      return false
+    }
     // Excluir importaciones del banco (Estado de Cuenta = importados con LectorEstadoCuenta)
-    if (gasto.metodo && METODOS_BANCARIOS.includes(gasto.metodo)) return false
-
+    if (gasto.metodo && METODOS_BANCARIOS.includes(gasto.metodo)) {
+      console.log('❌ Excluido (bancario):', gasto.descripcion, gasto.metodo)
+      return false
+    }
     // Autopagos de suscripciones (ya aparecen en su propia sección)
-    if (gasto.categoria === '📅 Suscripciones') return false
-    if (gasto.descripcion?.includes('Autopago:')) return false
-
+    if (gasto.categoria === '📅 Suscripciones') {
+      console.log('❌ Excluido (suscripcion):', gasto.descripcion, gasto.categoria)
+      return false
+    }
+    if (gasto.descripcion?.includes('Autopago:')) {
+      console.log('❌ Excluido (Autopago en desc):', gasto.descripcion)
+      return false
+    }
+    console.log('✅ Incluido:', gasto.descripcion, '| metodo:', gasto.metodo, '| cat:', gasto.categoria)
     return true
   })
 
