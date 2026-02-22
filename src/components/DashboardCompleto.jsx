@@ -1351,10 +1351,16 @@ const ingresosDelMes = datosFiltradosInteligentes.ingresos
 const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
 const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
 
-// ✅ GASTOS VARIABLES: todos los gastos manuales del usuario (sin filtro)
+// ✅ GASTOS VARIABLES: gastos manuales no archivados (excluye bancarios y autopagos)
 const gastosDelMes = useMemo(() => {
-  // SIN FILTRO: mostrar absolutamente todos para diagnóstico
-  return [...gastosInstant]
+  const EXCLUIR_METODO = ['Estado de Cuenta', 'Autopago']
+  return gastosInstant.filter(g => {
+    if (g.archivado === true) return false
+    if (g.metodo && EXCLUIR_METODO.includes(g.metodo)) return false
+    if (g.categoria === '📅 Suscripciones') return false
+    if (g.descripcion?.includes('Autopago:')) return false
+    return true
+  })
 }, [gastosInstant])
 
 
@@ -2386,7 +2392,6 @@ const dataGraficaDona = useMemo(() =>
             <div onClick={() => { setOverviewMode('VARIABLES'); setShowModal('gastosOverview') }} className="group bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 rounded-2xl p-4 cursor-pointer touch-manipulation transition-all">
   <div className="text-2xl md:text-3xl font-bold text-white mb-1">{gastosDelMes.length}</div>
   <div className="text-[10px] md:text-xs text-red-300 font-medium uppercase tracking-wide">Variables</div>
-  <div className="text-[9px] text-yellow-400">i:{gastosInstant.length} f:{gastosDelMes.length}</div>
 </div>
           </div>
         </div>
