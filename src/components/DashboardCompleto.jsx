@@ -1351,15 +1351,23 @@ const ingresosDelMes = datosFiltradosInteligentes.ingresos
 const gastosFijosActivos = datosFiltradosInteligentes.gastosFijos
 const suscripcionesActivas = datosFiltradosInteligentes.suscripciones
 
-// ✅ GASTOS VARIABLES: gastos manuales no archivados (excluye bancarios y autopagos)
+// ✅ GASTOS VARIABLES DEL MES ACTUAL
+// Reglas: no archivados + mes actual + no bancarios/autopagos
+// Los gastos de meses anteriores se archivan automáticamente → historial/reportes
 const gastosDelMes = useMemo(() => {
   const EXCLUIR_METODO = ['Estado de Cuenta', 'Autopago']
+  const ahora = new Date()
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59)
+
   return gastosInstant.filter(g => {
     if (g.archivado === true) return false
     if (g.metodo && EXCLUIR_METODO.includes(g.metodo)) return false
     if (g.categoria === '📅 Suscripciones') return false
     if (g.descripcion?.includes('Autopago:')) return false
-    return true
+    if (!g.fecha) return false
+    const fecha = new Date(g.fecha + 'T00:00:00')
+    return fecha >= inicioMes && fecha <= finMes
   })
 }, [gastosInstant])
 
@@ -2443,29 +2451,59 @@ const dataGraficaDona = useMemo(() =>
             
             {/* Tabs */}
             <div className="flex overflow-x-auto p-4 border-b border-white/10 bg-gray-900/50 gap-2">
-              {['ALL', 'DEUDAS', 'FIJOS', 'VARIABLES', 'SUSCRIPCIONES'].map(mode => (
-                <button 
+              {['ALL', 'DEUDAS', 'FIJOS', 'VARIABLES', 'SUSCRIPCIONES', 'HISTORIAL'].map(mode => (
+                <button
                   key={mode}
-                  onClick={() => setOverviewMode(mode)} 
-                  className={`px-4 py-2 rounded-xl text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation transition-all ${overviewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setOverviewMode(mode)}
+                  className={`px-4 py-2 rounded-xl text-xs md:text-sm font-semibold whitespace-nowrap touch-manipulation transition-all ${
+                    overviewMode === mode
+                      ? mode === 'HISTORIAL' ? 'bg-gray-600 text-white' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
                 >
-                  {mode.charAt(0) + mode.slice(1).toLowerCase()}
+                  {mode === 'HISTORIAL' ? '📂 Historial' : mode.charAt(0) + mode.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
 
             <div className="p-4 overflow-y-auto flex-1">
-              <ListaGastosCompleta
-                deudas={overviewData.deudas}
-                gastosFijos={overviewData.gastosFijos}
-                gastosVariables={overviewData.gastosVariables}
-                suscripciones={overviewData.suscripciones}
-                deudaPagadaEsteMes={deudaPagadaEsteMes}
-                onVerDetalle={handleOpenDetail}
-                onEliminar={handleEliminarUnificado}
-                onPagar={handlePagarUniversal}
-                onEditar={handleEditarUniversal}
-              />
+              {overviewMode === 'HISTORIAL' ? (
+                // ── HISTORIAL: gastos archivados de meses anteriores ──
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-400 mb-3">Gastos variables de meses anteriores (archivados automáticamente)</p>
+                  {gastosInstant
+                    .filter(g => g.archivado === true && !['Estado de Cuenta','Autopago'].includes(g.metodo) && !g.descripcion?.includes('Autopago:'))
+                    .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))
+                    .map(g => {
+                      const mes = g.fecha ? new Date(g.fecha + 'T00:00:00').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Sin fecha'
+                      return (
+                        <div key={g.id} className="flex items-center justify-between bg-gray-800/40 border border-white/5 rounded-xl px-4 py-3 opacity-75">
+                          <div>
+                            <p className="text-sm text-white font-medium">{g.descripcion || g.categoria}</p>
+                            <p className="text-xs text-gray-500">{mes} · {g.metodo}</p>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-300">${Number(g.monto||0).toFixed(2)}</span>
+                        </div>
+                      )
+                    })
+                  }
+                  {gastosInstant.filter(g => g.archivado === true && !['Estado de Cuenta','Autopago'].includes(g.metodo) && !g.descripcion?.includes('Autopago:')).length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No hay gastos en el historial</p>
+                  )}
+                </div>
+              ) : (
+                <ListaGastosCompleta
+                  deudas={overviewData.deudas}
+                  gastosFijos={overviewData.gastosFijos}
+                  gastosVariables={overviewData.gastosVariables}
+                  suscripciones={overviewData.suscripciones}
+                  deudaPagadaEsteMes={deudaPagadaEsteMes}
+                  onVerDetalle={handleOpenDetail}
+                  onEliminar={handleEliminarUnificado}
+                  onPagar={handlePagarUniversal}
+                  onEditar={handleEditarUniversal}
+                />
+              )}
             </div>
           </div>
         </div>
