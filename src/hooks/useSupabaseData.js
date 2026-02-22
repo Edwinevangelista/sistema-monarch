@@ -38,8 +38,9 @@ export const useSupabaseData = (
       if (cached) {
         const { data: cachedData, timestamp } = JSON.parse(cached)
         const isValid = Date.now() - timestamp < cacheDuration
-        
-        if (isValid && cachedData) {
+
+        // Solo usar cache si tiene datos reales (array vacío = cache corrupto, ir a Supabase)
+        if (isValid && Array.isArray(cachedData) && cachedData.length > 0) {
           setData(cachedData)
           return true
         }

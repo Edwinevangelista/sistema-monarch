@@ -226,8 +226,15 @@ useEffect(() => {
   });
   
   const [gastosInstant, setGastosInstant] = useState(() => {
-    const cached = localStorage.getItem('gastos_cache_v2');
-    return cached ? JSON.parse(cached) : [];
+    try {
+      const cached = localStorage.getItem('gastos_cache_v2');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Solo usar cache si tiene datos reales (no array vacío corrupto)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch(e) { /* cache corrupto, ignorar */ }
+    return [];
   });
 
   const [gastosFijosInstant, setGastosFijosInstant] = useState(() => {
@@ -307,39 +314,14 @@ useEffect(() => {
 }, [ingresos]);
 
 useEffect(() => {
-  // ✅ Sincronizar gastos del hook → estado instant.
-  // Solo cuando el hook terminó de cargar (gastosLoading=false)
-  if (!Array.isArray(gastos)) return
-  if (gastosLoading) return
-
+  // Solo sincronizar cuando el hook tiene datos reales
+  // NUNCA sobreescribir con [] — eso causa el race condition con la carga directa
+  if (!Array.isArray(gastos) || gastosLoading) return
   if (gastos.length > 0) {
-    // Hook tiene datos reales → aplicar
-    console.log('✅ gastos del hook:', gastos.length, 'registros')
     setGastosInstant(gastos)
     localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
-  } else {
-    // Hook devolvió vacío → limpiar cache corrompido y cargar directo desde Supabase
-    console.warn('⚠️ Hook de gastos devolvió vacío — iniciando fallback directo a BD')
-    // Limpiar caches que puedan tener [] guardado como "válido"
-    localStorage.removeItem('gastos_variables_cache')
-    localStorage.removeItem('gastos_cache_v2')
-
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('gastos_variables').select('*')
-        .eq('user_id', user.id)
-        .order('fecha', { ascending: false })
-        .limit(500)
-        .then(({ data: gastosDB, error }) => {
-          if (error) { console.error('❌ Fallback gastos:', error); return }
-          const d = gastosDB || []
-          console.log('✅ Gastos cargados directo de BD (fallback):', d.length, 'registros')
-          console.log('🔍 Muestra metodo valores:', d.slice(0,5).map(g => ({ id: g.id, metodo: g.metodo, categoria: g.categoria })))
-          setGastosInstant(d)
-          localStorage.setItem('gastos_cache_v2', JSON.stringify(d))
-        })
-    })
   }
+  // Si hook devuelve [] → no hacer nada, la carga directa al montar ya lo maneja
 }, [gastos, gastosLoading]);
 
 useEffect(() => {
