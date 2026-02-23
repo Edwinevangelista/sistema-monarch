@@ -130,7 +130,6 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
   const interesMensualCalculado = deudaActual ? calcularInteresMensual(deudaActual) : 0
   const principalNumber = Number(formData.principal || 0)
   const interesNumber = Number(formData.interes || 0)
-  const cuentaSeleccionada = cuentas.find(c => c.id === formData.cuenta_id)
 
   const inputClass = "w-full bg-gray-800 text-white px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all appearance-none"
 
