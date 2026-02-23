@@ -2569,15 +2569,18 @@ const dataGraficaDona = useMemo(() =>
         <ModalSuscripcion key={suscripcionEditando?.id} onClose={() => { setShowModal(null); setSuscripcionEditando(null) }} onSave={handleGuardarSuscripcion} suscripcionInicial={suscripcionEditando} />
       </ModalWrapper>
 
-      <ModalWrapper show={showModal === 'tarjetas'} onClose={() => setShowModal(null)}>
+      {showModal === 'tarjetas' && (
+        <>
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 99998 }} onClick={() => setShowModal(null)} />
+          <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 99999 }} onClick={() => setShowModal(null)}>
         {/* ── MODAL GESTIÓN DE TARJETAS ── */}
         <div
-          className="w-full md:max-w-md bg-gray-900 rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden"
-          style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top,0px) - 12px)' }}
+          className="w-full max-w-md bg-gray-900 rounded-3xl shadow-2xl border border-white/10 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{ maxHeight: 'calc(100dvh - 32px)' }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* HEADER */}
-          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-purple-950/50 to-gray-900">
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-purple-950/50 to-gray-900 rounded-t-3xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg shadow-purple-600/30">
@@ -2623,7 +2626,7 @@ const dataGraficaDona = useMemo(() =>
           {/* LISTA DE TARJETAS + HISTORIAL */}
           <div
             className="flex-1 overflow-y-auto overscroll-contain px-5 space-y-4"
-            style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom,16px) + 20px)' }}
+            style={{ WebkitOverflowScrolling: 'touch', paddingBottom: '20px' }}
           >
             {deudasInstant.length === 0 ? (
               <div className="text-center py-12">
@@ -2727,19 +2730,18 @@ const dataGraficaDona = useMemo(() =>
             )}
           </div>
         </div>
-      </ModalWrapper>
+          </div>
+        </>
+      )}
 
-      <ModalWrapper show={showModal === 'pagoTarjeta'} onClose={() => { setShowModal(null); setDeudaEditando(null) }}>
-        <ModalPagoTarjeta 
-          onClose={() => {
-            setShowModal(null)
-            setDeudaEditando(null)
-          }} 
-          onSave={handleRegistrarPagoTarjeta} 
+      {showModal === 'pagoTarjeta' && (
+        <ModalPagoTarjeta
+          onClose={() => { setShowModal(null); setDeudaEditando(null) }}
+          onSave={handleRegistrarPagoTarjeta}
           deudas={deudasInstant}
           deudaPreseleccionada={deudaEditando}
         />
-      </ModalWrapper>
+      )}
       
       <ModalWrapper show={showModal === 'agregarDeuda'} onClose={() => { setShowModal(null); setDeudaEditando(null); }}>
 
