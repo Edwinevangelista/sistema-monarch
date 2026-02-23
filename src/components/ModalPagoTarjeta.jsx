@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { CreditCard, X, ChevronLeft, Loader2, Info, Calculator, Wallet, Building2 } from 'lucide-react'
+import { CreditCard, X, Loader2, Info, Calculator, Wallet, Building2 } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null }) => {
@@ -149,38 +149,30 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
     <>
       {/* OVERLAY */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/90 backdrop-blur-sm animate-in fade-in"
         style={{ zIndex: 99998 }}
         onClick={onClose}
       />
 
       {/* MODAL */}
       <div
-        className="fixed inset-0 flex items-end md:items-center md:justify-center"
+        className="fixed inset-0 flex items-center justify-center p-4"
         style={{ zIndex: 99999 }}
       >
         <div
-          className="w-full md:w-[95%] md:max-w-lg
-                     bg-gray-900 rounded-t-3xl md:rounded-2xl shadow-2xl
-                     border-t md:border border-white/10
-                     flex flex-col overflow-hidden"
-          style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 12px)' }}
+          className="w-full max-w-lg
+                     bg-gray-900 rounded-3xl shadow-2xl
+                     border border-white/10
+                     flex flex-col overflow-hidden
+                     animate-in fade-in zoom-in-95 duration-200"
+          style={{ maxHeight: 'calc(100dvh - 32px)' }}
           onClick={(e) => e.stopPropagation()}
         >
 
           {/* HEADER */}
-          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-purple-950/40 to-gray-900">
-            {/* Pill indicator mobile */}
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+          <div className="flex-shrink-0 px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-r from-purple-950/40 to-gray-900 rounded-t-3xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={onClose}
-                  className="p-2 -ml-2 text-gray-400 hover:text-white rounded-xl transition-colors md:hidden"
-                  disabled={isLoading}
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
                 <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg shadow-purple-600/30">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
@@ -192,7 +184,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
               <button
                 onClick={onClose}
                 disabled={isLoading}
-                className="hidden md:flex p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors disabled:opacity-50"
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -204,7 +196,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
             className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-5"
             style={{
               WebkitOverflowScrolling: 'touch',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 80px)'
+              paddingBottom: '16px'
             }}
           >
 
@@ -490,8 +482,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
           {/* FOOTER */}
           <div
-            className="flex-shrink-0 p-4 border-t border-white/10 bg-gray-900"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+            className="flex-shrink-0 p-4 border-t border-white/10 bg-gray-900 rounded-b-3xl"
           >
             <div className="flex gap-3">
               <button
