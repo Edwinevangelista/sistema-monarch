@@ -2729,17 +2729,17 @@ const dataGraficaDona = useMemo(() =>
         </div>
       </ModalWrapper>
 
-      <ModalWrapper show={showModal === 'pagoTarjeta'} onClose={() => { setShowModal(null); setDeudaEditando(null) }}>
-        <ModalPagoTarjeta 
+      {showModal === 'pagoTarjeta' && (
+        <ModalPagoTarjeta
           onClose={() => {
             setShowModal(null)
             setDeudaEditando(null)
-          }} 
-          onSave={handleRegistrarPagoTarjeta} 
+          }}
+          onSave={handleRegistrarPagoTarjeta}
           deudas={deudasInstant}
           deudaPreseleccionada={deudaEditando}
         />
-      </ModalWrapper>
+      )}
       
       <ModalWrapper show={showModal === 'agregarDeuda'} onClose={() => { setShowModal(null); setDeudaEditando(null); }}>
 
