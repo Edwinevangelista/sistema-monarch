@@ -338,14 +338,17 @@ export async function unsubscribeFromPushFCM() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuario no autenticado')
 
-    // Cancelar suscripción push del navegador
+    // Cancelar suscripción push del navegador (con timeout para no colgarse)
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       try {
-        const registration = await navigator.serviceWorker.ready
-        const sub = await registration.pushManager.getSubscription()
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, r) => setTimeout(() => r(new Error('sw timeout')), 4000))
+        ])
+        const sub = await registration.pushManager?.getSubscription()
         if (sub) await sub.unsubscribe()
       } catch (e) {
-        console.warn('No se pudo cancelar pushManager:', e)
+        console.warn('No se pudo cancelar pushManager (ignorado):', e.message)
       }
     }
 

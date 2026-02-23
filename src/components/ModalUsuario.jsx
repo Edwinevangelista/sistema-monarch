@@ -425,57 +425,67 @@ export default function ModalUsuario({
   // NOTIFICACIONES (LIMPIO - SIN DEBUG)
   // =========================
   const handleActivarPush = async () => {
+    // Timeout de seguridad: nunca dejar loadingPush = true más de 20s
+    const safetyTimer = setTimeout(() => setLoadingPush(false), 20000);
     try {
       setLoadingPush(true);
-      
       await subscribeToPushFCM();
-      
       setPushEnabled(true);
       setPreferencias(prev => ({
         ...prev,
-        notificaciones: {
-          ...prev.notificaciones,
-          alertasPush: true
-        }
+        notificaciones: { ...(prev?.notificaciones || {}), alertasPush: true }
       }));
-
-      // Mostrar notificación de prueba
       setTimeout(() => {
-        sendTestNotification(
-          '🎉 Notificaciones Activadas',
-          'FinGuide te enviará alertas importantes sobre tus finanzas'
-        );
+        sendTestNotification('🎉 Notificaciones Activadas', 'FinGuide te avisará de pagos y alertas importantes');
       }, 1000);
-      
     } catch (error) {
       console.error('Error activando notificaciones:', error);
-      alert('❌ Error: ' + error.message);
+      alert('❌ Error al activar: ' + error.message);
     } finally {
+      clearTimeout(safetyTimer);
       setLoadingPush(false);
     }
   };
 
   const handleDesactivarPush = async () => {
+    // Timeout de seguridad: nunca dejar loadingPush = true más de 10s
+    const safetyTimer = setTimeout(() => setLoadingPush(false), 10000);
     try {
       setLoadingPush(true);
-      
-      await unsubscribeFromPushFCM();
-      
+      // Eliminar de BD directamente (más confiable que unsubscribeFromPushFCM en iOS)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+      }
+      // Intentar cancelar pushManager (best effort, no bloquea)
+      try {
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          const reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, r) => setTimeout(() => r(new Error('sw timeout')), 3000))
+          ]);
+          const sub = await reg.pushManager?.getSubscription();
+          if (sub) await sub.unsubscribe();
+        }
+      } catch (swErr) {
+        console.warn('pushManager unsubscribe best-effort:', swErr.message);
+      }
+      if (window._finGuideCheckInterval) {
+        clearInterval(window._finGuideCheckInterval);
+        window._finGuideCheckInterval = null;
+      }
+      window.showFinGuideNotification = null;
       setPushEnabled(false);
       setPreferencias(prev => ({
         ...prev,
-        notificaciones: {
-          ...prev.notificaciones,
-          alertasPush: false
-        }
+        notificaciones: { ...(prev?.notificaciones || {}), alertasPush: false }
       }));
-      
-      alert('🔕 Notificaciones desactivadas correctamente');
-      
+      alert('🔕 Notificaciones desactivadas');
     } catch (error) {
       console.error('Error desactivando push:', error);
-      alert('Error al desactivar las notificaciones');
+      alert('Error al desactivar: ' + error.message);
     } finally {
+      clearTimeout(safetyTimer);
       setLoadingPush(false);
     }
   };
