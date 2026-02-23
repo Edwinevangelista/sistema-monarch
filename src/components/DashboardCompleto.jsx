@@ -252,6 +252,13 @@ const [deudasInstant, setDeudasInstant] = useState(() => {
     return cached ? JSON.parse(cached) : [];
 });
 
+const [pagosInstant, setPagosInstant] = useState(() => {
+  try {
+    const cached = localStorage.getItem('pagos_tarjeta_cache_v2');
+    return cached ? JSON.parse(cached) : [];
+  } catch { return []; }
+});
+
 
 
   // 📅 FILTROS INTELIGENTES: Respetan transición mensual
@@ -347,6 +354,13 @@ useEffect(() => {
     localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
   }
 }, [deudas]);
+
+useEffect(() => {
+  if (Array.isArray(pagos) && pagos.length > 0) {
+    setPagosInstant(pagos);
+    localStorage.setItem('pagos_tarjeta_cache_v2', JSON.stringify(pagos));
+  }
+}, [pagos]);
 
  // FUNCIÓN: Auto-ocultar menú inferior (inactividad)
 // Si quieres ocultarlo de verdad, agrega un estado showMenu y úsalo en el render del MenuInferior.
@@ -1150,6 +1164,17 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     // Limpiar caché para que el próximo refresh traiga datos frescos del servidor
     localStorage.removeItem('deudas_cache')
     localStorage.setItem('deudas_cache_v2', JSON.stringify(deudasActualizadas))
+
+    // ✅ Actualización optimista de pagos: agregar pago al historial al instante
+    const pagoOptimista = {
+      ...pago,
+      id: 'temp-' + Date.now(),
+      created_at: new Date().toISOString(),
+      monto_total: Number(pago.monto_total)
+    }
+    const pagosActualizados = [pagoOptimista, ...pagosInstant]
+    setPagosInstant(pagosActualizados)
+    localStorage.setItem('pagos_tarjeta_cache_v2', JSON.stringify(pagosActualizados))
 
     // Refrescar datos (el useEffect[deudas] recibirá los datos actualizados del servidor)
     await refreshPagos()
@@ -2642,8 +2667,8 @@ const dataGraficaDona = useMemo(() =>
                 const compras = gastosInstant
                   .filter(g => g.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                // Pagos a esta tarjeta
-                const pagosTarjeta = pagos
+                // Pagos a esta tarjeta (usa pagosInstant para reflejo inmediato)
+                const pagosTarjeta = pagosInstant
                   .filter(p => p.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
 

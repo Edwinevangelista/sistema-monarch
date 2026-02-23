@@ -13,20 +13,12 @@ serve(async (req) => {
   }
 
   try {
-    const { title, body, type, user_id } = await req.json();
+    const { title, body, type, user_id, data: extraData } = await req.json();
 
-    // Obtener variables - usa los nombres que ya tienes configurados
     const PROJECT_URL = Deno.env.get("PUSH_PROJECT_URL") || Deno.env.get("SUPABASE_URL");
     const SERVICE_ROLE_KEY = Deno.env.get("PUSH_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const VAPID_PUBLIC_KEY = Deno.env.get("PUSH_VAPID_PUBLIC_KEY") || Deno.env.get("VAPID_PUBLIC_KEY");
     const VAPID_PRIVATE_KEY = Deno.env.get("PUSH_VAPID_PRIVATE_KEY") || Deno.env.get("VAPID_PRIVATE_KEY");
-
-    console.log("ENV Check:", {
-      PROJECT_URL: PROJECT_URL ? "✓" : "✗",
-      SERVICE_ROLE_KEY: SERVICE_ROLE_KEY ? "✓" : "✗", 
-      VAPID_PUBLIC_KEY: VAPID_PUBLIC_KEY ? "✓" : "✗",
-      VAPID_PRIVATE_KEY: VAPID_PRIVATE_KEY ? "✓" : "✗",
-    });
 
     if (!PROJECT_URL || !SERVICE_ROLE_KEY || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
       return new Response(
@@ -43,9 +35,7 @@ serve(async (req) => {
 
     // Obtener suscripciones
     let query = `${PROJECT_URL}/rest/v1/push_subscriptions?select=*`;
-    if (user_id) {
-      query += `&user_id=eq.${user_id}`;
-    }
+    if (user_id) query += `&user_id=eq.${user_id}`;
 
     const res = await fetch(query, {
       headers: {
@@ -66,40 +56,58 @@ serve(async (req) => {
 
     let sent = 0;
     let failed = 0;
+    const errors: string[] = [];
 
     for (const sub of subs) {
       try {
-        // ✅ CORREGIDO: Extraer datos del objeto subscription anidado
         const subscriptionData = sub.subscription;
-        
-        if (!subscriptionData || !subscriptionData.endpoint || !subscriptionData.keys) {
-          console.log(`Skipping invalid subscription ${sub.id}`);
+
+        // ✅ Soporta el nuevo formato web_push (endpoint + keys en el objeto subscription)
+        let endpoint: string | null = null;
+        let p256dh: string | null = null;
+        let auth: string | null = null;
+
+        if (subscriptionData?.type === 'web_push') {
+          // Nuevo formato: endpoint y keys dentro del objeto subscription
+          endpoint = subscriptionData.endpoint;
+          p256dh = subscriptionData.keys?.p256dh;
+          auth = subscriptionData.keys?.auth;
+        } else if (subscriptionData?.endpoint && subscriptionData?.keys) {
+          // Formato legacy con endpoint+keys directamente
+          endpoint = subscriptionData.endpoint;
+          p256dh = subscriptionData.keys?.p256dh;
+          auth = subscriptionData.keys?.auth;
+        }
+
+        if (!endpoint || !p256dh || !auth) {
+          console.log(`Skipping subscription ${sub.id} — no web push data (type: ${subscriptionData?.type})`);
           continue;
         }
 
+        const payload = JSON.stringify({
+          title: title || "FinGuide",
+          body: body || "Tienes una notificación",
+          type: type || "general",
+          tag: `finguide-${type || 'general'}-${Date.now()}`,
+          data: { url: "/", ...extraData }
+        });
+
         await webpush.sendNotification(
-          {
-            endpoint: subscriptionData.endpoint,
-            keys: {
-              p256dh: subscriptionData.keys.p256dh,
-              auth: subscriptionData.keys.auth,
-            },
-          },
-          JSON.stringify({ 
-            title: title || "FinGuide", 
-            body: body || "Tienes una notificación",
-            type: type || "general"
-          })
+          { endpoint, keys: { p256dh, auth } },
+          payload
         );
+
         sent++;
-        console.log(`✓ Sent to subscription ${sub.id}`);
-        
+        console.log(`✓ Sent to ${sub.id} (${subscriptionData?.strategy || 'unknown'})`);
+
       } catch (pushError: any) {
         failed++;
-        console.error(`✗ Failed ${sub.id}:`, pushError.message);
-        
-        // Si expiró (410), eliminar
-        if (pushError.statusCode === 410) {
+        const msg = `✗ Failed ${sub.id}: ${pushError.message}`;
+        console.error(msg);
+        errors.push(msg);
+
+        // Limpiar suscripciones expiradas
+        if (pushError.statusCode === 410 || pushError.statusCode === 404) {
           await fetch(`${PROJECT_URL}/rest/v1/push_subscriptions?id=eq.${sub.id}`, {
             method: "DELETE",
             headers: {
@@ -113,7 +121,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent, failed, total: subs.length }),
+      JSON.stringify({ success: true, sent, failed, total: subs.length, errors }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
