@@ -7,7 +7,10 @@ import { supabase } from './supabaseClient'
 
 // VAPID public key — debe coincidir con PUSH_VAPID_PUBLIC_KEY en Supabase Edge secrets
 // Generada con: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || ''
+const VAPID_PUBLIC_KEY =
+  import.meta.env.VITE_VAPID_PUBLIC_KEY ||
+  process.env.REACT_APP_VAPID_PUBLIC_KEY ||
+  ''
 
 // ============================================================
 // HELPER: convertir VAPID key base64url → Uint8Array
