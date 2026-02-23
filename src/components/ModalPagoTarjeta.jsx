@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { CreditCard, X, Loader2, Info, Calculator, Wallet, Building2 } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { toast } from 'sonner'
 
 const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null }) => {
   const { cuentas } = useCuentasBancarias()
@@ -94,16 +95,16 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
     try {
       setIsLoading(true)
       const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta)
-      if (!deudaSeleccionada) { alert('Debes seleccionar una tarjeta válida'); return }
-      if (!formData.monto || Number(formData.monto) <= 0) { alert('Debes ingresar un monto válido'); return }
+      if (!deudaSeleccionada) { toast.error('Debes seleccionar una tarjeta válida'); return }
+      if (!formData.monto || Number(formData.monto) <= 0) { toast.error('Debes ingresar un monto válido'); return }
       if (formData.metodo === 'Débito' && !formData.cuenta_id) {
-        alert('⚠️ Debes seleccionar una cuenta bancaria para débito automático')
+        toast.warning('Debes seleccionar una cuenta bancaria para débito automático')
         return
       }
       if (formData.metodo === 'Débito' && formData.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === formData.cuenta_id)
         if (cuenta && Number(cuenta.balance) < Number(formData.monto)) {
-          alert(`❌ Fondos insuficientes\n\nSaldo disponible: $${Number(cuenta.balance).toFixed(2)}\nMonto a pagar: $${Number(formData.monto).toFixed(2)}`)
+          toast.error(`Fondos insuficientes. Saldo: $${Number(cuenta.balance).toFixed(2)} | Monto: $${Number(formData.monto).toFixed(2)}`)
           return
         }
       }
@@ -120,7 +121,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
       onClose()
     } catch (e) {
       console.error('Error registrando pago:', e)
-      alert('Error al registrar el pago')
+      toast.error('Error al registrar el pago')
     } finally {
       setIsLoading(false)
     }

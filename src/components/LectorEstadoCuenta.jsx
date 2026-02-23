@@ -18,6 +18,7 @@ import Tesseract from "tesseract.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { useGastosVariables } from "../hooks/useGastosVariables";
 import { useIngresos } from "../hooks/useIngresos";
+import { toast } from 'sonner'
 
 // Configurar PDF.js worker para v5.x
 // La versión 5.x usa un formato diferente de worker
@@ -630,7 +631,7 @@ export default function LectorEstadoCuenta({ onClose }) {
         await new Promise(r => setTimeout(r, 30));
       }
 
-      alert(`✅ ${saved} transacciones guardadas exitosamente`);
+      toast.success(`${saved} transacciones guardadas exitosamente`);
       onClose?.();
       resetAll();
 

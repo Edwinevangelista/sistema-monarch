@@ -5,6 +5,7 @@ import {
   Shield, AlertCircle, Calendar, Target, TrendingUp
 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
+import { toast } from 'sonner'
 
 // ==========================================
 // SISTEMA DE APRENDIZAJE HISTÓRICO
@@ -776,7 +777,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
       onClose();
     } catch (error) {
       console.error('Error guardando plan:', error);
-      alert('Error al guardar el plan: ' + error.message);
+      toast.error('Error al guardar el plan: ' + error.message);
     }
   };
 
@@ -1837,7 +1838,7 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
 
   const handleGuardar = async () => {
     if (!nombre.trim()) {
-      alert('Por favor ingresa un nombre para tu plan');
+      toast.error('Por favor ingresa un nombre para tu plan');
       return;
     }
     setGuardando(true);

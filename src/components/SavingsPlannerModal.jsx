@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, PiggyBank, Target, TrendingUp, Zap, CheckCircle2 } from 'lucide-react';
 
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
+import { toast } from 'sonner'
 
 // ==========================================
 // FUNCIONES DE CÁLCULO
@@ -135,16 +136,16 @@ export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado
 
   const handleNext = () => {
     if (step === 1 && !config.tipoMeta) {
-      alert('Selecciona un tipo de meta');
+      toast.error('Selecciona un tipo de meta');
       return;
     }
     if (step === 2) {
       if (config.tipoMeta === 'objetivo' && (!config.montoObjetivo || !config.plazoMeses)) {
-        alert('Completa el monto objetivo y el plazo');
+        toast.error('Completa el monto objetivo y el plazo');
         return;
       }
       if (config.tipoMeta === 'ahorro_libre' && (!config.ahorroMensual || !config.plazoMeses)) {
-        alert('Completa el ahorro mensual y el plazo');
+        toast.error('Completa el ahorro mensual y el plazo');
         return;
       }
     }
@@ -167,7 +168,7 @@ export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado
     const resultado = calcularPlanAhorro(configNumerica);
     
     if (!resultado) {
-      alert('No se pudo calcular el plan. Verifica los datos.');
+      toast.error('No se pudo calcular el plan. Verifica los datos.');
       return;
     }
 
@@ -262,13 +263,13 @@ export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado
                 completado: false
               });
 
-              alert('✅ Plan guardado exitosamente');
+              toast.success('Plan guardado exitosamente');
               setShowConfirmacion(false);
               if (onPlanGuardado) onPlanGuardado();
               onClose();
             } catch (error) {
               console.error('Error guardando plan:', error);
-              alert('Error al guardar el plan: ' + error.message);
+              toast.error('Error al guardar el plan: ' + error.message);
             }
           }}
           onCancelar={() => setShowConfirmacion(false)}
@@ -541,7 +542,7 @@ function ConfirmModal({ onConfirmar, onCancelar }) {
 
   const handleGuardar = async () => {
     if (!nombre.trim()) {
-      alert('Por favor ingresa un nombre para tu plan');
+      toast.error('Por favor ingresa un nombre para tu plan');
       return;
     }
     setGuardando(true);

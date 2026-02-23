@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from 'sonner'
 
 export function useInactivityTimeout(timeoutMinutes = 15) {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export function useInactivityTimeout(timeoutMinutes = 15) {
           }
         });
 
-        alert("Sesión cerrada por inactividad");
+        toast.info('Sesión cerrada por inactividad');
         navigate("/login", { replace: true });
       }
     }, timeoutMinutes * 60 * 1000);

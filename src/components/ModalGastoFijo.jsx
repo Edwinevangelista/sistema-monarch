@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, X, CreditCard, Calendar, CheckCircle, Loader2, DollarSign, Tag, AlertCircle } from 'lucide-react';
 import { CATEGORIAS } from '../constants/categorias';
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
+import { toast } from 'sonner'
 
 export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null }) {
   const { cuentas } = useCuentasBancarias();
@@ -62,7 +63,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
 
       await onSave(dataToSave);
       
-      alert(`✅ ${gastoInicial ? 'Gasto fijo actualizado' : 'Gasto fijo creado'} correctamente`);
+      toast.success(`${gastoInicial ? 'Gasto fijo actualizado' : 'Gasto fijo creado'} correctamente`);
       onClose();
     } catch (error) {
       console.error("Error al guardar gasto fijo:", error);

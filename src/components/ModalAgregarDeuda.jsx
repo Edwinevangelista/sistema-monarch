@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { CreditCard, X, ChevronLeft, Loader2, DollarSign, Percent, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 
 const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
   const esEdicion = Boolean(deudaInicial)
@@ -67,7 +68,7 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
 
   const handleSubmit = async () => {
     if (!formData.cuenta || formData.saldo === '') {
-      alert('Por favor completa el nombre y el saldo.')
+      toast.error('Por favor completa el nombre y el saldo.')
       return
     }
     setLoading(true)
@@ -91,7 +92,7 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
       onClose()
     } catch (e) {
       console.error('Error al guardar deuda:', e)
-      alert('Ocurrió un error al guardar la deuda')
+      toast.error('Ocurrió un error al guardar la deuda')
     } finally {
       setLoading(false)
     }

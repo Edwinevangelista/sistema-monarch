@@ -13,6 +13,7 @@ import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
 
 import { subscribeToPushFCM, sendTestNotification } from '../lib/subscribeToPushFCM';
+import { toast } from 'sonner'
 
 export default function ModalUsuario({ 
   onClose, 
@@ -236,13 +237,13 @@ export default function ModalUsuario({
       setUsuario(prev => ({ ...prev, ...datosEdicion }));
       localStorage.setItem('usuario_fintrack', JSON.stringify({ ...usuario, ...datosEdicion }));
 
-      alert('✅ Perfil actualizado correctamente');
+      toast.success('Perfil actualizado correctamente');
       setModoEdicion(false);
       await cargarDatosUsuario();
 
     } catch (error) {
       console.error('Error guardando perfil:', error);
-      alert('Error al guardar el perfil: ' + error.message);
+      toast.info('Error al guardar el perfil: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -253,7 +254,7 @@ export default function ModalUsuario({
     if (onChangePreferencias) {
       onChangePreferencias(preferencias);
     }
-    alert("✅ Preferencias guardadas correctamente");
+    toast.success("Preferencias guardadas correctamente");
   };
 
   // =========================
@@ -289,17 +290,17 @@ export default function ModalUsuario({
 
   const handleCambiarPassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('❌ Las contraseñas no coinciden');
+      toast.error('Las contraseñas no coinciden');
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      alert('❌ La contraseña debe tener al menos 8 caracteres');
+      toast.error('La contraseña debe tener al menos 8 caracteres');
       return;
     }
 
     if (passwordStrength < 50) {
-      alert('❌ La contraseña es muy débil. Usa mayúsculas, números y símbolos.');
+      toast.error('La contraseña es muy débil. Usa mayúsculas, números y símbolos.');
       return;
     }
 
@@ -312,13 +313,13 @@ export default function ModalUsuario({
 
       if (error) throw error;
 
-      alert('✅ Contraseña actualizada correctamente');
+      toast.success('Contraseña actualizada correctamente');
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
     } catch (error) {
       console.error('Error cambiando contraseña:', error);
-      alert('❌ Error al cambiar la contraseña: ' + error.message);
+      toast.info('❌ Error al cambiar la contraseña: ' + error.message);
     } finally {
       setChangingPassword(false);
     }
@@ -329,7 +330,7 @@ export default function ModalUsuario({
   // =========================
   const handleEliminarCuenta = async () => {
     if (deleteConfirmText !== 'ELIMINAR') {
-      alert('❌ Escribe ELIMINAR para confirmar');
+      toast.error('Escribe ELIMINAR para confirmar');
       return;
     }
 
@@ -355,14 +356,14 @@ export default function ModalUsuario({
       }
 
       localStorage.clear();
-      alert('✅ Tu cuenta ha sido eliminada. Serás redirigido al inicio.');
+      toast.success('Tu cuenta ha sido eliminada. Serás redirigido al inicio.');
       
       await supabase.auth.signOut();
       if (onLogout) onLogout();
 
     } catch (error) {
       console.error('Error eliminando cuenta:', error);
-      alert('❌ Error al eliminar la cuenta: ' + error.message);
+      toast.info('❌ Error al eliminar la cuenta: ' + error.message);
     } finally {
       setDeletingAccount(false);
     }
@@ -411,11 +412,11 @@ export default function ModalUsuario({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      alert('✅ Datos exportados correctamente');
+      toast.success('Datos exportados correctamente');
 
     } catch (error) {
       console.error('Error exportando datos:', error);
-      alert('❌ Error al exportar los datos: ' + error.message);
+      toast.info('❌ Error al exportar los datos: ' + error.message);
     } finally {
       setExportingData(false);
     }
@@ -440,7 +441,7 @@ export default function ModalUsuario({
       }, 1000);
     } catch (error) {
       console.error('Error activando notificaciones:', error);
-      alert('❌ Error al activar: ' + error.message);
+      toast.info('❌ Error al activar: ' + error.message);
     } finally {
       clearTimeout(safetyTimer);
       setLoadingPush(false);
@@ -480,10 +481,10 @@ export default function ModalUsuario({
         ...prev,
         notificaciones: { ...(prev?.notificaciones || {}), alertasPush: false }
       }));
-      alert('🔕 Notificaciones desactivadas');
+      toast.info('🔕 Notificaciones desactivadas');
     } catch (error) {
       console.error('Error desactivando push:', error);
-      alert('Error al desactivar: ' + error.message);
+      toast.info('Error al desactivar: ' + error.message);
     } finally {
       clearTimeout(safetyTimer);
       setLoadingPush(false);
@@ -522,11 +523,11 @@ export default function ModalUsuario({
       try {
         await supabase.auth.signOut({ scope: 'global' });
         localStorage.clear();
-        alert('✅ Sesiones cerradas correctamente.');
+        toast.success('Sesiones cerradas correctamente.');
         if (onLogout) onLogout();
       } catch (e) {
         console.error(e);
-        alert('❌ Error: ' + e.message);
+        toast.info('❌ Error: ' + e.message);
       }
     }
   };
@@ -1188,7 +1189,7 @@ export default function ModalUsuario({
                       <p className="text-sm text-gray-400">Déjanos una reseña en la tienda</p>
                     </div>
                     <button 
-                      onClick={() => alert('🌟 ¡Gracias por tu apoyo!')}
+                      onClick={() => toast.success('🌟 ¡Gracias por tu apoyo!')}
                       className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl text-sm font-bold transition-all"
                     >
                       Calificar

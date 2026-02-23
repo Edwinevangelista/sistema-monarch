@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ShoppingCart, X, CreditCard, Loader2, CheckCircle } from 'lucide-react'
 import { CATEGORIAS, METODOS_PAGO } from '../constants/categorias'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { toast } from 'sonner'
 
 const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
   const { cuentas } = useCuentasBancarias() // ✅ Agregado para seleccionar cuenta
@@ -31,7 +32,7 @@ const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
 
   const handleSubmit = async () => {
     if (!formData.monto) {
-      alert('Por favor ingresa el monto')
+      toast.error('Por favor ingresa el monto')
       return
     }
 
@@ -52,11 +53,11 @@ const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
       await onSave(payload)
       
       // ✅ Mensaje de éxito
-      alert(`✅ ${gastoInicial ? 'Gasto actualizado' : 'Gasto registrado'} correctamente`)
+      toast.success(`${gastoInicial ? 'Gasto actualizado' : 'Gasto registrado'} correctamente`)
       onClose()
     } catch (error) {
       console.error(error)
-      alert('Error al guardar')
+      toast.error('Error al guardar')
     } finally {
       setLoading(false) // ✅ Finalizar carga
     }

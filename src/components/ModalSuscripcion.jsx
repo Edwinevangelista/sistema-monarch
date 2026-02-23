@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Repeat, X, Calendar, DollarSign, FileText, CreditCard, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { toast } from 'sonner'
 
 const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
   const { cuentas } = useCuentasBancarias()
@@ -71,7 +72,7 @@ const ModalSuscripcion = ({ onClose, onSave, suscripcionInicial = null }) => {
       await onSave(dataAGuardar)
       
       // ✅ FIX: Mensaje de éxito
-      alert(`✅ ${suscripcionInicial ? 'Suscripción actualizada' : 'Suscripción creada'} correctamente`)
+      toast.success(`${suscripcionInicial ? 'Suscripción actualizada' : 'Suscripción creada'} correctamente`)
       
       onClose()
     } catch (err) {

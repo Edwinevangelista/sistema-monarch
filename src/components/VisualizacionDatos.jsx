@@ -28,6 +28,7 @@ import jsPDF from 'jspdf'
 
 // Importaciones de utilidades de exportación reales (si existen)
 import { exportToExcel, exportToCSV } from '../utils/exportUtils'
+import { toast } from 'sonner'
 
 /**
  * Componente de Visualización de Datos Financieros (COMPLETO Y CORREGIDO - VERSION RESPONSIVA)
@@ -467,10 +468,10 @@ const fechasFiltradas = useMemo(() => {
 
       } else if (tipo === 'xlsx') {
         if (typeof exportToExcel === 'function') await exportToExcel(data, { nombreArchivo })
-        else alert('Función Excel no disponible.')
+        else toast.error('Función Excel no disponible.')
       } else if (tipo === 'csv') {
         if (typeof exportToCSV === 'function') await exportToCSV(data, { nombreArchivo })
-        else alert('Función CSV no disponible.')
+        else toast.error('Función CSV no disponible.')
       } else if (tipo === 'json') {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
@@ -483,7 +484,7 @@ const fechasFiltradas = useMemo(() => {
       
     } catch (error) {
       console.error('Error al exportar:', error)
-      alert(`Error: ${error.message}`)
+      toast.error(`Error: ${error.message}`)
     } finally {
       setExportando(false)
     }

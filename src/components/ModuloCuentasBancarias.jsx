@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
 import { supabase } from '../lib/supabaseClient';
+import { toast } from 'sonner'
 
 export default function ModuloCuentasBancarias({ 
   onAgregar, 
@@ -179,7 +180,7 @@ export default function ModuloCuentasBancarias({
 
   const handleGuardarCuenta = async () => {
     if (!formNombre.trim()) {
-      alert('El nombre es obligatorio');
+      toast.error('El nombre es obligatorio');
       return;
     }
     const saldoNum = parseFloat(formSaldo || 0);
@@ -205,7 +206,7 @@ export default function ModuloCuentasBancarias({
             cuentaNombre: formNombre
           });
         }
-        alert('✅ Cuenta actualizada correctamente');
+        toast.success('Cuenta actualizada correctamente');
       } else {
         if (onAgregar) {
           const nuevaCuenta = await onAgregar(dataCuenta);
@@ -218,7 +219,7 @@ export default function ModuloCuentasBancarias({
               cuentaNombre: formNombre
             });
           }
-          alert('✅ Cuenta creada correctamente');
+          toast.success('Cuenta creada correctamente');
         }
       }
       
@@ -233,7 +234,7 @@ export default function ModuloCuentasBancarias({
       
     } catch (err) {
       console.error("Error al guardar cuenta:", err);
-      alert('Error al guardar la cuenta: ' + (err.message || 'Error desconocido'));
+      toast.error('Error al guardar la cuenta: ' + (err.message || 'Error desconocido'));
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
+import { Toaster } from 'sonner'
 
 // 🔔 NOTIFICACIONES - NUEVA INTEGRACIÓN
 import { initializeNotificationsOnLoad } from './lib/subscribeToPushFCM'
@@ -19,8 +20,6 @@ import ResetPassword from './pages/auth/ResetPassword'
 // ============================================
 // 🔐 COMPONENTE PARA DETECTAR TOKENS DE RECOVERY
 // ============================================
-// Este componente detecta si hay tokens de recuperación en la URL
-// y redirige automáticamente a /reset
 function RecoveryTokenHandler({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -28,7 +27,6 @@ function RecoveryTokenHandler({ children }) {
 
   useEffect(() => {
     const checkForRecoveryToken = async () => {
-      // 1. Buscar tokens en el hash de la URL
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
       const accessToken = hashParams.get('access_token')
       const type = hashParams.get('type')
@@ -38,18 +36,14 @@ function RecoveryTokenHandler({ children }) {
       console.log('🔗 Hash:', window.location.hash)
       console.log('🔑 Type:', type)
 
-      // 2. Si es un token de recovery y NO estamos en /reset, redirigir
       if (type === 'recovery' && accessToken && location.pathname !== '/reset') {
         console.log('🔄 Token de recovery detectado, redirigiendo a /reset...')
-        // Mantener el hash con los tokens al redirigir
         navigate('/reset' + window.location.hash, { replace: true })
         return
       }
 
-      // 3. También escuchar eventos de auth por si el token se procesa automáticamente
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         console.log('🔔 Auth Event en Handler:', event)
-        
         if (event === 'PASSWORD_RECOVERY' && location.pathname !== '/reset') {
           console.log('🔄 Evento PASSWORD_RECOVERY detectado, redirigiendo...')
           navigate('/reset', { replace: true })
@@ -66,7 +60,6 @@ function RecoveryTokenHandler({ children }) {
     checkForRecoveryToken()
   }, [navigate, location.pathname])
 
-  // Mostrar loading muy breve mientras verifica
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
@@ -85,13 +78,8 @@ function AppRoutes() {
   return (
     <RecoveryTokenHandler>
       <Routes>
-        {/* 🔐 RESET DE CONTRASEÑA */}
         <Route path="/reset" element={<ResetPassword />} />
-
-        {/* 🔁 COMPATIBILIDAD */}
         <Route path="/auth/reset" element={<Navigate to="/reset" replace />} />
-
-        {/* ✅ PANTALLA DE CARGA POST LOGIN */}
         <Route
           path="/loading"
           element={
@@ -100,16 +88,10 @@ function AppRoutes() {
             </AuthGuard>
           }
         />
-
-        {/* AUTENTICACIÓN */}
         <Route path="/auth" element={<Auth />} />
-
-        {/* ALIAS DE COMPATIBILIDAD */}
         <Route path="/login" element={<Navigate to="/auth" replace />} />
         <Route path="/signup" element={<Navigate to="/auth" replace />} />
         <Route path="/forgot-password" element={<Navigate to="/auth" replace />} />
-
-        {/* DASHBOARD (PROTEGIDO) */}
         <Route
           path="/dashboard"
           element={
@@ -118,9 +100,6 @@ function AppRoutes() {
             </AuthGuard>
           }
         />
-
-        {/* DEFAULT - Importante: NO redirigir ciegamente a /auth */}
-        {/* El RecoveryTokenHandler ya maneja los tokens */}
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
@@ -135,43 +114,51 @@ function NotificationInitializer() {
   useEffect(() => {
     const initializeNotifications = async () => {
       try {
-        // Esperar un poco para que auth esté completamente listo
         setTimeout(async () => {
           try {
             const notificationsReactivated = await initializeNotificationsOnLoad()
-            
             if (notificationsReactivated) {
               console.log('🔔 Sistema de notificaciones reactivado automáticamente')
             }
           } catch (error) {
-            // Silencioso - no mostrar errores de notificaciones al usuario
             console.warn('Info: No se pudieron reactivar notificaciones automáticamente')
           }
-        }, 2000) // 2 segundos después de que la app esté lista
-        
+        }, 2000)
       } catch (error) {
-        // Completamente silencioso - las notificaciones son feature opcional
         console.warn('Info: Inicialización de notificaciones omitida')
       }
     }
 
-    // Solo intentar si estamos en un navegador compatible
     if (typeof window !== 'undefined' && 'Notification' in window) {
       initializeNotifications()
     }
   }, [])
 
-  // Este componente no renderiza nada, solo maneja la inicialización
   return null
 }
 
 function App() {
   return (
     <BrowserRouter>
-      {/* 🔔 INICIALIZAR NOTIFICACIONES (No interfiere con nada) */}
       <NotificationInitializer />
-      
-      {/* APP PRINCIPAL (Sin cambios) */}
+
+      {/* 🍞 TOAST NOTIFICATIONS GLOBALES */}
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1f2937',
+            color: '#f9fafb',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '12px',
+            fontSize: '14px',
+          },
+        }}
+      />
+
       <AppRoutes />
     </BrowserRouter>
   )

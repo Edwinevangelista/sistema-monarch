@@ -4,6 +4,7 @@
 import { useSupabaseData } from "./useSupabaseData";
 // ⚠️ IMPORTANTE: Asegúrate de que esta ruta sea donde tengas tu cliente de supabase
 import { supabase } from "../lib/supabase"; 
+import { toast } from 'sonner'
 
 export const usePlanesGuardados = (lazyLoad = false) => {
   const {
@@ -64,7 +65,7 @@ export const usePlanesGuardados = (lazyLoad = false) => {
         console.warn("⚠️ ID de prueba detectado. Limpiando sesión...");
         // Forzamos el cierre de sesión y recarga limpia
         await supabase.auth.signOut();
-        alert("Se detectó una sesión de prueba antigua. Recargando la aplicación...");
+        toast.error("Se detectó una sesión de prueba antigua. Recargando la aplicación...");
         window.location.reload(); // Recarga la página completamente
         return; 
       }

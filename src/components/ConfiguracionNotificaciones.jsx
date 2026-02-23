@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { subscribeToPushFCM } from '../lib/subscribeToPushFCM';
+import { toast } from 'sonner'
 
 export default function ConfiguracionNotificaciones() {
   const {
@@ -46,7 +47,7 @@ export default function ConfiguracionNotificaciones() {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al activar notificaciones: ' + error.message);
+      toast.error('Error al activar notificaciones: ' + error.message);
     } finally {
       setLoading(false);
     }

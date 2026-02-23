@@ -1,6 +1,7 @@
 // src/components/DebtPlannerModal.jsx
 import { useState, useEffect } from 'react';
 import { X, CreditCard, TrendingDown, Target, CheckCircle2, AlertCircle, Zap } from 'lucide-react';
+import { toast } from 'sonner'
 
 // ========== FUNCIONES DEL CEREBRO (INLINE) ==========
 
@@ -298,7 +299,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
       const selected = deudas.filter(d => selectedDebts.includes(d.id)).map(normalizeDebt);
       
       if (selected.length === 0) {
-        alert('Por favor selecciona al menos una deuda');
+        toast.error('Por favor selecciona al menos una deuda');
         return;
       }
       
@@ -307,7 +308,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
       setView('plan');
     } catch (error) {
       console.error('Error generando plan:', error);
-      alert('Error al generar el plan: ' + error.message);
+      toast.error('Error al generar el plan: ' + error.message);
     }
   };
 
@@ -316,7 +317,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
       const selected = deudas.filter(d => selectedDebts.includes(d.id)).map(normalizeDebt);
       
       if (selected.length === 0) {
-        alert('Por favor selecciona al menos una deuda');
+        toast.error('Por favor selecciona al menos una deuda');
         return;
       }
       
@@ -325,7 +326,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose }) {
       setView('compare');
     } catch (error) {
       console.error('Error comparando estrategias:', error);
-      alert('Error al comparar estrategias: ' + error.message);
+      toast.error('Error al comparar estrategias: ' + error.message);
     }
   };
 

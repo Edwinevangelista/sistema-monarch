@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ShoppingCart, X, Calendar, DollarSign, FileText, Tag, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { useDeudas } from '../hooks/useDeudas'
+import { toast } from 'sonner'
 
 const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null }) => {
   const { cuentas } = useCuentasBancarias()
@@ -104,7 +105,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
         }
 
         await onSaveVariable(payload)
-        alert('✅ Gasto variable registrado correctamente')
+        toast.success('Gasto variable registrado correctamente')
       } else {
         await onSaveFijo({
           id: gastoInicial?.id,
@@ -116,7 +117,7 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null 
           cuenta_id: formData.cuenta_id || null,
           deuda_id: formData.deuda_id || null
         })
-        alert('✅ Gasto fijo registrado correctamente')
+        toast.success('Gasto fijo registrado correctamente')
       }
       
       onClose()

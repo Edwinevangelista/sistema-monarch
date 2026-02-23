@@ -59,13 +59,15 @@ import ModalCoberturaCuentas from './ModalCoberturaCuentas'
 import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
+import OnboardingModal from './OnboardingModal'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
 
 // --- NUEVOS IMPORTS PARA TRANSICIÓN MENSUAL ---
 
-import { 
+import { toast } from 'sonner'
+import {
   obtenerDatosFiltrados
 } from '../utils/filtrosInteligentes'
 
@@ -97,6 +99,12 @@ export default function DashboardCompleto()  {
   const [isPagandoSuscripcion, setIsPagandoSuscripcion] = useState(false)
 
   const [showModal, setShowModal] = useState(null)
+
+  // Onboarding: se muestra solo si nunca se completó
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_completado')
+  })
+
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
@@ -626,7 +634,7 @@ useEffect(() => {
       
     } catch (e) {
       console.error('❌ Error al guardar ingreso:', e)
-      alert('Error al guardar el ingreso: ' + e.message)
+      toast.info('Error al guardar el ingreso: ' + e.message)
     }
   }
 
@@ -773,7 +781,7 @@ useEffect(() => {
     } catch (e) {
       console.error('❌ Error al guardar gasto completo:', e)
       const msg = e?.message || e?.error?.message || JSON.stringify(e) || 'Error desconocido'
-      alert('Error al guardar: ' + msg)
+      toast.info('Error al guardar: ' + msg)
     }
   }
 
@@ -825,7 +833,7 @@ useEffect(() => {
       setGastoFijoEditando(null)
     } catch (e) {
       console.error('Error al guardar gasto fijo:', e)
-      alert('Error al guardar: ' + e.message)
+      toast.info('Error al guardar: ' + e.message)
     }
   }
 
@@ -885,7 +893,7 @@ const calcularFechaAnterior = (fechaActual, ciclo) => {
 // MODIFICADO: Agrega feedback de carga y cierra modal al terminar
 const handlePagoManual = async (sub) => {
   if (!sub.cuenta_id) {
-    alert('⚠️ Esta suscripción no tiene una cuenta de pago asignada. Asígna una en editar.')
+    toast.warning('Esta suscripción no tiene una cuenta de pago asignada. Asígna una en editar.')
     setSuscripcionEditando(sub)
     setShowModal('suscripcion')
     return
@@ -922,7 +930,7 @@ const handlePagoManual = async (sub) => {
     
     await updateSuscripcion(sub.id, { proximo_pago: nuevoProximoPago })
     
-    alert(`✅ Pago registrado correctamente.\n\n💳 Descontado de: ${cuenta.nombre}\n💰 Monto: $${montoPagar.toLocaleString()}\n📅 Próximo cobro: ${new Date(nuevoProximoPago).toLocaleDateString('es-MX')}`)
+    toast.success(`Pago registrado. Descontado de: ${cuenta.nombre} — $${montoPagar.toLocaleString()}`)
     
     // Cerrar modal
     setItemSeleccionado(null)
@@ -930,7 +938,7 @@ const handlePagoManual = async (sub) => {
     
   } catch (error) {
     console.error('❌ Error en pago manual:', error)
-    alert('❌ Error al registrar el pago')
+    toast.error('Error al registrar el pago')
   } finally {
     setIsPagandoSuscripcion(false)
   }
@@ -1069,7 +1077,7 @@ const handleDeshacerPago = useCallback(async (item, type) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        alert('❌ Error: No se pudo identificar al usuario.')
+        toast.error('Error: No se pudo identificar al usuario.')
         return
       }
 
@@ -1086,11 +1094,11 @@ const handleDeshacerPago = useCallback(async (item, type) => {
       await refreshDeudas()
       setShowModal(null)
       setDeudaEditando(null)
-      alert('✅ Tarjeta guardada exitosamente')
+      toast.success('Tarjeta guardada exitosamente')
       
     } catch (e) {
       console.error("❌ Error guardando deuda:", e)
-      alert(`Error al guardar: ${e.message || 'Error desconocido'}`)
+      toast.error(`Error al guardar: ${e.message || 'Error desconocido'}`)
     }
   }
 
@@ -1100,7 +1108,7 @@ const handleDeshacerPago = useCallback(async (item, type) => {
         await deleteSuscripcion(id);
       } catch (error) {
         console.error('Error al eliminar suscripción:', error);
-        alert('Error al eliminar la suscripción');
+        toast.error('Error al eliminar la suscripción');
       }
     }
   }
@@ -1283,9 +1291,9 @@ if (planDeudaActivo) {
 
     // Mensaje personalizado
     if (esPagoCompleto) {
-      alert(`🎉 ¡Felicidades!\n\n💳 ${deuda.cuenta} está SALDADA\n💰 Saldo final: $0.00\n\n${planDeudaActivo ? '📊 Tu plan de deudas se ha actualizado.' : ''}`)
+      toast.success(`🎉 ¡${deuda.cuenta} está SALDADA! Saldo: $0.00`)
     } else {
-      alert(`✅ Pago registrado\n\n💳 ${deuda.cuenta}\n💰 Nuevo saldo: $${nuevoSaldo.toFixed(2)}\n💵 Pago mínimo: $${nuevoPagoMinimo.toFixed(2)}`)
+      toast.success(`Pago registrado — ${deuda.cuenta}: $${nuevoSaldo.toFixed(2)}`)
     }
 
     setShowModal(null)
@@ -1293,7 +1301,7 @@ if (planDeudaActivo) {
 
   } catch (err) {
     console.error('❌ Error registrando pago:', err)
-    alert('Error registrando el pago: ' + (err.message || 'Error desconocido'))
+    toast.info('Error registrando el pago: ' + (err.message || 'Error desconocido'))
   }
 }
 
@@ -1302,7 +1310,7 @@ if (planDeudaActivo) {
       await deleteIngreso(id);
     } catch (error) {
       console.error('Error al eliminar ingreso:', error);
-      alert('Error al eliminar el ingreso');
+      toast.error('Error al eliminar el ingreso');
     }
   };
 
@@ -1313,13 +1321,13 @@ const handleForzarTransicionMensual = async () => {
       setShowExportacion(true)
       await forzarTransicion()
       
-      alert('✅ Transición mensual ejecutada correctamente')
+      toast.success('Transición mensual ejecutada correctamente')
       
       // Refrescar datos
       refreshDeudas()
       refreshPlanes()
     } catch (error) {
-      alert('❌ Error en transición: ' + error.message)
+      toast.info('❌ Error en transición: ' + error.message)
     } finally {
       setShowExportacion(false)
     }
@@ -1342,7 +1350,7 @@ const handleForzarTransicionMensual = async () => {
     }
     
     console.log('📊 Estadísticas Detalladas:', stats)
-    alert('Ver estadísticas en la consola del navegador (F12)')
+    toast.info('Ver estadísticas en la consola del navegador (F12)')
   }
 
   const validarMonto = (valor) => {
@@ -2279,13 +2287,13 @@ const dataGraficaDona = useMemo(() =>
                     }
                     
                     if (actualizadas > 0) {
-                      alert(`✅ ${actualizadas} suscripciones actualizadas correctamente`)
+                      toast.success(`${actualizadas} suscripciones actualizadas correctamente`)
                     } else {
-                      alert('✅ Todas las fechas ya están al día')
+                      toast.success('Todas las fechas ya están al día')
                     }
                   } catch (error) {
                     console.error('❌ Error:', error)
-                    alert('❌ Error al actualizar fechas: ' + error.message)
+                    toast.info('❌ Error al actualizar fechas: ' + error.message)
                   }
                 }} 
                 className="flex items-center gap-2 px-4 py-2 bg-orange-600/80 hover:bg-orange-600 text-white rounded-xl transition-all active:scale-95 text-sm touch-manipulation border-orange-500/50 shadow-lg shadow-orange-900/20"
@@ -2912,9 +2920,22 @@ const dataGraficaDona = useMemo(() =>
         .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .slide-in-from-bottom-10 { animation: slide-in-from-bottom-10 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
+
+      {/* ── ONBOARDING (solo nuevos usuarios) ── */}
+      {showOnboarding && (
+        <OnboardingModal
+          onClose={() => setShowOnboarding(false)}
+          onAccionRapida={(key) => {
+            setShowOnboarding(false)
+            if (key === 'ingreso') setShowModal('ingreso')
+            else if (key === 'gasto') setShowModal('gasto')
+            else if (key === 'cuenta') setShowModal('cuentas')
+          }}
+        />
+      )}
     </div>
   )
-} 
+}
 
 // COMPONENTE AUXILIAR PARA MODALES
 function ModalWrapper({ show, onClose, children }) {

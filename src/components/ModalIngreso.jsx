@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, X, Building2, Calendar, FileText, Loader2, CheckCircle, AlertCircle, Repeat, Info } from 'lucide-react';
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
+import { toast } from 'sonner'
 
 const FRECUENCIAS = [
   { value: 'Único', label: 'Único', icon: '📅', descripcion: 'Ingreso que ocurre una sola vez' },
@@ -69,9 +70,9 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
       
       // Mensaje personalizado según frecuencia
       if (formData.frecuencia !== 'Único') {
-        alert(`✅ Ingreso guardado como ${formData.frecuencia}.\n📊 Se proyectará automáticamente en el balance.`);
+        toast.success(`Ingreso guardado como ${formData.frecuencia}. Se proyectará automáticamente en el balance.`);
       } else {
-        alert(`✅ Ingreso guardado correctamente`);
+        toast.success(`Ingreso guardado correctamente`);
       }
       
       onClose();

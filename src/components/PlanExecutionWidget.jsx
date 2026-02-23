@@ -15,6 +15,7 @@ import {
 
 import { usePlanExecution } from '../hooks/usePlanExecution';
 import PlanCheckInModal from './PlanCheckInModal';
+import { toast } from 'sonner'
 
 export default function PlanExecutionWidget({ 
   activePlan, 
@@ -200,13 +201,13 @@ export default function PlanExecutionWidget({
         // Forzar recálculo desde el hook
         if (window.refreshPlanesGlobally) {
           await window.refreshPlanesGlobally()
-          alert('✅ Plan actualizado con los saldos actuales')
+          toast.success('Plan actualizado con los saldos actuales')
         } else {
-          alert('⚠️ Recarga la página para actualizar el plan')
+          toast.warning('Recarga la página para actualizar el plan')
         }
       } catch (error) {
         console.error('Error actualizando plan:', error)
-        alert('❌ Error al actualizar: ' + error.message)
+        toast.error('❌ Error al actualizar: ' + error.message)
       }
     }
   }}

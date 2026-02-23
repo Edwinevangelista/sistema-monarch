@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Target, TrendingDown, DollarSign, Scissors, CheckCircle2, Trash2, Edit2, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
+import { toast } from 'sonner'
 
 const ICONOS_POR_TIPO = {
   ahorro: { icon: DollarSign, gradient: 'from-emerald-600 to-teal-600', emoji: '💰' },
@@ -17,10 +18,10 @@ export default function PlanesActivos({ onEditarPlan, onEliminarPlan }) {
     if (window.confirm('¿Marcar este plan como completado?')) {
       try {
         await marcarComoCompletado(planId);
-        alert('✅ ¡Felicitaciones! Plan completado');
+        toast.success('¡Felicitaciones! Plan completado');
       } catch (error) {
         console.error('Error marcando plan como completado:', error);
-        alert('Error al completar el plan');
+        toast.error('Error al completar el plan');
       }
     }
   };
@@ -29,10 +30,10 @@ export default function PlanesActivos({ onEditarPlan, onEliminarPlan }) {
     if (window.confirm('¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.')) {
       try {
         await deletePlan(planId);
-        alert('Plan eliminado');
+        toast.error('Plan eliminado');
       } catch (error) {
         console.error('Error eliminando plan:', error);
-        alert('Error al eliminar el plan');
+        toast.error('Error al eliminar el plan');
       }
     }
   };
