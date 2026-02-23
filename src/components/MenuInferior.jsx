@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  Home, 
-  DollarSign, 
-  CreditCard, 
-  Bell, 
-  Repeat, 
+import {
+  Home,
+  Bell,
   MoreHorizontal,
   Wallet,
-  ScanFace,
+  ScanLine,
   Sparkles,
   User,
   X,
-  Download
+  Download,
+  CreditCard,
+  Repeat,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 
 export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, coberturaBadge = 0, nombreUsuario = 'Usuario', onLogout }) {
@@ -19,68 +20,70 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
 
   const handleOpenModal = (modalName) => {
     setShowMenu(false);
-    // Pequeño delay para asegurar que el menú se cierre primero
-    setTimeout(() => {
-      onOpenModal(modalName);
-    }, 50);
+    setTimeout(() => onOpenModal(modalName), 50);
   };
 
   const handleExportAction = () => {
     setShowMenu(false);
-    // Pequeño delay para asegurar que el menú se cierre primero
-    setTimeout(() => {
-      if (onOpenExport) {
-        onOpenExport();
-      }
-    }, 50);
+    setTimeout(() => onOpenExport?.(), 50);
   };
+
+  const herramientas = [
+    { id: 'cuentas',      icon: Wallet,     label: 'Cuentas',     color: 'text-blue-400',   badge: coberturaBadge > 0 },
+    { id: 'suscripcion',  icon: Repeat,     label: 'Suscrip.',    color: 'text-indigo-400', badge: false },
+    { id: 'tarjetas',     icon: CreditCard, label: 'Tarjetas',    color: 'text-purple-400', badge: false },
+    { id: '_export',      icon: Download,   label: 'Exportar',    color: 'text-emerald-400',badge: false, tag: 'NUEVO' },
+    { id: 'lectorEstado', icon: ScanLine,   label: 'Escáner',     color: 'text-yellow-400', badge: false, tag: 'PRO' },
+    { id: 'usuario',      icon: User,       label: 'Perfil',      color: 'text-gray-300',   badge: false },
+  ];
 
   return (
     <>
-      {/* Menú Principal (Bottom Bar) - 5 botones en línea */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-white/10 z-50 safe-area-bottom">
-        <div className="flex justify-around items-center h-16 px-1">
-          
-          {/* INICIO */}
+      {/* ── BARRA INFERIOR ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
+        {/* Fondo con blur */}
+        <div className="absolute inset-0 bg-gray-950/90 backdrop-blur-xl border-t border-white/8" />
+
+        <div className="relative flex justify-around items-center h-16 px-2">
+
+          {/* Inicio */}
           <button
-            onClick={() => {
-              setShowMenu(false);
-              onOpenModal(null);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-white active:text-white transition-colors flex-1 py-2"
+            onClick={() => { setShowMenu(false); onOpenModal(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-white transition-colors flex-1 py-2 touch-manipulation"
           >
-            <Home className="w-5 h-5" />
+            <Home className="w-[22px] h-[22px]" />
             <span className="text-[10px] font-medium">Inicio</span>
           </button>
 
-          {/* INGRESOS */}
+          {/* Ingresos */}
           <button
             onClick={() => handleOpenModal('ingreso')}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-emerald-400 active:text-emerald-400 transition-colors flex-1 py-2"
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-emerald-400 active:text-emerald-400 transition-colors flex-1 py-2 touch-manipulation"
           >
-            <DollarSign className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Ingresos</span>
+            <TrendingUp className="w-[22px] h-[22px]" />
+            <span className="text-[10px] font-medium">Ingreso</span>
           </button>
 
-          {/* GASTOS */}
+          {/* Botón central — Agregar gasto (más prominente) */}
           <button
             onClick={() => handleOpenModal('gastos')}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-rose-400 active:text-rose-400 transition-colors flex-1 py-2"
+            className="flex flex-col items-center justify-center touch-manipulation"
           >
-            <CreditCard className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Gastos</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform">
+              <TrendingDown className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[10px] font-medium text-gray-500 mt-0.5">Gasto</span>
           </button>
 
-          {/* ALERTAS */}
+          {/* Alertas */}
           <button
             onClick={() => handleOpenModal('alertas')}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:text-yellow-400 active:text-yellow-400 transition-colors flex-1 py-2 relative"
+            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-yellow-400 active:text-yellow-400 transition-colors flex-1 py-2 relative touch-manipulation"
           >
             <div className="relative">
-              <Bell className="w-5 h-5" />
+              <Bell className="w-[22px] h-[22px]" />
               {alertasCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full border border-gray-900 animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full border-2 border-gray-950 animate-pulse">
                   {alertasCount > 9 ? '9+' : alertasCount}
                 </span>
               )}
@@ -88,139 +91,83 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
             <span className="text-[10px] font-medium">Alertas</span>
           </button>
 
-          {/* MÁS - Integrado en la barra */}
+          {/* Más */}
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className={`flex flex-col items-center justify-center gap-0.5 transition-colors flex-1 py-2 ${
-              showMenu ? 'text-purple-400' : 'text-gray-400 hover:text-purple-400 active:text-purple-400'
+            className={`flex flex-col items-center justify-center gap-0.5 transition-colors flex-1 py-2 touch-manipulation ${
+              showMenu ? 'text-white' : 'text-gray-500 hover:text-white'
             }`}
           >
-            <MoreHorizontal className={`w-5 h-5 transition-transform duration-200 ${showMenu ? 'rotate-90' : ''}`} />
-            <span className="text-[10px] font-medium">Más</span>
+            {showMenu
+              ? <X className="w-[22px] h-[22px]" />
+              : <MoreHorizontal className="w-[22px] h-[22px]" />
+            }
+            <span className="text-[10px] font-medium">{showMenu ? 'Cerrar' : 'Más'}</span>
           </button>
 
         </div>
       </div>
 
-      {/* MENÚ EXPANDIDO (Overlay Slide-Up) */}
+      {/* ── MENÚ EXPANDIDO ── */}
       {showMenu && (
         <>
-          {/* Overlay Oscuro */}
-          <div 
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-            style={{ zIndex: 40 }}
+          {/* Overlay */}
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in duration-150"
             onClick={() => setShowMenu(false)}
           />
-          
-          {/* Panel Deslizante */}
-          <div 
-            className="md:hidden fixed bottom-16 left-3 right-3 bg-gray-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
-            style={{ zIndex: 45 }}
+
+          {/* Panel */}
+          <div
+            className="md:hidden fixed bottom-16 left-3 right-3 z-50 bg-gray-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
           >
             <div className="p-4">
-              {/* Header del panel */}
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-purple-400" />
-                  Herramientas
-                </h3>
-                <button 
-                  onClick={() => setShowMenu(false)}
-                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              {/* Grid de opciones - NUEVA DISPOSICIÓN CON EXPORTACIÓN */}
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                
-                {/* Cuentas */}
-                <button
-                  onClick={() => handleOpenModal('cuentas')}
-                  className="relative p-3 bg-white/5 hover:bg-blue-600/20 rounded-xl transition-all border border-white/5 hover:border-blue-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                >
-                  {coberturaBadge > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-orange-500 rounded-full border border-gray-900 animate-pulse" />
-                  )}
-                  <Wallet className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Cuentas</span>
-                </button>
 
-                {/* Suscripciones */}
-                <button
-                  onClick={() => handleOpenModal('suscripcion')}
-                  className="p-3 bg-white/5 hover:bg-indigo-600/20 rounded-xl transition-all border border-white/5 hover:border-indigo-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                >
-                  <Repeat className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Suscrip.</span>
-                </button>
-
-                {/* Deudas/Tarjetas */}
-                <button
-                  onClick={() => handleOpenModal('tarjetas')}
-                  className="p-3 bg-white/5 hover:bg-purple-600/20 rounded-xl transition-all border border-white/5 hover:border-purple-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                >
-                  <CreditCard className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Tarjetas</span>
-                </button>
-
-                {/* NUEVO: Exportar Datos */}
-                <button
-                  onClick={handleExportAction}
-                  className="p-3 bg-gradient-to-br from-green-500/10 to-emerald-600/10 hover:from-green-500/20 hover:to-emerald-600/20 rounded-xl transition-all border border-green-500/20 hover:border-green-500/40 flex flex-col items-center gap-2 group relative active:scale-95"
-                >
-                  <div className="absolute top-1 right-1">
-                    <span className="text-[7px] font-bold bg-green-400 text-green-900 px-1 py-0.5 rounded">NUEVO</span>
-                  </div>
-                  <Download className="w-6 h-6 text-green-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Exportar</span>
-                </button>
-
-                {/* Escáner */}
-                <button
-                  onClick={() => handleOpenModal('lectorEstado')}
-                  className="p-3 bg-gradient-to-br from-yellow-500/10 to-orange-600/10 hover:from-yellow-500/20 hover:to-orange-600/20 rounded-xl transition-all border border-yellow-500/20 hover:border-yellow-500/40 flex flex-col items-center gap-2 group relative active:scale-95"
-                >
-                  <div className="absolute top-1 right-1">
-                    <span className="text-[7px] font-bold bg-yellow-400 text-yellow-900 px-1 py-0.5 rounded">PRO</span>
-                  </div>
-                  <ScanFace className="w-6 h-6 text-yellow-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Escáner</span>
-                </button>
-
-                {/* Perfil */}
-                <button
-                  onClick={() => handleOpenModal('usuario')}
-                  className="p-3 bg-white/5 hover:bg-emerald-600/20 rounded-xl transition-all border border-white/5 hover:border-emerald-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                >
-                  <User className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[11px] font-medium text-white">Perfil</span>
-                </button>
-
-              </div>
-
-              {/* Segunda fila para asistente IA */}
-              <div className="grid grid-cols-3 gap-2">
-                {/* Asistente IA - Centrado */}
-                <div className="col-start-2">
-                  <button
-                    onClick={() => handleOpenModal('asistente')}
-                    className="w-full p-3 bg-white/5 hover:bg-pink-600/20 rounded-xl transition-all border border-white/5 hover:border-pink-500/30 flex flex-col items-center gap-2 group active:scale-95"
-                  >
-                    <Sparkles className="w-6 h-6 text-pink-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-[11px] font-medium text-white">IA</span>
-                  </button>
+              {/* Saludo rápido */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs text-gray-500">Conectado como</p>
+                  <p className="text-sm font-bold text-white">{nombreUsuario}</p>
                 </div>
+                <button
+                  onClick={() => handleOpenModal('asistente')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-500/30 rounded-full text-xs font-semibold text-purple-300 hover:from-purple-600/40 hover:to-pink-600/40 transition-all active:scale-95 touch-manipulation"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  IA Financiera
+                </button>
               </div>
 
-              {/* Botón cerrar sesión */}
+              {/* Grid de herramientas */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {herramientas.map(({ id, icon: Icon, label, color, badge, tag }) => (
+                  <button
+                    key={id}
+                    onClick={() => id === '_export' ? handleExportAction() : handleOpenModal(id)}
+                    className="relative flex flex-col items-center gap-2 p-3.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-2xl border border-white/8 transition-all touch-manipulation group"
+                  >
+                    {badge && (
+                      <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full border border-gray-900 animate-pulse" />
+                    )}
+                    {tag && (
+                      <span className="absolute top-1.5 right-1.5 text-[7px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full">
+                        {tag}
+                      </span>
+                    )}
+                    <Icon className={`w-6 h-6 ${color} group-hover:scale-110 transition-transform`} />
+                    <span className="text-[11px] font-medium text-gray-300">{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Cerrar sesión */}
               <button
                 onClick={onLogout}
-                className="w-full mt-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 border border-red-500/20 active:scale-[0.98]"
+                className="w-full py-2.5 text-red-400 hover:text-red-300 text-sm font-medium transition-colors touch-manipulation border-t border-white/8 mt-1 pt-3"
               >
-                Cerrar Sesión
+                Cerrar sesión
               </button>
+
             </div>
           </div>
         </>
