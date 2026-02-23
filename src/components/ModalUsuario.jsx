@@ -481,13 +481,16 @@ export default function ModalUsuario({
   };
 
   const toggleNotificacion = (tipo) => {
-    setPreferencias(prev => ({
-      ...prev,
-      notificaciones: {
-        ...prev.notificaciones,
-        [tipo]: !prev.notificaciones[tipo]
-      }
-    }));
+    setPreferencias(prev => {
+      const notifs = prev?.notificaciones || { gastos: true, deudas: true, suscripciones: true, alertasPush: false };
+      return {
+        ...prev,
+        notificaciones: {
+          ...notifs,
+          [tipo]: !notifs[tipo]
+        }
+      };
+    });
   };
 
   const handleLogout = async () => {

@@ -96,24 +96,30 @@ export async function subscribeToPushFCM() {
 
     // 4. Suscribir al Push Manager con VAPID real
     let pushSubscription = null
-    if (VAPID_PUBLIC_KEY) {
+    if (VAPID_PUBLIC_KEY && 'PushManager' in window) {
       try {
         // Cancelar suscripción previa si existe
         const existingSub = await registration.pushManager.getSubscription()
         if (existingSub) {
           await existingSub.unsubscribe()
         }
-        pushSubscription = await registration.pushManager.subscribe({
+        // Timeout de 15 segundos para iOS que puede tardar más
+        const subscribePromise = registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         })
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('pushManager timeout')), 15000)
+        )
+        pushSubscription = await Promise.race([subscribePromise, timeoutPromise])
         console.log('✅ Push subscription creada:', pushSubscription.endpoint)
       } catch (pushErr) {
-        console.warn('⚠️ pushManager.subscribe falló (sin VAPID o bloqueado):', pushErr)
+        console.warn('⚠️ pushManager.subscribe falló:', pushErr.message)
         // Continuar sin push real — solo notificaciones foreground
+        pushSubscription = null
       }
     } else {
-      console.warn('⚠️ VITE_VAPID_PUBLIC_KEY no configurada — solo notificaciones foreground')
+      console.warn('⚠️ PushManager no disponible o sin VAPID key — modo foreground')
     }
 
     // 5. Detectar dispositivo
@@ -302,7 +308,7 @@ async function _checkFinancialAlerts() {
     // Alertas de gastos fijos con autopago próximos
     const { data: gastosFijos } = await supabase
       .from('gastos_fijos')
-      .select('nombre, monto, dia_venc')
+      .select('nombre,monto,dia_venc')
       .eq('user_id', user.id)
       .eq('autopago', true)
 
