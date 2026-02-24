@@ -1325,15 +1325,7 @@ if (planDeudaActivo) {
 
   
 
-  const handleExportacionCompletada = (resultado) => {
-    if (resultado.success && showLocalNotification) {
-      showLocalNotification('📊 Exportación completada', {
-        body: `Archivo ${resultado.nombreArchivo} descargado exitosamente`,
-        icon: '/favicon.ico'
-      })
-    }
-    setShowExportacion(false)
-  }
+  // handleExportacionCompletada: eliminado — VisualizacionDatos maneja su propio cierre
 
   useEffect(() => {
     const handleOpenExportEvent = (e) => {
@@ -2679,26 +2671,17 @@ const dataGraficaDona = useMemo(() =>
         <SpendingControlModal gastosFijos={gastosFijosInstant} gastosVariables={gastosDelMes} suscripciones={suscripcionesInstant} kpis={kpis} onClose={() => setShowSpendingControl(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
       </ModalWrapper>
 
-      {/* MODAL DE EXPORTACIÓN */}
+      {/* MIS REPORTES — usa createPortal internamente */}
       {showExportacion && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-          <div className="bg-gray-900 w-full md:max-w-4xl h-[95vh] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border-t md:border border-white/10 flex flex-col overflow-hidden animate-slide-in-from-bottom-10">
-            <VisualizacionDatos
-              onClose={() => setShowExportacion(false)}
-              onExportComplete={handleExportacionCompletada}
-              // Datos financieros
-              ingresos={ingresosInstant}
-              gastos={gastosInstant}
-              gastosFijos={gastosFijosInstant}
-              suscripciones={suscripcionesInstant}
-              deudas={deudasInstant}
-              cuentas={cuentas}
-              // Cálculos
-              calculosReales={calculosReales}
-              calculosProyectados={calculosProyectados}
-            />
-          </div>
-        </div>
+        <VisualizacionDatos
+          onClose={() => setShowExportacion(false)}
+          ingresos={ingresosInstant}
+          gastos={gastosInstant}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+          deudas={deudasInstant}
+          cuentas={cuentas}
+        />
       )}
 
       {/* Tutorial legacy eliminado — reemplazado por OnboardingModal */}

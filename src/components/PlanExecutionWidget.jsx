@@ -72,116 +72,109 @@ export default function PlanExecutionWidget({
     <div className="space-y-3">
       
       {/* ========================================
-          TARJETA PRINCIPAL: PRESUPUESTO DEL DÍA
+          WIDGET SALUD FINANCIERA DEL DÍA
           ======================================== */}
-      {financialHealth && (
-        <div
-          className="rounded-2xl border overflow-hidden transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            borderColor: financialHealth.esCrisis
-              ? 'rgba(239,68,68,0.25)'
-              : financialHealth.esEmergencia
-              ? 'rgba(245,158,11,0.2)'
-              : 'rgba(255,255,255,0.07)',
-          }}
-        >
-          <div className="p-4">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <div
-                  className="text-[10px] font-bold uppercase tracking-wider mb-1"
-                  style={{
-                    color: financialHealth.esCrisis
-                      ? '#f87171'
-                      : financialHealth.esEmergencia
-                      ? '#fbbf24'
-                      : '#9ca3af',
-                  }}
-                >
-                  {financialHealth.esCrisis
-                    ? '⚠️ Presupuesto ajustado'
-                    : financialHealth.esEmergencia
-                    ? 'Presupuesto bajo'
-                    : '💰 Tu límite diario'}
-                </div>
-                <div className="text-3xl font-black text-white">
-                  ${(financialHealth.presupuestoDiario ?? 0).toFixed(0)}
+      {financialHealth && (() => {
+        const score = financialHealth.healthScore ?? 0
+        const pct = Math.min(100, (financialHealth.gastosHoy / Math.max(1, financialHealth.presupuestoDiario)) * 100)
+        const accentColor = score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444'
+        const accentGlow  = score >= 70 ? 'rgba(16,185,129,0.35)' : score >= 40 ? 'rgba(245,158,11,0.35)' : 'rgba(239,68,68,0.35)'
+        const label       = score >= 70 ? 'Excelente' : score >= 40 ? 'Regular' : 'Atención'
+        // SVG ring params
+        const R = 26, C = 2 * Math.PI * R
+        const dash = (score / 100) * C
+
+        return (
+          <div
+            className="rounded-2xl p-4 overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+              border: `1px solid ${accentColor}22`,
+              boxShadow: `0 0 40px -10px ${accentGlow}`,
+            }}
+          >
+            {/* Fila principal: ring + cifra + stats */}
+            <div className="flex items-center gap-4">
+              {/* Ring SVG */}
+              <div className="relative shrink-0 w-[68px] h-[68px] flex items-center justify-center">
+                <svg viewBox="0 0 68 68" className="w-full h-full -rotate-90">
+                  <circle cx="34" cy="34" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6"/>
+                  <circle
+                    cx="34" cy="34" r={R} fill="none"
+                    stroke={accentColor} strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${dash} ${C}`}
+                    style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 6px ${accentGlow})` }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[15px] font-black text-white leading-none">{score}</span>
+                  <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider">/100</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Racha */}
-                {(stats.streak ?? 0) > 0 && (
-                  <div className="flex items-center gap-1 bg-orange-500/15 px-2 py-1 rounded-full border border-orange-500/25">
-                    <Flame className="w-3 h-3 text-orange-400" />
-                    <span className="text-xs font-bold text-orange-300">{stats.streak}</span>
-                  </div>
-                )}
-
-                {/* Score */}
-                <div
-                  className="px-2 py-1 rounded-full text-xs font-bold border"
-                  style={{
-                    background:
-                      financialHealth.healthScore >= 70
-                        ? 'rgba(16,185,129,0.12)'
-                        : financialHealth.healthScore >= 40
-                        ? 'rgba(245,158,11,0.12)'
-                        : 'rgba(239,68,68,0.12)',
-                    color:
-                      financialHealth.healthScore >= 70
-                        ? '#34d399'
-                        : financialHealth.healthScore >= 40
-                        ? '#fbbf24'
-                        : '#f87171',
-                    borderColor:
-                      financialHealth.healthScore >= 70
-                        ? 'rgba(16,185,129,0.25)'
-                        : financialHealth.healthScore >= 40
-                        ? 'rgba(245,158,11,0.25)'
-                        : 'rgba(239,68,68,0.25)',
-                  }}
-                >
-                  {financialHealth.healthScore}/100
+              {/* Centro: cifra y label */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span
+                    className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                    style={{ background: `${accentColor}18`, color: accentColor, border: `1px solid ${accentColor}30` }}
+                  >
+                    {label}
+                  </span>
+                  {(stats.streak ?? 0) > 0 && (
+                    <span className="flex items-center gap-0.5 text-[9px] font-bold text-orange-400">
+                      <Flame className="w-3 h-3" />{stats.streak}d
+                    </span>
+                  )}
                 </div>
+                <p className="text-[10px] text-gray-500 font-medium mb-1.5">Límite diario disponible</p>
+                <p className="text-2xl font-black text-white leading-none">
+                  ${(financialHealth.presupuestoDiario ?? 0).toFixed(0)}
+                </p>
+              </div>
+
+              {/* Derecha: días restantes */}
+              <div
+                className="text-center shrink-0 px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <p className="text-xl font-black text-white leading-none">{financialHealth.diasRestantes ?? '–'}</p>
+                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mt-0.5">días</p>
               </div>
             </div>
 
-            {/* Barra de gasto del día */}
-            <div className="mb-3">
-              <div className="flex justify-between text-[10px] text-gray-500 mb-1.5">
-                <span>Gastado hoy: ${(financialHealth.gastosHoy ?? 0).toFixed(0)}</span>
-                <span>{financialHealth.diasRestantes} días restantes</span>
+            {/* Barra de uso diario */}
+            <div className="mt-3.5">
+              <div className="flex justify-between text-[10px] text-gray-600 mb-1.5">
+                <span>Gastado hoy <span className="text-gray-400 font-semibold">${(financialHealth.gastosHoy ?? 0).toFixed(0)}</span></span>
+                <span style={{ color: accentColor }}>{pct.toFixed(0)}% usado</span>
               </div>
-              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-full transition-all duration-700"
                   style={{
-                    width: `${Math.min(100, (financialHealth.gastosHoy / Math.max(1, financialHealth.presupuestoDiario)) * 100)}%`,
-                    background: financialHealth.esCrisis
-                      ? '#ef4444'
-                      : financialHealth.esEmergencia
-                      ? '#f59e0b'
-                      : financialHealth.gastosHoy > financialHealth.presupuestoDiario
-                      ? '#eab308'
-                      : '#10b981',
+                    width: `${pct}%`,
+                    background: `linear-gradient(90deg, ${accentColor}cc, ${accentColor})`,
+                    boxShadow: `0 0 8px ${accentGlow}`,
                   }}
                 />
               </div>
             </div>
 
-            {/* Insight de tendencia */}
-            {financialHealth.tendenciaAlza && !financialHealth.esCrisis && (
-              <div className="flex items-center gap-2 text-[11px] p-2 bg-yellow-500/8 border border-yellow-500/15 rounded-xl text-yellow-300">
-                <TrendingUp className="w-3 h-3 flex-shrink-0" />
-                <span>Vas gastando más rápido de lo ideal este mes</span>
+            {/* Insight */}
+            {financialHealth.tendenciaAlza && score >= 40 && (
+              <div
+                className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl text-[11px] font-medium"
+                style={{ background: 'rgba(245,158,11,0.08)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.15)' }}
+              >
+                <TrendingUp className="w-3 h-3 shrink-0" />
+                Ritmo de gasto más alto de lo habitual
               </div>
             )}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
     {/* ========================================
     PROGRESO DEL PLAN (Compacto)
