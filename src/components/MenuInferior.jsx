@@ -8,7 +8,7 @@ import {
   Sparkles,
   User,
   X,
-  Download,
+  BarChart2,
   CreditCard,
   Repeat,
   TrendingUp,
@@ -32,7 +32,7 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
     { id: 'cuentas',      icon: Wallet,     label: 'Cuentas',     color: 'text-blue-400',   badge: coberturaBadge > 0 },
     { id: 'suscripcion',  icon: Repeat,     label: 'Suscrip.',    color: 'text-indigo-400', badge: false },
     { id: 'tarjetas',     icon: CreditCard, label: 'Tarjetas',    color: 'text-purple-400', badge: false },
-    { id: '_export',      icon: Download,   label: 'Exportar',    color: 'text-emerald-400',badge: false, tag: 'NUEVO' },
+    { id: '_export',      icon: BarChart2,  label: 'Reportes',    color: 'text-emerald-400',badge: false },
     { id: 'lectorEstado', icon: ScanLine,   label: 'Escáner',     color: 'text-yellow-400', badge: false, tag: 'PRO' },
     { id: 'usuario',      icon: User,       label: 'Perfil',      color: 'text-gray-300',   badge: false },
   ];
