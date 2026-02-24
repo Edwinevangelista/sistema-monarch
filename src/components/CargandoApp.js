@@ -1,247 +1,293 @@
+// CargandoApp.js — 2026 Design: moderno, finanzas para jóvenes
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Wallet, Coffee, Sparkles, Loader2, CheckCircle } from 'lucide-react'
 
-const CONSEJOS_FINANCIEROS = [
-  "💡 Una regla de oro: Ahorra al menos el 10% de tus ingresos.",
-  "💡 Antes de gastar, pregunta: ¿Lo necesito o solo lo quiero?",
-  "💡 Usa la regla de las 72 horas para gastos grandes: espera 3 días.",
-  "💡 Cancela una suscripción que no uses hoy y ahorra mañana.",
-  "💡 Prioriza pagar tus deudas más caras (Método Bola de Nieve).",
-  "💡 Lleva un registro de tus gastos diarios durante una semana.",
-  "💡 Crea un fondo de emergencia equivalente a 3 meses de gastos.",
-  "💡 Automatiza tus transferencias a ahorros apenas recibes tu sueldo.",
-  "💡 Revisa tus suscripciones anuales, a veces las olvidamos y cobran igual.",
-  "💡 Compara precios antes de compras grandes. Un 10% de descuento suma mucho.",
-  "💡 Compra productos genéricos para productos de uso diario.",
-  "💡 La comida fuera es el enemigo silencioso de tu presupuesto.",
-  "💡 Paga tus tarjetas de crédito en su fecha de corte, no solo el vencimiento.",
-  "💡 Divide tu sueldo en cuentas diferentes: Gastos, Ahorros y Cuentas Personales.",
-  "💡 Si te sobra dinero al final del mes, abona a deuda o inviértelo.",
-  "💡 La inflación aumenta, ajusta tu presupuesto mensual si puedes.",
-  "💡 No gastes el dinero que aún no has recibido (bonos futuros).",
-  "💡 Tu salud mental es más importante que tu dinero, pero el dinero ayuda a tu salud.",
+const TIPS = [
+  { emoji: '💡', text: 'Ahorra el 10% de cada ingreso antes de gastar.' },
+  { emoji: '📉', text: 'Cancela una suscripción que no uses. El tiempo vale más.' },
+  { emoji: '🎯', text: 'Define un objetivo claro: sin meta, no hay dirección.' },
+  { emoji: '⚡', text: 'Paga tus deudas más caras primero. La deuda es el enemigo.' },
+  { emoji: '🏦', text: 'Tu fondo de emergencia = 3 meses de gastos. Es tu red de seguridad.' },
+  { emoji: '📊', text: 'Lo que no se mide, no se puede mejorar. Registra todo.' },
+  { emoji: '🚀', text: 'Automatiza tus ahorros. El mejor ahorro es el que no ves.' },
+  { emoji: '💳', text: 'Paga tu tarjeta completa cada mes. Los intereses te roban.' },
+]
+
+const PASOS = [
+  'Verificando tu sesión...',
+  'Cargando tus datos financieros...',
+  'Sincronizando ingresos y gastos...',
+  'Preparando tu dashboard...',
+  '¡Todo listo!',
 ]
 
 export default function CargandoApp() {
   const navigate = useNavigate()
-  
   const [progreso, setProgreso] = useState(0)
-  const [usuario, setUsuario] = useState(null) 
-  const [consejo, setConsejo] = useState(CONSEJOS_FINANCIEROS[0])
-  const [listoParaNavegar, setListoParaNavegar] = useState(false)
+  const [usuario, setUsuario] = useState(null)
+  const [pasoActual, setPasoActual] = useState(0)
+  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)])
+  const [listo, setListo] = useState(false)
 
   useEffect(() => {
     let montado = true
 
-    // 1. Seleccionar consejo aleatorio
-    const randomTip = CONSEJOS_FINANCIEROS[Math.floor(Math.random() * CONSEJOS_FINANCIEROS.length)]
-    setConsejo(randomTip)
-
-    // 2. Lógica de Carga Inteligente
-    const inicializarSesion = async () => {
+    const inicializar = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-        if (!session || sessionError) {
+        // Verificar sesión
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (!session || error) {
           if (montado) navigate('/auth')
           return
         }
 
-        // Obtener datos del usuario
-        let datosUsuario = {
+        let datos = {
           id: session.user.id,
           email: session.user.email,
           nombre: session.user.user_metadata?.nombre || '',
-          apellido: session.user.user_metadata?.apellido || '',
           moneda: session.user.user_metadata?.moneda || 'USD',
           avatar_url: session.user.user_metadata?.avatar_url
         }
 
+        if (montado) { setPasoActual(0); setProgreso(15) }
+
+        // Perfil
         try {
           const { data: perfil } = await supabase.from('perfiles').select('*').eq('id', session.user.id).single()
-          if (perfil) datosUsuario = { ...datosUsuario, ...perfil }
-        } catch (err) { /* No fatal */ }
+          if (perfil) datos = { ...datos, ...perfil }
+        } catch { /* no fatal */ }
 
-        // ✅ PRE-CARGA DE DATOS (Mantener lógica inteligente)
-        try {
-          const user_id = session.user.id
-          const tables = [
-            { name: 'ingresos', table: 'ingresos' },
-            { name: 'gastos', table: 'gastos_variables' },  // ✅ BASE TABLE real
-            { name: 'gastos_fijos', table: 'gastos_fijos' },
-            { name: 'suscripciones', table: 'suscripciones' },
-            { name: 'deudas', table: 'deudas' },
-            { name: 'cuentas', table: 'cuentas_bancarias' }
-          ];
+        if (montado) { setPasoActual(1); setProgreso(35) }
 
-          for (const t of tables) {
-            const { data } = await supabase.from(t.table).select('*').eq('user_id', user_id)
+        // Pre-cargar datos financieros
+        const tablas = [
+          { name: 'ingresos', table: 'ingresos' },
+          { name: 'gastos', table: 'gastos_variables' },
+          { name: 'gastos_fijos', table: 'gastos_fijos' },
+          { name: 'suscripciones', table: 'suscripciones' },
+          { name: 'deudas', table: 'deudas' },
+          { name: 'cuentas', table: 'cuentas_bancarias' },
+        ]
+
+        for (let i = 0; i < tablas.length; i++) {
+          if (!montado) return
+          const t = tablas[i]
+          try {
+            const { data } = await supabase.from(t.table).select('*').eq('user_id', session.user.id)
             localStorage.setItem(`${t.name}_cache_v2`, JSON.stringify(data || []))
+          } catch { /* no fatal */ }
+          if (montado) {
+            setPasoActual(i < 3 ? 2 : 3)
+            setProgreso(35 + Math.round(((i + 1) / tablas.length) * 55))
           }
-        } catch (err) {
-          console.error("❌ Error pre-cargando datos:", err)
         }
 
-        localStorage.setItem('usuario_finguide', JSON.stringify(datosUsuario))
-        setUsuario(datosUsuario)
-
-        // E. SIMULAR CARGA VISUAL
-        const delayDeCarga = 2000
-        const pasosTotales = 20
-        const delayPorPaso = delayDeCarga / pasosTotales 
-
-        for (let i = 1; i <= pasosTotales; i++) {
-          if (!montado) break
-          await new Promise(resolve => setTimeout(resolve, delayPorPaso))
-          if (montado) setProgreso(Math.floor((i / pasosTotales) * 100))
-        }
-
+        localStorage.setItem('usuario_finguide', JSON.stringify(datos))
         if (montado) {
-          setListoParaNavegar(true)
-          setTimeout(() => {
-            navigate('/dashboard')
-          }, 800) 
+          setUsuario(datos)
+          setPasoActual(4)
+          setProgreso(100)
+          setListo(true)
+          setTimeout(() => { if (montado) navigate('/dashboard') }, 700)
         }
 
       } catch (err) {
-        console.error("Error en carga inicial:", err)
+        console.error('Error en carga:', err)
         if (montado) navigate('/auth')
       }
     }
 
-    // Optimización: Login reciente
+    // Login reciente → skip animación
     const tiempoLogin = sessionStorage.getItem('ultimo_login_timestamp')
     if (tiempoLogin) {
-      const segundosPasados = (Date.now() - parseInt(tiempoLogin)) / 1000
-      if (segundosPasados < 10) {
+      const seg = (Date.now() - parseInt(tiempoLogin)) / 1000
+      if (seg < 10) {
         sessionStorage.setItem('ultimo_login_timestamp', '')
         navigate('/dashboard')
         return
       }
     }
 
-    inicializarSesion()
-
-    return () => {
-      montado = false
-    }
+    inicializar()
+    return () => { montado = false }
   }, [navigate])
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-black flex flex-col items-center justify-center p-6 relative overflow-hidden text-center">
-      
-      {/* Fondo Atmosférico */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-      </div>
-      
-      {/* CARD PRINCIPAL */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
-          
-          {/* Linea de progreso superior */}
-          <div className="absolute top-0 left-0 h-1 w-full bg-white/5">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-300 ease-out"
-              style={{ width: `${progreso}%` }}
-            />
-          </div>
+  const nombreDisplay = usuario?.nombre?.split(' ')[0] || usuario?.email?.split('@')[0] || ''
+  const hora = new Date().getHours()
+  const saludo = hora >= 5 && hora < 12 ? 'Buenos días' : hora >= 12 && hora < 19 ? 'Buenas tardes' : 'Buenas noches'
 
-          {/* AVATAR / ICONO */}
-          <div className="mb-8 relative inline-block">
-            <div className="absolute inset-0 bg-blue-500 blur-xl opacity-40 animate-pulse rounded-full" />
-            {usuario?.avatar_url ? (
-              <img 
-                src={usuario.avatar_url} 
-                alt="Avatar" 
-                className="relative w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/10 object-cover shadow-2xl"
-              />
-            ) : (
-              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-white/10">
-                <Wallet className="w-10 h-10 md:w-12 md:h-12 text-white drop-shadow-md" />
-              </div>
-            )}
-            
-            {/* Estado de Carga (Icono) */}
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-4 border-gray-900 transition-all duration-500 transform scale-0">
-              {!listoParaNavegar ? (
-                <Loader2 className="w-6 h-6 md:w-8 md:h-8 text-blue-400 animate-spin" />
-              ) : (
-                <div className="bg-green-500 rounded-full w-full h-full flex items-center justify-center animate-bounce-in">
-                  <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                </div>
-              )}
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      style={{
+        background: 'radial-gradient(ellipse at top, #0f172a 0%, #020617 60%, #000000 100%)',
+      }}
+    >
+      {/* Glows de fondo */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-[-15%] left-[10%] w-[45vw] h-[45vw] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', filter: 'blur(40px)' }}
+        />
+        <div
+          className="absolute bottom-[-10%] right-[-5%] w-[40vw] h-[40vw] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', filter: 'blur(40px)' }}
+        />
+        {/* Grid sutil */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '60px 60px' }}
+        />
+      </div>
+
+      {/* CARD CENTRAL */}
+      <div
+        className="relative z-10 w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '28px',
+          backdropFilter: 'blur(30px)',
+          boxShadow: '0 40px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Barra de progreso top */}
+        <div className="h-0.5 bg-white/5">
+          <div
+            className="h-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progreso}%`,
+              background: 'linear-gradient(90deg, #6366f1, #10b981)',
+              boxShadow: '0 0 8px rgba(99,102,241,0.6)',
+            }}
+          />
+        </div>
+
+        <div className="p-7 text-center">
+          {/* Logo / Icono */}
+          <div className="relative inline-flex items-center justify-center mb-6">
+            {/* Anillo exterior animado */}
+            <div
+              className="absolute w-20 h-20 rounded-full"
+              style={{
+                border: `1.5px solid rgba(99,102,241,${listo ? '0.6' : '0.2'})`,
+                animation: !listo ? 'spin 3s linear infinite' : 'none',
+              }}
+            />
+            <div
+              className="absolute w-16 h-16 rounded-full"
+              style={{
+                border: `1px dashed rgba(16,185,129,${listo ? '0.5' : '0.15'})`,
+                animation: !listo ? 'spin 5s linear infinite reverse' : 'none',
+              }}
+            />
+            {/* Icono central */}
+            <div
+              className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{
+                background: listo
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                boxShadow: listo
+                  ? '0 0 30px rgba(16,185,129,0.4)'
+                  : '0 0 20px rgba(99,102,241,0.3)',
+                transition: 'all 0.5s ease',
+              }}
+            >
+              {listo
+                ? <span className="text-2xl">✓</span>
+                : <span className="text-2xl font-black text-white" style={{ fontFamily: 'monospace' }}>$</span>
+              }
             </div>
           </div>
 
-          {/* TEXTO DINÁMICO */}
-        <h1 className="text-2xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-purple-200 mb-2 tracking-tight">
-  {listoParaNavegar ? '¡Todo listo!' : (() => {
-    const hora = new Date().getHours();
-    if (hora >= 5 && hora < 12) return '☀️ Buenos días';
-    if (hora >= 12 && hora < 19) return '☕ Buenas tardes';
-    return '🌙 Buenas noches';
-  })()}
-</h1>
-<p className="text-white font-medium text-lg mb-8">
-  {listoParaNavegar 
-    ? 'Iniciando experiencia...' 
-    : `${usuario?.nombre ? usuario.nombre.split(' ')[0] : usuario?.email?.split('@')[0] || 'Usuario'} 👋`
-  }
-</p>
+          {/* Texto de saludo */}
+          <div className="mb-6">
+            {nombreDisplay ? (
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">{saludo}</p>
+                <h1 className="text-2xl font-black text-white">{nombreDisplay} 👋</h1>
+              </>
+            ) : (
+              <h1 className="text-2xl font-black text-white">FinGuide</h1>
+            )}
+            <p className={`text-sm mt-1 transition-all duration-300 ${listo ? 'text-emerald-400 font-semibold' : 'text-gray-500'}`}>
+              {listo ? '¡Entrando al dashboard!' : PASOS[pasoActual]}
+            </p>
+          </div>
 
-          {/* BARRA DE PROGRESO */}
-          {!listoParaNavegar && (
-            <div className="mb-10">
-              <div className="flex justify-between text-xs md:text-sm font-semibold text-blue-300 mb-3">
-                <span>Cargando activos financieros...</span>
-                <span>{progreso}%</span>
-              </div>
-              <div className="h-2 w-full bg-gray-700/50 rounded-full overflow-hidden shadow-inner">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                  style={{ width: `${progreso}%` }}
+          {/* Barra de progreso principal */}
+          {!listo && (
+            <div className="mb-6">
+              <div
+                className="h-1.5 w-full rounded-full overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-400 ease-out"
+                  style={{
+                    width: `${progreso}%`,
+                    background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #10b981)',
+                    boxShadow: '0 0 6px rgba(99,102,241,0.5)',
+                  }}
                 />
+              </div>
+              <div className="flex justify-between mt-1.5">
+                <span className="text-[10px] text-gray-600">Cargando...</span>
+                <span className="text-[10px] text-gray-500 font-bold">{progreso}%</span>
               </div>
             </div>
           )}
 
-          {/* TARJETA DE CONSEJO */}
-          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-white/10 rounded-2xl p-6 text-left relative overflow-hidden group hover:border-purple-400/30 transition-all duration-300">
-            <div className="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/20 rounded-full blur-xl group-hover:bg-yellow-500/30 transition-colors" />
-            <div className="flex items-start gap-4 relative z-10">
-              <div className="bg-yellow-500/20 p-3 rounded-xl text-yellow-400 shadow-lg">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-yellow-300/80 uppercase tracking-wider mb-2">Consejo del Día</p>
-                <p className="text-sm md:text-base text-gray-200 font-medium leading-relaxed">
-                  {consejo}
-                </p>
-              </div>
+          {/* Tip del día */}
+          <div
+            className="rounded-2xl p-4 text-left"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-2">💬 Tip financiero</p>
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">{tip.emoji}</span>
+              <p className="text-xs text-gray-300 leading-relaxed font-medium">{tip.text}</p>
             </div>
           </div>
 
-          {/* INDICADOR FINAL */}
-          <div className="mt-8 h-12 flex items-center justify-center">
-            {!listoParaNavegar ? (
-              <div className="flex items-center gap-2 text-blue-400/70 text-sm font-medium animate-pulse">
-                <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <div className="w-2 h-2 bg-blue-400 rounded-full" style={{ animationDelay: '0.2s' }} />
-                <div className="w-2 h-2 bg-blue-400 rounded-full" style={{ animationDelay: '0.4s' }} />
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-green-400 font-semibold animate-in fade-in slide-in-from-bottom-4">
-                <Coffee className="w-5 h-5" /> Disfruta tu experiencia
-              </div>
-            )}
-          </div>
+          {/* Puntos animados loading */}
+          {!listo && (
+            <div className="flex justify-center gap-1.5 mt-5">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full bg-indigo-500"
+                  style={{
+                    animation: 'bounce 1.2s ease-in-out infinite',
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
         </div>
       </div>
+
+      {/* Tag version */}
+      <p className="relative z-10 mt-8 text-[10px] text-gray-700 font-medium tracking-widest uppercase">
+        FinGuide · 2026
+      </p>
+
+      {/* Keyframes inline */}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+          40% { transform: translateY(-6px); opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
