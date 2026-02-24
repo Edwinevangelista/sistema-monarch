@@ -1,20 +1,18 @@
-// CalendarioPagos.jsx - VERSIÓN FINAL CORREGIDA
-// Fix todos los errores de ESLint
-
+// CalendarioPagos.jsx — 2026 Design: distingue gastos vs ingresos, resalta hoy
 import React, { useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, X, Calendar as CalIcon, CreditCard, Repeat, Wallet } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, CreditCard, Repeat, Wallet } from 'lucide-react'
 
 const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
   const [mesActual, setMesActual] = useState(new Date())
   const [diaSeleccionado, setDiaSeleccionado] = useState(null)
-  
+
   const hoy = useMemo(() => new Date(), [])
 
-  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-  const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
-  
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const diasSemana = ['D','L','M','X','J','V','S']
+
   const obtenerDiasDelMes = (fecha) => {
     const año = fecha.getFullYear()
     const mes = fecha.getMonth()
@@ -22,464 +20,412 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     const ultimoDia = new Date(año, mes + 1, 0)
     const diasEnMes = ultimoDia.getDate()
     const diaSemanaInicio = primerDia.getDay()
-    
     const dias = []
-    // Rellenar días vacíos antes del día 1
-    for (let i = 0; i < diaSemanaInicio; i++) {
-      dias.push(null)
-    }
-    // Días del mes
-    for (let dia = 1; dia <= diasEnMes; dia++) {
-      dias.push(dia)
-    }
+    for (let i = 0; i < diaSemanaInicio; i++) dias.push(null)
+    for (let dia = 1; dia <= diasEnMes; dia++) dias.push(dia)
     return dias
   }
-  
-  // ✅ USAR useCallback PARA EVITAR WARNINGS DE DEPENDENCY
+
   const obtenerEventosDelDia = useCallback((dia) => {
-    if (!dia) return { ingresos: 0, gastos: 0, eventos: [] }
-    
+    if (!dia) return { ingresos: 0, gastos: 0, eventos: [], tieneIngreso: false, tieneGasto: false }
+
     const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
     const fechaStr = fecha.toISOString().split('T')[0]
-    
+
     let totalIngresos = 0
     let totalGastos = 0
     const eventos = []
-    
-    // 🔄 INGRESOS CON SOPORTE PARA RECURRENCIA
+
+    // ── INGRESOS ──
     ingresos?.forEach(ing => {
       if (ing.fecha === fechaStr) {
         totalIngresos += Number(ing.monto || 0)
-        
-        // Determinar si es recurrente y generar nombre apropiado
-        let nombreIngreso = ing.fuente || 'Ingreso';
-        let esRecurrente = false;
-        
+        let nombreIngreso = ing.fuente || 'Ingreso'
+        let esRecurrente = false
         if (ing.frecuencia && ing.frecuencia !== 'Único') {
-          const sufijos = {
-            'Semanal': '(Semanal)',
-            'Quincenal': '(Quincenal)', 
-            'Mensual': '(Mensual)'
-          };
-          nombreIngreso += ' ' + (sufijos[ing.frecuencia] || '');
-          esRecurrente = true;
+          const sufijos = { 'Semanal': '(Semanal)', 'Quincenal': '(Quincenal)', 'Mensual': '(Mensual)' }
+          nombreIngreso += ' ' + (sufijos[ing.frecuencia] || '')
+          esRecurrente = true
         }
-        
-        eventos.push({ 
-          id: ing.id,
-          tipo: 'ingreso', 
-          nombre: nombreIngreso, 
-          monto: ing.monto,
-          icono: <Wallet className="w-4 h-4" />,
-          color: esRecurrente 
-            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed' // Proyectado
-            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', // Real
-          esRecurrente
+        eventos.push({
+          id: ing.id, tipo: 'ingreso', nombre: nombreIngreso, monto: ing.monto,
+          icono: <Wallet className="w-4 h-4" />, esRecurrente,
+          color: esRecurrente
+            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed'
+            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
         })
       }
-      
-      // 🔄 GENERAR EVENTOS RECURRENTES ADICIONALES
+
+      // Ingresos recurrentes adicionales
       if (ing.frecuencia && ing.frecuencia !== 'Único') {
-        const fechaBase = new Date(ing.fecha);
-        const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
-        const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
-        
+        const fechaBase = new Date(ing.fecha)
+        const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0)
+        const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1)
+
         if (ing.frecuencia === 'Semanal') {
-          // Generar eventos semanales adicionales
-          let fechaEvento = new Date(fechaBase);
+          let fechaEvento = new Date(fechaBase)
           while (fechaEvento <= ultimoDiaMes) {
-            fechaEvento.setDate(fechaEvento.getDate() + 7);
-            if (fechaEvento >= primerDiaMes && fechaEvento <= ultimoDiaMes) {
-              if (fechaEvento.getDate() === dia && fechaEvento.getMonth() === mesActual.getMonth()) {
-                totalIngresos += Number(ing.monto || 0);
-                eventos.push({
-                  id: `semanal-${ing.id}-${dia}`,
-                  tipo: 'ingreso',
-                  nombre: `${ing.fuente || 'Ingreso'} (Semanal)`,
-                  monto: ing.monto,
-                  icono: <Wallet className="w-4 h-4" />,
-                  color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
-                  esRecurrente: true
-                });
-              }
-            }
-          }
-        }
-        
-        else if (ing.frecuencia === 'Mensual') {
-          // Evento mensual en el mismo día
-          const diaOriginal = fechaBase.getDate();
-          if (dia === Math.min(diaOriginal, ultimoDiaMes.getDate()) && ing.fecha !== fechaStr) {
-            totalIngresos += Number(ing.monto || 0);
-            eventos.push({
-              id: `mensual-${ing.id}`,
-              tipo: 'ingreso',
-              nombre: `${ing.fuente || 'Ingreso'} (Mensual)`,
-              monto: ing.monto,
-              icono: <Wallet className="w-4 h-4" />,
-              color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
-              esRecurrente: true
-            });
-          }
-        }
-        
-        else if (ing.frecuencia === 'Quincenal') {
-          const diaOriginal = fechaBase.getDate();
-          // Generar dos pagos por mes: original y +15 días
-          if (diaOriginal <= 15) {
-            if (dia === diaOriginal + 15 && dia <= ultimoDiaMes.getDate()) {
-              totalIngresos += Number(ing.monto || 0);
+            fechaEvento.setDate(fechaEvento.getDate() + 7)
+            if (fechaEvento >= primerDiaMes && fechaEvento <= ultimoDiaMes && fechaEvento.getDate() === dia) {
+              totalIngresos += Number(ing.monto || 0)
               eventos.push({
-                id: `quincenal-${ing.id}-2`,
-                tipo: 'ingreso',
-                nombre: `${ing.fuente || 'Ingreso'} (Quincenal)`,
-                monto: ing.monto,
+                id: `semanal-${ing.id}-${dia}`, tipo: 'ingreso',
+                nombre: `${ing.fuente || 'Ingreso'} (Semanal)`, monto: ing.monto,
                 icono: <Wallet className="w-4 h-4" />,
                 color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
-                esRecurrente: true
-              });
+                esRecurrente: true,
+              })
             }
+          }
+        } else if (ing.frecuencia === 'Mensual') {
+          const diaOriginal = fechaBase.getDate()
+          if (dia === Math.min(diaOriginal, ultimoDiaMes.getDate()) && ing.fecha !== fechaStr) {
+            totalIngresos += Number(ing.monto || 0)
+            eventos.push({
+              id: `mensual-${ing.id}`, tipo: 'ingreso',
+              nombre: `${ing.fuente || 'Ingreso'} (Mensual)`, monto: ing.monto,
+              icono: <Wallet className="w-4 h-4" />,
+              color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
+              esRecurrente: true,
+            })
+          }
+        } else if (ing.frecuencia === 'Quincenal') {
+          const diaOriginal = fechaBase.getDate()
+          if (diaOriginal <= 15 && dia === diaOriginal + 15 && dia <= ultimoDiaMes.getDate()) {
+            totalIngresos += Number(ing.monto || 0)
+            eventos.push({
+              id: `quincenal-${ing.id}-2`, tipo: 'ingreso',
+              nombre: `${ing.fuente || 'Ingreso'} (Quincenal)`, monto: ing.monto,
+              icono: <Wallet className="w-4 h-4" />,
+              color: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 border-dashed',
+              esRecurrente: true,
+            })
           }
         }
       }
     })
-    
-    // Gastos Variables
+
+    // ── GASTOS VARIABLES ──
     gastos?.forEach(g => {
       if (g.fecha === fechaStr) {
         totalGastos += Number(g.monto || 0)
-        const iconoCat = g.categoria ? g.categoria.charAt(0) : '📝'
-        eventos.push({ 
-          id: g.id,
-          tipo: 'gasto', 
-          nombre: g.descripcion || g.categoria || 'Gasto', 
-          monto: g.monto,
-          icono: <span className="text-lg">{iconoCat}</span>,
-          color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+        eventos.push({
+          id: g.id, tipo: 'gasto',
+          nombre: g.descripcion || g.categoria || 'Gasto', monto: g.monto,
+          icono: <span className="text-sm">💸</span>,
+          color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
         })
       }
     })
-    
-    // Gastos Fijos
+
+    // ── GASTOS FIJOS ──
     gastosFijos?.forEach(gf => {
       if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
         totalGastos += Number(gf.monto || 0)
-        eventos.push({ 
-          id: gf.id,
-          tipo: 'gasto_fijo', 
-          nombre: gf.nombre, 
-          monto: gf.monto,
-          icono: <CalIcon className="w-4 h-4" />,
-          color: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+        eventos.push({
+          id: gf.id, tipo: 'gasto_fijo', nombre: gf.nombre, monto: gf.monto,
+          icono: <CreditCard className="w-4 h-4" />,
+          color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
         })
       }
     })
-    
-    // Suscripciones
+
+    // ── SUSCRIPCIONES ──
     suscripciones?.forEach(sub => {
       if (sub.estado === 'Activo' && sub.proximo_pago) {
         const proxPago = new Date(sub.proximo_pago + 'T00:00:00')
-        if (proxPago.getDate() === dia && 
-            proxPago.getMonth() === mesActual.getMonth() &&
-            proxPago.getFullYear() === mesActual.getFullYear()) {
+        if (proxPago.getDate() === dia && proxPago.getMonth() === mesActual.getMonth() && proxPago.getFullYear() === mesActual.getFullYear()) {
           totalGastos += Number(sub.costo || 0)
-          eventos.push({ 
-            id: sub.id,
-            tipo: 'suscripcion', 
-            nombre: sub.servicio, 
-            monto: sub.costo,
+          eventos.push({
+            id: sub.id, tipo: 'suscripcion', nombre: sub.servicio, monto: sub.costo,
             icono: <Repeat className="w-4 h-4" />,
-            color: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+            color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
           })
         }
       }
     })
-    
-    // Deudas
+
+    // ── DEUDAS ──
     deudas?.forEach(d => {
       if (d.vence) {
         const vence = new Date(d.vence + 'T00:00:00')
-        if (vence.getDate() === dia && 
-            vence.getMonth() === mesActual.getMonth() &&
-            vence.getFullYear() === mesActual.getFullYear()) {
+        if (vence.getDate() === dia && vence.getMonth() === mesActual.getMonth() && vence.getFullYear() === mesActual.getFullYear()) {
           totalGastos += Number(d.pago_minimo || 0)
-          eventos.push({ 
-            id: d.id,
-            tipo: 'deuda', 
-            nombre: d.cuenta, 
-            monto: d.pago_minimo,
+          eventos.push({
+            id: d.id, tipo: 'deuda', nombre: d.cuenta, monto: d.pago_minimo,
             icono: <CreditCard className="w-4 h-4" />,
-            color: 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+            color: 'bg-red-500/20 text-red-400 border-red-500/30',
           })
         }
       }
     })
-    
-    return { ingresos: totalIngresos, gastos: totalGastos, eventos }
-  }, [mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos]) // ✅ DEPENDENCIAS COMPLETAS
-  
+
+    const tieneIngreso = eventos.some(e => e.tipo === 'ingreso')
+    const tieneGasto = eventos.some(e => e.tipo !== 'ingreso')
+
+    return { ingresos: totalIngresos, gastos: totalGastos, eventos, tieneIngreso, tieneGasto }
+  }, [mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos])
+
   const cambiarMes = (direccion) => {
     const nuevaFecha = new Date(mesActual)
     nuevaFecha.setMonth(nuevaFecha.getMonth() + direccion)
     setMesActual(nuevaFecha)
     setDiaSeleccionado(null)
   }
-  
-  const handleDiaClick = (dia) => {
-    if (!dia) return
-    setDiaSeleccionado(dia)
-  }
-  
-  const dias = obtenerDiasDelMes(mesActual)
-  
-  const esHoy = (dia) => {
-    return dia === hoy.getDate() && 
-           mesActual.getMonth() === hoy.getMonth() && 
-           mesActual.getFullYear() === hoy.getFullYear()
-  }
-  
-  // ✅ CORREGIDO: Incluir obtenerEventosDelDia en dependencias
-  const eventosDelDia = useMemo(() => {
-    if (!diaSeleccionado) return null;
-    return obtenerEventosDelDia(diaSeleccionado);
-  }, [diaSeleccionado, obtenerEventosDelDia]) // ✅ DEPENDENCIA AGREGADA
-  
-  const netoDia = eventosDelDia ? eventosDelDia.ingresos - eventosDelDia.gastos : 0
-  
-  return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-4 md:p-6 relative overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <button 
-          onClick={() => cambiarMes(-1)}
-          className="p-2 hover:bg-white/10 rounded-xl transition-colors active:scale-95"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-400" />
-        </button>
-        
-        <h3 className="text-lg md:text-xl font-bold text-white tracking-wide">
-          {meses[mesActual.getMonth()].toUpperCase()} {mesActual.getFullYear()}
-        </h3>
-        
-        <button 
-          onClick={() => cambiarMes(1)}
-          className="p-2 hover:bg-white/10 rounded-xl transition-colors active:scale-95"
-        >
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
-      
-      {/* Días de la semana */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2 mb-3">
-        {diasSemana.map(dia => (
-          <div key={dia} className="text-center text-xs md:text-sm font-bold text-gray-500 uppercase py-2">
-            {dia}
-          </div>
-        ))}
-      </div>
-      
-      {/* Grid de días */}
-      <div className="grid grid-cols-7 gap-1 md:gap-2">
-        {dias.map((dia, index) => {
-          if (!dia) return <div key={`empty-${index}`} className="aspect-square" />
-          
-          // Cálculo rápido para UI (evitando render pesado si no es necesario)
-          const { eventos } = obtenerEventosDelDia(dia)
-          const tieneEventos = eventos.length > 0
-          const esDiaSeleccionado = dia === diaSeleccionado
-          
-          return (
-            <div
-              key={dia}
-              onClick={() => handleDiaClick(dia)}
-              className={`
-                aspect-square rounded-2xl p-1 md:p-2 
-                flex flex-col items-center justify-center relative cursor-pointer
-                transition-all duration-200 ease-out
-                ${esDiaSeleccionado 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-900' 
-                  : tieneEventos
-                    ? 'bg-white/10 hover:bg-white/20 text-gray-200'
-                    : 'text-gray-500 hover:bg-white/5'
-                }
-                ${esHoy(dia) ? 'font-extrabold' : 'font-semibold'}
-                active:scale-95
-              `}
-            >
-              <span className="text-sm md:text-base z-10">{dia}</span>
-              
-              {/* Indicador de Hoy */}
-              {esHoy(dia) && !tieneEventos && (
-                <span className="absolute bottom-1 w-1 h-1 bg-blue-400 rounded-full shadow-[0_0_5px_rgba(96,165,250,0.8)]" />
-              )}
 
-              {/* Puntitos de Eventos */}
-              {tieneEventos && (
-                <div className="flex gap-0.5 mt-1 z-10">
-                  {eventos.slice(0, 3).map((ev, i) => {
-                    let color = '#34d399'; // Verde por defecto (ingresos)
-                    let style = { color };
-                    
-                    if (ev.tipo === 'ingreso' && ev.esRecurrente) {
-                      // Ingresos proyectados: puntito con borde punteado
-                      color = '#a7f3d0';
-                      style = { 
-                        color, 
-                        border: '0.5px dashed #34d399',
-                        backgroundColor: 'transparent'
-                      };
-                    } else if (ev.tipo === 'deuda') {
-                      color = '#fb7185';
-                    } else if (ev.tipo !== 'ingreso') {
-                      color = '#facc15';
-                    }
-                    
-                    return (
-                      <div 
-                        key={i} 
-                        className={`w-1 h-1 rounded-full ${ev.esRecurrente ? 'border' : 'bg-current'} opacity-70`}
-                        style={style}
-                      />
-                    );
-                  })}
-                  {eventos.length > 3 && <span className="text-[8px] leading-none text-white/50">+</span>}
-                </div>
-              )}
+  const handleDiaClick = (dia) => { if (dia) setDiaSeleccionado(dia) }
+
+  const dias = obtenerDiasDelMes(mesActual)
+
+  const esHoy = (dia) =>
+    dia === hoy.getDate() && mesActual.getMonth() === hoy.getMonth() && mesActual.getFullYear() === hoy.getFullYear()
+
+  const eventosDelDia = useMemo(() => {
+    if (!diaSeleccionado) return null
+    return obtenerEventosDelDia(diaSeleccionado)
+  }, [diaSeleccionado, obtenerEventosDelDia])
+
+  const netoDia = eventosDelDia ? eventosDelDia.ingresos - eventosDelDia.gastos : 0
+
+  // Leyenda de colores para el calendario
+  const leyenda = [
+    { color: 'bg-emerald-400', label: 'Ingreso' },
+    { color: 'bg-red-400', label: 'Gasto' },
+    { color: 'bg-blue-400', label: 'Hoy' },
+  ]
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/10"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+        boxShadow: '0 20px 40px -12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(20px)',
+      }}>
+
+      {/* Shimmer top */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+
+      <div className="p-4 md:p-5">
+        {/* ── HEADER ── */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => cambiarMes(-1)}
+            className="p-2 hover:bg-white/10 rounded-xl transition-all active:scale-90 text-gray-400 hover:text-white">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <div className="text-center">
+            <h3 className="text-base font-black text-white tracking-wider">
+              {meses[mesActual.getMonth()].toUpperCase()}
+            </h3>
+            <span className="text-xs text-gray-500 font-medium">{mesActual.getFullYear()}</span>
+          </div>
+
+          <button onClick={() => cambiarMes(1)}
+            className="p-2 hover:bg-white/10 rounded-xl transition-all active:scale-90 text-gray-400 hover:text-white">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* ── LEYENDA ── */}
+        <div className="flex items-center justify-center gap-4 mb-3">
+          {leyenda.map(({ color, label }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${color}`} />
+              <span className="text-[10px] text-gray-500 font-medium">{label}</span>
             </div>
-          )
-        })}
+          ))}
+        </div>
+
+        {/* ── DÍAS DE LA SEMANA ── */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {diasSemana.map(dia => (
+            <div key={dia} className="text-center text-[10px] font-bold text-gray-600 uppercase py-1.5">
+              {dia}
+            </div>
+          ))}
+        </div>
+
+        {/* ── GRID DE DÍAS ── */}
+        <div className="grid grid-cols-7 gap-1">
+          {dias.map((dia, index) => {
+            if (!dia) return <div key={`empty-${index}`} className="aspect-square" />
+
+            const { tieneIngreso, tieneGasto } = obtenerEventosDelDia(dia)
+            const tieneEventos = tieneIngreso || tieneGasto
+            const esDiaSeleccionado = dia === diaSeleccionado
+            const esHoyDia = esHoy(dia)
+            const ambos = tieneIngreso && tieneGasto
+
+            // Colores del día según tipo de eventos
+            let dayBg = ''
+            let dayText = 'text-gray-500'
+            let dayRing = ''
+
+            if (esDiaSeleccionado) {
+              dayBg = 'bg-blue-600'
+              dayText = 'text-white'
+              dayRing = 'ring-2 ring-blue-400 ring-offset-1 ring-offset-gray-900'
+            } else if (esHoyDia) {
+              dayBg = 'bg-blue-500/20'
+              dayText = 'text-blue-300'
+              dayRing = 'ring-1 ring-blue-500/50'
+            } else if (ambos) {
+              dayBg = 'bg-gradient-to-br from-emerald-500/15 to-red-500/15'
+              dayText = 'text-gray-200'
+            } else if (tieneIngreso) {
+              dayBg = 'bg-emerald-500/12'
+              dayText = 'text-emerald-200'
+            } else if (tieneGasto) {
+              dayBg = 'bg-red-500/12'
+              dayText = 'text-red-200'
+            } else {
+              dayText = 'text-gray-600'
+            }
+
+            return (
+              <div
+                key={dia}
+                onClick={() => handleDiaClick(dia)}
+                className={`
+                  aspect-square rounded-xl flex flex-col items-center justify-center relative cursor-pointer
+                  transition-all duration-150 active:scale-90 touch-manipulation
+                  hover:bg-white/8 ${dayBg} ${dayText} ${dayRing}
+                  ${esHoyDia ? 'font-black' : tieneEventos ? 'font-bold' : 'font-medium'}
+                `}
+              >
+                <span className="text-xs md:text-sm z-10">{dia}</span>
+
+                {/* Indicadores de puntos */}
+                {tieneEventos && !esDiaSeleccionado && (
+                  <div className="flex gap-0.5 mt-0.5 z-10">
+                    {tieneIngreso && (
+                      <div className="w-1 h-1 rounded-full bg-emerald-400" />
+                    )}
+                    {tieneGasto && (
+                      <div className="w-1 h-1 rounded-full bg-red-400" />
+                    )}
+                  </div>
+                )}
+
+                {/* Hoy sin eventos — solo punto azul */}
+                {esHoyDia && !tieneEventos && (
+                  <div className="w-1 h-1 rounded-full bg-blue-400 mt-0.5" />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
-      
-    {/* DETALLE DEL DÍA: MODAL CENTRADO */}
+
+      {/* ── MODAL DETALLE DÍA ── */}
       {diaSeleccionado && eventosDelDia && createPortal(
         <>
-          {/* Overlay oscuro */}
-          <div 
-            className="fixed inset-0 z-[9998] bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+          <div
+            className="fixed inset-0 z-[9998] bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
             onClick={() => setDiaSeleccionado(null)}
-            style={{ touchAction: 'none' }}
           />
-          
-          {/* Modal Centrado */}
-          <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
-            onClick={() => setDiaSeleccionado(null)}
-          >
-            <div 
-              className="bg-gradient-to-br from-gray-900 to-gray-800 border border-white/10 rounded-3xl shadow-2xl w-full max-w-md max-h-[80vh] pointer-events-auto flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-300"
+          <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-4 pointer-events-none">
+            <div
+              className="w-full md:max-w-md max-h-[80vh] pointer-events-auto flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-300 rounded-t-3xl md:rounded-3xl"
               onClick={(e) => e.stopPropagation()}
-              style={{ touchAction: 'pan-y' }}
+              style={{
+                background: 'linear-gradient(160deg, rgba(17,24,39,0.98) 0%, rgba(17,24,39,0.95) 100%)',
+                backdropFilter: 'blur(40px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 -20px 60px rgba(0,0,0,0.5)',
+              }}
             >
-              {/* Header con diseño mejorado */}
-              <div className="relative bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/10 p-6 shrink-0">
-                {/* Botón Cerrar - Arriba derecha */}
-                <button 
+              {/* Pill mobile */}
+              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-0 md:hidden" />
+
+              {/* Header */}
+              <div className="relative p-5 pb-4 border-b border-white/8">
+                <button
                   onClick={() => setDiaSeleccionado(null)}
-                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-all active:scale-95"
+                  className="absolute top-4 right-4 p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-gray-400 hover:text-white transition-all"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
 
-                {/* Fecha */}
-                <div className="mb-3">
-                  <div className="text-sm text-gray-400 font-medium mb-1">
-                    {diasSemana[new Date(mesActual.getFullYear(), mesActual.getMonth(), diaSeleccionado).getDay()]}
+                <div className="flex items-start gap-4">
+                  {/* Día grande */}
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shrink-0 ${
+                    esHoy(diaSeleccionado)
+                      ? 'bg-blue-600 text-white'
+                      : netoDia >= 0
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {diaSeleccionado}
                   </div>
-                  <h4 className="text-2xl font-bold text-white">
-                    {diaSeleccionado} de {meses[mesActual.getMonth()]}
-                  </h4>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">
+                      {diasSemana[new Date(mesActual.getFullYear(), mesActual.getMonth(), diaSeleccionado).getDay()]} · {meses[mesActual.getMonth()]}
+                    </p>
+                    <div className={`text-xl font-black ${netoDia >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {netoDia >= 0 ? '+' : ''}{netoDia.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                    <p className="text-[10px] text-gray-600 font-medium mt-0.5">
+                      Balance del día · {eventosDelDia.eventos.length} evento{eventosDelDia.eventos.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Balance del día */}
-                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-                  netoDia >= 0 
-                    ? 'bg-emerald-500/20 border border-emerald-500/30' 
-                    : 'bg-rose-500/20 border border-rose-500/30'
-                }`}>
-                  <span className="text-xs font-medium text-gray-300">Balance:</span>
-                  <span className={`text-lg font-bold ${netoDia >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    ${netoDia >= 0 ? '+' : ''}{netoDia.toLocaleString(undefined, {maximumFractionDigits:0})}
-                  </span>
-                </div>
+                {/* Resumen rápido */}
+                {eventosDelDia.eventos.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {eventosDelDia.ingresos > 0 && (
+                      <div className="flex-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 text-center">
+                        <p className="text-[10px] text-emerald-600 font-bold uppercase">Ingresos</p>
+                        <p className="text-sm font-black text-emerald-400">${eventosDelDia.ingresos.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                      </div>
+                    )}
+                    {eventosDelDia.gastos > 0 && (
+                      <div className="flex-1 bg-red-500/10 border border-red-500/20 rounded-xl p-2 text-center">
+                        <p className="text-[10px] text-red-600 font-bold uppercase">Gastos</p>
+                        <p className="text-sm font-black text-red-400">${eventosDelDia.gastos.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {/* Lista de Eventos Scrollable */}
-              <div 
-                className="p-4 overflow-y-auto flex-1 space-y-3"
-                style={{ 
-                  WebkitOverflowScrolling: 'touch'
-                }}
-              >
+
+              {/* Lista eventos scrolleable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2.5" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {eventosDelDia.eventos.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-3">
-                      <span className="text-3xl">📭</span>
-                    </div>
-                    <div className="text-gray-400 font-medium">Sin movimientos</div>
-                    <div className="text-gray-500 text-sm mt-1">Este día no tiene registros</div>
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="text-4xl mb-3">📭</div>
+                    <p className="text-gray-400 font-semibold text-sm">Sin movimientos</p>
+                    <p className="text-gray-600 text-xs mt-1">Este día no tiene registros</p>
                   </div>
                 ) : (
                   eventosDelDia.eventos.map((evento, idx) => (
-                    <div 
+                    <div
                       key={evento.id}
-                      className={`p-4 rounded-2xl border flex items-start gap-3 transition-all hover:scale-[1.02] active:scale-95 ${evento.color} animate-in slide-in-from-left duration-200`}
-                      style={{ animationDelay: `${idx * 50}ms` }}
+                      className={`flex items-center gap-3 p-3.5 rounded-2xl border ${evento.color} animate-in fade-in slide-in-from-bottom-2`}
+                      style={{ animationDelay: `${idx * 40}ms` }}
                     >
-                      {/* Icono */}
-                      <div className={`p-2.5 bg-black/20 rounded-xl text-white/90 shrink-0`}>
+                      <div className="p-2 bg-black/20 rounded-xl shrink-0 text-current">
                         {evento.icono}
                       </div>
-                      
-                      {/* Contenido */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2 mb-1">
-                          <div className="text-sm font-semibold text-white leading-tight flex-1">
-                            {evento.nombre}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-white truncate">{evento.nombre}</p>
                           {evento.esRecurrente && (
-                            <span className="text-[9px] bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-full border border-emerald-500/40 font-bold uppercase tracking-wide shrink-0">
-                              Proyectado
+                            <span className="text-[8px] bg-emerald-500/25 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30 font-black uppercase shrink-0">
+                              Proy.
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-gray-300 capitalize opacity-70">
-                          {evento.tipo.replace('_', ' ')}
-                        </div>
+                        <p className="text-[11px] text-current opacity-60 capitalize">{evento.tipo.replace('_', ' ')}</p>
                       </div>
-                      
-                      {/* Monto */}
-                      <div className="text-right shrink-0">
-                        <div className="text-base font-bold text-white">
-                          ${evento.monto.toFixed(2)}
-                        </div>
-                      </div>
+                      <p className="text-sm font-black text-white shrink-0">${Number(evento.monto).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                     </div>
                   ))
                 )}
               </div>
-
-              {/* Footer con resumen (opcional) */}
-              {eventosDelDia.eventos.length > 0 && (
-                <div className="p-4 border-t border-white/10 bg-gray-900/50 shrink-0">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Total eventos:</span>
-                    <span className="text-white font-bold">{eventosDelDia.eventos.length}</span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Estilos de animación */}
-          <style jsx>{`
-            @keyframes zoom-in-95 {
-              from { transform: scale(0.95); opacity: 0; }
-              to { transform: scale(1); opacity: 1; }
-            }
-            .animate-in.zoom-in-95 {
-              animation: zoom-in-95 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            }
-          `}</style>
         </>,
         document.body
       )}

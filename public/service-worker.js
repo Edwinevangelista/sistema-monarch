@@ -110,27 +110,39 @@ self.addEventListener('push', (event) => {
 });
 
 // ==============================
-// NOTIFICATION CLICK
+// NOTIFICATION CLICK — Navegación inteligente por sección
 // ==============================
 self.addEventListener('notificationclick', (event) => {
-  console.log('SW v4: Notificación clickeada');
+  console.log('SW v4: Notificación clickeada', event.notification.data);
   event.notification.close();
 
-  const url = event.notification.data?.url || '/';
+  // Extraer sección de destino del payload
+  // El servidor puede enviar: data.seccion = 'cuentas' | 'gastos' | 'deudas' | 'suscripciones' | 'alertas'
+  const seccion = event.notification.data?.seccion || null;
+  const baseUrl = self.location.origin;
+  const url = event.notification.data?.url || baseUrl;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Buscar tab ya abierto con la app
+        // Buscar ventana ya abierta con la app
         for (const client of clientList) {
-          if ('focus' in client) {
+          if (client.url.startsWith(baseUrl) && 'focus' in client) {
             client.focus();
-            if (client.navigate) client.navigate(url);
+            // Enviar mensaje al cliente para navegar a la sección correcta
+            if (seccion) {
+              client.postMessage({
+                type: 'NAVIGATE_TO_SECTION',
+                seccion: seccion,
+                data: event.notification.data || {}
+              });
+            }
             return;
           }
         }
-        // Abrir nueva ventana si no hay ninguna abierta
-        return clients.openWindow(url);
+        // No hay ventana abierta → abrir la app
+        const urlToOpen = seccion ? `${baseUrl}/?seccion=${seccion}` : url;
+        return clients.openWindow(urlToOpen);
       })
   );
 });

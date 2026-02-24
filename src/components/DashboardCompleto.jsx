@@ -188,6 +188,51 @@ useEffect(() => {
   }
 }, [refreshPlanes])
 
+// 📱 LISTENER: Navegación desde notificaciones push (service worker → app)
+useEffect(() => {
+  const handleSWMessage = (event) => {
+    if (event.data?.type === 'NAVIGATE_TO_SECTION') {
+      const { seccion } = event.data
+      // Mapear sección a acción del dashboard
+      const SECCIONES_MAPA = {
+        'cuentas':      () => setShowModal('cuentas'),
+        'gastos':       () => setShowModal('gastos'),
+        'ingresos':     () => setShowModal('ingreso'),
+        'deudas':       () => setShowModal('agregarDeuda'),
+        'suscripciones':() => setShowModal('suscripcion'),
+        'alertas':      () => {}, // scroll al top (ya visible)
+        'exportar':     () => setShowExportacion(true),
+      }
+      const accion = SECCIONES_MAPA[seccion]
+      if (accion) {
+        // Pequeño delay para asegurar que la app esté lista
+        setTimeout(accion, 300)
+        toast.info(`Abriendo ${seccion}...`, { duration: 2000 })
+      }
+    }
+  }
+
+  // También manejar navegación desde URL params (cuando app se abre desde notificación)
+  const params = new URLSearchParams(window.location.search)
+  const seccionParam = params.get('seccion')
+  if (seccionParam) {
+    const accionesParam = {
+      'cuentas':      () => setShowModal('cuentas'),
+      'gastos':       () => setShowModal('gastos'),
+      'ingresos':     () => setShowModal('ingreso'),
+      'deudas':       () => setShowModal('agregarDeuda'),
+      'suscripciones':() => setShowModal('suscripcion'),
+    }
+    const accion = accionesParam[seccionParam]
+    if (accion) setTimeout(accion, 800)
+    // Limpiar URL
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  navigator.serviceWorker?.addEventListener('message', handleSWMessage)
+  return () => navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
+}, []) // eslint-disable-line react-hooks/exhaustive-deps
+
 
 
   const { permission, showLocalNotification } = useNotifications()
@@ -2115,43 +2160,22 @@ const dataGraficaDona = useMemo(() =>
             </div>
           ) : (
             <>
-              {/* Scroll horizontal en móvil */}
-              <div className="md:hidden overflow-x-auto pb-2 -mx-3 px-3 no-scrollbar">
-                <div className="flex gap-3 min-w-max">
-                  {alertas.map((alerta, idx) => {
-                    const esCritico = alerta.tipo === 'critical'
-                    const esWarning = alerta.tipo === 'warning'
-                    const diasTexto = alerta.dias < 0
-                      ? `Venció hace ${Math.abs(alerta.dias)}d`
-                      : alerta.dias === 0 ? 'Hoy' : `En ${alerta.dias} día${alerta.dias > 1 ? 's' : ''}`
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => handleOpenDetail(alerta.item, alerta.tipoItem)}
-                        className={`p-3.5 rounded-2xl border text-left min-w-[170px] max-w-[200px] flex flex-col gap-1.5 transition-all active:scale-95 touch-manipulation ${
-                          esCritico ? 'bg-red-500/10 border-red-500/25' :
-                          esWarning ? 'bg-orange-500/10 border-orange-500/25' :
-                          'bg-blue-500/10 border-blue-500/25'
-                        }`}
-                      >
-                        <div className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md w-fit ${
-                          esCritico ? 'bg-red-500/20 text-red-400' :
-                          esWarning ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {diasTexto}
-                        </div>
-                        <div className="text-sm font-bold text-white truncate">{alerta.mensajeCorto}</div>
-                        <div className="text-base font-bold text-white">${Number(alerta.monto || 0).toLocaleString()}</div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              {/* Vista escritorio */}
-              <div className="hidden md:block">
-                <Notificaciones alertas={alertas} onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)} />
-              </div>
+              {/* Primeras 5 alertas */}
+              <Notificaciones
+                alertas={alertas.slice(0, 5)}
+                onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)}
+              />
+              {/* Ver más — si hay más de 5 */}
+              {alertas.length > 5 && (
+                <button
+                  onClick={() => setShowModal('alertas')}
+                  className="w-full mt-2 py-2.5 rounded-2xl border border-white/10 bg-white/4 hover:bg-white/8 text-sm text-gray-400 hover:text-white font-semibold transition-all active:scale-[0.98] touch-manipulation flex items-center justify-center gap-2"
+                >
+                  <Bell className="w-4 h-4 text-yellow-400" />
+                  Ver {alertas.length - 5} más
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </>
           )}
         </div>
