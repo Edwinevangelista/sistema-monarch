@@ -33,8 +33,8 @@ function Auth() {
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
-  const [moneda, setMoneda] = useState('USD')
-  const [pais, setPais] = useState('Mexico')
+  const [moneda, setMoneda] = useState('DOP')
+  const [pais, setPais] = useState('RepublicaDominicana')
 
   // ESTADOS DE UI
   const [loading, setLoading] = useState(false)
@@ -365,8 +365,8 @@ function Auth() {
     setNombre('')
     setApellido('')
     setTelefono('')
-    setPais('Mexico')
-    setMoneda('USD')
+    setPais('RepublicaDominicana')
+    setMoneda('DOP')
   }
 
   return (
@@ -582,16 +582,66 @@ function Auth() {
                     </label>
                     <select
                       value={pais}
-                      onChange={(e) => setPais(e.target.value)}
+                      onChange={(e) => {
+                        const p = e.target.value
+                        setPais(p)
+                        // Auto-sync moneda al cambiar país
+                        const mapa = {
+                          'RepublicaDominicana': 'DOP',
+                          'Mexico': 'MXN',
+                          'Colombia': 'COP',
+                          'Argentina': 'ARS',
+                          'Chile': 'CLP',
+                          'Guatemala': 'GTQ',
+                          'Peru': 'PEN',
+                          'Bolivia': 'BOB',
+                          'Paraguay': 'PYG',
+                          'Uruguay': 'UYU',
+                          'Honduras': 'HNL',
+                          'CostaRica': 'CRC',
+                          'Venezuela': 'VES',
+                          'Brasil': 'BRL',
+                          'Panama': 'PAB',
+                          'ElSalvador': 'USD',
+                          'Nicaragua': 'NIO',
+                          'Ecuador': 'USD',
+                          'USA': 'USD',
+                          'Spain': 'EUR',
+                          'Canada': 'CAD',
+                          'UK': 'GBP',
+                        }
+                        if (mapa[p]) setMoneda(mapa[p])
+                      }}
                       className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
                     >
-                      <option value="Mexico">🇲🇽 México</option>
-                      <option value="USA">🇺🇸 Estados Unidos</option>
-                      <option value="Spain">🇪🇸 España</option>
-                      <option value="Argentina">🇦🇷 Argentina</option>
-                      <option value="Colombia">🇨🇴 Colombia</option>
-                      <option value="Chile">🇨🇱 Chile</option>
-                      <option value="Peru">🇵🇪 Perú</option>
+                      <optgroup label="🌎 América Central y El Caribe">
+                        <option value="RepublicaDominicana">🇩🇴 República Dominicana</option>
+                        <option value="Mexico">🇲🇽 México</option>
+                        <option value="Guatemala">🇬🇹 Guatemala</option>
+                        <option value="Honduras">🇭🇳 Honduras</option>
+                        <option value="ElSalvador">🇸🇻 El Salvador</option>
+                        <option value="Nicaragua">🇳🇮 Nicaragua</option>
+                        <option value="CostaRica">🇨🇷 Costa Rica</option>
+                        <option value="Panama">🇵🇦 Panamá</option>
+                      </optgroup>
+                      <optgroup label="🌎 América del Sur">
+                        <option value="Colombia">🇨🇴 Colombia</option>
+                        <option value="Venezuela">🇻🇪 Venezuela</option>
+                        <option value="Ecuador">🇪🇨 Ecuador</option>
+                        <option value="Peru">🇵🇪 Perú</option>
+                        <option value="Bolivia">🇧🇴 Bolivia</option>
+                        <option value="Brasil">🇧🇷 Brasil</option>
+                        <option value="Paraguay">🇵🇾 Paraguay</option>
+                        <option value="Uruguay">🇺🇾 Uruguay</option>
+                        <option value="Argentina">🇦🇷 Argentina</option>
+                        <option value="Chile">🇨🇱 Chile</option>
+                      </optgroup>
+                      <optgroup label="🌍 Resto del mundo">
+                        <option value="USA">🇺🇸 Estados Unidos</option>
+                        <option value="Spain">🇪🇸 España</option>
+                        <option value="Canada">🇨🇦 Canadá</option>
+                        <option value="UK">🇬🇧 Reino Unido</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div>
@@ -603,13 +653,30 @@ function Auth() {
                       onChange={(e) => setMoneda(e.target.value)}
                       className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
                     >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="MXN">MXN ($)</option>
-                      <option value="COP">COP ($)</option>
-                      <option value="ARS">ARS ($)</option>
-                      <option value="CLP">CLP ($)</option>
-                      <option value="PEN">PEN (S/.)</option>
+                      <optgroup label="🌎 Latinoamérica">
+                        <option value="DOP">DOP — Peso Dominicano (RD$)</option>
+                        <option value="MXN">MXN — Peso Mexicano ($)</option>
+                        <option value="COP">COP — Peso Colombiano ($)</option>
+                        <option value="ARS">ARS — Peso Argentino ($)</option>
+                        <option value="CLP">CLP — Peso Chileno ($)</option>
+                        <option value="GTQ">GTQ — Quetzal (Q)</option>
+                        <option value="PEN">PEN — Sol Peruano (S/.)</option>
+                        <option value="BOB">BOB — Boliviano (Bs.)</option>
+                        <option value="PYG">PYG — Guaraní (₲)</option>
+                        <option value="UYU">UYU — Peso Uruguayo ($U)</option>
+                        <option value="HNL">HNL — Lempira (L)</option>
+                        <option value="CRC">CRC — Colón Costarricense (₡)</option>
+                        <option value="NIO">NIO — Córdoba (C$)</option>
+                        <option value="VES">VES — Bolívar (Bs.S)</option>
+                        <option value="BRL">BRL — Real Brasileño (R$)</option>
+                        <option value="PAB">PAB — Balboa (B/.)</option>
+                      </optgroup>
+                      <optgroup label="🌍 Internacionales">
+                        <option value="USD">USD — Dólar Americano ($)</option>
+                        <option value="EUR">EUR — Euro (€)</option>
+                        <option value="GBP">GBP — Libra Esterlina (£)</option>
+                        <option value="CAD">CAD — Dólar Canadiense (C$)</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>

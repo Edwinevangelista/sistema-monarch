@@ -60,6 +60,7 @@ import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
 import OnboardingModal from './OnboardingModal'
+import TourNuevoUsuario, { useTourNuevoUsuario } from './TourNuevoUsuario'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -170,6 +171,14 @@ export default function DashboardCompleto()  {
   const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
 const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
+
+  // ── Tour para nuevos usuarios (solo si todo está en cero) ──
+  const { mostrar: mostrarTour, cerrarTour } = useTourNuevoUsuario({
+    ingresos,
+    gastos,
+    deudas,
+    cuentas,
+  })
 
 // ✅ DEBE estar DESPUÉS de planesActivos
 const planDeudaActivo = useMemo(() => {
@@ -2743,6 +2752,11 @@ const dataGraficaDona = useMemo(() =>
             else if (key === 'cuenta') setShowModal('cuentas')
           }}
         />
+      )}
+
+      {/* ── TOUR NUEVO USUARIO (cuando todo está en cero, después del onboarding) ── */}
+      {mostrarTour && !showOnboarding && (
+        <TourNuevoUsuario onCerrar={cerrarTour} />
       )}
     </div>
   )
