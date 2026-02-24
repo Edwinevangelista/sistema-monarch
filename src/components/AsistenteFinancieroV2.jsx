@@ -1,15 +1,16 @@
 // src/components/AsistenteFinancieroV2.jsx
-// 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente (V4 - Visual Upgrade & Real Logic)
-// Visual Impactante | Planes Numéricos Reales | Sin Simulaciones Vacías
+// 💎 FinGuide AI - Tu Asesor Financiero Personal Inteligente (V5 - Visual para Usuarios Promedio)
+// Visual Impactante | Gráficas | Sin Números Abrumadores | Mobile-First
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { 
-  Brain, CheckCircle2, Zap, X, 
+import {
+  Brain, CheckCircle2, Zap, X,
   Calendar, AlertTriangle,
   Shield, PiggyBank, CreditCard,
-  Trash2, TrendingUp, TrendingDown,
+  Trash2, TrendingDown,
   ChevronRight, ChevronDown, ChevronUp, Play,
-  Sparkles, HeartPulse, Eye, EyeOff, Activity
+  Sparkles, HeartPulse, Eye, EyeOff, Activity,
+  Flame, Droplets, Leaf
 } from "lucide-react";
 
 // --- CONSTANTES ---
@@ -565,34 +566,12 @@ export default function AsistenteFinancieroV2({
           </div>
         </div>
 
-        {/* 2. KPIs GRID */}
-        <div className="grid grid-cols-2 gap-3">
-          <KPICard label="Ingresos" value={formatMoney(kpis.totalIngresos)} color="text-emerald-400" icon={<TrendingUp className="w-4 h-4" />} />
-          <KPICard label="Gastos" value={formatMoney(kpis.gastosTotales)} color="text-rose-400" icon={<TrendingDown className="w-4 h-4" />} />
-          <KPICard label="Disponible" value={formatMoney(kpis.disponible)} color={kpis.disponible >= 0 ? "text-blue-300" : "text-rose-400"} icon={kpis.disponible >= 0 ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} />
-          <KPICard label="Ahorro" value={formatPct(kpis.tasaAhorro)} color="text-purple-300" icon={<PiggyBank className="w-4 h-4" />} />
-        </div>
+        {/* 2. TARJETA VISUAL DINERO — ingresos / gastos / disponible */}
+        <TarjetaFlujoDinero kpis={kpis} />
 
-        {/* 3. PREDICCIÓN LIBERTAD */}
+        {/* 3. LIBERTAD FINANCIERA VISUAL */}
         {prediccionLibertad.mesesLibertad > 0 && kpis.totalDeudas > 0 && (
-          <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-5 h-5 text-indigo-400" />
-              <h4 className="text-white font-bold text-sm">Libertad Financiera</h4>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-2">
-              <div>
-                <div className="text-[10px] text-gray-400 uppercase">Libre en</div>
-                <div className={`text-xl font-bold ${prediccionLibertad.mesesLibertad === 999 ? 'text-red-400' : 'text-green-400'}`}>
-                  {prediccionLibertad.mesesLibertad === 999 ? '>99a' : `${prediccionLibertad.mesesLibertad}m`}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] text-gray-400 uppercase">Capacidad Pago</div>
-                <div className="text-xl font-bold text-white">{formatMoney(prediccionLibertad.capacidadPago)}</div>
-              </div>
-            </div>
-          </div>
+          <TarjetaLibertad prediccionLibertad={prediccionLibertad} kpis={kpis} />
         )}
 
         {/* 4. CONTENIDO DINÁMICO */}
@@ -930,44 +909,78 @@ function ContenidoPorObjetivo(props) {
 }
 
 function DiagnosticoCompleto({ kpis, recomendaciones, indiceLibertas, requisitoLibertad, prediccion3Meses, onOpenDebtPlanner, onOpenSavingsPlanner }) {
+  const requisitosLabels = {
+    fondoEmergencia: { label: 'Fondo de emergencia (6 meses)', emoji: '🛡️' },
+    sinDeudas:       { label: 'Sin deudas', emoji: '✅' },
+    tasaAhorroSana:  { label: 'Ahorro sano (≥20%)', emoji: '🐷' },
+    ingresoPasivo:   { label: 'Ingreso pasivo', emoji: '💸' },
+  }
+
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Shield className="w-5 h-5 text-emerald-400" />
-          <h4 className="text-white font-bold text-sm">Índice de Libertad</h4>
+      {/* Checklist de libertad — visual */}
+      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-emerald-400" />
+            <h4 className="text-white font-bold text-sm">Tu Salud Financiera</h4>
+          </div>
+          {/* Score visual */}
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-black text-white">{indiceLibertas.toFixed(0)}</span>
+            <span className="text-gray-500 text-xs">/100</span>
+          </div>
         </div>
-        <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden mb-3">
-          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000" style={{ width: `${indiceLibertas}%` }} />
+
+        {/* Barra de progreso segmentada */}
+        <div className="h-3 bg-white/8 rounded-full overflow-hidden mb-3 flex">
+          {[0, 25, 50, 75].map((seg, i) => (
+            <div
+              key={i}
+              className={`flex-1 transition-all duration-700 ${i > 0 ? 'border-l border-black/30' : ''} ${
+                indiceLibertas >= (seg + 25) ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
+                indiceLibertas >= seg ? 'bg-gradient-to-r from-emerald-500/60 to-transparent' :
+                ''
+              }`}
+            />
+          ))}
         </div>
-        <div className="text-center mb-3">
-          <span className="text-3xl font-bold text-white">{indiceLibertas.toFixed(0)}/100</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {Object.entries(requisitoLibertad).slice(0, 2).map(([key, cumplido], idx) => {
-            const labels = { fondoEmergencia: 'Fondo 6m', sinDeudas: '0 Deudas' };
-            return (
-              <div key={idx} className="flex items-center gap-2">
-                {cumplido ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <div className="w-3 h-3 rounded-full border border-gray-600" />}
-                <span className={cumplido ? 'text-emerald-300' : 'text-gray-500'}>{labels[key]}</span>
-              </div>
-            );
-          })}
+
+        {/* Checklist */}
+        <div className="space-y-2">
+          {Object.entries(requisitoLibertad).map(([key, cumplido]) => (
+            <div key={key} className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${cumplido ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-white/3 border border-white/5'}`}>
+              <span className="text-lg leading-none">{requisitosLabels[key]?.emoji}</span>
+              <span className={`text-xs flex-1 ${cumplido ? 'text-emerald-300 font-semibold' : 'text-gray-500'}`}>
+                {requisitosLabels[key]?.label}
+              </span>
+              {cumplido
+                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                : <div className="w-4 h-4 rounded-full border-2 border-gray-700 flex-shrink-0" />
+              }
+            </div>
+          ))}
         </div>
       </div>
 
+      {/* Proyección 3 meses — tarjeta visual */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-        <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-400" /> Proyección 3 Meses</h4>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-white/5 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-gray-400 uppercase">Ahorro Total</div>
-            <div className="text-sm font-bold text-blue-400">{formatMoney(prediccion3Meses.ahorro)}</div>
+        <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-blue-400" /> ¿Cómo estarás en 3 meses?
+        </h4>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-center">
+            <span className="text-xl">💰</span>
+            <div className="text-[10px] text-gray-400 mt-1">Habrás ahorrado</div>
+            <div className="text-sm font-bold text-blue-300 mt-0.5">{formatMoney(Math.max(0, prediccion3Meses.ahorro))}</div>
           </div>
-          <div className="bg-white/5 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-gray-400 uppercase">Deuda Final</div>
-            <div className="text-sm font-bold text-orange-400">{formatMoney(prediccion3Meses.deudaRestante)}</div>
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 text-center">
+            <span className="text-xl">💳</span>
+            <div className="text-[10px] text-gray-400 mt-1">Deuda restante</div>
+            <div className="text-sm font-bold text-orange-300 mt-0.5">{formatMoney(prediccion3Meses.deudaRestante)}</div>
           </div>
         </div>
+        <p className="text-[10px] text-gray-600 text-center mt-2">* Estimado si mantienes tu ritmo actual</p>
       </div>
 
       {recomendaciones.map((rec, idx) => <RecomendacionCard key={idx} recomendacion={rec} />)}
@@ -981,27 +994,98 @@ function DiagnosticoCompleto({ kpis, recomendaciones, indiceLibertas, requisitoL
 }
 
 function ControlGastosView({ fugasDetectadas, totalFugasAhorro, recomendaciones, kpis, onOpenSpendingControl }) {
+  const total = kpis.gastosTotales || 1
+  const cats = [
+    { label: 'Fijos', value: kpis.totalGastosFijos, color: '#6366f1', emoji: '🏠' },
+    { label: 'Variables', value: kpis.totalGastosVariables, color: '#f97316', emoji: '🛍️' },
+    { label: 'Suscripciones', value: kpis.totalSuscripciones, color: '#a855f7', emoji: '📱' },
+  ]
+
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5">
-        <h4 className="text-white font-bold mb-2 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-400" /> Fugas Detectadas</h4>
-        <div className="text-center mb-4">
-          <div className="text-3xl font-bold text-white">{formatMoney(totalFugasAhorro)}</div>
-          <div className="text-xs text-red-300">potencial de ahorro mensual real</div>
+      {/* Fugas — visual con impacto */}
+      {fugasDetectadas.length === 0 ? (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 text-center">
+          <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
+          <p className="text-white font-bold">¡Sin fugas detectadas!</p>
+          <p className="text-xs text-gray-400 mt-1">Tus gastos están bajo control</p>
         </div>
-        {fugasDetectadas.length === 0 ? (
-          <div className="text-center py-4"><CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" /><p className="text-sm text-white">¡Sin fugas detectadas!</p></div>
-        ) : (
-          <div className="space-y-2">{fugasDetectadas.slice(0, 3).map((fuga, idx) => <FugaCardCompact key={idx} fuga={fuga} />)}</div>
-        )}
-      </div>
+      ) : (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-red-500/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-red-400" />
+              <span className="text-sm font-bold text-white">Dinero que se escapa</span>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-red-400">{formatMoney(totalFugasAhorro)}/mes</p>
+              <p className="text-[10px] text-gray-500">podrías recuperar</p>
+            </div>
+          </div>
+          {/* Fugas list */}
+          <div className="p-3 space-y-2">
+            {fugasDetectadas.slice(0, 3).map((fuga, idx) => {
+              const pct = fuga.ahorroEstimado > 0 ? Math.round((fuga.ahorroEstimado / fuga.gastoActual) * 100) : 0
+              return (
+                <div key={idx} className="bg-black/20 rounded-xl p-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl leading-none">{fuga.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-white">{fuga.tipo}</p>
+                      <p className="text-[10px] text-gray-500">{fuga.frecuencia} veces este mes</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-gray-300">{formatMoney(fuga.gastoActual)}</p>
+                    </div>
+                  </div>
+                  {/* Barra de ahorro potencial */}
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-400 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <p className="text-[10px] text-gray-600 italic truncate">{fuga.solucion}</p>
+                    <p className="text-[10px] text-emerald-400 font-bold flex-shrink-0 ml-2">-{formatMoney(fuga.ahorroEstimado)}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-        <h4 className="text-white font-bold text-sm mb-3">Distribución Actual</h4>
+      {/* Distribución de gastos — torta visual */}
+      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4">
+        <h4 className="text-white font-bold text-sm mb-3">¿En qué se va el dinero?</h4>
+        {/* Stacked bar */}
+        <div className="h-5 w-full rounded-full overflow-hidden flex mb-3">
+          {cats.map((c, i) => {
+            const w = total > 0 ? (c.value / total) * 100 : 0
+            return w > 0 ? (
+              <div key={i} className="h-full transition-all duration-700" style={{ width: `${w}%`, backgroundColor: c.color }} />
+            ) : null
+          })}
+        </div>
+        {/* Leyenda */}
         <div className="space-y-2">
-          <GastoBar label="Fijos" value={kpis.totalGastosFijos} total={kpis.gastosTotales} color="bg-blue-500" />
-          <GastoBar label="Variables" value={kpis.totalGastosVariables} total={kpis.gastosTotales} color="bg-orange-500" />
-          <GastoBar label="Suscripciones" value={kpis.totalSuscripciones} total={kpis.gastosTotales} color="bg-purple-500" />
+          {cats.map((c, i) => {
+            const pct = total > 0 ? (c.value / total) * 100 : 0
+            return (
+              <div key={i} className="flex items-center gap-3">
+                <span className="text-base leading-none">{c.emoji}</span>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-[11px] text-gray-400">{c.label}</span>
+                    <span className="text-[11px] font-bold text-white">{formatMoney(c.value)}</span>
+                  </div>
+                  <div className="h-1 bg-white/8 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: c.color }} />
+                  </div>
+                </div>
+                <span className="text-[10px] text-gray-500 w-8 text-right">{pct.toFixed(0)}%</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -1012,23 +1096,94 @@ function ControlGastosView({ fugasDetectadas, totalFugasAhorro, recomendaciones,
 }
 
 function AhorroView({ kpis, recomendaciones, onOpenSavingsPlanner }) {
-  const metaAhorro = kpis.totalIngresos * 0.20;
-  const progreso = metaAhorro > 0 ? (kpis.disponible / metaAhorro) * 100 : 0;
+  const pctAhorro = Math.max(0, Math.min(100, kpis.tasaAhorro * 100))
+  const metaAhorro = kpis.totalIngresos * 0.20
+  const superaMeta = kpis.disponible >= metaAhorro
+
+  // Gauge circular grande
+  const R = 52, CIRC = 2 * Math.PI * R
+  const dash = (pctAhorro / 100) * CIRC
+  const color = pctAhorro >= 20 ? '#34d399' : pctAhorro >= 10 ? '#fbbf24' : '#f87171'
+  const colorText = pctAhorro >= 20 ? 'text-emerald-400' : pctAhorro >= 10 ? 'text-yellow-400' : 'text-red-400'
+
+  // Mensaje motivacional
+  const mensaje = pctAhorro >= 30 ? '¡Vas muy bien! Eres un ahorrador estrella 🌟'
+    : pctAhorro >= 20 ? '¡Alcanzaste la meta! Mantén el ritmo 💪'
+    : pctAhorro >= 10 ? 'Casi llegás. Solo un poco más 🎯'
+    : pctAhorro > 0 ? 'Pequeños pasos también cuentan. ¡Sigue adelante!'
+    : 'Este mes no sobra nada. Revisemos los gastos.'
+
   return (
     <div className="space-y-4">
+      {/* Gauge grande de ahorro */}
       <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5">
-        <h4 className="text-white font-bold mb-3 flex items-center gap-2"><PiggyBank className="w-5 h-5 text-emerald-400" /> Tu Tasa de Ahorro</h4>
-        <div className="text-center mb-4">
-          <div className="text-4xl font-bold text-white">{formatPct(kpis.tasaAhorro)}</div>
-          <div className="text-xs text-emerald-300">Meta: 20%</div>
-        </div>
-        <div className="relative w-full h-3 bg-white/10 rounded-full overflow-hidden">
-          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(Math.max(progreso, 0), 100)}%` }} />
-        </div>
-        <div className="mt-3 text-center">
-          <span className="text-sm text-white">{kpis.disponible < metaAhorro ? <>Faltan {formatMoney(metaAhorro - kpis.disponible)}</> : <>¡Superaste meta en {formatMoney(kpis.disponible - metaAhorro)}!</>}</span>
+        <div className="flex flex-col items-center">
+          {/* Gauge SVG */}
+          <div className="relative" style={{ width: 140, height: 140 }}>
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              {/* Track */}
+              <circle cx="70" cy="70" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="12" />
+              {/* Progreso */}
+              <circle cx="70" cy="70" r={R} fill="none"
+                stroke={color}
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${CIRC}`}
+                transform="rotate(-90 70 70)"
+                style={{ transition: 'stroke-dasharray 1.2s ease, stroke 0.5s ease' }}
+              />
+              {/* Marca de meta 20% */}
+              <line
+                x1="70" y1="18"
+                x2="70" y2="28"
+                stroke="#6366f1"
+                strokeWidth="3"
+                strokeLinecap="round"
+                transform={`rotate(${(20 / 100) * 360 - 90} 70 70)`}
+              />
+            </svg>
+            {/* Centro */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <PiggyBank className={`w-6 h-6 ${colorText} mb-0.5`} />
+              <span className={`text-2xl font-black ${colorText}`}>{pctAhorro.toFixed(0)}%</span>
+              <span className="text-[10px] text-gray-500">ahorro</span>
+            </div>
+          </div>
+
+          {/* Mensaje */}
+          <p className="text-center text-sm text-gray-300 mt-2 leading-relaxed max-w-xs">{mensaje}</p>
+
+          {/* Comparación vs meta */}
+          <div className={`mt-3 px-4 py-2 rounded-xl text-center w-full ${superaMeta ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-white/5 border border-white/10'}`}>
+            {superaMeta ? (
+              <p className="text-sm text-emerald-400 font-bold">🎉 Superaste la meta en {formatMoney(kpis.disponible - metaAhorro)}</p>
+            ) : (
+              <p className="text-sm text-gray-300">Faltan <span className="font-bold text-white">{formatMoney(metaAhorro - kpis.disponible)}</span> para llegar al 20%</p>
+            )}
+          </div>
+
+          {/* Barra visual de niveles */}
+          <div className="w-full mt-4">
+            <div className="flex justify-between text-[10px] text-gray-600 mb-1">
+              <span>0%</span><span>10%</span><span className="text-indigo-500">20% meta</span><span>30%+</span>
+            </div>
+            <div className="h-2 bg-white/8 rounded-full overflow-hidden flex">
+              <div className="h-full rounded-l-full bg-red-500/60 flex-1" />
+              <div className="h-full bg-yellow-500/60 flex-1 border-l border-black/20" />
+              <div className="h-full bg-emerald-500/60 flex-1 border-l border-black/20" />
+              <div className="h-full rounded-r-full bg-emerald-500 flex-1 border-l border-black/20" />
+            </div>
+            {/* Indicador de posición */}
+            <div className="relative h-3 mt-0.5">
+              <div
+                className="absolute top-0 w-2 h-2 bg-white rounded-full border-2 border-slate-900 transition-all duration-700"
+                style={{ left: `calc(${Math.min(100, pctAhorro)}% - 4px)` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
+
       {recomendaciones.map((rec, idx) => <RecomendacionCard key={idx} recomendacion={rec} />)}
       <ActionButton emoji="🎯" text="Crear Plan de Ahorro" onClick={onOpenSavingsPlanner} />
     </div>
@@ -1036,20 +1191,70 @@ function AhorroView({ kpis, recomendaciones, onOpenSavingsPlanner }) {
 }
 
 function DeudasView({ deudas, kpis, recomendaciones, onOpenDebtPlanner }) {
+  if (kpis.totalDeudas === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
+          <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+          <p className="text-white font-bold text-lg">¡Libre de deudas! 🎉</p>
+          <p className="text-gray-400 text-sm mt-1">Eso es un logro enorme. Ahora es momento de invertir.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const deudaMax = Math.max(...deudas.map(d => Number(d.saldo || 0)), 1)
+
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-5">
-        <h4 className="text-white font-bold mb-3 flex items-center gap-2"><CreditCard className="w-5 h-5 text-red-400" /> Panorama de Deudas</h4>
-        <div className="text-center mb-4">
-          <div className="text-3xl font-bold text-white">{formatMoney(kpis.totalDeudas)}</div>
-          <div className="text-xs text-red-300">deuda total acumulada</div>
+      {/* Header visual */}
+      <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-red-400" />
+            <span className="text-sm font-bold text-white">Tus Deudas</span>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-black text-red-400">{formatMoney(kpis.totalDeudas)}</p>
+            <p className="text-[10px] text-gray-500">total</p>
+          </div>
         </div>
-        {deudas.length === 0 ? (
-          <div className="text-center py-4"><CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" /><p className="text-sm text-white">¡Libre de deudas!</p></div>
-        ) : (
-          <div className="space-y-2">{deudas.slice(0, 3).map((deuda, idx) => <DeudaCardCompact key={idx} deuda={deuda} />)}</div>
-        )}
+
+        {/* Deudas como barras proporcionales */}
+        <div className="space-y-3">
+          {deudas.slice(0, 4).map((deuda, idx) => {
+            const saldo = Number(deuda.saldo || 0)
+            const pct = Math.round((saldo / deudaMax) * 100)
+            const apr = Number(deuda.apr || 0)
+            const aprDisplay = apr > 1 ? apr.toFixed(0) : (apr * 100).toFixed(0)
+            return (
+              <div key={idx}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[11px] font-semibold text-white truncate">{deuda.nombre || deuda.cuenta || 'Deuda'}</span>
+                    {apr > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/20 flex-shrink-0">
+                        {aprDisplay}% APR
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-300 flex-shrink-0 ml-2">{formatMoney(saldo)}</span>
+                </div>
+                <div className="h-2 bg-white/8 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-red-500 to-rose-600 transition-all duration-700"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+          {deudas.length > 4 && (
+            <p className="text-[10px] text-gray-600 text-center">+{deudas.length - 4} deudas más</p>
+          )}
+        </div>
       </div>
+
       {recomendaciones.map((rec, idx) => <RecomendacionCard key={idx} recomendacion={rec} />)}
       <ActionButton emoji="🎯" text="Simular Pagos" onClick={onOpenDebtPlanner} />
     </div>
@@ -1078,16 +1283,214 @@ function OptimizacionView({ suscripcionesOptimizables, fugasDetectadas, recomend
   );
 }
 
-function KPICard({ label, value, icon, color }) {
+// ─── TARJETA VISUAL FLUJO DE DINERO ───────────────────────────────────────────
+function TarjetaFlujoDinero({ kpis }) {
+  const { totalIngresos, gastosTotales, disponible, tasaAhorro } = kpis
+  const pctGastos = totalIngresos > 0 ? Math.min(100, (gastosTotales / totalIngresos) * 100) : 0
+  const pctDisponible = totalIngresos > 0 ? Math.max(0, (disponible / totalIngresos) * 100) : 0
+  const pctAhorro = Math.max(0, Math.min(100, tasaAhorro * 100))
+
+  // Gauge SVG params
+  const R = 38, CIRC = 2 * Math.PI * R
+  const gapDeg = disponible >= 0 ? pctGastos : 100
+
+  // Estado del mes
+  const estadoMes = disponible < 0
+    ? { label: 'En números rojos', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' }
+    : pctDisponible < 15
+    ? { label: 'Muy justo', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' }
+    : pctDisponible < 30
+    ? { label: 'Ajustado', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' }
+    : { label: 'Bien manejado', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
+
   return (
-    <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-xl p-3">
-      <div className="flex justify-between items-start mb-1">
-        <span className="text-[10px] font-bold uppercase text-gray-500">{label}</span>
-        <div className={color}>{icon}</div>
+    <div className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-md overflow-hidden">
+      {/* Estado visual top */}
+      <div className={`px-4 py-2 flex items-center justify-between ${estadoMes.bg} border-b ${estadoMes.border}`}>
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${estadoMes.color}`}>{estadoMes.label}</span>
+        <span className="text-[11px] text-gray-500">Este mes</span>
       </div>
-      <div className={`text-base font-bold ${color}`}>{value}</div>
+
+      {/* Fila principal: gauge + números */}
+      <div className="flex items-center px-4 py-4 gap-4">
+        {/* Gauge de gastos */}
+        <div className="relative flex-shrink-0">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            {/* Track */}
+            <circle cx="45" cy="45" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="9" />
+            {/* Gastos arc */}
+            <circle cx="45" cy="45" r={R} fill="none"
+              stroke={pctGastos >= 90 ? '#f87171' : pctGastos >= 70 ? '#fbbf24' : '#34d399'}
+              strokeWidth="9"
+              strokeLinecap="round"
+              strokeDasharray={`${(gapDeg / 100) * CIRC} ${CIRC}`}
+              transform="rotate(-90 45 45)"
+              style={{ transition: 'stroke-dasharray 1s ease' }}
+            />
+            {/* Disponible arc (debajo del gastos) */}
+            {disponible > 0 && (
+              <circle cx="45" cy="45" r={R} fill="none"
+                stroke="#6366f1"
+                strokeWidth="9"
+                strokeLinecap="round"
+                strokeDasharray={`${(pctDisponible / 100) * CIRC} ${CIRC}`}
+                transform={`rotate(${-90 + (gapDeg * 360 / 100)} 45 45)`}
+                style={{ transition: 'stroke-dasharray 1s ease' }}
+              />
+            )}
+          </svg>
+          {/* Label centro */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[10px] text-gray-500">Gasté</span>
+            <span className={`text-sm font-black ${pctGastos >= 90 ? 'text-red-400' : pctGastos >= 70 ? 'text-amber-400' : 'text-white'}`}>
+              {pctGastos.toFixed(0)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Números clave */}
+        <div className="flex-1 space-y-3">
+          {/* Ingresos */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
+              <span className="text-[11px] text-gray-400">Ingresos</span>
+            </div>
+            <span className="text-sm font-bold text-emerald-400">{formatMoney(totalIngresos)}</span>
+          </div>
+          {/* Gastos */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${pctGastos >= 90 ? 'bg-red-400' : pctGastos >= 70 ? 'bg-amber-400' : 'bg-yellow-400'}`} />
+              <span className="text-[11px] text-gray-400">Gastos</span>
+            </div>
+            <span className={`text-sm font-bold ${pctGastos >= 90 ? 'text-red-400' : 'text-gray-300'}`}>{formatMoney(gastosTotales)}</span>
+          </div>
+          {/* Disponible */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${disponible < 0 ? 'bg-red-400' : 'bg-indigo-400'}`} />
+              <span className="text-[11px] text-gray-400">Disponible</span>
+            </div>
+            <span className={`text-sm font-bold ${disponible < 0 ? 'text-red-400' : 'text-indigo-300'}`}>{formatMoney(disponible)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de ahorro */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <PiggyBank className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-[11px] text-gray-400">Tasa de ahorro</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-[11px] font-bold ${pctAhorro >= 20 ? 'text-emerald-400' : pctAhorro >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {pctAhorro.toFixed(0)}%
+            </span>
+            <span className="text-[10px] text-gray-600">/ meta 20%</span>
+          </div>
+        </div>
+        <div className="h-2 bg-white/8 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ${pctAhorro >= 20 ? 'bg-emerald-400' : pctAhorro >= 10 ? 'bg-yellow-400' : 'bg-red-400'}`}
+            style={{ width: `${Math.min(100, pctAhorro)}%` }}
+          />
+        </div>
+        {/* Milestones */}
+        <div className="flex justify-between mt-1">
+          <span className="text-[9px] text-gray-700">0%</span>
+          <span className="text-[9px] text-gray-700">10%</span>
+          <span className="text-[9px] text-emerald-800 font-bold">20% ✓</span>
+          <span className="text-[9px] text-gray-700">30%</span>
+        </div>
+      </div>
     </div>
-  );
+  )
+}
+
+// ─── TARJETA LIBERTAD FINANCIERA ───────────────────────────────────────────────
+function TarjetaLibertad({ prediccionLibertad, kpis }) {
+  const { mesesLibertad, fechaLibertad } = prediccionLibertad
+  const anios = mesesLibertad !== 999 ? Math.floor(mesesLibertad / 12) : null
+  const mesesResto = mesesLibertad !== 999 ? mesesLibertad % 12 : null
+
+  // Semáforo de urgencia
+  const nivel = mesesLibertad === 999
+    ? { color: 'text-red-400', bg: 'from-red-500/20 to-red-900/20', border: 'border-red-500/20', label: 'Sin capacidad de pago', icon: Flame }
+    : mesesLibertad > 36
+    ? { color: 'text-amber-400', bg: 'from-amber-500/20 to-orange-900/20', border: 'border-amber-500/20', label: 'Camino largo', icon: Droplets }
+    : { color: 'text-emerald-400', bg: 'from-emerald-500/20 to-teal-900/20', border: 'border-emerald-500/20', label: '¡Muy cerca!', icon: Leaf }
+
+  const IconNivel = nivel.icon
+
+  // Progreso (estimado)
+  const maxMeses = 60
+  const progreso = mesesLibertad === 999 ? 0 : Math.max(5, 100 - (mesesLibertad / maxMeses) * 100)
+
+  return (
+    <div className={`rounded-2xl border ${nivel.border} bg-gradient-to-br ${nivel.bg} overflow-hidden p-4`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className={`p-1.5 rounded-lg bg-black/20`}>
+          <IconNivel className={`w-4 h-4 ${nivel.color}`} />
+        </div>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Libertad Financiera</p>
+          <p className={`text-[11px] ${nivel.color} font-bold`}>{nivel.label}</p>
+        </div>
+      </div>
+
+      {/* Tiempo visual */}
+      <div className="flex items-end gap-4 mb-3">
+        <div>
+          {mesesLibertad === 999 ? (
+            <p className="text-3xl font-black text-red-400">∞</p>
+          ) : (
+            <div className="flex items-end gap-1">
+              {anios > 0 && (
+                <><span className="text-3xl font-black text-white">{anios}</span><span className="text-sm text-gray-400 mb-1">a</span></>
+              )}
+              {mesesResto > 0 && (
+                <><span className="text-3xl font-black text-white">{mesesResto}</span><span className="text-sm text-gray-400 mb-1">m</span></>
+              )}
+              {anios === 0 && mesesResto === 0 && (
+                <span className="text-3xl font-black text-emerald-400">¡Libre!</span>
+              )}
+            </div>
+          )}
+          <p className="text-[10px] text-gray-500 mt-0.5">para saldar deudas</p>
+        </div>
+        <div className="flex-1 flex flex-col gap-1">
+          {fechaLibertad && mesesLibertad < 999 && (
+            <div className="flex items-center justify-end gap-1">
+              <Calendar className="w-3 h-3 text-gray-500" />
+              <span className="text-[11px] text-gray-400">
+                {fechaLibertad.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1">
+            <span className="text-[10px] text-gray-600">deuda:</span>
+            <span className="text-[11px] font-bold text-white">{formatMoney(kpis.totalDeudas)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de progreso hacia libertad */}
+      <div>
+        <div className="h-2.5 bg-black/30 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ${mesesLibertad === 999 ? 'bg-red-500' : mesesLibertad > 36 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+            style={{ width: `${progreso}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-[9px] text-gray-600">Inicio</span>
+          <span className="text-[9px] text-gray-600">Libertad</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function RecomendacionCard({ recomendacion }) {
@@ -1118,40 +1521,6 @@ function RecomendacionCard({ recomendacion }) {
   );
 }
 
-function FugaCardCompact({ fuga }) {
-  return (
-    <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">{fuga.emoji}</span>
-        <div><div className="text-white text-xs font-semibold">{fuga.tipo}</div><div className="text-gray-400 text-[10px]">{fuga.frecuencia}x • {formatMoney(fuga.gastoActual)}</div></div>
-      </div>
-      <div className="text-green-400 text-xs font-bold">{formatMoney(fuga.ahorroEstimado)}</div>
-    </div>
-  );
-}
-
-function DeudaCardCompact({ deuda }) {
-  return (
-    <div className="bg-white/5 rounded-lg p-2">
-      <div className="flex justify-between items-center">
-        <span className="text-white text-xs font-semibold">{deuda.nombre || deuda.cuenta || 'Deuda'}</span>
-        <span className="text-red-400 text-xs font-bold">{formatMoney(deuda.saldo)}</span>
-      </div>
-    </div>
-  );
-}
-
-function GastoBar({ label, value, total, color }) {
-  const percent = total > 0 ? (value / total) * 100 : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-xs text-gray-400 mb-1">
-        <span>{label}</span><span>{formatMoney(value)} ({percent.toFixed(0)}%)</span>
-      </div>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className={`h-full ${color}`} style={{ width: `${percent}%` }} /></div>
-    </div>
-  );
-}
 
 function ActionButton({ emoji, text, onClick }) {
   return (
