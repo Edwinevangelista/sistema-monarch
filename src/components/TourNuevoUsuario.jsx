@@ -349,13 +349,14 @@ const TourNuevoUsuario = ({ onCerrar, onAccion }) => {
 }
 
 // ── Hook: controla cuándo mostrar el tour ────────────────────────────────────
-// Lógica: mostrar si usuario es NUEVO (todo en cero) y no completó el tour
+// Lógica: mostrar SOLO si usuario es NUEVO (todo en cero) y los datos YA cargaron
 // NO requiere onboarding_completado para cubrir también login con Google
 export const useTourNuevoUsuario = ({
   ingresos = [],
   gastos = [],
   deudas = [],
   cuentas = [],
+  dataReady = false,   // ← clave: true cuando los hooks de Supabase terminaron su fetch
 }) => {
   const [mostrar, setMostrar] = useState(false)
 
@@ -363,22 +364,40 @@ export const useTourNuevoUsuario = ({
     // Si ya completó el tour, nunca mostrar
     if (localStorage.getItem('tour_completado')) return
 
+    // ⚠️ NO evaluar hasta que los datos de Supabase hayan terminado de cargar.
+    // Evita el falso-positivo: en el primer render todos los arrays son []
+    // aunque el usuario sea antiguo (sus datos aún están en vuelo).
+    if (!dataReady) return
+
     const todoEnCero =
       ingresos.length === 0 &&
       gastos.length === 0 &&
       deudas.length === 0 &&
       cuentas.length === 0
 
-    if (todoEnCero) {
-      // Delay para que el dashboard cargue completamente
-      // Si el onboarding aún está activo, esperar más
-      const onboardingActivo = !localStorage.getItem('onboarding_completado')
-      const delay = onboardingActivo ? 3500 : 1400
-
-      const t = setTimeout(() => setMostrar(true), delay)
-      return () => clearTimeout(t)
+    if (!todoEnCero) {
+      // Usuario antiguo con datos — nunca mostrar el tour
+      return
     }
-  }, [ingresos.length, gastos.length, deudas.length, cuentas.length])
+
+    // Usuario genuinamente nuevo: todo en cero DESPUÉS de que los datos cargaron
+    const onboardingActivo = !localStorage.getItem('onboarding_completado')
+    const delay = onboardingActivo ? 3500 : 1400
+
+    const t = setTimeout(() => setMostrar(true), delay)
+    return () => clearTimeout(t)
+  }, [dataReady, ingresos.length, gastos.length, deudas.length, cuentas.length])
+
+  // Si en algún momento llegan datos, ocultar el tour por si se mostró antes
+  useEffect(() => {
+    if (!mostrar) return
+    const tieneData =
+      ingresos.length > 0 || gastos.length > 0 || deudas.length > 0 || cuentas.length > 0
+    if (tieneData) {
+      setMostrar(false)
+      localStorage.setItem('tour_completado', '1')
+    }
+  }, [mostrar, ingresos.length, gastos.length, deudas.length, cuentas.length])
 
   const cerrarTour = () => {
     setMostrar(false)

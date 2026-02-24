@@ -266,18 +266,18 @@ export default function GraficaBarras({
   return (
     <div className="w-full">
       {/* ── HEADER ── */}
-      <div className="flex items-start justify-between mb-3 gap-2">
+      <div className="flex items-start justify-between mb-4 gap-2">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <TrendingUp className="w-4 h-4 text-indigo-400 shrink-0" />
             <h3 className="text-sm font-black text-white">Evolución Mensual</h3>
           </div>
-          <p className="text-[10px] text-gray-600">
+          <p className="text-[11px] text-gray-600">
             Últimos {chartData.length} meses · toca una barra para ver el detalle
           </p>
         </div>
         {tendencia !== 0 && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold shrink-0 ${
+          <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold shrink-0 ${
             tendencia > 0
               ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
               : 'bg-red-500/15 text-red-400 border border-red-500/20'
@@ -286,79 +286,119 @@ export default function GraficaBarras({
               ? <TrendingUp className="w-3 h-3" />
               : <TrendingDown className="w-3 h-3" />
             }
-            {tendencia > 0 ? '+' : ''}{(tendencia / 1000).toFixed(1)}k vs mes ant.
+            {tendencia > 0 ? '+' : ''}{(tendencia / 1000).toFixed(1)}k vs ant.
           </div>
         )}
       </div>
 
       {/* ── GRÁFICA ── */}
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart
-          data={chartData}
-          margin={{ top: 4, right: 2, left: -30, bottom: 0 }}
-          barGap={1}
-          barCategoryGap="28%"
-          onClick={(payload) => {
-            if (payload?.activePayload?.[0]?.payload?.mes) {
-              setMesSel(payload.activePayload[0].payload.mes)
-            }
-          }}
-          style={{ cursor: 'pointer' }}
-        >
-          <CartesianGrid
-            strokeDasharray="2 6"
-            stroke="rgba(255,255,255,0.04)"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="mesNombre"
-            stroke="transparent"
-            tick={{ fill: '#6b7280', fontSize: 11, fontWeight: 700 }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            stroke="transparent"
-            tick={{ fill: '#4b5563', fontSize: 10 }}
-            axisLine={false}
-            tickLine={false}
-            tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
-          />
-          <Tooltip
-            content={<CustomTooltip />}
-            cursor={{ fill: 'rgba(255,255,255,0.035)', radius: 8 }}
-          />
+      {/* Área táctil ampliada para dedo — altura generosa en mobile */}
+      <div
+        className="w-full rounded-2xl overflow-hidden"
+        style={{ touchAction: 'pan-y', cursor: 'pointer' }}
+      >
+        <ResponsiveContainer width="100%" height={height}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 6, right: 4, left: -28, bottom: 0 }}
+            barGap={2}
+            barCategoryGap="22%"
+            onClick={(payload) => {
+              if (payload?.activePayload?.[0]?.payload?.mes) {
+                setMesSel(payload.activePayload[0].payload.mes)
+              }
+            }}
+          >
+            <CartesianGrid
+              strokeDasharray="2 6"
+              stroke="rgba(255,255,255,0.04)"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="mesNombre"
+              stroke="transparent"
+              tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 700 }}
+              axisLine={false}
+              tickLine={false}
+              height={28}
+            />
+            <YAxis
+              stroke="transparent"
+              tick={{ fill: '#4b5563', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ fill: 'rgba(255,255,255,0.04)', radius: 10 }}
+            />
 
-          {SERIES.map(s => (
-            <Bar key={s.key} dataKey={s.key} name={s.label} radius={[4, 4, 0, 0]} maxBarSize={22}>
-              {chartData.map((entry, idx) => (
-                <Cell
-                  key={`${s.key}-${idx}`}
-                  fill={idx === chartData.length - 1 ? s.color : s.dimColor}
-                />
-              ))}
-            </Bar>
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            {SERIES.map(s => (
+              <Bar key={s.key} dataKey={s.key} name={s.label} radius={[5, 5, 0, 0]} maxBarSize={28}>
+                {chartData.map((entry, idx) => (
+                  <Cell
+                    key={`${s.key}-${idx}`}
+                    fill={idx === chartData.length - 1 ? s.color : s.dimColor}
+                  />
+                ))}
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* ── LEYENDA ── */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 justify-center">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 justify-center">
         {SERIES.map(s => (
           <div key={s.key} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-            <span className="text-[10px] text-gray-500 font-medium">{s.label}</span>
+            <div className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+            <span className="text-[11px] text-gray-500 font-semibold">{s.label}</span>
           </div>
         ))}
       </div>
 
-      {/* ── Botón "Ver resumen completo" (mes actual) ── */}
+      {/* ── Botones de mes (táctiles, grandes) ── */}
+      {/* Meses como chips tocables — alternativa al click en barra */}
+      <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+        {chartData.map((d, idx) => (
+          <button
+            key={d.mes}
+            onClick={() => setMesSel(d.mes)}
+            className="shrink-0 flex flex-col items-center gap-0.5 px-3.5 py-2.5 rounded-xl transition-all touch-manipulation active:scale-95"
+            style={{
+              background: mesSel === d.mes
+                ? 'rgba(99,102,241,0.2)'
+                : idx === chartData.length - 1
+                ? 'rgba(255,255,255,0.07)'
+                : 'rgba(255,255,255,0.03)',
+              border: mesSel === d.mes
+                ? '1px solid rgba(99,102,241,0.4)'
+                : idx === chartData.length - 1
+                ? '1px solid rgba(255,255,255,0.12)'
+                : '1px solid rgba(255,255,255,0.05)',
+            }}
+          >
+            <span
+              className="text-[11px] font-black"
+              style={{ color: mesSel === d.mes ? '#a5b4fc' : idx === chartData.length - 1 ? '#e5e7eb' : '#6b7280' }}
+            >
+              {d.mesNombre}
+            </span>
+            {idx === chartData.length - 1 && (
+              <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-wider">Este mes</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Botón "Ver detalle" ── */}
       <button
         onClick={() => setMesSel(chartData[chartData.length - 1]?.mes)}
-        className="w-full mt-3 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all border border-dashed border-white/8 touch-manipulation"
+        className="w-full mt-3 flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[12px] font-bold text-gray-400 hover:text-white hover:bg-white/6 transition-all border border-white/7 touch-manipulation active:scale-[0.98]"
       >
         Ver detalle del mes actual
-        <ArrowRight className="w-3 h-3" />
+        <ArrowRight className="w-3.5 h-3.5" />
       </button>
 
       {/* ── MODAL detalle mes ── */}

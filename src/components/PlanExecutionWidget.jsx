@@ -75,73 +75,106 @@ export default function PlanExecutionWidget({
           TARJETA PRINCIPAL: PRESUPUESTO DEL DÍA
           ======================================== */}
       {financialHealth && (
-        <div className={`rounded-2xl border overflow-hidden transition-all ${
-          financialHealth.esCrisis 
-            ? 'bg-gradient-to-br from-red-900/50 to-red-950/50 border-red-500/40' 
-            : financialHealth.esEmergencia
-            ? 'bg-gradient-to-br from-orange-900/40 to-orange-950/40 border-orange-500/30'
-            : 'bg-gradient-to-br from-slate-800/60 to-slate-900/60 border-white/10'
-        }`}>
+        <div
+          className="rounded-2xl border overflow-hidden transition-all"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            borderColor: financialHealth.esCrisis
+              ? 'rgba(239,68,68,0.25)'
+              : financialHealth.esEmergencia
+              ? 'rgba(245,158,11,0.2)'
+              : 'rgba(255,255,255,0.07)',
+          }}
+        >
           <div className="p-4">
             {/* Header */}
             <div className="flex justify-between items-start mb-3">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
-                  {financialHealth.esCrisis ? '🚨 Modo Crisis' : financialHealth.esEmergencia ? '⚠️ Presupuesto Bajo' : '💰 Tu Límite Hoy'}
+                <div
+                  className="text-[10px] font-bold uppercase tracking-wider mb-1"
+                  style={{
+                    color: financialHealth.esCrisis
+                      ? '#f87171'
+                      : financialHealth.esEmergencia
+                      ? '#fbbf24'
+                      : '#9ca3af',
+                  }}
+                >
+                  {financialHealth.esCrisis
+                    ? '⚠️ Presupuesto ajustado'
+                    : financialHealth.esEmergencia
+                    ? 'Presupuesto bajo'
+                    : '💰 Tu límite diario'}
                 </div>
                 <div className="text-3xl font-black text-white">
                   ${(financialHealth.presupuestoDiario ?? 0).toFixed(0)}
-
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 {/* Racha */}
                 {(stats.streak ?? 0) > 0 && (
-                  <div className="flex items-center gap-1 bg-orange-500/20 px-2 py-1 rounded-full border border-orange-500/30">
+                  <div className="flex items-center gap-1 bg-orange-500/15 px-2 py-1 rounded-full border border-orange-500/25">
                     <Flame className="w-3 h-3 text-orange-400" />
                     <span className="text-xs font-bold text-orange-300">{stats.streak}</span>
                   </div>
                 )}
-                
+
                 {/* Score */}
-                <div className={`px-2 py-1 rounded-full text-xs font-bold ${
-                  financialHealth.healthScore >= 70 
-                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                    : financialHealth.healthScore >= 40
-                    ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                    : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                }`}>
+                <div
+                  className="px-2 py-1 rounded-full text-xs font-bold border"
+                  style={{
+                    background:
+                      financialHealth.healthScore >= 70
+                        ? 'rgba(16,185,129,0.12)'
+                        : financialHealth.healthScore >= 40
+                        ? 'rgba(245,158,11,0.12)'
+                        : 'rgba(239,68,68,0.12)',
+                    color:
+                      financialHealth.healthScore >= 70
+                        ? '#34d399'
+                        : financialHealth.healthScore >= 40
+                        ? '#fbbf24'
+                        : '#f87171',
+                    borderColor:
+                      financialHealth.healthScore >= 70
+                        ? 'rgba(16,185,129,0.25)'
+                        : financialHealth.healthScore >= 40
+                        ? 'rgba(245,158,11,0.25)'
+                        : 'rgba(239,68,68,0.25)',
+                  }}
+                >
                   {financialHealth.healthScore}/100
                 </div>
               </div>
             </div>
-            
+
             {/* Barra de gasto del día */}
             <div className="mb-3">
-              <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+              <div className="flex justify-between text-[10px] text-gray-500 mb-1.5">
                 <span>Gastado hoy: ${(financialHealth.gastosHoy ?? 0).toFixed(0)}</span>
-
                 <span>{financialHealth.diasRestantes} días restantes</span>
               </div>
-              <div className="h-2 bg-black/30 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    financialHealth.esCrisis ? 'bg-red-500' :
-                    financialHealth.esEmergencia ? 'bg-orange-500' :
-                    financialHealth.gastosHoy > financialHealth.presupuestoDiario ? 'bg-yellow-500' :
-                    'bg-emerald-500'
-                  }`}
-                  style={{ 
-                    width: `${Math.min(100, (financialHealth.gastosHoy / Math.max(1, financialHealth.presupuestoDiario)) * 100)}%` 
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (financialHealth.gastosHoy / Math.max(1, financialHealth.presupuestoDiario)) * 100)}%`,
+                    background: financialHealth.esCrisis
+                      ? '#ef4444'
+                      : financialHealth.esEmergencia
+                      ? '#f59e0b'
+                      : financialHealth.gastosHoy > financialHealth.presupuestoDiario
+                      ? '#eab308'
+                      : '#10b981',
                   }}
                 />
               </div>
             </div>
-            
+
             {/* Insight de tendencia */}
             {financialHealth.tendenciaAlza && !financialHealth.esCrisis && (
-              <div className="flex items-center gap-2 text-[11px] p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-200">
+              <div className="flex items-center gap-2 text-[11px] p-2 bg-yellow-500/8 border border-yellow-500/15 rounded-xl text-yellow-300">
                 <TrendingUp className="w-3 h-3 flex-shrink-0" />
                 <span>Vas gastando más rápido de lo ideal este mes</span>
               </div>

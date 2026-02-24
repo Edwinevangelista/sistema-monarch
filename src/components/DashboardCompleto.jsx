@@ -164,20 +164,23 @@ export default function DashboardCompleto()  {
   // Hook de transición mensual automática (ejecuta en background)
   useMonthlyTransition()
 
-  const { ingresos, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
+  const { ingresos, loading: ingresosLoading, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
   const { gastos, loading: gastosLoading, addGasto, updateGasto, deleteGasto, refresh: refreshGastos } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
-  const { deudas, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
+  const { deudas, loading: deudasLoading, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
   const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
 const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
 
-  // ── Tour para nuevos usuarios (solo si todo está en cero) ──
+  // ── Tour para nuevos usuarios (solo si todo está en cero Y los datos ya cargaron) ──
+  // dataReady = true cuando todos los hooks de datos terminaron su fetch inicial
+  const dataReady = !ingresosLoading && !gastosLoading && !deudasLoading
   const { mostrar: mostrarTour, cerrarTour } = useTourNuevoUsuario({
     ingresos,
     gastos,
     deudas,
     cuentas,
+    dataReady,
   })
 
 // ✅ DEBE estar DESPUÉS de planesActivos
