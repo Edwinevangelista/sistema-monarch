@@ -2756,7 +2756,16 @@ const dataGraficaDona = useMemo(() =>
 
       {/* ── TOUR NUEVO USUARIO (cuando todo está en cero, después del onboarding) ── */}
       {mostrarTour && !showOnboarding && (
-        <TourNuevoUsuario onCerrar={cerrarTour} />
+        <TourNuevoUsuario
+          onCerrar={cerrarTour}
+          onAccion={(key) => {
+            // El tour pasa la acción clave y el dashboard abre el modal correspondiente
+            if (key === 'ingreso') setShowModal('ingreso')
+            else if (key === 'gasto') setShowModal('gasto')
+            else if (key === 'cuenta') setShowModal('cuentas')
+            else if (key === 'deuda') setShowModal('agregarDeuda')
+          }}
+        />
       )}
     </div>
   )

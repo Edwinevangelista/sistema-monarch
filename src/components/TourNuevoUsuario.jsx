@@ -1,9 +1,10 @@
-// TourNuevoUsuario.jsx — 2026: Guía interactiva para usuarios nuevos (datos en cero)
+// TourNuevoUsuario.jsx — 2026: Tour interactivo con acciones reales para nuevos usuarios
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronRight, ChevronLeft } from 'lucide-react'
+import { X, ChevronRight, ChevronLeft, Plus } from 'lucide-react'
 
-// ── Pasos del tour ──────────────────────────────────────────────────────────
+// ── Pasos del tour ───────────────────────────────────────────────────────────
+// Cada paso puede tener `accionBtn` y `accionKey` para abrir un modal real
 const PASOS = [
   {
     id: 'bienvenida',
@@ -11,96 +12,94 @@ const PASOS = [
     color: '#6366f1',
     glow: 'rgba(99,102,241,0.4)',
     titulo: '¡Bienvenido a FinGuide!',
-    subtitulo: 'Tu app de finanzas personales',
-    descripcion: 'FinGuide es tu compañero financiero diseñado para jóvenes modernos. Aquí puedes controlar tu dinero, salir de deudas y alcanzar tus metas. ¡Vamos a mostrarte cómo!',
-    tip: 'Solo toma 2 minutos conocer la app 🚀',
+    subtitulo: 'Tu app de finanzas para 2026',
+    descripcion: 'En menos de 2 minutos aprenderás cómo registrar tu dinero, ver tus gastos y tomar el control total de tus finanzas personales.',
+    tip: 'Es gratis, rápido y funciona sin conexión 🚀',
   },
   {
-    id: 'balance',
+    id: 'ingreso',
     emoji: '💰',
     color: '#10b981',
     glow: 'rgba(16,185,129,0.4)',
-    titulo: 'Tu Balance General',
-    subtitulo: 'La vista más importante',
-    descripcion: 'En la parte superior siempre verás tu balance: cuánto entra, cuánto sale y cuánto te queda. Puedes ver el día o el mes completo con un toque.',
-    tip: 'El verde = ingresos. El rojo = gastos. Simple.',
-    accion: '➡ Agrega tu primer ingreso para empezar',
+    titulo: 'Registra tus Ingresos',
+    subtitulo: '¿Cuánto entra cada mes?',
+    descripcion: 'El primer paso es registrar de dónde viene tu dinero: salario, freelance, negocio, renta... Toca el botón verde "+" y selecciona "Ingreso".',
+    tip: 'Registra tu ingreso principal hoy mismo para ver cómo funciona la app.',
+    accionBtn: '+ Agregar mi primer ingreso',
+    accionKey: 'ingreso',
+    dondeSe: 'Menú inferior → botón verde "+"',
   },
   {
-    id: 'gastos',
-    emoji: '📊',
+    id: 'gasto',
+    emoji: '🛒',
     color: '#f59e0b',
     glow: 'rgba(245,158,11,0.4)',
-    titulo: 'Gastos y Categorías',
-    subtitulo: 'Conoce en qué gastas tu dinero',
-    descripcion: 'Registra tus gastos del día a día y verás automáticamente una gráfica que muestra en qué categorías gastas más: comida, transporte, entretenimiento y más.',
-    tip: 'La gráfica de dona te muestra el desglose visual de tus gastos.',
-    accion: '➡ Registra un gasto para ver la gráfica',
+    titulo: 'Registra tus Gastos',
+    subtitulo: '¿En qué se va el dinero?',
+    descripcion: 'Cada vez que gastes, registra el monto y la categoría: comida, transporte, entretenimiento, salud... La gráfica se actualiza automáticamente.',
+    tip: 'Los gastos más pequeños son los que más se acumulan. ¡Registra todo!',
+    accionBtn: '+ Agregar mi primer gasto',
+    accionKey: 'gasto',
+    dondeSe: 'Menú inferior → botón verde "+" → Gasto variable',
+  },
+  {
+    id: 'cuenta',
+    emoji: '🏦',
+    color: '#06b6d4',
+    glow: 'rgba(6,182,212,0.4)',
+    titulo: 'Vincula una Cuenta',
+    subtitulo: 'Bancos, efectivo, digital',
+    descripcion: 'Agrega tus cuentas bancarias o de dinero digital (banco, efectivo, OXXO Pay, etc.). La app calcula el balance de cada cuenta automáticamente.',
+    tip: 'Puedes tener múltiples cuentas y ver el total combinado.',
+    accionBtn: '+ Agregar mi primera cuenta',
+    accionKey: 'cuenta',
+    dondeSe: 'Dashboard → sección "Cuentas Bancarias"',
   },
   {
     id: 'deudas',
     emoji: '💳',
     color: '#ef4444',
     glow: 'rgba(239,68,68,0.4)',
-    titulo: 'Control de Deudas',
-    subtitulo: 'Sal de deudas con un plan',
-    descripcion: 'Agrega tus deudas (tarjetas, préstamos, etc.) y la app te mostrará cuánto debes en total y te ayudará a crear un plan personalizado para pagarlas.',
-    tip: 'Primero paga las deudas con mayor interés. Eso te ahorra dinero.',
-    accion: '➡ Agrega tu primera deuda',
+    titulo: '¿Tienes Deudas?',
+    subtitulo: 'Regístralas y tenlas bajo control',
+    descripcion: 'Si tienes tarjetas de crédito, préstamos o deudas, agrégalas aquí. La app te muestra cuánto debes en total y el Asistente IA puede crear un plan para pagarlas.',
+    tip: 'Conocer tus deudas exactas es el primer paso para eliminarlas.',
+    accionBtn: '+ Agregar una deuda',
+    accionKey: 'deuda',
+    dondeSe: 'Dashboard → sección "Mis Deudas"',
   },
   {
-    id: 'evolucion',
-    emoji: '📈',
+    id: 'asistente',
+    emoji: '🤖',
     color: '#8b5cf6',
     glow: 'rgba(139,92,246,0.4)',
-    titulo: 'Evolución Mensual',
-    subtitulo: 'Mira tu progreso en el tiempo',
-    descripcion: 'La gráfica de barras muestra mes a mes cómo van tus ingresos y gastos. Así puedes ver si estás mejorando o si hay un mes que se salió de control.',
-    tip: 'Si las barras verdes crecen y las rojas bajan, ¡vas bien!',
-  },
-  {
-    id: 'alertas',
-    emoji: '🔔',
-    color: '#f97316',
-    glow: 'rgba(249,115,22,0.4)',
-    titulo: 'Alertas Inteligentes',
-    subtitulo: 'La app trabaja contigo',
-    descripcion: 'FinGuide analiza tus finanzas y te manda alertas cuando detecta algo importante: gastos altos, deudas próximas a vencer, o cuando llevas tiempo sin registrar.',
-    tip: 'Activa las notificaciones push para no perderte ninguna alerta.',
-  },
-  {
-    id: 'planes',
-    emoji: '🎯',
-    color: '#06b6d4',
-    glow: 'rgba(6,182,212,0.4)',
-    titulo: 'Planes Financieros',
-    subtitulo: 'Metas que puedes lograr',
-    descripcion: 'El Asistente IA puede crear planes personalizados para ti: pagar una deuda en X meses, ahorrar para algo especial o reducir gastos en una categoría específica.',
-    tip: 'Cuéntale al asistente tu situación y él creará el plan perfecto.',
-    accion: '➡ Toca "Asistente IA" para empezar',
+    titulo: 'Tu Asistente IA',
+    subtitulo: 'Tu asesor financiero personal',
+    descripcion: 'Una vez que tengas datos, el Asistente IA analiza tus finanzas y te da recomendaciones personalizadas. También puede crear planes de ahorro y deuda.',
+    tip: 'Toca "Analizar finanzas" en el Asistente para ver tu primer diagnóstico.',
+    dondeSe: 'Dashboard → sección "Asistente IA"',
   },
   {
     id: 'listo',
     emoji: '🚀',
     color: '#10b981',
     glow: 'rgba(16,185,129,0.4)',
-    titulo: '¡Estás listo!',
+    titulo: '¡Ya estás listo!',
     subtitulo: 'Empieza tu camino financiero',
-    descripcion: 'Ya conoces lo básico. El primer paso es registrar un ingreso o gasto hoy mismo. La constancia es la clave: usuarios que registran diario mejoran sus finanzas 3x más rápido.',
-    tip: 'Consejo pro: Registra apenas gastas o ingresas. Así no olvidas nada.',
-    accion: '¡Empecemos!',
+    descripcion: 'Comienza registrando un ingreso o gasto hoy. La constancia es la clave: con solo 30 segundos al día tendrás el control total de tu dinero.',
+    tip: 'Tip pro: Activa las notificaciones para recordatorios diarios 🔔',
+    accionBtn: '¡Empezar ahora!',
     esFinal: true,
   },
 ]
 
 // ── Componente principal ─────────────────────────────────────────────────────
-const TourNuevoUsuario = ({ onCerrar }) => {
+const TourNuevoUsuario = ({ onCerrar, onAccion }) => {
   const [paso, setPaso] = useState(0)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Fade-in inicial
-    const t = setTimeout(() => setVisible(true), 50)
+    const t = setTimeout(() => setVisible(true), 60)
     return () => clearTimeout(t)
   }, [])
 
@@ -108,155 +107,167 @@ const TourNuevoUsuario = ({ onCerrar }) => {
   const pasoActual = PASOS[paso]
 
   const siguiente = () => {
-    if (paso < total - 1) {
-      setPaso(p => p + 1)
-    }
+    if (paso < total - 1) setPaso(p => p + 1)
   }
-
   const anterior = () => {
-    if (paso > 0) {
-      setPaso(p => p - 1)
-    }
+    if (paso > 0) setPaso(p => p - 1)
   }
 
-  const cerrar = () => {
-    // Marcar como visto
+  const cerrar = (completado = false) => {
     localStorage.setItem('tour_completado', '1')
     setVisible(false)
     setTimeout(() => {
-      if (onCerrar) onCerrar()
+      if (onCerrar) onCerrar(completado)
     }, 300)
+  }
+
+  // Ejecutar acción real (abre modal en dashboard) y avanza al siguiente paso
+  const ejecutarAccion = (key) => {
+    if (onAccion && key) onAccion(key)
+    // Cerrar tour si es la acción final, sino avanzar
+    if (pasoActual.esFinal) {
+      cerrar(true)
+    } else {
+      siguiente()
+    }
   }
 
   const content = (
     <div
-      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
       style={{
-        background: 'rgba(0,0,0,0.75)',
-        backdropFilter: 'blur(12px)',
+        background: 'rgba(0,0,0,0.8)',
+        backdropFilter: 'blur(16px)',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.3s ease',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) cerrar() }}
     >
-      {/* ── Tarjeta principal ── */}
       <div
-        className="relative w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden"
+        className="relative w-full sm:max-w-sm rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden"
         style={{
-          background: 'linear-gradient(160deg, rgba(15,20,40,0.98) 0%, rgba(5,8,20,0.99) 100%)',
-          border: `1px solid ${pasoActual.color}25`,
-          boxShadow: `0 -20px 60px -10px rgba(0,0,0,0.8), 0 0 0 1px ${pasoActual.color}15`,
-          transform: visible ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'transform 0.3s ease, box-shadow 0.4s ease',
-          maxHeight: '90dvh',
+          background: 'linear-gradient(160deg, rgba(13,18,38,0.99) 0%, rgba(5,8,18,0.99) 100%)',
+          border: `1px solid ${pasoActual.color}22`,
+          boxShadow: `0 -24px 80px -12px rgba(0,0,0,0.9), 0 0 0 1px ${pasoActual.color}12, inset 0 1px 0 rgba(255,255,255,0.05)`,
+          transform: visible ? 'translateY(0)' : 'translateY(24px)',
+          transition: 'transform 0.32s cubic-bezier(0.16,1,0.3,1)',
+          maxHeight: '92dvh',
         }}
       >
         {/* Barra de progreso top */}
-        <div className="h-0.5 w-full bg-white/5">
+        <div className="h-[3px] w-full" style={{ background: 'rgba(255,255,255,0.05)' }}>
           <div
-            className="h-full transition-all duration-500 ease-out"
+            className="h-full transition-all duration-500 ease-out rounded-full"
             style={{
               width: `${((paso + 1) / total) * 100}%`,
-              background: `linear-gradient(90deg, ${pasoActual.color}, ${pasoActual.color}aa)`,
-              boxShadow: `0 0 8px ${pasoActual.glow}`,
+              background: `linear-gradient(90deg, ${pasoActual.color}, ${pasoActual.color}99)`,
+              boxShadow: `0 0 12px ${pasoActual.glow}`,
             }}
           />
         </div>
 
-        {/* Glow de fondo decorativo */}
+        {/* Glow decorativo */}
         <div
-          className="absolute top-0 right-0 w-48 h-48 pointer-events-none"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 pointer-events-none"
           style={{
-            background: `radial-gradient(circle, ${pasoActual.color}18 0%, transparent 70%)`,
-            transform: 'translate(25%, -25%)',
+            background: `radial-gradient(ellipse, ${pasoActual.color}15 0%, transparent 70%)`,
           }}
         />
 
-        {/* Botón cerrar */}
-        <button
-          onClick={cerrar}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-white/8 hover:bg-white/15 transition-all touch-manipulation"
-        >
-          <X className="w-4 h-4 text-gray-400" />
-        </button>
-
-        {/* Indicador de paso */}
-        <div className="absolute top-4 left-4 z-10">
-          <span className="text-[11px] font-bold text-gray-500 tracking-widest uppercase">
-            {paso + 1} / {total}
-          </span>
+        {/* Handle bar mobile */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="w-10 h-1 rounded-full bg-white/15" />
         </div>
 
-        <div className="p-6 pt-12">
-          {/* Icono animado */}
-          <div className="flex items-center justify-center mb-5">
+        {/* Top bar: step + close */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <span
+            className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+            style={{
+              background: `${pasoActual.color}18`,
+              color: pasoActual.color,
+              border: `1px solid ${pasoActual.color}30`,
+            }}
+          >
+            {paso + 1} de {total}
+          </span>
+          <button
+            onClick={() => cerrar()}
+            className="w-7 h-7 rounded-full flex items-center justify-center bg-white/7 hover:bg-white/14 transition-all touch-manipulation"
+          >
+            <X className="w-3.5 h-3.5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="px-5 pb-2 overflow-y-auto" style={{ maxHeight: 'calc(92dvh - 100px)' }}>
+          {/* Emoji icon */}
+          <div className="flex justify-center mb-4">
             <div
-              className="relative w-20 h-20 rounded-3xl flex items-center justify-center"
+              className="w-[76px] h-[76px] rounded-[22px] flex items-center justify-center relative"
               style={{
-                background: `linear-gradient(135deg, ${pasoActual.color}30, ${pasoActual.color}10)`,
-                border: `1px solid ${pasoActual.color}30`,
-                boxShadow: `0 0 30px ${pasoActual.glow}, inset 0 1px 0 rgba(255,255,255,0.1)`,
+                background: `linear-gradient(135deg, ${pasoActual.color}28, ${pasoActual.color}0a)`,
+                border: `1px solid ${pasoActual.color}28`,
+                boxShadow: `0 0 40px ${pasoActual.glow}60, inset 0 1px 0 rgba(255,255,255,0.08)`,
               }}
             >
-              <span className="text-4xl" role="img" aria-label="paso">
-                {pasoActual.emoji}
-              </span>
-              {/* Anillo exterior */}
+              <span className="text-[2.4rem] leading-none">{pasoActual.emoji}</span>
+              {/* pulse ring */}
               <div
-                className="absolute inset-0 rounded-3xl"
+                className="absolute inset-0 rounded-[22px] animate-ping"
                 style={{
                   border: `1px solid ${pasoActual.color}20`,
-                  transform: 'scale(1.2)',
+                  animationDuration: '3s',
                 }}
               />
             </div>
           </div>
 
           {/* Texto */}
-          <div className="text-center mb-5">
+          <div className="text-center mb-4">
             <p
-              className="text-[11px] font-bold uppercase tracking-widest mb-1"
+              className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5"
               style={{ color: pasoActual.color }}
             >
               {pasoActual.subtitulo}
             </p>
-            <h2 className="text-2xl font-black text-white mb-3 leading-tight">
+            <h2 className="text-[1.4rem] font-black text-white mb-2.5 leading-tight">
               {pasoActual.titulo}
             </h2>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-[13px] text-gray-400 leading-relaxed">
               {pasoActual.descripcion}
             </p>
           </div>
 
+          {/* Dónde se hace */}
+          {pasoActual.dondeSe && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <span className="text-[11px]">📍</span>
+              <span className="text-[11px] text-gray-500 font-medium">{pasoActual.dondeSe}</span>
+            </div>
+          )}
+
           {/* Tip */}
           <div
-            className="rounded-2xl p-3 mb-5 flex items-start gap-2.5"
+            className="rounded-2xl px-3.5 py-3 mb-4 flex items-start gap-2.5"
             style={{
-              background: `${pasoActual.color}12`,
-              border: `1px solid ${pasoActual.color}25`,
+              background: `${pasoActual.color}0f`,
+              border: `1px solid ${pasoActual.color}22`,
             }}
           >
-            <span className="text-base shrink-0">💡</span>
+            <span className="text-sm shrink-0 mt-0.5">💡</span>
             <p
-              className="text-xs leading-relaxed font-medium"
-              style={{ color: `${pasoActual.color}dd` }}
+              className="text-[12px] leading-relaxed font-medium"
+              style={{ color: `${pasoActual.color}cc` }}
             >
               {pasoActual.tip}
             </p>
           </div>
 
-          {/* Acción contextual */}
-          {pasoActual.accion && !pasoActual.esFinal && (
-            <div
-              className="rounded-xl p-2.5 mb-4 text-center"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px dashed rgba(255,255,255,0.1)' }}
-            >
-              <p className="text-[11px] text-gray-500 font-medium">{pasoActual.accion}</p>
-            </div>
-          )}
-
-          {/* Puntos de navegación */}
-          <div className="flex items-center justify-center gap-1.5 mb-5">
+          {/* Dots de navegación */}
+          <div className="flex items-center justify-center gap-1.5 mb-4">
             {PASOS.map((_, i) => (
               <button
                 key={i}
@@ -265,61 +276,70 @@ const TourNuevoUsuario = ({ onCerrar }) => {
                 style={{
                   width: i === paso ? '20px' : '6px',
                   height: '6px',
-                  background: i === paso ? pasoActual.color : 'rgba(255,255,255,0.15)',
-                  boxShadow: i === paso ? `0 0 6px ${pasoActual.glow}` : 'none',
+                  background: i === paso ? pasoActual.color : 'rgba(255,255,255,0.12)',
+                  boxShadow: i === paso ? `0 0 8px ${pasoActual.glow}` : 'none',
                 }}
               />
             ))}
           </div>
 
-          {/* Botones de navegación */}
-          <div className="flex gap-2">
-            {paso > 0 && !pasoActual.esFinal && (
+          {/* Botones */}
+          <div className="flex flex-col gap-2 pb-6">
+            {/* Botón de acción principal (abre modal real) */}
+            {pasoActual.accionBtn && (
               <button
-                onClick={anterior}
-                className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-white/6 hover:bg-white/10 transition-all text-gray-400 hover:text-white text-sm font-semibold touch-manipulation active:scale-[0.97]"
+                onClick={() => ejecutarAccion(pasoActual.accionKey)}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[13px] text-white transition-all touch-manipulation active:scale-[0.97]"
+                style={{
+                  background: `linear-gradient(135deg, ${pasoActual.color}, ${pasoActual.color}cc)`,
+                  boxShadow: `0 8px 30px -6px ${pasoActual.glow}`,
+                }}
               >
-                <ChevronLeft className="w-4 h-4" />
-                Atrás
+                {!pasoActual.esFinal && <Plus className="w-4 h-4" />}
+                {pasoActual.esFinal && <span>🚀</span>}
+                {pasoActual.accionBtn}
               </button>
             )}
 
-            {pasoActual.esFinal ? (
+            {/* Navegación atrás / siguiente */}
+            <div className="flex gap-2">
+              {paso > 0 && (
+                <button
+                  onClick={anterior}
+                  className="flex items-center gap-1 px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/9 transition-all text-gray-500 hover:text-gray-300 text-[13px] font-semibold touch-manipulation active:scale-[0.97]"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Atrás
+                </button>
+              )}
+
+              {!pasoActual.esFinal && (
+                <button
+                  onClick={siguiente}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[13px] font-semibold transition-all touch-manipulation active:scale-[0.97] ${
+                    pasoActual.accionBtn ? 'flex-1 bg-white/6 hover:bg-white/10 text-gray-400 hover:text-white' : 'flex-1 text-white'
+                  }`}
+                  style={!pasoActual.accionBtn ? {
+                    background: `linear-gradient(135deg, ${pasoActual.color}, ${pasoActual.color}cc)`,
+                    boxShadow: `0 8px 30px -6px ${pasoActual.glow}`,
+                  } : {}}
+                >
+                  {paso === 0 ? 'Comenzar' : pasoActual.accionBtn ? 'Saltar este paso' : 'Siguiente'}
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Saltar tour */}
+            {!pasoActual.esFinal && (
               <button
-                onClick={cerrar}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white transition-all touch-manipulation active:scale-[0.97]"
-                style={{
-                  background: `linear-gradient(135deg, ${pasoActual.color}, ${pasoActual.color}cc)`,
-                  boxShadow: `0 8px 25px -5px ${pasoActual.glow}`,
-                }}
+                onClick={() => cerrar()}
+                className="py-1.5 text-[11px] text-gray-700 hover:text-gray-500 transition-colors touch-manipulation text-center"
               >
-                <span>🚀</span>
-                {pasoActual.accion}
-              </button>
-            ) : (
-              <button
-                onClick={siguiente}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm text-white transition-all touch-manipulation active:scale-[0.97]"
-                style={{
-                  background: `linear-gradient(135deg, ${pasoActual.color}, ${pasoActual.color}cc)`,
-                  boxShadow: `0 8px 25px -5px ${pasoActual.glow}`,
-                }}
-              >
-                {paso === 0 ? 'Comenzar tour' : 'Siguiente'}
-                <ChevronRight className="w-4 h-4" />
+                Saltar tour completo
               </button>
             )}
           </div>
-
-          {/* Skip */}
-          {!pasoActual.esFinal && (
-            <button
-              onClick={cerrar}
-              className="w-full mt-3 py-2 text-[11px] text-gray-600 hover:text-gray-400 transition-colors touch-manipulation"
-            >
-              Saltar tour
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -328,18 +348,20 @@ const TourNuevoUsuario = ({ onCerrar }) => {
   return createPortal(content, document.body)
 }
 
-// ── Hook para controlar si mostrar el tour ───────────────────────────────────
-export const useTourNuevoUsuario = ({ ingresos = [], gastos = [], deudas = [], cuentas = [] }) => {
+// ── Hook: controla cuándo mostrar el tour ────────────────────────────────────
+// Lógica: mostrar si usuario es NUEVO (todo en cero) y no completó el tour
+// NO requiere onboarding_completado para cubrir también login con Google
+export const useTourNuevoUsuario = ({
+  ingresos = [],
+  gastos = [],
+  deudas = [],
+  cuentas = [],
+}) => {
   const [mostrar, setMostrar] = useState(false)
 
   useEffect(() => {
-    // Solo mostrar si:
-    // 1. El tour no fue completado antes
-    // 2. El usuario tiene todo en cero (datos vacíos)
-    const tourCompletado = localStorage.getItem('tour_completado')
-    const onboardingCompletado = localStorage.getItem('onboarding_completado')
-
-    if (tourCompletado) return
+    // Si ya completó el tour, nunca mostrar
+    if (localStorage.getItem('tour_completado')) return
 
     const todoEnCero =
       ingresos.length === 0 &&
@@ -347,9 +369,13 @@ export const useTourNuevoUsuario = ({ ingresos = [], gastos = [], deudas = [], c
       deudas.length === 0 &&
       cuentas.length === 0
 
-    // Mostrar después de un pequeño delay para que el dashboard cargue primero
-    if (todoEnCero && onboardingCompletado) {
-      const t = setTimeout(() => setMostrar(true), 1200)
+    if (todoEnCero) {
+      // Delay para que el dashboard cargue completamente
+      // Si el onboarding aún está activo, esperar más
+      const onboardingActivo = !localStorage.getItem('onboarding_completado')
+      const delay = onboardingActivo ? 3500 : 1400
+
+      const t = setTimeout(() => setMostrar(true), delay)
       return () => clearTimeout(t)
     }
   }, [ingresos.length, gastos.length, deudas.length, cuentas.length])
