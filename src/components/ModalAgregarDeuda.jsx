@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { CreditCard, X, ChevronLeft, Loader2, DollarSign, Percent, Calendar } from 'lucide-react'
+import { CreditCard, X, ChevronLeft, Loader2, DollarSign, Percent, Calendar, Shield } from 'lucide-react'
 import { toast } from 'sonner'
+import { calcularPagoMinimo } from '../utils/tarjetasCalculos'
 
 const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
   const esEdicion = Boolean(deudaInicial)
@@ -12,6 +13,8 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
     tipo: 'Tarjeta',
     saldo: '',
     apr: '',
+    limite_credito: '',
+    dias_gracia: '21',
     pago_minimo: '',
     pago_real: '',
     vence: '',
@@ -46,6 +49,8 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
         tipo: deudaInicial.tipo || 'Tarjeta',
         saldo: deudaInicial.saldo ?? '',
         apr: deudaInicial.apr ? (deudaInicial.apr * 100).toString() : '',
+        limite_credito: deudaInicial.limite_credito ?? '',
+        dias_gracia: deudaInicial.dias_gracia ?? '21',
         pago_minimo: deudaInicial.pago_minimo ?? '',
         pago_real: deudaInicial.pago_real ?? '',
         vence: deudaInicial.vence || '',
@@ -58,6 +63,8 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
         tipo: 'Tarjeta',
         saldo: '',
         apr: '',
+        limite_credito: '',
+        dias_gracia: '21',
         pago_minimo: '',
         pago_real: '',
         vence: '',
@@ -73,14 +80,20 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
     }
     setLoading(true)
     try {
+      const saldoNum = parseFloat(formData.saldo) || 0
+      const aprNum = formData.apr ? parseFloat(formData.apr) / 100 : 0
+      // Si el usuario deja pago_minimo vacío, calcularlo automáticamente
+      const pagoMinAuto = calcularPagoMinimo(saldoNum, aprNum)
       const payload = {
         cuenta: formData.cuenta,
         tipo: formData.tipo,
-        saldo: parseFloat(formData.saldo),
-        apr: formData.apr ? parseFloat(formData.apr) / 100 : 0,
-        pago_minimo: parseFloat(formData.pago_minimo) || 0,
+        saldo: saldoNum,
+        apr: aprNum,
+        limite_credito: formData.limite_credito ? parseFloat(formData.limite_credito) : null,
+        dias_gracia: parseInt(formData.dias_gracia, 10) || 21,
+        pago_minimo: parseFloat(formData.pago_minimo) || pagoMinAuto,
         pago_real: parseFloat(formData.pago_real) || 0,
-        vence: formData.vence,
+        vence: formData.vence || null,
         estado: formData.estado
       }
       if (esEdicion && deudaInicial) {
@@ -226,14 +239,54 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
               </div>
             </div>
 
-            {/* Pago Mínimo y Vencimiento */}
+            {/* Limite de credito y dias de gracia — solo para tarjetas */}
+            {formData.tipo === 'Tarjeta' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>
+                    <Shield className="w-3 h-3 inline mr-1" />
+                    Limite de Credito
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="Ej: 10000"
+                    value={formData.limite_credito}
+                    onChange={(e) => setFormData({ ...formData, limite_credito: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Dias de Gracia</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="21"
+                    value={formData.dias_gracia}
+                    onChange={(e) => setFormData({ ...formData, dias_gracia: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Pago Minimo y Vencimiento */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>Pago Mínimo</label>
+                <label className={labelClass}>
+                  Pago Minimo
+                  {formData.saldo && formData.apr && !formData.pago_minimo && (
+                    <span className="text-blue-400 ml-1 normal-case font-normal">(auto)</span>
+                  )}
+                </label>
                 <input
                   type="number"
                   inputMode="decimal"
-                  placeholder="0.00"
+                  placeholder={
+                    formData.saldo
+                      ? `Auto: $${calcularPagoMinimo(parseFloat(formData.saldo) || 0, parseFloat(formData.apr) || 0).toFixed(0)}`
+                      : '0.00'
+                  }
                   value={formData.pago_minimo}
                   onChange={(e) => setFormData({ ...formData, pago_minimo: e.target.value })}
                   className={inputClass}
@@ -267,16 +320,37 @@ const ModalAgregarDeuda = ({ onClose, onSave, deudaInicial = null }) => {
               </select>
             </div>
 
-            {/* Preview info si tiene saldo y APR */}
-            {formData.saldo && formData.apr && (
-              <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-1 font-semibold">Interés mensual estimado:</p>
-                <p className="text-base font-bold text-red-400">
-                  ${(parseFloat(formData.saldo) * (parseFloat(formData.apr) / 100) / 12).toFixed(2)} / mes
-                </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">
-                  Con APR {formData.apr}% sobre saldo de ${parseFloat(formData.saldo).toFixed(2)}
-                </p>
+            {/* Preview info calculado automaticamente */}
+            {formData.saldo && (
+              <div className="bg-gray-800/80 border border-white/8 rounded-xl p-3 space-y-2">
+                {formData.apr && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Interes mensual</span>
+                    <span className="text-sm font-bold text-red-400">
+                      ${(parseFloat(formData.saldo) * (parseFloat(formData.apr) / 100) / 12).toFixed(2)} / mes
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-400">Pago minimo calculado</span>
+                  <span className="text-sm font-bold text-blue-400">
+                    ${calcularPagoMinimo(parseFloat(formData.saldo) || 0, parseFloat(formData.apr) || 0).toFixed(2)}
+                  </span>
+                </div>
+                {formData.limite_credito && parseFloat(formData.limite_credito) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Uso de credito</span>
+                    <span className={`text-sm font-bold ${
+                      (parseFloat(formData.saldo) / parseFloat(formData.limite_credito)) * 100 < 30
+                        ? 'text-emerald-400'
+                        : (parseFloat(formData.saldo) / parseFloat(formData.limite_credito)) * 100 < 70
+                        ? 'text-yellow-400'
+                        : 'text-red-400'
+                    }`}>
+                      {Math.round((parseFloat(formData.saldo) / parseFloat(formData.limite_credito)) * 100)}%
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

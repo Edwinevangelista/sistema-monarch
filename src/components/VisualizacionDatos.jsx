@@ -265,6 +265,16 @@ const VisualizacionDatos = ({
 
   const rangoLabel = RANGOS.find(r => r.id === rango)?.label || rango
 
+  // Strip emojis y caracteres no-Latin1 para jsPDF (Helvetica no soporta Unicode)
+  const stripEmoji = (str = '') =>
+    str
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+      .replace(/[\u{2600}-\u{27BF}]/gu, '')
+      .replace(/[\u{FE00}-\u{FEFF}]/gu, '')
+      .replace(/[^\u0020-\u00FF]/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+
   // ── Exportar PDF PROFESIONAL ──────────────────────────────────────────────
   const exportarPDF = async () => {
     setExportando(true)
@@ -452,7 +462,7 @@ const VisualizacionDatos = ({
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(7.5)
           doc.setTextColor(30,30,30)
-          doc.text(cat.name.substring(0, 18), catColX[0]+1, y+5)
+          doc.text(stripEmoji(cat.name).substring(0, 22), catColX[0]+1, y+5)
           doc.text(fmt(cat.value), catColX[1] + 38, y+5, { align: 'right' })
           doc.text(`${pct.toFixed(1)}%`, catColX[2]+1, y+5)
           // Mini barra visual
@@ -502,7 +512,8 @@ const VisualizacionDatos = ({
           doc.setTextColor(180,30,30)
           doc.text(fmt(d.saldo), dColX[2] + 28, y+5, { align: 'right' })
           doc.setTextColor(30,30,30)
-          doc.text(d.interes_anual ? `${d.interes_anual}%` : '-', dColX[3]+1, y+5)
+          const aprDisplay = d.apr ? `${(Number(d.apr) > 1 ? Number(d.apr) : Number(d.apr)*100).toFixed(1)}%` : '-'
+          doc.text(aprDisplay, dColX[3]+1, y+5)
           if (d.limite_credito > 0) {
             const barColor = pctUso > 70 ? [220,60,60] : pctUso > 40 ? [200,140,20] : [30,150,80]
             doc.setFillColor(210,210,210)
@@ -848,16 +859,20 @@ const VisualizacionDatos = ({
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="text-[13px] font-black text-white">{d.nombre || d.cuenta || 'Deuda'}</p>
-                        <p className="text-[10px] text-gray-600">{d.tipo || 'Tarjeta'}{d.banco ? ` · ${d.banco}` : ''}</p>
+                        <p className="text-[10px] text-gray-600">
+                          {d.tipo || 'Tarjeta'}
+                          {d.apr ? ` · APR ${(Number(d.apr) > 1 ? Number(d.apr) : Number(d.apr)*100).toFixed(1)}%` : ''}
+                        </p>
                       </div>
                       <p className="text-[15px] font-black text-red-400">{fmt(d.saldo)}</p>
                     </div>
-                    {d.interes_anual && <p className="text-[10px] text-yellow-500 font-bold mb-2">{d.interes_anual}% interes anual</p>}
                     {d.limite_credito > 0 && (
                       <div>
-                        <div className="flex justify-between text-[9px] text-gray-600 mb-1">
-                          <span>Uso: {pctUso.toFixed(0)}%</span>
-                          <span>Limite: {fmt(d.limite_credito)}</span>
+                        <div className="flex justify-between text-[9px] mb-1">
+                          <span className={pctUso > 70 ? 'text-red-400 font-bold' : pctUso > 40 ? 'text-yellow-400' : 'text-emerald-400'}>
+                            Uso: {pctUso.toFixed(0)}% {pctUso > 70 ? '· Alto' : pctUso > 40 ? '· Moderado' : '· Saludable'}
+                          </span>
+                          <span className="text-gray-600">Limite: {fmt(d.limite_credito)}</span>
                         </div>
                         <div className="h-1.5 rounded-full" style={{ background:'rgba(255,255,255,0.06)' }}>
                           <div className="h-full rounded-full transition-all duration-700" style={{ width:`${pctUso}%`, background: pctUso > 70 ? '#ef4444' : pctUso > 40 ? '#f59e0b' : '#10b981' }}/>

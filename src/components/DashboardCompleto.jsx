@@ -15,6 +15,7 @@ import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 
 // --- NUEVOS HOOKS Y UTILIDADES ---
 import { calcularBalanceInteligente } from '../utils/financialCalculations'
+import { calcularProximoCorte, calcularPagoMinimo as calcPagoMin } from '../utils/tarjetasCalculos'
 import { useMonthlyTransition } from '../hooks/useMonthlyTransition'
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados'
 
@@ -44,6 +45,7 @@ import CalendarioPagos from './CalendarioPagos'
 // --- MODALES Y WIDGETS (Default Imports corregidos) ---
 import WidgetBalanceDual from './WidgetBalanceDual'
 import PlanExecutionWidget from './PlanExecutionWidget'
+import PlanTipsWidget from './PlanTipsWidget'
 
 // --- MODALES NUEVOS (Default Imports corregidos) ---
 import DebtPlannerModal from './DebtPlannerModal'
@@ -1137,20 +1139,16 @@ const handleRegistrarPagoTarjeta = async (pago) => {
       ? 0 
       : Math.max(0, Number(deuda.saldo) - principal)
 
-    // Calcular nuevo pago mínimo:
-    // - Si saldo queda en 0 → resetear a 0 (tarjeta saldada)
-    // - Si saldo baja → recalcular 2% del nuevo saldo (mínimo $25 si aún hay deuda)
-    const calcularPagoMinimo = (saldo) => {
-      if (saldo <= 0) return 0           // ✅ Reset a 0 cuando saldo = 0
-      const porcentaje = saldo * 0.02
-      return Math.max(porcentaje, 25)   // Mínimo $25 si hay deuda
-    }
+    // Calcular nuevo pago mínimo con APR real (usa función centralizada)
+    const nuevoPagoMinimo = calcPagoMin(nuevoSaldo, deuda.apr)
 
-    const nuevoPagoMinimo = calcularPagoMinimo(nuevoSaldo)
+    // Calcular próxima fecha de corte (avanza al mes siguiente si ya pasó)
+    const nuevoVence = esPagoCompleto ? deuda.vence : calcularProximoCorte(deuda.vence)
 
-    console.log('📊 Actualizando tarjeta:', {
+    console.log('Actualizando tarjeta:', {
       nuevoSaldo,
       nuevoPagoMinimo,
+      nuevoVence,
       esPagoCompleto
     })
 
@@ -1158,16 +1156,19 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     await addPago(pago)
 
     // Actualizar la deuda en BD
-    await updateDebt(deuda.id, {
+    const updatePayload = {
       saldo: nuevoSaldo,
       pago_minimo: nuevoPagoMinimo,
       ultimo_pago: pago.fecha,
-    })
+    }
+    if (nuevoVence) updatePayload.vence = nuevoVence
 
-    // ✅ Actualización optimista: actualiza UI al instante
+    await updateDebt(deuda.id, updatePayload)
+
+    // Actualización optimista: actualiza UI al instante
     const deudasActualizadas = deudasInstant.map(d =>
       d.id === deuda.id
-        ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha }
+        ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha, vence: nuevoVence || d.vence }
         : d
     )
     setDeudasInstant(deudasActualizadas)
@@ -2065,27 +2066,49 @@ const dataGraficaDona = useMemo(() =>
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
-          <PlanExecutionWidget
-            activePlan={planDeudaActivo}
-            realFinancialData={{
-              ingresos: ingresosInstant,
-              gastos: gastosInstant,
-              gastosFijos: gastosFijosInstant,
-              deudas: deudasInstant
-            }}
-            showLocalNotification={showLocalNotification}
-            onOpenPlanDetails={() => setShowDebtPlanner(true)}
-            onRegisterPayment={() => {
-              const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
-              if (targetDebt) {
-                const deudaReal = deudasInstant.find(d => 
-                  d.cuenta === targetDebt.nombre || d.id === targetDebt.id
-                );
-                setDeudaEditando(deudaReal || null);
-                setShowModal('pagoTarjeta');
-              }
-            }}
-          />
+          <>
+            {/* Widget de tips y recomendaciones del plan */}
+            <PlanTipsWidget
+              activePlan={planDeudaActivo}
+              deudas={deudasInstant}
+              gastos={gastosInstant}
+              gastosFijos={gastosFijosInstant}
+              ingresos={ingresosInstant}
+              alertas={alertas}
+              onOpenPlan={() => setShowDebtPlanner(true)}
+              onRegisterPayment={() => {
+                const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
+                if (targetDebt) {
+                  const deudaReal = deudasInstant.find(d =>
+                    d.cuenta === targetDebt.nombre || d.id === targetDebt.id
+                  );
+                  setDeudaEditando(deudaReal || null);
+                  setShowModal('pagoTarjeta');
+                }
+              }}
+            />
+            <PlanExecutionWidget
+              activePlan={planDeudaActivo}
+              realFinancialData={{
+                ingresos: ingresosInstant,
+                gastos: gastosInstant,
+                gastosFijos: gastosFijosInstant,
+                deudas: deudasInstant
+              }}
+              showLocalNotification={showLocalNotification}
+              onOpenPlanDetails={() => setShowDebtPlanner(true)}
+              onRegisterPayment={() => {
+                const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
+                if (targetDebt) {
+                  const deudaReal = deudasInstant.find(d =>
+                    d.cuenta === targetDebt.nombre || d.id === targetDebt.id
+                  );
+                  setDeudaEditando(deudaReal || null);
+                  setShowModal('pagoTarjeta');
+                }
+              }}
+            />
+          </>
         ) : deudasInstant.length > 0 && (
           <button
             onClick={() => setShowDebtPlanner(true)}

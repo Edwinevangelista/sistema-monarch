@@ -295,10 +295,84 @@ function getSmartNotifications(plan, financialHealth, showLocalNotification, get
   // ==========================================
   if (today.getDay() === 5 && isMorning) {
     notifications.push({
-      title: "📋 ¡Es Viernes de Check-in!",
-      body: "¿Cumpliste tus metas esta semana? Abre la app para reportar tu progreso.",
+      title: "Viernes de revision",
+      body: "Cumpliste tus metas esta semana? Abre la app para ver tu progreso.",
       type: 'checkin'
     });
+  }
+
+  // ==========================================
+  // 4. TIP DEL DIA: Primera apertura del dia
+  // Se dispara la primera vez del dia, a cualquier hora.
+  // Rota entre 7 tips motivacionales con dato concreto del plan.
+  // ==========================================
+  const tipDiaId = `tip_dia_${todayStr}`;
+  const tipYaEnviado = alreadySentNotifs.includes(tipDiaId);
+
+  if (!tipYaEnviado && plan) {
+    const config = plan.configuracion || {};
+    const orderedDebts = config?.plan?.orderedDebts || [];
+    const targetDebt = orderedDebts[0];
+    const totalOriginal = orderedDebts.reduce((s, d) => s + Number(d.balance || d.saldo || 0), 0);
+    const montoPago = config?.monthlyPayment || 0;
+    const estrategia = config?.strategy === 'avalancha' ? 'Avalancha' : 'Bola de Nieve';
+
+    // Dia de la semana para rotar tip (0=Dom … 6=Sab)
+    const diaSemana = today.getDay();
+
+    const tips = [
+      // 0 Domingo: motivacion
+      {
+        title: "Tip del dia: Mantente enfocado",
+        body: `Estrategia ${estrategia}: pagar las deudas correctas primero te ahorra mas dinero a largo plazo.`
+      },
+      // 1 Lunes: accion concreta
+      {
+        title: "Inicio de semana: revisa tu plan",
+        body: targetDebt
+          ? `Esta semana: enfoca en ${targetDebt.nombre || 'tu deuda principal'}. Cada pago cuenta.`
+          : `Revisa tus deudas hoy y programa un pago si puedes.`
+      },
+      // 2 Martes: dato del progreso
+      {
+        title: "Tu progreso importa",
+        body: montoPago > 0
+          ? `Si pagaste ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(montoPago)} este mes, vas por buen camino. No pares.`
+          : `Cada peso extra que pagues reduce los intereses que debes.`
+      },
+      // 3 Miercoles: consejo de ahorro
+      {
+        title: "Reduce un gasto esta semana",
+        body: "Identifica un gasto no esencial esta semana y destina ese dinero a tus deudas."
+      },
+      // 4 Jueves: recordatorio de pago
+      {
+        title: "Jueves: revisa tus fechas de corte",
+        body: "Verifica que no tengas tarjetas con corte proximo. Un pago a tiempo evita intereses."
+      },
+      // 5 Viernes: balance semanal
+      {
+        title: "Fin de semana: evalua tu semana",
+        body: totalOriginal > 0
+          ? `Tu meta total del plan: ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(totalOriginal)}. Cada pago te acerca mas.`
+          : `Revisa tu progreso en el plan y celebra cada avance.`
+      },
+      // 6 Sabado: habito de revision
+      {
+        title: "Sabado financiero",
+        body: "Es buen momento para revisar tus gastos de la semana y planificar la siguiente."
+      },
+    ];
+
+    const tipHoy = tips[diaSemana] || tips[0];
+
+    notifications.push({
+      ...tipHoy,
+      type: 'tip_dia'
+    });
+
+    // Marcar el tip del dia como enviado (separado del guard AM/PM)
+    setStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, [...alreadySentNotifs, tipDiaId]);
   }
 
   // Ejecutar inmediatamente si hay notificaciones
@@ -306,9 +380,11 @@ function getSmartNotifications(plan, financialHealth, showLocalNotification, get
     notifications.forEach(notif => {
       showLocalNotification(notif.title, { body: notif.body, tag: notif.type });
     });
-    
-    // Marcar como enviadas
-    setStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, [...alreadySentNotifs, notifId]);
+
+    // Marcar periodo AM/PM como enviado
+    if (!alreadySentNotifs.includes(notifId)) {
+      setStoredData(STORAGE_KEYS.NOTIFICATIONS_SENT, [...alreadySentNotifs, notifId]);
+    }
   }
 
   return notifications;
