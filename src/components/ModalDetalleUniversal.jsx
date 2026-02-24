@@ -16,16 +16,30 @@ import {
   Clock,
   ArrowDownCircle,
   Receipt,
-  TrendingDown,
-  AlertCircle
+  AlertCircle,
+  Shield,
+  Percent,
+  History,
+  ChevronRight,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react'
 
-import { getEstadoTarjeta } from '../utils/tarjetasCalculos'
+import {
+  getEstadoTarjeta,
+  calcularPagoMinimo,
+  calcularUsoCredito,
+  colorUsoCredito,
+  calcularProximoCorte,
+  calcularFechaLimitePago,
+} from '../utils/tarjetasCalculos'
 
 export default function ModalDetalleUniversal({
   item,
   type,
   status,
+  pagos = [],
+  gastos = [],
   onClose,
   onEditar,
   onPagar,
@@ -393,66 +407,346 @@ export default function ModalDetalleUniversal({
   // RENDER: DEUDA / TARJETA
   // =========================
   if (type === ITEM_TYPES.DEUDA) {
-    const estadoTarjeta = getEstadoTarjeta(item.saldo, item.ultimo_pago)
+    const saldo = Number(item.saldo || 0)
+    const apr = Number(item.apr || 0)
+    const limite = Number(item.limite_credito || item.limite || 0)
+    const diasGracia = Number(item.dias_gracia || 21)
+    const esTarjeta = item.tipo === 'Tarjeta' || !item.tipo
+
+    // Estado y badge
+    const estadoTarjeta = getEstadoTarjeta(saldo, item.ultimo_pago)
     const badgeByEstado = {
-      green: { content: <><CheckCircle className="w-3.5 h-3.5 text-green-400" /><span className="text-xs font-semibold text-green-400">{estadoTarjeta.badge}</span></>, bg: 'bg-green-500/15 border-green-500/25' },
-      red:   { content: <><AlertCircle className="w-3.5 h-3.5 text-red-400" /><span className="text-xs font-semibold text-red-400">{estadoTarjeta.badge}</span></>, bg: 'bg-red-500/15 border-red-500/25' },
+      green: { content: <><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /><span className="text-xs font-semibold text-emerald-400">Saldada</span></>, bg: 'bg-emerald-500/15 border-emerald-500/25' },
+      red:   { content: <><AlertCircle className="w-3.5 h-3.5 text-red-400" /><span className="text-xs font-semibold text-red-400">Con deuda</span></>, bg: 'bg-red-500/15 border-red-500/25' },
       gray:  { content: <><Info className="w-3.5 h-3.5 text-gray-400" /><span className="text-xs font-semibold text-gray-400">{estadoTarjeta.badge}</span></>, bg: 'bg-gray-500/15 border-gray-500/25' },
     }
     const badge = badgeByEstado[estadoTarjeta.color] || badgeByEstado.gray
 
+    // Pagos calculados
+    const pagoMinDinamico = calcularPagoMinimo(saldo, apr)
+    const aprPct = apr > 1 ? apr : apr * 100  // normalizar
+    const interesMensual = saldo * (aprPct / 100 / 12)
+    // Pago sugerido: mínimo + 20% extra para reducir capital más rápido
+    const pagoSugerido = saldo > 0 ? Math.min(saldo, pagoMinDinamico * 1.5) : 0
+
+    // Uso de crédito
+    const usoPorc = calcularUsoCredito(saldo, limite)
+    const usoColor = colorUsoCredito(usoPorc)
+
+    // Fechas
+    const proximoCorte = calcularProximoCorte(item.vence)
+    const fechaLimitePago = calcularFechaLimitePago(proximoCorte, diasGracia)
+    const diasHastaCorte = proximoCorte
+      ? Math.round((new Date(proximoCorte) - new Date()) / (1000 * 60 * 60 * 24))
+      : null
+    const diasHastaPago = fechaLimitePago
+      ? Math.round((new Date(fechaLimitePago) - new Date()) / (1000 * 60 * 60 * 24))
+      : null
+    const fmtFecha = (f) => f
+      ? new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })
+      : null
+
+    // Historial de pagos de esta tarjeta (últimos 5)
+    const pagosTarjeta = pagos
+      .filter(p => p.deuda_id === item.id)
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 5)
+
+    // Compras/gastos vinculados a esta tarjeta (últimos 5)
+    const comprasTarjeta = gastos
+      .filter(g => g.deuda_id === item.id)
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 5)
+
+    // Estado de pago este mes
+    const hoy = new Date()
+    const pagadaEsteMes = pagosTarjeta.some(p => {
+      const f = new Date(p.fecha)
+      return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear()
+    })
+
+    // Estado del vencimiento
+    let estadoVenceLabel = null
+    let estadoVenceClass = 'text-gray-400'
+    if (diasHastaPago !== null) {
+      if (diasHastaPago < 0) { estadoVenceLabel = 'VENCIDO'; estadoVenceClass = 'text-red-400 font-black' }
+      else if (diasHastaPago === 0) { estadoVenceLabel = 'VENCE HOY'; estadoVenceClass = 'text-red-400 font-black' }
+      else if (diasHastaPago <= 3) { estadoVenceLabel = `En ${diasHastaPago}d`; estadoVenceClass = 'text-orange-400 font-bold' }
+      else if (diasHastaPago <= 7) { estadoVenceLabel = `En ${diasHastaPago}d`; estadoVenceClass = 'text-yellow-400 font-bold' }
+      else { estadoVenceLabel = `En ${diasHastaPago}d`; estadoVenceClass = 'text-emerald-400' }
+    }
+
     return (
       <div className="bg-gray-900 rounded-2xl w-full overflow-hidden flex flex-col relative">
-        <ModalHeader icon={CreditCard} title={item.cuenta || item.nombre || 'Tarjeta'} subtitle={item.tipo || null} />
 
-        <MontoHero monto={getMonto()} badgeContent={badge.content} badgeBg={badge.bg} subtitle="Saldo actual" />
+        {/* HEADER */}
+        <ModalHeader icon={CreditCard} title={item.cuenta || item.nombre || 'Tarjeta'} subtitle={item.tipo || 'Tarjeta de Crédito'} />
 
-        <div className="h-px bg-gradient-to-r from-transparent via-white/8 to-transparent mx-5 mt-4 mb-1" />
+        {/* ── HERO: Saldo + estado ──────────────────────────── */}
+        <div className="mx-4 mb-0 rounded-2xl overflow-hidden border border-white/6"
+          style={{ background: 'linear-gradient(135deg, rgba(88,28,135,0.25) 0%, rgba(17,24,39,0.8) 100%)' }}>
+          <div className="px-5 pt-4 pb-3 flex items-start justify-between">
+            <div>
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Saldo actual</p>
+              <p className="text-4xl font-black text-white tracking-tight leading-none">
+                {fmtMonto(saldo)}
+              </p>
+              {limite > 0 && (
+                <p className="text-[11px] text-gray-500 mt-1">de {fmtMonto(limite)} disponibles</p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1.5 mt-1">
+              <div className={`flex items-center gap-1.5 border px-3 py-1.5 rounded-full ${badge.bg}`}>
+                {badge.content}
+              </div>
+              {pagadaEsteMes && (
+                <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                  <CheckCircle className="w-3 h-3" /> Pagada este mes
+                </div>
+              )}
+            </div>
+          </div>
 
-        <div className="px-5 py-3 grid grid-cols-2 gap-2.5">
-          {item.limite && (
-            <DetailCard icon={TrendingDown} iconColor="text-purple-400/70" label="Límite de Crédito" value={fmtMonto(item.limite)} />
-          )}
-          {item.ultimo_pago && (
-            <DetailCard icon={Calendar} iconColor="text-purple-400/70" label="Último Pago" value={fmtFechaCorta(item.ultimo_pago)} />
-          )}
-          {item.proximo_pago && (
-            <DetailCard icon={Calendar} iconColor="text-gray-400" label="Próximo Pago" value={fmtFechaCorta(item.proximo_pago)} />
-          )}
-          {item.cuenta_nombre && (
-            <DetailCard icon={Wallet} iconColor="text-gray-400" label="Banco / Cuenta" value={item.cuenta_nombre} />
-          )}
-          {status && (
-            <DetailCard icon={Info} iconColor="text-purple-400/70" label="Estado" value={status.label || 'Activa'} valueClass="text-green-400" />
+          {/* Barra uso de crédito */}
+          {esTarjeta && usoPorc !== null && usoColor && (
+            <div className="px-5 pb-4">
+              <div className="flex justify-between text-[10px] mb-1.5">
+                <span className="text-gray-500">Uso de crédito</span>
+                <span className={`font-bold ${usoColor.text}`}>{usoPorc}% · {usoColor.label}</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+                <div className={`h-full rounded-full ${usoColor.bar} transition-all duration-700`}
+                  style={{ width: `${usoPorc}%` }} />
+              </div>
+              {usoPorc >= 70 && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  <AlertTriangle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                  <span className="text-[10px] text-red-400">Uso alto afecta tu score crediticio</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {item.descripcion && (
-          <div className="mx-5 mb-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+        {/* ── GRID: Fechas y APR ────────────────────────────── */}
+        <div className="px-4 pt-3 grid grid-cols-2 gap-2">
+
+          {/* APR */}
+          {apr > 0 && (
+            <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Percent className="w-3 h-3 text-red-400" />
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">APR Anual</span>
+              </div>
+              <p className="text-sm font-bold text-red-400">{(aprPct).toFixed(1)}%</p>
+              <p className="text-[9px] text-gray-600 mt-0.5">Interés mensual: {fmtMonto(interesMensual)}</p>
             </div>
-            <p className="text-gray-300 text-sm">{item.descripcion}</p>
+          )}
+
+          {/* Límite de crédito */}
+          {limite > 0 && (
+            <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Shield className="w-3 h-3 text-purple-400" />
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Límite</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtMonto(limite)}</p>
+              {usoPorc !== null && (
+                <p className="text-[9px] text-gray-600 mt-0.5">Disponible: {fmtMonto(limite - saldo)}</p>
+              )}
+            </div>
+          )}
+
+          {/* Fecha de corte */}
+          {proximoCorte && (
+            <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Calendar className="w-3 h-3 text-blue-400" />
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Próx. Corte</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtFecha(proximoCorte)}</p>
+              {diasHastaCorte !== null && (
+                <p className={`text-[9px] mt-0.5 ${diasHastaCorte <= 3 ? 'text-orange-400 font-bold' : 'text-gray-600'}`}>
+                  {diasHastaCorte === 0 ? 'Hoy' : diasHastaCorte === 1 ? 'Mañana' : `en ${diasHastaCorte}d`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Fecha límite de pago */}
+          {fechaLimitePago && (
+            <div className={`rounded-xl p-3 border ${
+              diasHastaPago !== null && diasHastaPago <= 3
+                ? 'bg-red-900/20 border-red-500/20'
+                : diasHastaPago !== null && diasHastaPago <= 7
+                ? 'bg-orange-900/20 border-orange-500/20'
+                : 'bg-gray-800/60 border-white/5'
+            }`}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertCircle className={`w-3 h-3 ${diasHastaPago !== null && diasHastaPago <= 7 ? 'text-orange-400' : 'text-gray-500'}`} />
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Pagar antes de</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtFecha(fechaLimitePago)}</p>
+              {estadoVenceLabel && (
+                <p className={`text-[9px] mt-0.5 font-semibold ${estadoVenceClass}`}>{estadoVenceLabel}</p>
+              )}
+            </div>
+          )}
+
+          {/* Último pago */}
+          {item.ultimo_pago && (
+            <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <CheckCircle className="w-3 h-3 text-emerald-400" />
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Último Pago</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtFecha(item.ultimo_pago)}</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── PAGOS SUGERIDOS ───────────────────────────────── */}
+        {saldo > 0 && (
+          <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-white/6"
+            style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(17,24,39,0.6) 100%)' }}>
+            <div className="px-4 pt-3 pb-1">
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold mb-2.5 flex items-center gap-1.5">
+                <Zap className="w-3 h-3 text-emerald-400" /> Pagos recomendados
+              </p>
+              <div className="grid grid-cols-3 gap-2 pb-3">
+                {/* Pago mínimo */}
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 mb-1">Mínimo</p>
+                  <p className="text-[13px] font-black text-yellow-400">{fmtMonto(pagoMinDinamico)}</p>
+                  <p className="text-[8px] text-gray-600 mt-0.5">Solo intereses</p>
+                </div>
+                {/* Pago sugerido */}
+                <div className="text-center border-x border-white/6">
+                  <p className="text-[9px] text-gray-500 mb-1">Sugerido</p>
+                  <p className="text-[13px] font-black text-emerald-400">{fmtMonto(pagoSugerido)}</p>
+                  <p className="text-[8px] text-gray-600 mt-0.5">Reduce capital</p>
+                </div>
+                {/* Pago total */}
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-500 mb-1">Total</p>
+                  <p className="text-[13px] font-black text-blue-400">{fmtMonto(saldo)}</p>
+                  <p className="text-[8px] text-gray-600 mt-0.5">Saldo 0</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="px-5 pb-5 pt-2 space-y-2">
+        {/* ── HISTORIAL DE PAGOS ────────────────────────────── */}
+        {pagosTarjeta.length > 0 && (
+          <div className="mx-4 mt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <History className="w-3.5 h-3.5 text-purple-400" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Últimos pagos</p>
+            </div>
+            <div className="space-y-1.5">
+              {pagosTarjeta.map((p, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-white">
+                        {fmtMonto(p.monto_total || p.monto || 0)}
+                      </p>
+                      <p className="text-[9px] text-gray-500">{fmtFecha(p.fecha)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {(p.a_principal > 0 || p.intereses > 0) && (
+                      <>
+                        <p className="text-[9px] text-gray-500">Capital: {fmtMonto(p.a_principal || 0)}</p>
+                        <p className="text-[9px] text-gray-500">Interés: {fmtMonto(p.intereses || 0)}</p>
+                      </>
+                    )}
+                    {p.metodo && (
+                      <p className="text-[9px] text-gray-600">{p.metodo}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── ÚLTIMAS TRANSACCIONES (compras cargadas) ─────── */}
+        {comprasTarjeta.length > 0 && (
+          <div className="mx-4 mt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Receipt className="w-3.5 h-3.5 text-orange-400" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Últimas compras</p>
+            </div>
+            <div className="space-y-1.5">
+              {comprasTarjeta.map((g, i) => {
+                const cat = (g.categoria || 'Otro').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
+                return (
+                  <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-500/15 flex items-center justify-center flex-shrink-0">
+                        <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-white leading-tight max-w-[140px] truncate">
+                          {g.descripcion || cat}
+                        </p>
+                        <p className="text-[9px] text-gray-500">{cat} · {fmtFecha(g.fecha)}</p>
+                      </div>
+                    </div>
+                    <p className="text-[12px] font-bold text-orange-300">{fmtMonto(g.monto)}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Notas */}
+        {item.descripcion && (
+          <div className="mx-4 mt-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="w-3.5 h-3.5 text-gray-500" />
+              <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+            </div>
+            <p className="text-gray-300 text-xs leading-relaxed">{item.descripcion}</p>
+          </div>
+        )}
+
+        {/* ── ACCIONES ─────────────────────────────────────── */}
+        <div className="px-4 pb-5 pt-3 space-y-2">
           <div className="h-px bg-gradient-to-r from-transparent via-white/8 to-transparent mb-3" />
-          <button
-            onClick={() => onPagar?.(item, type)}
-            disabled={isPagando}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all border active:scale-95 ${t.bg} ${t.border} ${t.color} ${isPagando ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}`}
-          >
-            {isPagando ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</> : <><CreditCard className="w-4 h-4" /> Registrar Pago</>}
-          </button>
+          {saldo > 0 && (
+            <button
+              onClick={() => onPagar?.(item, type)}
+              disabled={isPagando}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold transition-all border active:scale-[0.98] touch-manipulation bg-purple-600/20 border-purple-500/30 text-purple-300 hover:bg-purple-600/30"
+            >
+              {isPagando
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
+                : <><CreditCard className="w-4 h-4" /> Registrar Pago</>}
+            </button>
+          )}
           <button
             onClick={() => onEditar?.(item, type)}
             disabled={isPagando}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl font-medium transition-all border border-white/8 active:scale-95"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl font-medium transition-all border border-white/8 active:scale-[0.98] touch-manipulation"
           >
-            <Edit2 className="w-4 h-4" /> Editar Deuda
+            <Edit2 className="w-4 h-4" /> Editar Tarjeta
           </button>
+          {saldo > 0 && diasHastaPago !== null && diasHastaPago <= 5 && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-500/8 border border-orange-500/15">
+              <AlertTriangle className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
+              <p className="text-[10px] text-orange-300 leading-snug">
+                Paga antes del {fmtFecha(fechaLimitePago)} para evitar cargos por mora
+              </p>
+              <ChevronRight className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
+            </div>
+          )}
         </div>
       </div>
     )

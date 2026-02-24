@@ -2353,13 +2353,14 @@ const dataGraficaDona = useMemo(() =>
               item={itemSeleccionado.item}
               type={itemSeleccionado.type}
               status={itemSeleccionado.status}
+              pagos={pagosInstant}
+              gastos={gastosInstant}
               onClose={() => {
-                console.log('✅ Cerrando modal de detalles');
                 setItemSeleccionado(null);
               }}
               onEditar={handleEditarUniversal}
               onPagar={handlePagarUniversal}
-              isPagando={isPagandoSuscripcion} 
+              isPagando={isPagandoSuscripcion}
             />
           </div>
         </div>
