@@ -34,13 +34,12 @@ export default function PlanTipsWidget({
     const config = activePlan?.configuracion
     const orderedDebts = config?.plan?.orderedDebts || []
     const targetDebt = orderedDebts[0] || null
-    const estrategia = config?.strategy === 'avalancha' ? 'Avalancha' : 'Bola de Nieve'
     const montoPago = config?.monthlyPayment || 0
     const totalOriginal = orderedDebts.reduce((s, d) => s + Number(d.balance || d.saldo || 0), 0)
-    return { config, orderedDebts, targetDebt, estrategia, montoPago, totalOriginal }
+    return { config, orderedDebts, targetDebt, montoPago, totalOriginal }
   }, [activePlan])
 
-  const { orderedDebts, targetDebt, estrategia, montoPago, totalOriginal } = planData
+  const { orderedDebts, targetDebt, montoPago, totalOriginal } = planData
 
   // Deuda objetivo en tiempo real
   const deudaRealTarget = useMemo(() => {
@@ -128,9 +127,9 @@ export default function PlanTipsWidget({
         color: 'text-purple-400',
         bg: 'bg-purple-500/10',
         border: 'border-purple-500/20',
-        titulo: `Enfoque: ${targetDebt.nombre || 'Deuda principal'}`,
-        detalle: `Saldo restante ${fmt(saldoTarget)} · Pago min. ${fmt(pagoMin)}/mes`,
-        accion: onRegisterPayment ? 'Registrar pago' : null,
+        titulo: `Esta semana: ataca "${targetDebt.nombre || 'tu deuda principal'}"`,
+        detalle: `Te quedan ${fmt(saldoTarget)} · Pago mínimo este mes: ${fmt(pagoMin)}`,
+        accion: onRegisterPayment ? 'Registrar pago ahora' : null,
         onAccion: onRegisterPayment,
         urgente: false,
       })
@@ -231,11 +230,11 @@ export default function PlanTipsWidget({
             <Lightbulb className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-left">
-            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400">
-              Plan {estrategia}
+            <p className="text-[12px] font-black text-white">
+              Tu plan va {progresoPlan >= 50 ? 'muy bien 🔥' : progresoPlan >= 20 ? 'por buen camino' : 'empezando'}
             </p>
             <p className="text-[10px] text-gray-500">
-              {progresoPlan.toFixed(0)}% completado · {tips.length} acciones recomendadas
+              {progresoPlan.toFixed(0)}% pagado · {tips.length} {tips.length === 1 ? 'acción' : 'acciones'} recomendadas
             </p>
           </div>
         </div>

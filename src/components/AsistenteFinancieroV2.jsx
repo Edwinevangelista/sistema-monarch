@@ -1411,82 +1411,105 @@ function TarjetaFlujoDinero({ kpis }) {
 
 // ─── TARJETA LIBERTAD FINANCIERA ───────────────────────────────────────────────
 function TarjetaLibertad({ prediccionLibertad, kpis }) {
-  const { mesesLibertad, fechaLibertad } = prediccionLibertad
-  const anios = mesesLibertad !== 999 ? Math.floor(mesesLibertad / 12) : null
-  const mesesResto = mesesLibertad !== 999 ? mesesLibertad % 12 : null
+  const { mesesLibertad, fechaLibertad, capacidadPago } = prediccionLibertad
+  const sinCapacidad = mesesLibertad === 999 || capacidadPago <= 0
 
-  // Semáforo de urgencia
-  const nivel = mesesLibertad === 999
-    ? { color: 'text-red-400', bg: 'from-red-500/20 to-red-900/20', border: 'border-red-500/20', label: 'Sin capacidad de pago', icon: Flame }
-    : mesesLibertad > 36
-    ? { color: 'text-amber-400', bg: 'from-amber-500/20 to-orange-900/20', border: 'border-amber-500/20', label: 'Camino largo', icon: Droplets }
-    : { color: 'text-emerald-400', bg: 'from-emerald-500/20 to-teal-900/20', border: 'border-emerald-500/20', label: '¡Muy cerca!', icon: Leaf }
+  // Sin capacidad → tarjeta motivacional de primer paso
+  if (sinCapacidad) {
+    return (
+      <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-900/10 p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/20 flex-shrink-0 text-xl leading-none">🎯</div>
+          <div className="flex-1">
+            <p className="text-sm font-black text-white mb-1">Primer paso: liberar margen</p>
+            <p className="text-xs text-gray-400 leading-relaxed mb-3">
+              Tus gastos consumen todo tu ingreso. Para avanzar en tus deudas, intenta liberar aunque sea{' '}
+              <span className="text-amber-300 font-semibold">$500/mes</span> reduciendo algún gasto.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { emoji: '🍔', tip: 'Cocina en casa más seguido' },
+                { emoji: '📱', tip: 'Cancela 1 suscripción' },
+                { emoji: '🚗', tip: 'Reduce transporte' },
+              ].map((s, i) => (
+                <div key={i} className="bg-black/20 rounded-xl p-2 text-center">
+                  <span className="text-base leading-none">{s.emoji}</span>
+                  <p className="text-[9px] text-gray-500 mt-1 leading-tight">{s.tip}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const anios = Math.floor(mesesLibertad / 12)
+  const mesesResto = mesesLibertad % 12
+
+  const nivel = mesesLibertad > 48
+    ? { color: 'text-amber-400', bg: 'from-amber-500/15 to-orange-900/15', border: 'border-amber-500/20', label: 'Largo camino — ¡pero llegarás!', icon: Droplets }
+    : mesesLibertad > 18
+    ? { color: 'text-blue-400', bg: 'from-blue-500/15 to-indigo-900/15', border: 'border-blue-500/20', label: 'Buen ritmo, sigue así', icon: Leaf }
+    : { color: 'text-emerald-400', bg: 'from-emerald-500/15 to-teal-900/15', border: 'border-emerald-500/20', label: '¡Casi libre!', icon: Flame }
 
   const IconNivel = nivel.icon
-
-  // Progreso (estimado)
   const maxMeses = 60
-  const progreso = mesesLibertad === 999 ? 0 : Math.max(5, 100 - (mesesLibertad / maxMeses) * 100)
+  const progreso = Math.max(5, 100 - (mesesLibertad / maxMeses) * 100)
 
   return (
     <div className={`rounded-2xl border ${nivel.border} bg-gradient-to-br ${nivel.bg} overflow-hidden p-4`}>
       <div className="flex items-center gap-2 mb-3">
-        <div className={`p-1.5 rounded-lg bg-black/20`}>
+        <div className="p-1.5 rounded-lg bg-black/20">
           <IconNivel className={`w-4 h-4 ${nivel.color}`} />
         </div>
         <div>
-          <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Libertad Financiera</p>
+          <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">¿Cuándo estarás libre de deudas?</p>
           <p className={`text-[11px] ${nivel.color} font-bold`}>{nivel.label}</p>
         </div>
       </div>
 
-      {/* Tiempo visual */}
-      <div className="flex items-end gap-4 mb-3">
+      <div className="flex items-end justify-between mb-3">
         <div>
-          {mesesLibertad === 999 ? (
-            <p className="text-3xl font-black text-red-400">∞</p>
-          ) : (
-            <div className="flex items-end gap-1">
-              {anios > 0 && (
-                <><span className="text-3xl font-black text-white">{anios}</span><span className="text-sm text-gray-400 mb-1">a</span></>
-              )}
-              {mesesResto > 0 && (
-                <><span className="text-3xl font-black text-white">{mesesResto}</span><span className="text-sm text-gray-400 mb-1">m</span></>
-              )}
-              {anios === 0 && mesesResto === 0 && (
-                <span className="text-3xl font-black text-emerald-400">¡Libre!</span>
-              )}
-            </div>
-          )}
-          <p className="text-[10px] text-gray-500 mt-0.5">para saldar deudas</p>
+          <div className="flex items-end gap-1">
+            {anios > 0 && (
+              <><span className="text-3xl font-black text-white">{anios}</span><span className="text-sm text-gray-400 mb-1 ml-0.5">año{anios > 1 ? 's' : ''}</span></>
+            )}
+            {mesesResto > 0 && (
+              <><span className="text-3xl font-black text-white ml-1">{mesesResto}</span><span className="text-sm text-gray-400 mb-1 ml-0.5">mes{mesesResto > 1 ? 'es' : ''}</span></>
+            )}
+            {anios === 0 && mesesResto === 0 && (
+              <span className="text-3xl font-black text-emerald-400">¡Libre ya!</span>
+            )}
+          </div>
+          <p className="text-[10px] text-gray-500 mt-0.5">pagando tu plan actual</p>
         </div>
-        <div className="flex-1 flex flex-col gap-1">
-          {fechaLibertad && mesesLibertad < 999 && (
-            <div className="flex items-center justify-end gap-1">
+        <div className="text-right">
+          {fechaLibertad && (
+            <div className="flex items-center justify-end gap-1 mb-1">
               <Calendar className="w-3 h-3 text-gray-500" />
               <span className="text-[11px] text-gray-400">
                 {fechaLibertad.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
               </span>
             </div>
           )}
-          <div className="flex items-center justify-end gap-1">
-            <span className="text-[10px] text-gray-600">deuda:</span>
-            <span className="text-[11px] font-bold text-white">{formatMoney(kpis.totalDeudas)}</span>
-          </div>
+          <span className="text-[10px] text-gray-600">Deuda: </span>
+          <span className="text-[11px] font-bold text-white">{formatMoney(kpis.totalDeudas)}</span>
         </div>
       </div>
 
-      {/* Barra de progreso hacia libertad */}
       <div>
         <div className="h-2.5 bg-black/30 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-1000 ${mesesLibertad === 999 ? 'bg-red-500' : mesesLibertad > 36 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+            className={`h-full rounded-full transition-all duration-1000 ${
+              mesesLibertad > 48 ? 'bg-amber-500' : mesesLibertad > 18 ? 'bg-blue-500' : 'bg-emerald-500'
+            }`}
             style={{ width: `${progreso}%` }}
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[9px] text-gray-600">Inicio</span>
-          <span className="text-[9px] text-gray-600">Libertad</span>
+          <span className="text-[9px] text-gray-600">Hoy</span>
+          <span className="text-[9px] text-gray-600">Sin deudas 🎯</span>
         </div>
       </div>
     </div>

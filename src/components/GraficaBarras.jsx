@@ -11,10 +11,10 @@ const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct
 const MESES_LARGOS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 const SERIES = [
-  { key: 'ingresos',        label: 'Ingresos',       color: '#10b981', dimColor: 'rgba(16,185,129,0.35)'  },
-  { key: 'gastosVariables', label: 'Variables',      color: '#ef4444', dimColor: 'rgba(239,68,68,0.35)'   },
-  { key: 'gastosFijos',     label: 'Fijos',          color: '#f59e0b', dimColor: 'rgba(245,158,11,0.35)'  },
-  { key: 'suscripciones',   label: 'Suscripciones',  color: '#8b5cf6', dimColor: 'rgba(139,92,246,0.35)'  },
+  { key: 'ingresos',        label: 'Ingresos',       color: '#10b981', dimColor: 'rgba(16,185,129,0.30)'  },
+  { key: 'gastosVariables', label: 'Variables',      color: '#f97316', dimColor: 'rgba(249,115,22,0.30)'  },
+  { key: 'gastosFijos',     label: 'Fijos',          color: '#f59e0b', dimColor: 'rgba(245,158,11,0.30)'  },
+  { key: 'suscripciones',   label: 'Suscripciones',  color: '#8b5cf6', dimColor: 'rgba(139,92,246,0.30)'  },
 ]
 
 // ── Modal de detalle del mes ─────────────────────────────────────────────────
@@ -253,43 +253,74 @@ export default function GraficaBarras({
     )
   }
 
-  // Tendencia vs mes anterior
+  // Mes actual (último en el chart)
   const ultimo = chartData[chartData.length - 1]
-  const penultimo = chartData[chartData.length - 2]
-  const tendencia = penultimo
-    ? (ultimo.ingresos - ultimo.totalGastos) - (penultimo.ingresos - penultimo.totalGastos)
-    : 0
 
   // Mes seleccionado para modal
   const mesDato = mesSel ? chartData.find(d => d.mes === mesSel) : null
 
+  // Balance del mes actual (último mes en chart)
+  const balanceActual = ultimo ? ultimo.ingresos - ultimo.totalGastos : 0
+  const balancePct = ultimo?.ingresos > 0 ? Math.min(100, Math.max(0, (balanceActual / ultimo.ingresos) * 100)) : 0
+
   return (
     <div className="w-full">
       {/* ── HEADER ── */}
-      <div className="flex items-start justify-between mb-4 gap-2">
+      <div className="flex items-start justify-between mb-3 gap-2">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <TrendingUp className="w-4 h-4 text-indigo-400 shrink-0" />
-            <h3 className="text-sm font-black text-white">Evolución Mensual</h3>
+            <h3 className="text-sm font-black text-white">Mes a mes</h3>
           </div>
           <p className="text-[11px] text-gray-600">
-            Últimos {chartData.length} meses · toca una barra para ver el detalle
+            Toca una barra para ver el detalle del mes
           </p>
         </div>
-        {tendencia !== 0 && (
-          <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold shrink-0 ${
-            tendencia > 0
-              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-              : 'bg-red-500/15 text-red-400 border border-red-500/20'
-          }`}>
-            {tendencia > 0
-              ? <TrendingUp className="w-3 h-3" />
-              : <TrendingDown className="w-3 h-3" />
-            }
-            {tendencia > 0 ? '+' : ''}{(tendencia / 1000).toFixed(1)}k vs ant.
-          </div>
-        )}
+        {/* Badge de balance actual */}
+        <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold shrink-0 ${
+          balanceActual >= 0
+            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+            : 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+        }`}>
+          {balanceActual >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          {balanceActual >= 0 ? '+' : ''}${Math.abs(Math.round(balanceActual / 1000))}k este mes
+        </div>
       </div>
+
+      {/* ── RESUMEN VISUAL MES ACTUAL ── */}
+      {ultimo && (
+        <div className="flex items-center gap-2 mb-3 p-2.5 rounded-xl bg-white/4 border border-white/8">
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between text-[10px] mb-1">
+              <span className="text-gray-500">Gastos vs Ingresos</span>
+              <span className={`font-bold ${balancePct > 20 ? 'text-emerald-400' : balancePct > 0 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                {(100 - balancePct).toFixed(0)}% usado
+              </span>
+            </div>
+            {/* Barra apilada de gastos */}
+            <div className="h-3 bg-white/8 rounded-full overflow-hidden flex">
+              {[
+                { key: 'gastosVariables', color: '#f97316' },
+                { key: 'gastosFijos',     color: '#f59e0b' },
+                { key: 'suscripciones',   color: '#8b5cf6' },
+              ].map(({ key, color }) => {
+                const val = ultimo[key] || 0
+                const w = ultimo.ingresos > 0 ? (val / ultimo.ingresos) * 100 : 0
+                return w > 1 ? (
+                  <div key={key} className="h-full" style={{ width: `${w}%`, backgroundColor: color, opacity: 0.85 }} />
+                ) : null
+              })}
+            </div>
+          </div>
+          {/* Disponible */}
+          <div className="text-right flex-shrink-0">
+            <p className="text-[9px] text-gray-600">Disponible</p>
+            <p className={`text-sm font-black ${balanceActual >= 0 ? 'text-emerald-400' : 'text-orange-400'}`}>
+              ${Math.abs(balanceActual).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── GRÁFICA ── */}
       {/* Área táctil ampliada para dedo — altura generosa en mobile */}
