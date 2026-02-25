@@ -710,10 +710,11 @@ useEffect(() => {
     try {
       if (!data.fecha) data.fecha = hoyStr
 
-      // Limpiar campos que NO existen en la tabla gastos_variables
-      // (deuda_id no es columna de gastos_variables — es de pagos_tarjetas)
-      const { deuda_id, ...dataLimpia } = data
-      data = dataLimpia
+      // Guardar deuda_id por separado antes de limpiar campos opcionales
+      const deuda_id = data.deuda_id || null
+
+      // Limpiar campos vacíos que podrían causar error en Supabase
+      if (!data.cuenta_id) delete data.cuenta_id
 
       if (data.id) {
         await updateGasto(data.id, data)
@@ -726,8 +727,15 @@ useEffect(() => {
         console.log('✅ Gasto actualizado')
       } else {
         console.log('📤 Enviando gasto a BD:', JSON.stringify(data, null, 2))
-        const result = await addGasto(data)
+        let result = await addGasto(data)
         console.log('📥 Resultado addGasto:', JSON.stringify(result, null, 2))
+
+        // Si falló por columna deuda_id inexistente, reintentar sin ella
+        if (!result?.success && deuda_id && result?.error?.message?.includes('deuda_id')) {
+          console.warn('⚠️ columna deuda_id no existe en BD, reintentando sin ella...')
+          const { deuda_id: _ignored, ...dataFallback } = data
+          result = await addGasto(dataFallback)
+        }
 
         // Si falló el insert, abortar — no hacer optimistic update falso
         if (!result?.success || !result?.data?.[0]) {
@@ -766,11 +774,17 @@ useEffect(() => {
         }
 
         // 💳 Tarjeta de crédito → SUMAR al saldo (deuda)
-        if (data.deuda_id && monto > 0) {
-          const deuda = deudasInstant.find(d => d.id === data.deuda_id)
+        if (deuda_id && monto > 0) {
+          const deuda = deudasInstant.find(d => d.id === deuda_id)
           if (deuda) {
             const nuevoSaldo = Number(deuda.saldo || 0) + monto
             await updateDebt(deuda.id, { saldo: nuevoSaldo })
+            // Actualizar estado local de deudas para reflejar nuevo saldo
+            setDeudasInstant(prev => {
+              const updated = prev.map(d => d.id === deuda.id ? { ...d, saldo: nuevoSaldo } : d)
+              localStorage.setItem('deudas_cache_v2', JSON.stringify(updated))
+              return updated
+            })
             console.log('💳 Tarjeta cargada:', deuda.cuenta, '→ saldo:', nuevoSaldo)
           }
         }
