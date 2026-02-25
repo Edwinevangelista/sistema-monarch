@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   Trash2, X,
   Clock, CheckSquare, RefreshCw,
-  ArrowRight
+  ArrowRight, Trophy
 } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 import { supabase } from '../lib/supabaseClient';
@@ -85,7 +85,10 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
 
   const plansConStats = useMemo(() => {
     if (!planes?.length) return [];
-    return planes.map(p => ({ ...p, stats: getPlanStats(p) }));
+    // Solo mostrar planes activos y no completados
+    return planes
+      .filter(p => p.activo && !p.completado)
+      .map(p => ({ ...p, stats: getPlanStats(p) }));
   }, [planes, getPlanStats]);
 
   if (loading) {
@@ -117,16 +120,18 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Scroll horizontal en mobile, grid en desktop */}
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory md:grid md:grid-cols-2 md:overflow-visible md:pb-0">
         {plansConStats.map((plan, idx) => (
-          <PlanCard2026
-            key={plan.id}
-            plan={plan}
-            stats={plan.stats}
-            delay={idx * 60}
-            onClick={() => setPlanSeleccionado(plan)}
-            onDelete={async (id) => { await deletePlan(id); await refresh(); }}
-          />
+          <div key={plan.id} className="snap-start flex-shrink-0 w-[82vw] max-w-[280px] md:w-auto md:max-w-none md:flex-shrink">
+            <PlanCard2026
+              plan={plan}
+              stats={plan.stats}
+              delay={idx * 60}
+              onClick={() => setPlanSeleccionado(plan)}
+              onDelete={async (id) => { await deletePlan(id); await refresh(); }}
+            />
+          </div>
         ))}
       </div>
 
@@ -137,7 +142,7 @@ export default function SavedPlansList({ refreshSignal = 0, realFinancialData = 
           onClose={() => setPlanSeleccionado(null)}
           onDelete={async (id) => { await deletePlan(id); await refresh(); setPlanSeleccionado(null); }}
           onComplete={async (id) => {
-            await updatePlan(id, { completado: true, fecha_completado: new Date().toISOString() });
+            await updatePlan(id, { completado: true, activo: false, progreso: 100, fecha_completado: new Date().toISOString() });
             await refresh();
             setPlanSeleccionado(null);
           }}
@@ -284,6 +289,7 @@ function ModalPlan2026({ plan, stats, onClose, onDelete, onComplete }) {
   const cfg = getTipoConfig(plan.tipo);
   const { meta, actual, progreso, esDeuda, deudaPendiente } = stats;
   const completado = progreso >= 100;
+  const [celebrando, setCelebrando] = useState(false);
 
   const fechaInicio = plan.fecha_inicio ? new Date(plan.fecha_inicio) : new Date();
   const plazoMeses = plan.plazo_meses || plan.meses_duracion || 12;
@@ -303,7 +309,7 @@ function ModalPlan2026({ plan, stats, onClose, onDelete, onComplete }) {
       />
       <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-4 pointer-events-none">
         <div
-          className="w-full md:max-w-md max-h-[92dvh] md:max-h-[85vh] pointer-events-auto flex flex-col overflow-hidden rounded-t-3xl md:rounded-3xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-300"
+          className="relative w-full md:max-w-md max-h-[92dvh] md:max-h-[85vh] pointer-events-auto flex flex-col overflow-hidden rounded-t-3xl md:rounded-3xl animate-in slide-in-from-bottom-4 md:zoom-in-95 duration-300"
           style={{
             background: 'linear-gradient(160deg, rgba(10,15,30,0.99) 0%, rgba(17,24,39,0.98) 100%)',
             border: `1px solid ${cfg.accent}25`,
@@ -439,15 +445,39 @@ function ModalPlan2026({ plan, stats, onClose, onDelete, onComplete }) {
             )}
           </div>
 
+          {/* Pantalla de celebración al completar */}
+          {celebrando && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-t-3xl md:rounded-3xl"
+              style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.98))' }}>
+              <div className="text-7xl mb-4 animate-bounce">🏆</div>
+              <p className="text-white text-2xl font-black mb-2">¡Lo lograste!</p>
+              <p className="text-emerald-100 text-sm text-center px-8 mb-6">
+                {esDeuda ? 'Pagaste tus deudas. Eso toma disciplina real. 💪' : 'Alcanzaste tu meta de ahorro. ¡Increíble! 🎉'}
+              </p>
+              <Trophy className="w-10 h-10 text-yellow-300 animate-pulse" />
+            </div>
+          )}
+
           {/* Botones sticky */}
           <div className="p-4 border-t border-white/8 flex gap-2.5 shrink-0 safe-area-bottom">
-            <button
-              onClick={() => { if (window.confirm('¿Marcar como completado?')) onComplete(plan.id); }}
-              className="flex-1 py-3 rounded-2xl text-sm font-black text-white flex items-center justify-center gap-2 active:scale-[0.97] transition-all"
-              style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}
-            >
-              <CheckSquare className="w-4 h-4" /> Completar
-            </button>
+            {!completado && (
+              <button
+                onClick={async () => {
+                  setCelebrando(true);
+                  await onComplete(plan.id);
+                  setTimeout(() => { setCelebrando(false); onClose(); }, 2200);
+                }}
+                className="flex-1 py-3 rounded-2xl text-sm font-black text-white flex items-center justify-center gap-2 active:scale-[0.97] transition-all"
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}
+              >
+                <CheckSquare className="w-4 h-4" /> Marcar completado
+              </button>
+            )}
+            {completado && (
+              <div className="flex-1 py-3 rounded-2xl text-sm font-black text-emerald-400 flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-500/10">
+                <Trophy className="w-4 h-4" /> ¡Meta lograda!
+              </div>
+            )}
             <button
               onClick={() => { if (window.confirm('¿Eliminar este plan?')) onDelete(plan.id); }}
               className="py-3 px-4 rounded-2xl text-sm font-bold text-red-400 border border-red-500/25 hover:bg-red-500/10 active:scale-[0.97] transition-all"

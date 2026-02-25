@@ -571,13 +571,14 @@ export function usePlanExecution(activePlan, realFinancialData = {}, showLocalNo
   }, [activePlan, showLocalNotification]);
 
   const performCheckIn = useCallback((data) => {
-    setLastCheckIn({ date: new Date().toISOString(), ...data });
-    setStoredData(STORAGE_KEYS.LAST_CHECKIN, lastCheckIn);
+    const checkInRecord = { date: new Date().toISOString(), ...data };
+    setLastCheckIn(checkInRecord);
+    setStoredData(STORAGE_KEYS.LAST_CHECKIN, checkInRecord);
     setShowCheckInModal(false);
-    // Marcar tarea check-in completada
+    // Marcar tarea check-in completada con los puntos reales del check-in
     const todayStr = new Date().toISOString().split('T')[0];
-    completeTask(`weekly_checkin_${todayStr}`, 50);
-  }, [completeTask, lastCheckIn]);
+    completeTask(`weekly_checkin_${todayStr}`, data.pointsEarned || 50);
+  }, [completeTask]);
 
   const needsCheckIn = useMemo(() => {
     if (!lastCheckIn) return true;

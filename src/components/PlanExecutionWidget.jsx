@@ -5,11 +5,11 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { 
+import {
   Target, CheckCircle2, Circle,
   Zap, TrendingUp, ChevronRight,
   ChevronDown, Trophy, Sparkles, Calendar,
-  Flame
+  Flame, Info, X
 } from 'lucide-react';
 
 
@@ -40,6 +40,7 @@ export default function PlanExecutionWidget({
 
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [celebratingTask, setCelebratingTask] = useState(null);
+  const [showStrategyInfo, setShowStrategyInfo] = useState(false);
 
   // Sin plan activo
   if (!activePlan?.configuracion) {
@@ -185,10 +186,19 @@ export default function PlanExecutionWidget({
       <div className="p-1.5 bg-purple-500/20 rounded-lg">
         <Target className="w-4 h-4 text-purple-400" />
       </div>
-      <div>
-        <div className="text-sm font-semibold text-white">{targetDebt?.nombre || 'Plan Activo'}</div>
-        <div className="text-[10px] text-gray-400">
-          {isAvalancha ? '🏔️ Avalancha' : '⛄ Bola de Nieve'} • ${(config.monthlyPayment ?? 0).toLocaleString()}/mes
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-white truncate">{targetDebt?.nombre || 'Plan Activo'}</div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] text-gray-400">
+            Pagando <span className="text-white font-semibold">${(config.monthlyPayment ?? 0).toLocaleString()}/mes</span>
+          </span>
+          <button
+            onClick={() => setShowStrategyInfo(true)}
+            className="flex items-center gap-0.5 text-[9px] text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            <Info className="w-2.5 h-2.5" />
+            {isAvalancha ? 'Ahorrando intereses' : 'Método rápido'}
+          </button>
         </div>
       </div>
     </div>
@@ -328,6 +338,84 @@ export default function PlanExecutionWidget({
             }
           }}
         />
+      )}
+
+      {/* ========================================
+          MODAL INFO DE ESTRATEGIA (lenguaje simple)
+          ======================================== */}
+      {showStrategyInfo && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm p-0" onClick={() => setShowStrategyInfo(false)}>
+          <div
+            className="w-full max-w-md bg-slate-900 border border-white/10 rounded-t-3xl p-6 pb-8 animate-in slide-in-from-bottom-4 duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-black text-base">¿Cómo funciona tu plan?</h3>
+              <button onClick={() => setShowStrategyInfo(false)} className="p-1.5 rounded-xl bg-white/8 text-gray-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {isAvalancha ? (
+              <div className="space-y-4">
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4">
+                  <p className="text-purple-300 font-bold text-sm mb-1">🧠 Estrategia Inteligente</p>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    Tu plan ataca primero la deuda que <span className="text-white font-semibold">cobra más intereses</span>. Así pagas menos dinero en total al final.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider">¿Cómo funciona?</p>
+                  {[
+                    { n: '1', t: 'Pagas el mínimo en todas tus deudas', d: 'Para no atrasarte ni pagar multas.' },
+                    { n: '2', t: 'El extra va a la que cobra más', d: `Todo el dinero extra a "${targetDebt?.nombre || 'tu deuda principal'}" porque tiene el interés más alto.` },
+                    { n: '3', t: 'Cuando terminas una, sigues con la siguiente', d: 'Y así hasta quedar libre de deudas.' },
+                  ].map(s => (
+                    <div key={s.n} className="flex gap-3 bg-white/4 rounded-xl p-3">
+                      <div className="w-6 h-6 rounded-full bg-purple-500/30 text-purple-300 text-xs font-black flex items-center justify-center flex-shrink-0">{s.n}</div>
+                      <div>
+                        <p className="text-white text-xs font-semibold">{s.t}</p>
+                        <p className="text-gray-500 text-[10px] mt-0.5">{s.d}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                  <p className="text-emerald-300 text-xs font-bold">✅ Resultado: ahorras más dinero en intereses a largo plazo</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+                  <p className="text-blue-300 font-bold text-sm mb-1">⚡ Estrategia de Motivación</p>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    Tu plan empieza por la <span className="text-white font-semibold">deuda más pequeña</span>. Te da victorias rápidas y te mantiene motivado para continuar.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] text-gray-500 uppercase font-bold tracking-wider">¿Cómo funciona?</p>
+                  {[
+                    { n: '1', t: 'Pagas el mínimo en todas las deudas', d: 'Para no atrasarte ni generar multas.' },
+                    { n: '2', t: 'El extra va a la más pequeña primero', d: `"${targetDebt?.nombre || 'tu deuda principal'}" es la primera en eliminarse.` },
+                    { n: '3', t: 'Cada deuda que pagues = más dinero libre', d: 'Ese dinero lo diriges a la siguiente deuda.' },
+                  ].map(s => (
+                    <div key={s.n} className="flex gap-3 bg-white/4 rounded-xl p-3">
+                      <div className="w-6 h-6 rounded-full bg-blue-500/30 text-blue-300 text-xs font-black flex items-center justify-center flex-shrink-0">{s.n}</div>
+                      <div>
+                        <p className="text-white text-xs font-semibold">{s.t}</p>
+                        <p className="text-gray-500 text-[10px] mt-0.5">{s.d}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
+                  <p className="text-emerald-300 text-xs font-bold">✅ Resultado: te sientes bien más rápido y mantienes el ritmo</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

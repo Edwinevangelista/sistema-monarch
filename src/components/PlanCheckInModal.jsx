@@ -69,9 +69,20 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
   };
 
   const handleSubmit = () => {
+    const paid = responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0;
+    const pct = expectedPayment > 0 ? Math.min(100, (paid / expectedPayment) * 100) : 0;
+    // Calcular puntos ganados
+    let pts = 20; // base por hacer check-in
+    if (responses.paidOnTime) pts += 50;
+    if (!responses.usedCreditCards) pts += 30;
+    if (responses.followedBudget === 'yes') pts += 20;
+    if (responses.mood >= 4) pts += 10;
     const data = {
       ...responses,
-      amountPaid: responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0,
+      amountPaid: paid,
+      pctCumplido: pct,
+      pointsEarned: pts,
+      estrategia: strategy,
       expectedPayment,
       completedAt: new Date().toISOString(),
       planId: plan.id
@@ -345,90 +356,109 @@ export default function PlanCheckInModal({ plan, onClose, onSubmit }) {
   const renderSummary = () => {
     const paid = responses.paidOnTime ? (parseFloat(responses.amountPaid) || 0) : 0;
     const pct = expectedPayment > 0 ? Math.min(100, (paid / expectedPayment) * 100) : 0;
-    
+
+    // Puntos ganados
+    let pts = 20;
+    if (responses.paidOnTime) pts += 50;
+    if (!responses.usedCreditCards) pts += 30;
+    if (responses.followedBudget === 'yes') pts += 20;
+    if (responses.mood >= 4) pts += 10;
+
+    // Acción concreta de la próxima semana
+    const accionProxima = responses.paidOnTime === false
+      ? `Separa $${Math.round(expectedPayment * 0.5).toLocaleString()} esta semana antes de gastar en otra cosa.`
+      : responses.usedCreditCards
+      ? 'Deja las tarjetas de crédito en casa los próximos 7 días. Solo usa efectivo o débito.'
+      : pct < 70
+      ? `Busca un gasto que puedas recortar para llegar más cerca de $${expectedPayment.toLocaleString()}/mes.`
+      : '¡Sigue así! Paga lo mismo la próxima semana y ve si puedes agregar algo extra.';
+
+    const colorMap = {
+      emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', icon: 'bg-emerald-500/20 text-emerald-300' },
+      purple:  { bg: 'bg-purple-500/10',  border: 'border-purple-500/20',  text: 'text-purple-300',  icon: 'bg-purple-500/20 text-purple-300' },
+      orange:  { bg: 'bg-orange-500/10',  border: 'border-orange-500/20',  text: 'text-orange-300',  icon: 'bg-orange-500/20 text-orange-300' },
+      yellow:  { bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20',  text: 'text-yellow-300',  icon: 'bg-yellow-500/20 text-yellow-300' },
+      blue:    { bg: 'bg-blue-500/10',    border: 'border-blue-500/20',    text: 'text-blue-300',    icon: 'bg-blue-500/20 text-blue-300' },
+    };
+    const clr = colorMap[strategy.color] || colorMap.blue;
+
     return (
-      <div className="space-y-5">
-        {/* Header */}
+      <div className="space-y-4">
+        {/* Header con puntos */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-500/30">
-            <Trophy className="w-8 h-8 text-white" />
+          <div className="relative w-16 h-16 mx-auto mb-3">
+            <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Trophy className="w-8 h-8 text-white" />
+            </div>
+            <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-gray-900">
+              +{pts}pts
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-white">Check-in Completado</h3>
+          <h3 className="text-xl font-bold text-white">¡Check-in listo!</h3>
+          <p className="text-gray-400 text-xs mt-0.5">Ganaste {pts} puntos esta semana</p>
         </div>
-        
-        {/* Score */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border border-white/10">
-          <div className="flex justify-between items-end mb-2">
-            <div>
-              <div className="text-3xl font-black text-white">{Math.round(pct)}%</div>
-              <div className="text-[10px] text-gray-400 uppercase">Meta cumplida</div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-bold text-green-400">${paid.toLocaleString()}</div>
-              <div className="text-[10px] text-gray-500">pagado</div>
+
+        {/* Barra de cumplimiento */}
+        <div className="bg-white/5 border border-white/8 rounded-xl p-3">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[11px] text-gray-400">Meta cumplida</span>
+            <div className="flex items-center gap-2">
+              <span className="text-green-400 text-xs font-bold">${paid.toLocaleString()}</span>
+              <span className="text-gray-600 text-xs">/ ${expectedPayment.toLocaleString()}</span>
             </div>
           </div>
-          
-          <div className="h-2 bg-black/40 rounded-full overflow-hidden">
-            <div 
+          <div className="h-2.5 bg-black/40 rounded-full overflow-hidden">
+            <div
               className={`h-full rounded-full transition-all duration-1000 ${
                 pct >= 100 ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
-                pct >= 70 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
-                'bg-gradient-to-r from-red-400 to-rose-500'
+                pct >= 70  ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                             'bg-gradient-to-r from-red-400 to-rose-500'
               }`}
-              style={{ width: `${pct}%` }}
+              style={{ width: `${Math.max(4, pct)}%` }}
             />
           </div>
+          <p className={`text-xs font-bold mt-1.5 ${pct >= 100 ? 'text-green-400' : pct >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {pct >= 100 ? '🎉 ¡Superaste la meta!' : pct >= 70 ? `👍 ${Math.round(pct)}% cumplido` : `⚠️ ${Math.round(pct)}% — sigamos`}
+          </p>
         </div>
-        
-        {/* Indicadores rápidos */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className={`p-3 rounded-lg border ${
-            !responses.usedCreditCards 
-              ? 'bg-green-500/10 border-green-500/20' 
-              : 'bg-red-500/10 border-red-500/20'
-          }`}>
-            <div className="text-[10px] text-gray-400 mb-1">Tarjetas</div>
-            <div className={`text-sm font-semibold ${
-              !responses.usedCreditCards ? 'text-green-300' : 'text-red-300'
-            }`}>
-              {responses.usedCreditCards ? '⚠️ Usadas' : '✅ Sin uso'}
-            </div>
+
+        {/* 3 badges de resultados */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`p-2.5 rounded-xl border text-center ${responses.paidOnTime ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+            <span className="text-lg">{responses.paidOnTime ? '✅' : '❌'}</span>
+            <p className="text-[9px] text-gray-500 mt-0.5">Pagó</p>
           </div>
-          <div className={`p-3 rounded-lg border ${
-            responses.mood >= 3 
-              ? 'bg-green-500/10 border-green-500/20' 
-              : 'bg-yellow-500/10 border-yellow-500/20'
-          }`}>
-            <div className="text-[10px] text-gray-400 mb-1">Ánimo</div>
-            <div className="text-lg">
-              {['😫', '😟', '😐', '🙂', '😁'][responses.mood - 1]}
-            </div>
+          <div className={`p-2.5 rounded-xl border text-center ${!responses.usedCreditCards ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+            <span className="text-lg">{!responses.usedCreditCards ? '💳✅' : '💳⚠️'}</span>
+            <p className="text-[9px] text-gray-500 mt-0.5">Tarjetas</p>
+          </div>
+          <div className="p-2.5 rounded-xl border bg-white/4 border-white/8 text-center">
+            <span className="text-lg">{['😫', '😟', '😐', '🙂', '😁'][(responses.mood || 3) - 1]}</span>
+            <p className="text-[9px] text-gray-500 mt-0.5">Ánimo</p>
           </div>
         </div>
-        
-        {/* Estrategia IA */}
-        <div className={`p-4 rounded-xl border ${
-          strategy.color === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/20' :
-          strategy.color === 'purple' ? 'bg-purple-500/10 border-purple-500/20' :
-          strategy.color === 'orange' ? 'bg-orange-500/10 border-orange-500/20' :
-          strategy.color === 'yellow' ? 'bg-yellow-500/10 border-yellow-500/20' :
-          'bg-blue-500/10 border-blue-500/20'
-        }`}>
+
+        {/* Consejo de la IA */}
+        <div className={`p-4 rounded-xl border ${clr.bg} ${clr.border}`}>
           <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg ${
-              strategy.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-300' :
-              strategy.color === 'purple' ? 'bg-purple-500/20 text-purple-300' :
-              strategy.color === 'orange' ? 'bg-orange-500/20 text-orange-300' :
-              strategy.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-300' :
-              'bg-blue-500/20 text-blue-300'
-            }`}>
+            <div className={`p-2 rounded-lg ${clr.icon}`}>
               <Zap className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-white font-bold text-sm">{strategy.title}</h4>
+              <h4 className={`font-bold text-sm ${clr.text}`}>{strategy.title}</h4>
               <p className="text-gray-300 text-xs mt-1 leading-relaxed">{strategy.advice}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Acción concreta próxima semana */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex gap-3 items-start">
+          <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 flex-shrink-0">
+            <Target className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Tu tarea para esta semana</p>
+            <p className="text-xs text-white leading-relaxed">{accionProxima}</p>
           </div>
         </div>
       </div>
