@@ -63,12 +63,6 @@ const WidgetBalanceDual = ({
     ? Math.min(100, Math.round((datosActivos.totalGastos / datosActivos.totalIngresos) * 100))
     : 0
 
-  const barraColor = porcentajeGasto < 70
-    ? 'from-emerald-400 to-teal-500'
-    : porcentajeGasto < 90
-    ? 'from-amber-400 to-orange-500'
-    : 'from-red-400 to-rose-500'
-
   const tasaAhorro = datosActivos.tasaAhorro != null ? Number(datosActivos.tasaAhorro).toFixed(0) : null
 
   return (
@@ -153,22 +147,67 @@ const WidgetBalanceDual = ({
               )}
             </div>
 
-            {/* Barra gasto/ingreso */}
-            <div className="mt-3.5 space-y-1.5">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Gasto vs ingresos</span>
-                <span className={`text-[11px] font-bold ${
-                  porcentajeGasto > 90 ? 'text-red-400' : porcentajeGasto > 70 ? 'text-amber-400' : 'text-emerald-400'
-                }`}>{porcentajeGasto}%</span>
+            {/* Barra gasto/ingreso — visual segmentada */}
+            {datosActivos.totalIngresos > 0 && (
+              <div className="mt-3.5">
+                {/* Etiquetas */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400/80" />
+                      <span className="text-[10px] text-gray-500">Ingreso</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-orange-400/80" />
+                      <span className="text-[10px] text-gray-500">Gasto</span>
+                    </div>
+                    {datosActivos.saldo > 0 && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-indigo-400/80" />
+                        <span className="text-[10px] text-gray-500">Libre</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-[11px] font-bold tabular-nums ${
+                    porcentajeGasto > 90 ? 'text-orange-400' : porcentajeGasto > 70 ? 'text-amber-400' : 'text-emerald-400'
+                  }`}>{porcentajeGasto}% usado</span>
+                </div>
+                {/* Barra apilada segmentada — no una sola línea roja */}
+                <div className="h-3 bg-white/6 rounded-full overflow-hidden flex gap-px"
+                  style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}>
+                  {/* Segmento gastos */}
+                  <div
+                    className="h-full rounded-l-full transition-all duration-700 flex-shrink-0"
+                    style={{
+                      width: `${Math.min(100, porcentajeGasto)}%`,
+                      background: porcentajeGasto > 90
+                        ? 'linear-gradient(90deg, #fb923c, #f97316)'
+                        : porcentajeGasto > 70
+                        ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                        : 'linear-gradient(90deg, #34d399, #10b981)',
+                    }}
+                  />
+                  {/* Segmento libre */}
+                  {datosActivos.saldo > 0 && (
+                    <div
+                      className="h-full rounded-r-full transition-all duration-700 flex-shrink-0"
+                      style={{
+                        width: `${Math.max(0, 100 - porcentajeGasto)}%`,
+                        background: 'linear-gradient(90deg, rgba(99,102,241,0.5), rgba(99,102,241,0.2))',
+                      }}
+                    />
+                  )}
+                </div>
+                {/* Mini labels debajo */}
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-gray-600">${(datosActivos.totalGastos || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })} gastados</span>
+                  {datosActivos.saldo > 0
+                    ? <span className="text-[9px] text-indigo-500 font-semibold">${datosActivos.saldo.toLocaleString('es-MX', { maximumFractionDigits: 0 })} libres</span>
+                    : <span className="text-[9px] text-orange-500 font-semibold">déficit ${Math.abs(datosActivos.saldo || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                  }
+                </div>
               </div>
-              <div className="h-2 bg-white/8 rounded-full overflow-hidden"
-                style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}>
-                <div
-                  className={`h-full bg-gradient-to-r ${barraColor} rounded-full transition-all duration-700`}
-                  style={{ width: `${porcentajeGasto}%` }}
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ── ROW 3: Cards Ingresos / Gastos ── */}
