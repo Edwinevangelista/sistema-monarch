@@ -120,6 +120,8 @@ export default function DashboardCompleto()  {
   // Proyección 3 días: se muestra una vez por día al entrar
   const [showProyeccion3d, setShowProyeccion3d] = useState(false)
   const [tarjetaExpandidaId, setTarjetaExpandidaId] = useState(null) // historial expandido por tarjeta
+  const [tarjetaHistTab, setTarjetaHistTab] = useState({})   // { [deudaId]: 'pagos' | 'compras' }
+  const [tarjetaMesFiltro, setTarjetaMesFiltro] = useState({}) // { [deudaId]: 'YYYY-MM' }
 
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   
@@ -2563,13 +2565,50 @@ const dataGraficaDona = useMemo(() =>
                 const compras = gastosInstant
                   .filter(g => g.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                // Pagos a esta tarjeta (usa pagosInstant para reflejo inmediato)
+                // Pagos a esta tarjeta
                 const pagosTarjeta = pagosInstant
                   .filter(p => p.deuda_id === deuda.id)
                   .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
 
                 const totalMovimientos = compras.length + pagosTarjeta.length
                 const expandido = tarjetaExpandidaId === deuda.id
+
+                // Estado de historial por tarjeta
+                const histTab = tarjetaHistTab?.[deuda.id] || 'pagos'
+                const hoy2 = new Date()
+                const mesFiltro = tarjetaMesFiltro?.[deuda.id] ||
+                  `${hoy2.getFullYear()}-${String(hoy2.getMonth() + 1).padStart(2, '0')}`
+
+                const [anoF, mesF] = mesFiltro.split('-').map(Number)
+
+                const pagosDelMes = pagosTarjeta.filter(p => {
+                  const f = new Date(p.fecha)
+                  return f.getFullYear() === anoF && f.getMonth() + 1 === mesF
+                })
+                const comprasDelMes = compras.filter(g => {
+                  const f = new Date(g.fecha)
+                  return f.getFullYear() === anoF && f.getMonth() + 1 === mesF
+                })
+                const totalPagadoMes = pagosDelMes.reduce((s, p) => s + Number(p.monto_total || 0), 0)
+                const totalGastadoMes = comprasDelMes.reduce((s, g) => s + Number(g.monto || 0), 0)
+
+                // Meses disponibles para esta tarjeta
+                const todosLosMeses = [
+                  ...pagosTarjeta.map(p => p.fecha?.slice(0, 7)),
+                  ...compras.map(g => g.fecha?.slice(0, 7)),
+                ].filter(Boolean)
+                const mesesUnicos = [...new Set(todosLosMeses)].sort().reverse().slice(0, 12)
+                if (!mesesUnicos.includes(mesFiltro)) mesesUnicos.unshift(mesFiltro)
+
+                const fmtMes = (mes) => {
+                  const [a, m] = mes.split('-')
+                  return new Date(Number(a), Number(m) - 1).toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })
+                }
+                const fmtFechaCorta = (f) => f
+                  ? new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+                  : ''
+                const fmtMonto2 = (n) =>
+                  `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
                 return (
                   <div key={deuda.id}>
@@ -2595,54 +2634,115 @@ const dataGraficaDona = useMemo(() =>
                         className="w-full mt-1.5 py-2 flex items-center justify-center gap-2 text-xs font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/15 rounded-xl transition-all touch-manipulation"
                       >
                         <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expandido ? 'rotate-90' : ''}`} />
-                        {expandido ? 'Ocultar movimientos' : `Ver ${totalMovimientos} movimiento${totalMovimientos !== 1 ? 's' : ''}`}
+                        {expandido ? 'Ocultar historial' : `Ver historial · ${totalMovimientos} movimiento${totalMovimientos !== 1 ? 's' : ''}`}
                       </button>
                     )}
 
-                    {/* HISTORIAL — solo visible al expandir */}
+                    {/* HISTORIAL CON TABS — solo visible al expandir */}
                     {expandido && (
-                      <div className="mt-2 ml-2 border-l-2 border-purple-500/20 pl-3 space-y-1.5">
-                        <p className="text-[10px] font-bold text-purple-400/60 uppercase tracking-widest mb-2">
-                          Movimientos recientes
-                        </p>
+                      <div className="mt-2 rounded-2xl border border-white/6 overflow-hidden"
+                        style={{ background: 'rgba(17,24,39,0.7)' }}>
 
-                        {pagosTarjeta.slice(0, 3).map(pago => (
-                          <div key={`pago-${pago.id}`} className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/15 rounded-xl px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-[10px]">💳</span>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-emerald-300">Pago realizado</p>
-                                <p className="text-[10px] text-gray-500">{pago.fecha}</p>
-                              </div>
-                            </div>
-                            <span className="text-sm font-bold text-emerald-400">-${Number(pago.monto_total || 0).toFixed(2)}</span>
+                        {/* TABS Pagos / Compras */}
+                        <div className="flex gap-1 p-2 bg-gray-800/40">
+                          {[
+                            { key: 'pagos', label: 'Pagos', count: pagosTarjeta.length, color: 'text-emerald-400' },
+                            { key: 'compras', label: 'Compras', count: compras.length, color: 'text-orange-400' },
+                          ].map(tab => (
+                            <button key={tab.key}
+                              onClick={() => setTarjetaHistTab(prev => ({ ...prev, [deuda.id]: tab.key }))}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all touch-manipulation ${
+                                histTab === tab.key ? 'bg-gray-700 text-white' : 'text-gray-500'
+                              }`}
+                            >
+                              {tab.label}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 ${histTab === tab.key ? tab.color : 'text-gray-600'}`}>
+                                {tab.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* FILTRO POR MES */}
+                        {mesesUnicos.length > 0 && (
+                          <div className="flex gap-1.5 px-2 pb-2 pt-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                            {mesesUnicos.map(mes => (
+                              <button key={mes}
+                                onClick={() => setTarjetaMesFiltro(prev => ({ ...prev, [deuda.id]: mes }))}
+                                className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all touch-manipulation ${
+                                  mesFiltro === mes ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'
+                                }`}
+                              >
+                                {fmtMes(mes)}
+                              </button>
+                            ))}
                           </div>
-                        ))}
-
-                        {compras.slice(0, 5).map(gasto => (
-                          <div key={`gasto-${gasto.id}`} className="flex items-center justify-between bg-red-500/5 border border-red-500/10 rounded-xl px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-red-500/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-[10px]">🛍️</span>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-white/80 truncate max-w-[130px]">
-                                  {gasto.descripcion || gasto.categoria || 'Compra'}
-                                </p>
-                                <p className="text-[10px] text-gray-500">{gasto.fecha}</p>
-                              </div>
-                            </div>
-                            <span className="text-sm font-bold text-red-400">+${Number(gasto.monto || 0).toFixed(2)}</span>
-                          </div>
-                        ))}
-
-                        {totalMovimientos > 8 && (
-                          <p className="text-[10px] text-gray-600 text-center pt-1">
-                            +{totalMovimientos - 8} movimientos más
-                          </p>
                         )}
+
+                        <div className="px-2 pb-2 space-y-1.5">
+                          {/* RESUMEN DEL MES */}
+                          {histTab === 'pagos' && pagosDelMes.length > 0 && (
+                            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-500/8 border border-emerald-500/15">
+                              <span className="text-[10px] text-gray-400">{pagosDelMes.length} {pagosDelMes.length === 1 ? 'pago' : 'pagos'}</span>
+                              <span className="text-[11px] font-black text-emerald-400">{fmtMonto2(totalPagadoMes)}</span>
+                            </div>
+                          )}
+                          {histTab === 'compras' && comprasDelMes.length > 0 && (
+                            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-orange-500/8 border border-orange-500/15">
+                              <span className="text-[10px] text-gray-400">{comprasDelMes.length} {comprasDelMes.length === 1 ? 'compra' : 'compras'}</span>
+                              <span className="text-[11px] font-black text-orange-400">{fmtMonto2(totalGastadoMes)}</span>
+                            </div>
+                          )}
+
+                          {/* LISTA PAGOS */}
+                          {histTab === 'pagos' && (
+                            pagosDelMes.length === 0
+                              ? <p className="text-center py-4 text-gray-600 text-[10px]">Sin pagos este mes</p>
+                              : pagosDelMes.map((pago, i) => (
+                                <div key={`p-${pago.id || i}`} className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/15 rounded-xl px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <span className="text-[10px]">💳</span>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] font-semibold text-emerald-300">Pago realizado</p>
+                                      <p className="text-[9px] text-gray-500">{fmtFechaCorta(pago.fecha)}{pago.metodo ? ` · ${pago.metodo}` : ''}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[12px] font-bold text-emerald-400">-{fmtMonto2(pago.monto_total || pago.monto)}</p>
+                                    {pago.a_principal > 0 && <p className="text-[9px] text-emerald-600">Capital: {fmtMonto2(pago.a_principal)}</p>}
+                                    {pago.intereses > 0 && <p className="text-[9px] text-red-400/60">Interés: {fmtMonto2(pago.intereses)}</p>}
+                                  </div>
+                                </div>
+                              ))
+                          )}
+
+                          {/* LISTA COMPRAS */}
+                          {histTab === 'compras' && (
+                            comprasDelMes.length === 0
+                              ? <p className="text-center py-4 text-gray-600 text-[10px]">Sin compras este mes</p>
+                              : comprasDelMes.map((gasto, i) => {
+                                const cat = (gasto.categoria || 'Compra').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
+                                return (
+                                  <div key={`g-${gasto.id || i}`} className="flex items-center justify-between bg-orange-500/5 border border-orange-500/10 rounded-xl px-3 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 bg-orange-500/15 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="text-[10px]">🛍️</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[11px] font-semibold text-white/80 truncate max-w-[130px]">
+                                          {gasto.descripcion || cat}
+                                        </p>
+                                        <p className="text-[9px] text-gray-500">{cat} · {fmtFechaCorta(gasto.fecha)}</p>
+                                      </div>
+                                    </div>
+                                    <span className="text-[12px] font-bold text-orange-300">+{fmtMonto2(gasto.monto)}</span>
+                                  </div>
+                                )
+                              })
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
