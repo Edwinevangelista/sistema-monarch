@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import {
   X,
@@ -19,7 +20,6 @@ import {
   AlertCircle,
   Shield,
   Percent,
-  History,
   ChevronRight,
   AlertTriangle,
   Zap,
@@ -446,21 +446,50 @@ export default function ModalDetalleUniversal({
       ? new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })
       : null
 
-    // Historial de pagos de esta tarjeta (últimos 5)
-    const pagosTarjeta = pagos
-      .filter(p => p.deuda_id === item.id)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-      .slice(0, 5)
+    // ── Historial: tabs y filtro por mes ──────────────────────
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [histTab, setHistTab] = useState('pagos')
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [mesFiltro, setMesFiltro] = useState(() => {
+      const h = new Date()
+      return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}`
+    })
 
-    // Compras/gastos vinculados a esta tarjeta (últimos 5)
-    const comprasTarjeta = gastos
-      .filter(g => g.deuda_id === item.id)
+    const [anoFiltro, mesIdxFiltro] = mesFiltro.split('-').map(Number)
+
+    const pagosDelMes = pagos
+      .filter(p => {
+        if (p.deuda_id !== item.id) return false
+        const f = new Date(p.fecha)
+        return f.getFullYear() === anoFiltro && f.getMonth() + 1 === mesIdxFiltro
+      })
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-      .slice(0, 5)
+
+    const comprasDelMes = gastos
+      .filter(g => {
+        if (g.deuda_id !== item.id) return false
+        const f = new Date(g.fecha)
+        return f.getFullYear() === anoFiltro && f.getMonth() + 1 === mesIdxFiltro
+      })
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+    const totalPagadoMes = pagosDelMes.reduce((s, p) => s + Number(p.monto_total || 0), 0)
+    const totalGastadoMes = comprasDelMes.reduce((s, g) => s + Number(g.monto || 0), 0)
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const mesesDisponibles = useMemo(() => {
+      const todos = [
+        ...pagos.filter(p => p.deuda_id === item.id).map(p => p.fecha),
+        ...gastos.filter(g => g.deuda_id === item.id).map(g => g.fecha),
+      ]
+      const unicos = [...new Set(todos.map(f => f.slice(0, 7)))].sort().reverse()
+      if (!unicos.includes(mesFiltro)) unicos.unshift(mesFiltro)
+      return unicos.slice(0, 12)
+    }, [pagos, gastos, item.id, mesFiltro])
 
     // Estado de pago este mes
     const hoy = new Date()
-    const pagadaEsteMes = pagosTarjeta.some(p => {
+    const pagadaEsteMes = pagos.filter(p => p.deuda_id === item.id).some(p => {
       const f = new Date(p.fecha)
       return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear()
     })
@@ -637,72 +666,116 @@ export default function ModalDetalleUniversal({
           </div>
         )}
 
-        {/* ── HISTORIAL DE PAGOS ────────────────────────────── */}
-        {pagosTarjeta.length > 0 && (
+        {/* ── HISTORIAL COMPLETO: Tabs Pagos / Compras ─────── */}
+        {(pagos.some(p => p.deuda_id === item.id) || gastos.some(g => g.deuda_id === item.id)) && (
           <div className="mx-4 mt-3">
-            <div className="flex items-center gap-2 mb-2">
-              <History className="w-3.5 h-3.5 text-purple-400" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Últimos pagos</p>
-            </div>
-            <div className="space-y-1.5">
-              {pagosTarjeta.map((p, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-white">
-                        {fmtMonto(p.monto_total || p.monto || 0)}
-                      </p>
-                      <p className="text-[9px] text-gray-500">{fmtFecha(p.fecha)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {(p.a_principal > 0 || p.intereses > 0) && (
-                      <>
-                        <p className="text-[9px] text-gray-500">Capital: {fmtMonto(p.a_principal || 0)}</p>
-                        <p className="text-[9px] text-gray-500">Interés: {fmtMonto(p.intereses || 0)}</p>
-                      </>
-                    )}
-                    {p.metodo && (
-                      <p className="text-[9px] text-gray-600">{p.metodo}</p>
-                    )}
-                  </div>
-                </div>
+
+            {/* TABS */}
+            <div className="flex gap-1 mb-3 bg-gray-800/60 rounded-xl p-1">
+              {[
+                { key: 'pagos', label: 'Pagos', count: pagos.filter(p => p.deuda_id === item.id).length, color: 'text-purple-400' },
+                { key: 'compras', label: 'Compras', count: gastos.filter(g => g.deuda_id === item.id).length, color: 'text-orange-400' },
+              ].map(tab => (
+                <button key={tab.key}
+                  onClick={() => setHistTab(tab.key)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all touch-manipulation ${
+                    histTab === tab.key ? 'bg-gray-700 text-white' : 'text-gray-500'
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 ${histTab === tab.key ? tab.color : 'text-gray-600'}`}>
+                    {tab.count}
+                  </span>
+                </button>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* ── ÚLTIMAS TRANSACCIONES (compras cargadas) ─────── */}
-        {comprasTarjeta.length > 0 && (
-          <div className="mx-4 mt-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Receipt className="w-3.5 h-3.5 text-orange-400" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Últimas compras</p>
-            </div>
-            <div className="space-y-1.5">
-              {comprasTarjeta.map((g, i) => {
-                const cat = (g.categoria || 'Otro').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
-                return (
+            {/* FILTRO POR MES */}
+            {mesesDisponibles.length > 0 && (
+              <div className="flex items-center gap-2 mb-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                {mesesDisponibles.map(mes => {
+                  const [a, m] = mes.split('-')
+                  const label = new Date(Number(a), Number(m) - 1).toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })
+                  return (
+                    <button key={mes}
+                      onClick={() => setMesFiltro(mes)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all touch-manipulation ${
+                        mesFiltro === mes ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* RESUMEN DEL MES */}
+            {histTab === 'pagos' && pagosDelMes.length > 0 && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-purple-500/8 border border-purple-500/15 mb-2">
+                <span className="text-[10px] text-gray-400">{pagosDelMes.length} {pagosDelMes.length === 1 ? 'pago' : 'pagos'}</span>
+                <span className="text-[12px] font-black text-emerald-400">{fmtMonto(totalPagadoMes)}</span>
+              </div>
+            )}
+            {histTab === 'compras' && comprasDelMes.length > 0 && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-orange-500/8 border border-orange-500/15 mb-2">
+                <span className="text-[10px] text-gray-400">{comprasDelMes.length} {comprasDelMes.length === 1 ? 'compra' : 'compras'}</span>
+                <span className="text-[12px] font-black text-orange-400">{fmtMonto(totalGastadoMes)}</span>
+              </div>
+            )}
+
+            {/* LISTA DE PAGOS */}
+            {histTab === 'pagos' && (
+              <div className="space-y-1.5">
+                {pagosDelMes.length === 0 ? (
+                  <div className="text-center py-6 text-gray-600 text-[11px]">Sin pagos registrados este mes</div>
+                ) : pagosDelMes.map((p, i) => (
                   <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-500/15 flex items-center justify-center flex-shrink-0">
-                        <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-white leading-tight max-w-[140px] truncate">
-                          {g.descripcion || cat}
-                        </p>
-                        <p className="text-[9px] text-gray-500">{cat} · {fmtFecha(g.fecha)}</p>
+                        <p className="text-[11px] font-semibold text-white">{fmtMonto(p.monto_total || p.monto || 0)}</p>
+                        <p className="text-[9px] text-gray-500">{fmtFecha(p.fecha)}{p.metodo ? ` · ${p.metodo}` : ''}</p>
                       </div>
                     </div>
-                    <p className="text-[12px] font-bold text-orange-300">{fmtMonto(g.monto)}</p>
+                    <div className="text-right">
+                      {p.a_principal > 0 && <p className="text-[9px] text-emerald-600">Capital: {fmtMonto(p.a_principal)}</p>}
+                      {p.intereses > 0 && <p className="text-[9px] text-red-400/70">Interés: {fmtMonto(p.intereses)}</p>}
+                      {p.metodo && !p.a_principal && !p.intereses && <p className="text-[9px] text-gray-600">{p.metodo}</p>}
+                    </div>
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {/* LISTA DE COMPRAS */}
+            {histTab === 'compras' && (
+              <div className="space-y-1.5">
+                {comprasDelMes.length === 0 ? (
+                  <div className="text-center py-6 text-gray-600 text-[11px]">Sin compras registradas este mes</div>
+                ) : comprasDelMes.map((g, i) => {
+                  const cat = (g.categoria || 'Otro').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
+                  return (
+                    <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-500/15 flex items-center justify-center flex-shrink-0">
+                          <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold text-white leading-tight max-w-[150px] truncate">
+                            {g.descripcion || cat}
+                          </p>
+                          <p className="text-[9px] text-gray-500">{cat} · {fmtFecha(g.fecha)}</p>
+                        </div>
+                      </div>
+                      <p className="text-[12px] font-bold text-orange-300">{fmtMonto(g.monto)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
