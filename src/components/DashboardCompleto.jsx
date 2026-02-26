@@ -123,6 +123,23 @@ export default function DashboardCompleto()  {
   const [tarjetaHistTab, setTarjetaHistTab] = useState({})   // { [deudaId]: 'pagos' | 'compras' }
   const [tarjetaMesFiltro, setTarjetaMesFiltro] = useState({}) // { [deudaId]: 'YYYY-MM' }
 
+  // ── Función central: cierra TODOS los paneles/modales antes de abrir uno nuevo ──
+  const cerrarTodo = () => {
+    setShowDebtPlanner(false)
+    setShowSavingsPlanner(false)
+    setShowSpendingControl(false)
+    setShowExportacion(false)
+    setShowProyeccion3d(false)
+    setShowDetallesCategorias(false)
+    setShowModal(null)
+  }
+
+  // Wrapper que garantiza cerrar todo antes de abrir el nuevo modal
+  const abrirModal = (nombre) => {
+    cerrarTodo()
+    if (nombre) setShowModal(nombre)
+  }
+
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   
   const inactivityTimerRef = useRef(null)
@@ -211,13 +228,13 @@ useEffect(() => {
       const { seccion } = event.data
       // Mapear sección a acción del dashboard
       const SECCIONES_MAPA = {
-        'cuentas':      () => setShowModal('cuentas'),
-        'gastos':       () => setShowModal('gastos'),
-        'ingresos':     () => setShowModal('ingreso'),
-        'deudas':       () => setShowModal('agregarDeuda'),
-        'suscripciones':() => setShowModal('suscripcion'),
+        'cuentas':      () => abrirModal('cuentas'),
+        'gastos':       () => abrirModal('gastos'),
+        'ingresos':     () => abrirModal('ingreso'),
+        'deudas':       () => abrirModal('agregarDeuda'),
+        'suscripciones':() => abrirModal('suscripcion'),
         'alertas':      () => {}, // scroll al top (ya visible)
-        'exportar':     () => setShowExportacion(true),
+        'exportar':     () => { cerrarTodo(); setShowExportacion(true) },
       }
       const accion = SECCIONES_MAPA[seccion]
       if (accion) {
@@ -233,11 +250,11 @@ useEffect(() => {
   const seccionParam = params.get('seccion')
   if (seccionParam) {
     const accionesParam = {
-      'cuentas':      () => setShowModal('cuentas'),
-      'gastos':       () => setShowModal('gastos'),
-      'ingresos':     () => setShowModal('ingreso'),
-      'deudas':       () => setShowModal('agregarDeuda'),
-      'suscripciones':() => setShowModal('suscripcion'),
+      'cuentas':      () => abrirModal('cuentas'),
+      'gastos':       () => abrirModal('gastos'),
+      'ingresos':     () => abrirModal('ingreso'),
+      'deudas':       () => abrirModal('agregarDeuda'),
+      'suscripciones':() => abrirModal('suscripcion'),
     }
     const accion = accionesParam[seccionParam]
     if (accion) setTimeout(accion, 800)
@@ -550,22 +567,22 @@ useEffect(() => {
 
     if (type === ITEM_TYPES.DEUDA) {
       setDeudaEditando(item)
-      setShowModal('agregarDeuda')
+      abrirModal('agregarDeuda')
       return
     }
     if (type === ITEM_TYPES.FIJO) {
       setGastoFijoEditando(item)
-      setShowModal('gastos')
+      abrirModal('gastos')
       return
     }
     if (type === ITEM_TYPES.VARIABLE) {
       setGastoEditando(item)
-      setShowModal('gastos')
+      abrirModal('gastos')
       return
     }
     if (type === ITEM_TYPES.SUSCRIPCION) {
       setSuscripcionEditando(item)
-      setShowModal('suscripcion')
+      abrirModal('suscripcion')
       return
     }
     console.warn('⚠️ Tipo no reconocido en handleEditarUniversal:', type)
@@ -575,7 +592,7 @@ useEffect(() => {
     if (type === ITEM_TYPES.DEUDA) {
       setItemSeleccionado(null)
       setDeudaEditando(item)
-      setShowModal('pagoTarjeta')
+      abrirModal('pagoTarjeta')
       return
     }
     if (type === ITEM_TYPES.FIJO) {
@@ -915,7 +932,7 @@ const handlePagoManual = async (sub) => {
   if (!sub.cuenta_id) {
     toast.warning('Esta suscripción no tiene una cuenta de pago asignada. Asígna una en editar.')
     setSuscripcionEditando(sub)
-    setShowModal('suscripcion')
+    abrirModal('suscripcion')
     return
   }
   
@@ -2059,7 +2076,7 @@ const dataGraficaDona = useMemo(() =>
     {/* Controles */}
     <div className="flex items-center gap-2 shrink-0">
       <button
-        onClick={() => setShowExportacion(true)}
+        onClick={() => { cerrarTodo(); setShowExportacion(true) }}
         className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-400 hover:text-emerald-400 transition-colors"
         title="Exportar datos"
       >
@@ -2091,7 +2108,7 @@ const dataGraficaDona = useMemo(() =>
               gastosFijos={gastosFijosInstant}
               ingresos={ingresosInstant}
               alertas={alertas}
-              onOpenPlan={() => setShowDebtPlanner(true)}
+              onOpenPlan={() => { cerrarTodo(); setShowDebtPlanner(true) }}
               onRegisterPayment={() => {
                 const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
                 if (targetDebt) {
@@ -2099,7 +2116,7 @@ const dataGraficaDona = useMemo(() =>
                     d.cuenta === targetDebt.nombre || d.id === targetDebt.id
                   );
                   setDeudaEditando(deudaReal || null);
-                  setShowModal('pagoTarjeta');
+                  abrirModal('pagoTarjeta');
                 }
               }}
             />
@@ -2112,7 +2129,7 @@ const dataGraficaDona = useMemo(() =>
                 deudas: deudasInstant
               }}
               showLocalNotification={showLocalNotification}
-              onOpenPlanDetails={() => setShowDebtPlanner(true)}
+              onOpenPlanDetails={() => { cerrarTodo(); setShowDebtPlanner(true) }}
               onRegisterPayment={() => {
                 const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
                 if (targetDebt) {
@@ -2120,14 +2137,14 @@ const dataGraficaDona = useMemo(() =>
                     d.cuenta === targetDebt.nombre || d.id === targetDebt.id
                   );
                   setDeudaEditando(deudaReal || null);
-                  setShowModal('pagoTarjeta');
+                  abrirModal('pagoTarjeta');
                 }
               }}
             />
           </>
         ) : deudasInstant.length > 0 && (
           <button
-            onClick={() => setShowDebtPlanner(true)}
+            onClick={() => { cerrarTodo(); setShowDebtPlanner(true) }}
             className="w-full bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-purple-600/30 hover:to-indigo-600/30 transition-all"
           >
             <div className="flex items-center gap-3">
@@ -2163,11 +2180,11 @@ const dataGraficaDona = useMemo(() =>
 
         {/* BOTONES DE ACCIÓN (Solo Desktop) */}
         <div className="hidden md:flex flex-wrap gap-3 bg-white/5 backdrop-blur-sm p-4 rounded-2xl border border-white/10 animate-in fade-in delay-300">
-          <button onClick={() => setShowModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-green-500/50"><Plus className="w-4 h-4" /> Ingreso</button>
-          <button onClick={() => setShowModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-red-500/50"><Plus className="w-4 h-4" /> Gasto</button>
-          <button onClick={() => setShowModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-indigo-500/50"><Repeat className="w-4 h-4" /> Suscripción</button>
-          <button onClick={() => setShowModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-purple-500/50"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          <button onClick={() => setShowModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-gray-500/50"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
+          <button onClick={() => abrirModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-green-500/50"><Plus className="w-4 h-4" /> Ingreso</button>
+          <button onClick={() => abrirModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-red-500/50"><Plus className="w-4 h-4" /> Gasto</button>
+          <button onClick={() => abrirModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-indigo-500/50"><Repeat className="w-4 h-4" /> Suscripción</button>
+          <button onClick={() => abrirModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-purple-500/50"><CreditCard className="w-4 h-4" /> Tarjetas</button>
+          <button onClick={() => abrirModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-gray-500/50"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
         </div>
 
         {/* ── ALERTAS ── */}
@@ -2184,7 +2201,7 @@ const dataGraficaDona = useMemo(() =>
             </h3>
             {cuentasEnRiesgo.length > 0 && (
               <button
-                onClick={() => setShowModal('cobertura')}
+                onClick={() => abrirModal('cobertura')}
                 className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold hover:bg-orange-500/25 active:scale-95 transition-all touch-manipulation"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
@@ -2211,7 +2228,7 @@ const dataGraficaDona = useMemo(() =>
               {/* Ver más — si hay más de 5 */}
               {alertas.length > 5 && (
                 <button
-                  onClick={() => setShowModal('alertas')}
+                  onClick={() => abrirModal('alertas')}
                   className="w-full mt-2 py-2.5 rounded-2xl border border-white/10 bg-white/4 hover:bg-white/8 text-sm text-gray-400 hover:text-white font-semibold transition-all active:scale-[0.98] touch-manipulation flex items-center justify-center gap-2"
                 >
                   <Bell className="w-4 h-4 text-yellow-400" />
@@ -2231,9 +2248,9 @@ const dataGraficaDona = useMemo(() =>
             suscripciones={suscripcionesInstant}
             deudas={deudasInstant}
             showLocalNotification={showLocalNotification}
-            onOpenDebtPlanner={() => setShowDebtPlanner(true)}
-            onOpenSavingsPlanner={() => setShowSavingsPlanner(true)}
-            onOpenSpendingControl={() => setShowSpendingControl(true)}
+            onOpenDebtPlanner={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+            onOpenSavingsPlanner={() => { cerrarTodo(); setShowSavingsPlanner(true) }}
+            onOpenSpendingControl={() => { cerrarTodo(); setShowSpendingControl(true) }}
               dashboardKpis={kpis}                     // ← NUEVO
   calculosReales={calculosReales}           // ← NUEVO  
   calculosProyectados={calculosProyectados} // ← NUEVO
@@ -2244,7 +2261,7 @@ const dataGraficaDona = useMemo(() =>
         <div className="animate-in fade-in delay-400">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-bold text-white">Mis Planes</h3>
-            <button onClick={() => setShowSavingsPlanner(true)} className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors touch-manipulation flex items-center gap-1">
+            <button onClick={() => { cerrarTodo(); setShowSavingsPlanner(true) }} className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors touch-manipulation flex items-center gap-1">
               <Plus className="w-3 h-3" /> Nuevo
             </button>
           </div>
@@ -2264,7 +2281,7 @@ const dataGraficaDona = useMemo(() =>
           <h3 className="text-base font-bold text-white mb-3">¿En qué va tu dinero?</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-              <GraficaDona data={dataGraficaDona} onCategoryClick={() => setShowDetallesCategorias(true)} />
+              <GraficaDona data={dataGraficaDona} onCategoryClick={() => { cerrarTodo(); setShowDetallesCategorias(true) }} />
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
               <GraficaBarras
@@ -2282,7 +2299,7 @@ const dataGraficaDona = useMemo(() =>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-bold text-white">Ingresos este mes</h3>
             <button
-              onClick={() => setShowModal('ingreso')}
+              onClick={() => abrirModal('ingreso')}
               className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors touch-manipulation flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Agregar
@@ -2290,7 +2307,7 @@ const dataGraficaDona = useMemo(() =>
           </div>
           <ListaIngresos
             ingresos={ingresosDelMes}
-            onEditar={(ingreso) => { setIngresoEditando(ingreso); setShowModal('ingreso'); }}
+            onEditar={(ingreso) => { setIngresoEditando(ingreso); abrirModal('ingreso'); }}
             onEliminar={handleEliminarIngreso}
           />
         </div>
@@ -2300,7 +2317,7 @@ const dataGraficaDona = useMemo(() =>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-bold text-white">Mis Finanzas</h3>
             <button
-              onClick={() => { setOverviewMode('ALL'); setShowModal('gastosOverview') }}
+              onClick={() => { setOverviewMode('ALL'); abrirModal('gastosOverview') }}
               className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors touch-manipulation"
             >
               Ver todo →
@@ -2309,7 +2326,7 @@ const dataGraficaDona = useMemo(() =>
           <div className="grid grid-cols-3 gap-2.5">
             {/* Deudas */}
             <button
-              onClick={() => { setOverviewMode('DEUDAS'); setShowModal('gastosOverview') }}
+              onClick={() => { setOverviewMode('DEUDAS'); abrirModal('gastosOverview') }}
               className="group flex flex-col gap-1.5 p-3.5 bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 rounded-2xl text-left touch-manipulation transition-all"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">💳 Deudas</span>
@@ -2321,7 +2338,7 @@ const dataGraficaDona = useMemo(() =>
 
             {/* Gastos Fijos */}
             <button
-              onClick={() => { setOverviewMode('FIJOS'); setShowModal('gastosOverview') }}
+              onClick={() => { setOverviewMode('FIJOS'); abrirModal('gastosOverview') }}
               className="group flex flex-col gap-1.5 p-3.5 bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/20 rounded-2xl text-left touch-manipulation transition-all"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-400">📌 Fijos</span>
@@ -2333,7 +2350,7 @@ const dataGraficaDona = useMemo(() =>
 
             {/* Suscripciones */}
             <button
-              onClick={() => { setOverviewMode('SUSCRIPCIONES'); setShowModal('gastosOverview') }}
+              onClick={() => { setOverviewMode('SUSCRIPCIONES'); abrirModal('gastosOverview') }}
               className="group flex flex-col gap-1.5 p-3.5 bg-indigo-500/10 hover:bg-indigo-500/20 active:scale-95 border border-indigo-500/20 rounded-2xl text-left touch-manipulation transition-all"
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">🔄 Suscripc.</span>
@@ -2537,13 +2554,13 @@ const dataGraficaDona = useMemo(() =>
           {/* BOTONES ACCIÓN */}
           <div className="flex-shrink-0 flex gap-3 px-5 pt-4 pb-3">
             <button
-              onClick={() => { setDeudaEditando(null); setShowModal('agregarDeuda') }}
+              onClick={() => { setDeudaEditando(null); abrirModal('agregarDeuda') }}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white rounded-2xl font-semibold transition-all touch-manipulation text-sm shadow-lg shadow-purple-900/30"
             >
               <Plus className="w-4 h-4" /> Nueva Tarjeta
             </button>
             <button
-              onClick={() => { setDeudaEditando(null); setShowModal('pagoTarjeta') }}
+              onClick={() => { setDeudaEditando(null); abrirModal('pagoTarjeta') }}
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-2xl font-semibold transition-all touch-manipulation text-sm shadow-lg shadow-emerald-900/30"
             >
               <CreditCard className="w-4 h-4" /> Pagar
@@ -2628,7 +2645,7 @@ const dataGraficaDona = useMemo(() =>
                   <div key={deuda.id}>
                     <CardDeuda
                       deuda={deuda}
-                      onEditar={() => { setDeudaEditando(deuda); setShowModal('agregarDeuda') }}
+                      onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
                       onEliminar={async () => {
                         if (window.confirm(`¿Eliminar ${deuda.cuenta}?`)) {
                           await deleteDebt(deuda.id)
@@ -2837,12 +2854,12 @@ const dataGraficaDona = useMemo(() =>
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
       {/* NOTA PARA MENU INFERIOR: Asegúrate de que `MenuInferior.jsx` tenga acceso a la prop `onOpenExport` */}
       <MenuInferior
-        onOpenModal={setShowModal}
+        onOpenModal={abrirModal}
         alertasCount={alertas.length}
         coberturaBadge={cuentasEnRiesgo.length}
         nombreUsuario={usuario.nombre}
         onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }}
-        onOpenExport={() => setShowExportacion(true)}
+        onOpenExport={() => { cerrarTodo(); setShowExportacion(true) }}
       />
 
       {/* ESTILOS ADICIONALES */}
@@ -2871,9 +2888,9 @@ const dataGraficaDona = useMemo(() =>
           onClose={() => setShowOnboarding(false)}
           onAccionRapida={(key) => {
             setShowOnboarding(false)
-            if (key === 'ingreso') setShowModal('ingreso')
-            else if (key === 'gasto') setShowModal('gasto')
-            else if (key === 'cuenta') setShowModal('cuentas')
+            if (key === 'ingreso') abrirModal('ingreso')
+            else if (key === 'gasto') abrirModal('gasto')
+            else if (key === 'cuenta') abrirModal('cuentas')
           }}
         />
       )}
@@ -2884,10 +2901,10 @@ const dataGraficaDona = useMemo(() =>
           onCerrar={cerrarTour}
           onAccion={(key) => {
             // El tour pasa la acción clave y el dashboard abre el modal correspondiente
-            if (key === 'ingreso') setShowModal('ingreso')
-            else if (key === 'gasto') setShowModal('gasto')
-            else if (key === 'cuenta') setShowModal('cuentas')
-            else if (key === 'deuda') setShowModal('agregarDeuda')
+            if (key === 'ingreso') abrirModal('ingreso')
+            else if (key === 'gasto') abrirModal('gasto')
+            else if (key === 'cuenta') abrirModal('cuentas')
+            else if (key === 'deuda') abrirModal('agregarDeuda')
           }}
         />
       )}
