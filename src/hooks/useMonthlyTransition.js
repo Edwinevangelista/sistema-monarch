@@ -151,10 +151,9 @@ export const useMonthlyTransition = () => {
           monto: ingreso.monto,
           fuente: `${ingreso.fuente} (Auto-generado)`,
           descripcion: ingreso.descripcion,
-          categoria: ingreso.categoria,
           cuenta_id: ingreso.cuenta_id,
-          es_recurrente: true,
-          ingreso_origen_id: ingreso.id
+          frecuencia: ingreso.frecuencia || 'Único',
+          es_recurrente: true
         }
         
         ingresosRecurrentes.push(nuevoIngreso)
