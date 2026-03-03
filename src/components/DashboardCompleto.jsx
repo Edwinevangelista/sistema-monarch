@@ -97,6 +97,10 @@ export default function DashboardCompleto()  {
   });
 
   const [overviewMode, setOverviewMode] = useState('ALL')
+  const [historialMesFiltro, setHistorialMesFiltro] = useState(() => {
+    const hoy = new Date()
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
+  })
   const [itemSeleccionado, setItemSeleccionado] = useState(null)
 
   const [isPagandoSuscripcion, setIsPagandoSuscripcion] = useState(false)
@@ -2427,29 +2431,142 @@ const dataGraficaDona = useMemo(() =>
 
             <div className="p-4 overflow-y-auto flex-1">
               {overviewMode === 'HISTORIAL' ? (
-                // ── HISTORIAL: gastos archivados de meses anteriores ──
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-400 mb-3">Gastos variables de meses anteriores (archivados automáticamente)</p>
-                  {gastosInstant
-                    .filter(g => g.archivado === true && !['Estado de Cuenta','Autopago'].includes(g.metodo) && !g.descripcion?.includes('Autopago:'))
-                    .sort((a,b) => new Date(b.fecha) - new Date(a.fecha))
-                    .map(g => {
-                      const mes = g.fecha ? new Date(g.fecha + 'T00:00:00').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) : 'Sin fecha'
-                      return (
-                        <div key={g.id} className="flex items-center justify-between bg-gray-800/40 border border-white/5 rounded-xl px-4 py-3 opacity-75">
-                          <div>
-                            <p className="text-sm text-white font-medium">{g.descripcion || g.categoria}</p>
-                            <p className="text-xs text-gray-500">{mes} · {g.metodo}</p>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-300">${Number(g.monto||0).toFixed(2)}</span>
-                        </div>
-                      )
-                    })
+                // ── HISTORIAL: gastos con filtro por mes ──
+                (() => {
+                  const mesesDisponibles = []
+                  const ahoraH = new Date()
+                  for (let i = 0; i < 12; i++) {
+                    const d = new Date(ahoraH.getFullYear(), ahoraH.getMonth() - i, 1)
+                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                    const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
+                    mesesDisponibles.push({ key, label })
                   }
-                  {gastosInstant.filter(g => g.archivado === true && !['Estado de Cuenta','Autopago'].includes(g.metodo) && !g.descripcion?.includes('Autopago:')).length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No hay gastos en el historial</p>
-                  )}
-                </div>
+
+                  const [filtroAño, filtroMes] = historialMesFiltro.split('-').map(Number)
+                  const inicioPeriodo = new Date(filtroAño, filtroMes - 1, 1)
+                  const finPeriodo = new Date(filtroAño, filtroMes, 0, 23, 59, 59)
+                  const esMesActual = filtroAño === ahoraH.getFullYear() && filtroMes === (ahoraH.getMonth() + 1)
+
+                  const gastosDelPeriodo = gastosInstant.filter(g => {
+                    if (!g.fecha) return false
+                    if (['Estado de Cuenta','Autopago'].includes(g.metodo)) return false
+                    if (g.descripcion?.includes('Autopago:')) return false
+                    if (g.categoria === '📅 Suscripciones') return false
+                    const fecha = new Date(g.fecha + 'T00:00:00')
+                    return fecha >= inicioPeriodo && fecha <= finPeriodo
+                  }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+                  const gastosFijosDelPeriodo = gastosFijosInstant.map(gf => ({
+                    ...gf,
+                    estadoPeriodo: esMesActual ? gf.estado : 'Recurrente'
+                  }))
+
+                  const pagosDelPeriodo = pagos.filter(p => {
+                    if (!p.fecha) return false
+                    const fecha = new Date(p.fecha + 'T00:00:00')
+                    return fecha >= inicioPeriodo && fecha <= finPeriodo
+                  }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+                  const totalVariables = gastosDelPeriodo.reduce((s, g) => s + Number(g.monto || 0), 0)
+                  const totalFijos = gastosFijosDelPeriodo.reduce((s, g) => s + Number(g.monto || 0), 0)
+                  const totalPagos = pagosDelPeriodo.reduce((s, p) => s + Number(p.monto || 0), 0)
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 shrink-0">Mes:</span>
+                        <select
+                          value={historialMesFiltro}
+                          onChange={e => setHistorialMesFiltro(e.target.value)}
+                          className="flex-1 bg-gray-800 border border-white/10 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                        >
+                          {mesesDisponibles.map(m => (
+                            <option key={m.key} value={m.key}>{m.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 text-center">
+                          <p className="text-[10px] text-rose-400 font-bold uppercase mb-0.5">Variables</p>
+                          <p className="text-sm font-black text-rose-300">${totalVariables.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-[10px] text-gray-600">{gastosDelPeriodo.length} gastos</p>
+                        </div>
+                        <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-2.5 text-center">
+                          <p className="text-[10px] text-orange-400 font-bold uppercase mb-0.5">Fijos</p>
+                          <p className="text-sm font-black text-orange-300">${totalFijos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-[10px] text-gray-600">{gastosFijosDelPeriodo.length} fijos</p>
+                        </div>
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-center">
+                          <p className="text-[10px] text-blue-400 font-bold uppercase mb-0.5">Pagos</p>
+                          <p className="text-sm font-black text-blue-300">${totalPagos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-[10px] text-gray-600">{pagosDelPeriodo.length} pagos</p>
+                        </div>
+                      </div>
+
+                      {gastosFijosDelPeriodo.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-orange-400 uppercase mb-2">Gastos Fijos</p>
+                          <div className="space-y-1.5">
+                            {gastosFijosDelPeriodo.map(gf => (
+                              <div key={gf.id} className="flex items-center justify-between bg-gray-800/40 border border-white/5 rounded-xl px-3.5 py-2.5">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className={`w-2 h-2 rounded-full shrink-0 ${gf.estadoPeriodo === 'Pagado' ? 'bg-green-400' : 'bg-orange-400'}`} />
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-white font-medium truncate">{gf.nombre}</p>
+                                    <p className="text-[10px] text-gray-500">Día {gf.dia_venc} · {gf.estadoPeriodo}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-sm font-bold shrink-0 ${gf.estadoPeriodo === 'Pagado' ? 'text-green-400' : 'text-orange-300'}`}>${Number(gf.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {gastosDelPeriodo.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-rose-400 uppercase mb-2">Gastos Variables</p>
+                          <div className="space-y-1.5">
+                            {gastosDelPeriodo.map(g => (
+                              <div key={g.id} className="flex items-center justify-between bg-gray-800/40 border border-white/5 rounded-xl px-3.5 py-2.5">
+                                <div className="min-w-0">
+                                  <p className="text-sm text-white font-medium truncate">{g.descripcion || g.categoria}</p>
+                                  <p className="text-[10px] text-gray-500">{g.fecha} · {g.metodo || g.categoria}</p>
+                                </div>
+                                <span className="text-sm font-bold text-rose-300 shrink-0">${Number(g.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {pagosDelPeriodo.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-bold text-blue-400 uppercase mb-2">Pagos de Tarjetas</p>
+                          <div className="space-y-1.5">
+                            {pagosDelPeriodo.map(p => {
+                              const deuda = deudasInstant.find(d => d.id === p.deuda_id)
+                              return (
+                                <div key={p.id} className="flex items-center justify-between bg-gray-800/40 border border-white/5 rounded-xl px-3.5 py-2.5">
+                                  <div className="min-w-0">
+                                    <p className="text-sm text-white font-medium truncate">{deuda?.cuenta || 'Tarjeta'}</p>
+                                    <p className="text-[10px] text-gray-500">{p.fecha} · {p.tipo === 'minimo' ? 'Pago mínimo' : p.tipo === 'total' ? 'Pago total' : 'Abono'}</p>
+                                  </div>
+                                  <span className="text-sm font-bold text-blue-300 shrink-0">${Number(p.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {gastosDelPeriodo.length === 0 && gastosFijosDelPeriodo.length === 0 && pagosDelPeriodo.length === 0 && (
+                        <p className="text-center text-gray-500 py-8">No hay registros para este mes</p>
+                      )}
+                    </div>
+                  )
+                })()
               ) : (
                 <ListaGastosCompleta
                   deudas={overviewData.deudas}

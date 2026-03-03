@@ -119,15 +119,39 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     })
 
     // ── GASTOS FIJOS ──
+    // Son recurrentes → aparecen en TODOS los meses en su día de vencimiento
     gastosFijos?.forEach(gf => {
-      if (gf.dia_venc === dia && gf.estado !== 'Pagado') {
+      if (gf.dia_venc !== dia) return
+
+      const esMesActual =
+        mesActual.getMonth() === hoy.getMonth() &&
+        mesActual.getFullYear() === hoy.getFullYear()
+
+      // Solo el mes actual tiene estado real (Pagado/Pendiente)
+      // Meses pasados/futuros → se muestran como proyección
+      const esPagado = esMesActual && gf.estado === 'Pagado'
+      const esFuturo =
+        mesActual.getFullYear() > hoy.getFullYear() ||
+        (mesActual.getFullYear() === hoy.getFullYear() && mesActual.getMonth() > hoy.getMonth())
+
+      if (!esPagado) {
         totalGastos += Number(gf.monto || 0)
-        eventos.push({
-          id: gf.id, tipo: 'gasto_fijo', nombre: gf.nombre, monto: gf.monto,
-          icono: <CreditCard className="w-4 h-4" />,
-          color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-        })
       }
+
+      eventos.push({
+        id: gf.id,
+        tipo: 'gasto_fijo',
+        nombre: gf.nombre,
+        monto: gf.monto,
+        icono: <CreditCard className="w-4 h-4" />,
+        esPagado,
+        esProyeccion: !esMesActual,
+        color: esPagado
+          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+          : esFuturo
+          ? 'bg-orange-500/10 text-orange-300 border-orange-500/20 border-dashed'
+          : 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      })
     })
 
     // ── SUSCRIPCIONES ──
@@ -164,7 +188,7 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     const tieneGasto = eventos.some(e => e.tipo !== 'ingreso')
 
     return { ingresos: totalIngresos, gastos: totalGastos, eventos, tieneIngreso, tieneGasto }
-  }, [mesActual, gastosFijos, suscripciones, deudas, ingresos, gastos])
+  }, [mesActual, hoy, gastosFijos, suscripciones, deudas, ingresos, gastos])
 
   const cambiarMes = (direccion) => {
     const nuevaFecha = new Date(mesActual)
@@ -411,8 +435,18 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-white truncate">{evento.nombre}</p>
+                          {evento.esPagado && (
+                            <span className="text-[8px] bg-green-500/25 text-green-300 px-1.5 py-0.5 rounded-full border border-green-500/30 font-black uppercase shrink-0">
+                              Pagado
+                            </span>
+                          )}
                           {evento.esRecurrente && (
                             <span className="text-[8px] bg-emerald-500/25 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30 font-black uppercase shrink-0">
+                              Proy.
+                            </span>
+                          )}
+                          {evento.esProyeccion && !evento.esPagado && evento.tipo === 'gasto_fijo' && (
+                            <span className="text-[8px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded-full border border-orange-500/30 font-black uppercase shrink-0">
                               Proy.
                             </span>
                           )}

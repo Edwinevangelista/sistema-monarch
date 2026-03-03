@@ -309,7 +309,7 @@ async function _checkFinancialAlerts() {
       .from('gastos_fijos')
       .select('nombre,monto,dia_venc')
       .eq('user_id', user.id)
-      .eq('autopago', true)
+      .eq('auto_pago', true)
 
     if (gastosFijos?.length > 0) {
       const diaHoy = new Date().getDate()
