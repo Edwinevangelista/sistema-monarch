@@ -629,21 +629,42 @@ useEffect(() => {
   const handleGuardarIngreso = async (data) => {
     try {
       console.log('💾 Guardando ingreso:', data)
-      
+
       if (data.id) {
         await updateIngreso(data.id, data)
         console.log('✅ Ingreso actualizado')
       } else {
-        const nuevoIngreso = await addIngreso(data)
-        console.log('✅ Ingreso creado:', nuevoIngreso)
-        
-        if (data.cuenta_id && data.monto > 0) {
-          const cuenta = cuentas.find(c => c.id === data.cuenta_id)
+        const resultado = await addIngreso(data)
+
+        // Verificar que el ingreso se guardó correctamente
+        if (resultado && resultado.success === false) {
+          console.error('❌ addIngreso falló:', resultado.error)
+          toast.error('Error al guardar el ingreso: ' + (resultado.error?.message || 'Error desconocido'))
+          return
+        }
+        console.log('✅ Ingreso creado:', resultado)
+
+        // Actualizar saldo de la cuenta asignada
+        if (data.cuenta_id && Number(data.monto) > 0) {
+          // Primero buscar en el array en memoria
+          let cuenta = cuentas.find(c => c.id === data.cuenta_id)
+
+          // Fallback: consultar Supabase directamente si no se encontró en memoria
+          if (!cuenta) {
+            console.warn('⚠️ Cuenta no encontrada en memoria, consultando Supabase...')
+            const { data: cuentaDB } = await supabase
+              .from('cuentas_bancarias')
+              .select('*')
+              .eq('id', data.cuenta_id)
+              .single()
+            cuenta = cuentaDB
+          }
+
           if (cuenta) {
-            const nuevoBalance = Number(cuenta.balance) + Number(data.monto)
+            const nuevoBalance = Number(cuenta.balance || 0) + Number(data.monto)
             await updateCuenta(cuenta.id, { balance: nuevoBalance })
-            console.log('✅ Saldo actualizado:', nuevoBalance)
-            
+            console.log('✅ Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
+
             await registrarMovimientoEnHistorial({
               tipo: 'ingreso',
               monto: Number(data.monto),
@@ -652,16 +673,18 @@ useEffect(() => {
               cuentaNombre: cuenta.nombre
             })
             console.log('✅ Movimiento registrado en historial')
+          } else {
+            console.error('❌ No se encontró la cuenta:', data.cuenta_id)
           }
         }
       }
-      
+
       setShowModal(null)
       setIngresoEditando(null)
-      
+
     } catch (e) {
       console.error('❌ Error al guardar ingreso:', e)
-      toast.info('Error al guardar el ingreso: ' + e.message)
+      toast.error('Error al guardar el ingreso: ' + e.message)
     }
   }
 
