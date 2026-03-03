@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 /**
@@ -311,6 +311,33 @@ export const useMonthlyTransition = () => {
       console.error('❌ Error en transición forzada:', error)
       throw error
     }
+  }, [procesarTransicionCompleta])
+
+  /**
+   * 🔁 Auto-detección de cambio de mes al montar
+   */
+  useEffect(() => {
+    const checkAndRunTransition = async () => {
+      const hoy = new Date()
+      const mesActual = `${hoy.getFullYear()}-${hoy.getMonth() + 1}`
+      const ultimaTransicion = localStorage.getItem('ultima_transicion_mensual')
+
+      if (ultimaTransicion === mesActual) return // Ya se ejecutó este mes
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        console.log('🗓️ Nuevo mes detectado → ejecutando transición mensual automática...')
+        await procesarTransicionCompleta(user.id)
+        localStorage.setItem('ultima_transicion_mensual', mesActual)
+        console.log('✅ Transición mensual automática completada:', mesActual)
+      } catch (error) {
+        console.error('❌ Error en transición mensual automática:', error)
+      }
+    }
+
+    checkAndRunTransition()
   }, [procesarTransicionCompleta])
 
   return {
