@@ -93,7 +93,7 @@ const MONEDAS = [
   { codigo: 'BRL', simbolo: 'R$', nombre: 'Real', pais: 'Brasil', flag: '🇧🇷' },
   { codigo: 'PAB', simbolo: 'B/.', nombre: 'Balboa', pais: 'Panamá', flag: '🇵🇦' },
   // Global
-  { codigo: 'USD', simbolo: '$', nombre: 'Dólar', pais: 'Estados Unidos', flag: '🇺🇸' },
+  { codigo: 'USD', simbolo: '$', nombre: 'US Dollar', pais: 'United States', flag: '🇺🇸' },
   { codigo: 'EUR', simbolo: '€', nombre: 'Euro', pais: 'Europa', flag: '🇪🇺' },
   { codigo: 'GBP', simbolo: '£', nombre: 'Libra', pais: 'Reino Unido', flag: '🇬🇧' },
   { codigo: 'CAD', simbolo: 'C$', nombre: 'Dólar Canadiense', pais: 'Canadá', flag: '🇨🇦' },
@@ -109,7 +109,7 @@ const OBJETIVOS = [
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function OnboardingModal({ onClose, onAccionRapida }) {
   const [paso, setPaso] = useState(0)
-  const [monedaSeleccionada, setMonedaSeleccionada] = useState('DOP')
+  const [monedaSeleccionada, setMonedaSeleccionada] = useState('USD')
   const [objetivoSeleccionado, setObjetivoSeleccionado] = useState(null)
   const [animando, setAnimando] = useState(false)
   const [busqueda, setBusqueda] = useState('')

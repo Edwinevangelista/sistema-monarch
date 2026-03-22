@@ -1,5 +1,6 @@
 import React from 'react';
 import { Repeat, Edit2, Trash2, DollarSign, Calendar, AlertTriangle, Clock, Zap } from 'lucide-react';
+import { showConfirm } from '../utils/confirm';
 
 // Helper para estilos según ciclo
 const getStyleCiclo = (ciclo) => {
@@ -13,10 +14,13 @@ const getStyleCiclo = (ciclo) => {
 export default function ListaSuscripciones({ suscripciones, onEditar, onEliminar, onPagarManual }) {
   const suscripcionesActivas = suscripciones.filter(s => s.estado === 'Activo');
 
-  const handleEliminar = (id, servicio) => {
-    if (window.confirm(`¿Estás seguro de eliminar la suscripción de ${servicio}?`)) {
-      onEliminar(id);
-    }
+  const handleEliminar = async (id, servicio) => {
+    const ok = await showConfirm({
+      titulo: `Delete ${servicio}?`,
+      mensaje: "This subscription will be permanently removed from your records.",
+      textoConfirmar: "Delete",
+    });
+    if (ok) onEliminar(id);
   };
 
   const getDaysRemaining = (proximoPago) => {
@@ -150,7 +154,7 @@ export default function ListaSuscripciones({ suscripciones, onEditar, onEliminar
                   <div className="flex items-center gap-2">
                     <Calendar className={`w-4 h-4 ${daysRemaining <= 0 ? 'text-rose-400' : daysRemaining <= 3 ? 'text-yellow-400' : 'text-gray-400'}`} />
                     <span className="text-gray-300">
-                      Próximo pago: {new Date(sub.proximo_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      Próximo pago: {new Date(sub.proximo_pago).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                       {daysRemaining !== null && (
                         <span className={`font-semibold ${daysRemaining <= 0 ? 'text-rose-400' : daysRemaining <= 3 ? 'text-yellow-400' : 'text-gray-400'} ml-2`}>
                           ({daysRemaining > 0 ? `en ${daysRemaining} días` : 'Vence hoy'})

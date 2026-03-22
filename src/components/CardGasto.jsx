@@ -25,7 +25,7 @@ export default function CardGasto({ gasto, onEditar, onEliminar }) {
       <div className="space-y-1 mb-4">
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <Calendar className="w-4 h-4" />
-          <span>{new Date(gasto.fecha).toLocaleDateString('es-ES')}</span>
+          <span>{new Date(gasto.fecha).toLocaleDateString('en-US')}</span>
         </div>
         {gasto.descripcion && (
           <p className="text-sm text-gray-300">{gasto.descripcion}</p>

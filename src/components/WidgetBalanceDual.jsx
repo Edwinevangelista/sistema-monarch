@@ -200,10 +200,10 @@ const WidgetBalanceDual = ({
                 </div>
                 {/* Mini labels debajo */}
                 <div className="flex justify-between mt-1">
-                  <span className="text-[9px] text-gray-600">${(datosActivos.totalGastos || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })} gastados</span>
+                  <span className="text-[9px] text-gray-600">${(datosActivos.totalGastos || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} gastados</span>
                   {datosActivos.saldo > 0
-                    ? <span className="text-[9px] text-indigo-500 font-semibold">${datosActivos.saldo.toLocaleString('es-MX', { maximumFractionDigits: 0 })} libres</span>
-                    : <span className="text-[9px] text-orange-500 font-semibold">déficit ${Math.abs(datosActivos.saldo || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                    ? <span className="text-[9px] text-indigo-500 font-semibold">${datosActivos.saldo.toLocaleString('en-US', { maximumFractionDigits: 0 })} libres</span>
+                    : <span className="text-[9px] text-orange-500 font-semibold">déficit ${Math.abs(datosActivos.saldo || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                   }
                 </div>
               </div>

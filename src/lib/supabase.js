@@ -1,18 +1,4 @@
 // src/lib/supabase.js
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ ERROR: Faltan las variables de entorno de Supabase')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage
-  }
-})
+// Re-exporta desde supabaseClient para que todos los imports apunten
+// a la misma instancia. Evita dos clientes Supabase con sesiones desincronizadas.
+export { supabase } from './supabaseClient'

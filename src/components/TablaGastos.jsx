@@ -61,7 +61,7 @@ export default function TablaGastos({ gastos, updateGasto, deleteGasto }) {
             {gastos.map((gasto) => (
               <tr key={gasto.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                 <td className="py-3 px-4 text-gray-300">
-                  {new Date(gasto.fecha).toLocaleDateString('es-ES')}
+                  {new Date(gasto.fecha).toLocaleDateString('en-US')}
                 </td>
                 <td className="py-3 px-4 text-white font-medium">{gasto.categoria}</td>
                 <td className="py-3 px-4 text-gray-300">{gasto.descripcion}</td>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, Edit2, Trash2, X, CreditCard, Wallet, ArrowLeftRight, 
+import {
+  Plus, Edit2, Trash2, X, CreditCard, Wallet, ArrowLeftRight,
   Activity, PlusCircle, MinusCircle, ChevronLeft
 } from 'lucide-react';
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner'
+import { showConfirm } from '../utils/confirm'
 
 export default function ModuloCuentasBancarias({ 
   onAgregar, 
@@ -98,7 +99,7 @@ export default function ModuloCuentasBancarias({
       } else {
         const movimientosConFecha = (data || []).map(m => ({
           ...m,
-          fecha: new Date(m.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+          fecha: new Date(m.created_at).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         }));
         setListaMovimientos(movimientosConFecha);
       }
@@ -139,7 +140,7 @@ export default function ModuloCuentasBancarias({
         const movimientoLocal = {
           id: Date.now(),
           ...nuevoMovimiento,
-          fecha: new Date().toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+          fecha: new Date().toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
         };
         setListaMovimientos(prev => [movimientoLocal, ...prev]);
         const historialActual = JSON.parse(localStorage.getItem('historial_bancarios_v2') || '[]');
@@ -147,7 +148,7 @@ export default function ModuloCuentasBancarias({
       } else {
         const movimientoConFecha = {
           ...data,
-          fecha: new Date(data.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          fecha: new Date(data.created_at).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
           ref: data.descripcion,
           cuenta_nombre: nuevoMovimiento.cuentaNombre
         };
@@ -358,7 +359,7 @@ export default function ModuloCuentasBancarias({
                 <div className="md:hidden text-right mr-2">
                   <p className="text-[10px] text-gray-500 uppercase">Total</p>
                   <p className={`text-sm font-bold ${balanceTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    ${balanceTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    ${balanceTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 
@@ -377,7 +378,7 @@ export default function ModuloCuentasBancarias({
               <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-4 border border-blue-500/20">
                 <p className="text-gray-400 text-xs uppercase mb-1">Balance Total</p>
                 <p className={`text-3xl font-bold ${balanceTotal >= 0 ? 'text-white' : 'text-red-400'}`}>
-                  ${balanceTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  ${balanceTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -501,7 +502,7 @@ export default function ModuloCuentasBancarias({
                     <div className="mb-3 flex justify-between items-center text-xs text-gray-400 border-b border-gray-700 pb-3">
                       <span>{cuenta.tipo_cuenta || formTipo} {cuenta.ultimos_digitos ? `• ••••${cuenta.ultimos_digitos}` : ''}</span>
                       <span className={`text-lg md:text-xl font-bold ${Number(cuenta.balance) >= 0 ? 'text-white' : 'text-red-400'}`}>
-                        ${Number(cuenta.balance).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        ${Number(cuenta.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
 
@@ -513,10 +514,14 @@ export default function ModuloCuentasBancarias({
                         <Edit2 className="w-3.5 h-3.5" /> Editar
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`¿Eliminar cuenta ${cuenta.nombre}?`)) {
-                            onEliminar(cuenta.id);
-                          }
+                        onClick={async () => {
+                          const ok = await showConfirm({
+                            titulo: `Delete account "${cuenta.nombre}"?`,
+                            mensaje: 'This account and its data will be permanently removed.',
+                            textoConfirmar: 'Delete Account',
+                          });
+                          if (!ok) return;
+                          onEliminar(cuenta.id);
                         }}
                         className="p-2.5 bg-gray-700 hover:bg-red-600 active:bg-red-700 text-gray-300 hover:text-white rounded-lg transition-all"
                         title="Eliminar"
@@ -581,7 +586,7 @@ export default function ModuloCuentasBancarias({
                             </div>
                           </div>
                           <span className={`font-bold text-sm md:text-base ${color} whitespace-nowrap ml-2`}>
-                            {signo}${Number(mov.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            {signo}${Number(mov.monto).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
                       );

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Target, TrendingDown, DollarSign, Scissors, CheckCircle2, Trash2, Edit2, Calendar, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
-import { toast } from 'sonner'
+import { toast } from 'sonner';
+import { showConfirm } from '../utils/confirm';
 
 const ICONOS_POR_TIPO = {
   ahorro: { icon: DollarSign, gradient: 'from-emerald-600 to-teal-600', emoji: '💰' },
@@ -15,26 +16,33 @@ export default function PlanesActivos({ onEditarPlan, onEliminarPlan }) {
   const [expandido, setExpandido] = useState(null);
 
   const handleMarcarCompletado = async (planId) => {
-    if (window.confirm('¿Marcar este plan como completado?')) {
-      try {
-        await marcarComoCompletado(planId);
-        toast.success('¡Felicitaciones! Plan completado');
-      } catch (error) {
-        console.error('Error marcando plan como completado:', error);
-        toast.error('Error al completar el plan');
-      }
+    const ok = await showConfirm({
+      titulo: "Mark as completed?",
+      mensaje: "Congratulations on completing this plan! It will be moved to your completed plans.",
+      textoConfirmar: "Complete Plan",
+      textoCancel: "Not yet",
+    });
+    if (!ok) return;
+    try {
+      await marcarComoCompletado(planId);
+      toast.success('🎉 Plan completed!');
+    } catch (error) {
+      toast.error('Error completing plan');
     }
   };
 
   const handleEliminar = async (planId) => {
-    if (window.confirm('¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.')) {
-      try {
-        await deletePlan(planId);
-        toast.error('Plan eliminado');
-      } catch (error) {
-        console.error('Error eliminando plan:', error);
-        toast.error('Error al eliminar el plan');
-      }
+    const ok = await showConfirm({
+      titulo: "Delete this plan?",
+      mensaje: "This financial plan will be permanently deleted. This action cannot be undone.",
+      textoConfirmar: "Delete Plan",
+    });
+    if (!ok) return;
+    try {
+      await deletePlan(planId);
+      toast.success('Plan deleted');
+    } catch (error) {
+      toast.error('Error deleting plan');
     }
   };
 
@@ -205,7 +213,7 @@ export default function PlanesActivos({ onEditarPlan, onEliminarPlan }) {
                         <div className="bg-gray-900/50 p-3 md:p-4 rounded-2xl border border-white/5">
                           <p className="text-gray-400 text-xs md:text-sm uppercase tracking-wider font-semibold">Fecha Meta</p>
                           <p className="text-white font-medium text-sm md:text-base">
-                            {new Date(plan.fecha_objetivo).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {new Date(plan.fecha_objetivo).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                           </p>
                         </div>
                       )}

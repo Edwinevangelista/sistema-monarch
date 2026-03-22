@@ -316,7 +316,7 @@ export default function GraficaBarras({
           <div className="text-right flex-shrink-0">
             <p className="text-[9px] text-gray-600">Disponible</p>
             <p className={`text-sm font-black ${balanceActual >= 0 ? 'text-emerald-400' : 'text-orange-400'}`}>
-              ${Math.abs(balanceActual).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+              ${Math.abs(balanceActual).toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </p>
           </div>
         </div>

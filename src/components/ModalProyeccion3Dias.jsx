@@ -4,7 +4,7 @@ import {
   Calendar, Repeat, Wallet, AlertTriangle, ChevronLeft
 } from 'lucide-react'
 
-const fmt = (v) => '$' + Number(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmt = (v) => '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /**
  * Modal de proyección financiera a 3 días.
@@ -99,7 +99,7 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
     return { t: `+${dias}d`,              c: 'bg-blue-600 text-white' }
   }
 
-  const fechaStr = hoy.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+  const fechaStr = hoy.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
     <>

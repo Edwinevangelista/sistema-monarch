@@ -4,7 +4,7 @@ import {
   Wallet, Calendar, Repeat, TrendingDown, AlertTriangle
 } from 'lucide-react'
 
-const fmt = (v) => Number(v || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmt = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }) {
 

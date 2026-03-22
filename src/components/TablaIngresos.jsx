@@ -60,7 +60,7 @@ export default function TablaIngresos({ ingresos, updateIngreso, deleteIngreso }
             {ingresos.map((ingreso) => (
               <tr key={ingreso.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                 <td className="py-3 px-4 text-gray-300">
-                  {new Date(ingreso.fecha).toLocaleDateString('es-ES')}
+                  {new Date(ingreso.fecha).toLocaleDateString('en-US')}
                 </td>
                 <td className="py-3 px-4 text-white font-medium">{ingreso.fuente}</td>
                 <td className="py-3 px-4 text-gray-300">{ingreso.descripcion}</td>

@@ -33,8 +33,8 @@ function Auth() {
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
   const [telefono, setTelefono] = useState('')
-  const [moneda, setMoneda] = useState('DOP')
-  const [pais, setPais] = useState('RepublicaDominicana')
+  const [moneda, setMoneda] = useState('USD')
+  const [pais, setPais] = useState('UnitedStates')
 
   // ESTADOS DE UI
   const [loading, setLoading] = useState(false)
@@ -386,8 +386,8 @@ function Auth() {
     setNombre('')
     setApellido('')
     setTelefono('')
-    setPais('RepublicaDominicana')
-    setMoneda('DOP')
+    setPais('UnitedStates')
+    setMoneda('USD')
   }
 
   return (
@@ -395,7 +395,7 @@ function Auth() {
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <Wallet className="w-10 h-10 text-blue-400" />
-          <h1 className="text-3xl font-bold text-white">finguide App</h1>
+          <h1 className="text-3xl font-bold text-white">FinGuide</h1>
         </div>
       </div>
 
@@ -636,6 +636,7 @@ function Auth() {
                         setPais(p)
                         // Auto-sync moneda al cambiar país
                         const mapa = {
+                          'UnitedStates': 'USD',
                           'RepublicaDominicana': 'DOP',
                           'Mexico': 'MXN',
                           'Colombia': 'COP',
@@ -686,6 +687,7 @@ function Auth() {
                         <option value="Chile">🇨🇱 Chile</option>
                       </optgroup>
                       <optgroup label="🌍 Resto del mundo">
+                        <option value="UnitedStates">🇺🇸 United States</option>
                         <option value="USA">🇺🇸 Estados Unidos</option>
                         <option value="Spain">🇪🇸 España</option>
                         <option value="Canada">🇨🇦 Canadá</option>
@@ -702,6 +704,9 @@ function Auth() {
                       onChange={(e) => setMoneda(e.target.value)}
                       className="w-full bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors p-3"
                     >
+                      <optgroup label="🇺🇸 United States">
+                        <option value="USD">USD — US Dollar ($)</option>
+                      </optgroup>
                       <optgroup label="🌎 Latinoamérica">
                         <option value="DOP">DOP — Peso Dominicano (RD$)</option>
                         <option value="MXN">MXN — Peso Mexicano ($)</option>

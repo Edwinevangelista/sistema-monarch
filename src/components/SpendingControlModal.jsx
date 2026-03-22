@@ -18,7 +18,7 @@ import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 // 🎨 CONSTANTES Y UTILIDADES
 // ═══════════════════════════════════════════════════
 
-const fmt = (v) => `$${Math.round(Number(v || 0)).toLocaleString('es-MX')}`;
+const fmt = (v) => `$${Math.round(Number(v || 0)).toLocaleString('en-US')}`;
 const pct = (v) => `${(Number(v || 0)).toFixed(1)}%`;
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -1257,7 +1257,7 @@ function ConfirmacionGuardado({ motor, retosAceptados, onConfirmar, onCancelar }
   const [nombre, setNombre] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  const mesActual = new Date().toLocaleString('es-MX', { month: 'long' });
+  const mesActual = new Date().toLocaleString('en-US', { month: 'long' });
 
   const handleGuardar = async () => {
     const finalNombre = nombre.trim() || `Plan ${mesActual} ${new Date().getFullYear()}`;

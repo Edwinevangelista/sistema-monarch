@@ -17,7 +17,7 @@ const diasHasta = (fecha) => {
 }
 
 const fmt = (n) =>
-  `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
 export default function PlanTipsWidget({
   activePlan,

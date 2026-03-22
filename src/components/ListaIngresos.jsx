@@ -1,6 +1,7 @@
 // ListaIngresos.jsx — 2026: compacta, últimos 3, modal detalle moderno
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { showConfirm } from '../utils/confirm'
 import {
   ArrowUpRight, Edit2, Trash2, Calendar,
   FileText, Search, X, Filter,
@@ -13,7 +14,7 @@ const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov'
 function fmtFecha(fecha, largo = false) {
   const d = new Date(fecha + 'T00:00:00')
   if (largo) {
-    return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   }
   return `${d.getDate()} ${MESES[d.getMonth()]}`
 }
@@ -156,11 +157,15 @@ function ModalDetalleIngreso({ ingreso, onClose, onEditar, onEliminar }) {
             Editar
           </button>
           <button
-            onClick={() => {
-              if (window.confirm('¿Eliminar este ingreso?')) {
-                onEliminar(ingreso.id)
-                cerrar()
-              }
+            onClick={async () => {
+              const ok = await showConfirm({
+                titulo: 'Delete this income?',
+                mensaje: 'This income record will be permanently removed.',
+                textoConfirmar: 'Delete',
+              });
+              if (!ok) return;
+              onEliminar(ingreso.id);
+              cerrar();
             }}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all touch-manipulation active:scale-[0.97]"
             style={{
@@ -303,7 +308,7 @@ function ModalTodosIngresos({ ingresos, onClose, onEditar, onEliminar }) {
                     const d = new Date(y, m - 1)
                     return (
                       <option key={mes} value={mes}>
-                        {d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                        {d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                       </option>
                     )
                   })}

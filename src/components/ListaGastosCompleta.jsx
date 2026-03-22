@@ -23,7 +23,7 @@ export default function ListaGastosCompleta({
   onPagar,
   onEditar,
 }) {
-  const formatMoney = (n) => `$${Number(n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatMoney = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Helper: Configuración visual por tipo
   const typeConfig = {
@@ -196,7 +196,7 @@ export default function ListaGastosCompleta({
           <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-500 mb-4 pb-4 border-b border-white/5">
             <span>
               {type === ITEM_TYPES.DEUDA && `Mínimo: ${formatMoney(item.pago_minimo)} • Tasa: ${item.interes || 0}%`}
-              {type === ITEM_TYPES.SUSCRIPCION && `Ciclo: ${item.ciclo} • Próximo: ${new Date(item.proximo_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+              {type === ITEM_TYPES.SUSCRIPCION && `Ciclo: ${item.ciclo} • Próximo: ${new Date(item.proximo_pago).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`}
             </span>
           </div>
         )}

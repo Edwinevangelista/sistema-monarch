@@ -153,14 +153,24 @@ const ExportacionDatos = ({
   }, [gastos])
 
   // --- 4. RENDER HELPERS ---
-  const formatCurrency = (amount) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount)
+  const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
   
   const handleExportar = async () => {
     setExportando(true)
-    setTimeout(() => {
-      setResultado({ tipo: 'exito', mensaje: `Exportado a ${formato.toUpperCase()} exitosamente` })
+    setResultado(null)
+    try {
+      const datos = { ingresos, gastos, gastosFijos, suscripciones, deudas, cuentas }
+      if (formato === 'csv')    exportToCSV(datos)
+      if (formato === 'excel')  exportToExcel(datos)
+      if (formato === 'pdf')    generatePDFReport(datos)
+      if (formato === 'json')   exportToJSON(datos)
+      setResultado({ tipo: 'exito', mensaje: `✓ Reporte ${formato.toUpperCase()} descargado exitosamente` })
+    } catch (err) {
+      console.error('Error exportando:', err)
+      setResultado({ tipo: 'error', mensaje: `Error al exportar: ${err.message}` })
+    } finally {
       setExportando(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -418,7 +428,7 @@ const ComparisonCard = ({ title, current, previous, icon, color }) => {
 
 const formatCurrency = (amount) => {
   if (!amount && amount !== 0) return '$0'
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
 }
 
 export default ExportacionDatos

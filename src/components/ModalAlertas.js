@@ -221,7 +221,7 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                         {/* Monto y flecha */}
                         <div className="flex flex-col items-end flex-shrink-0">
                           <span className={`text-lg font-bold ${style.text}`}>
-                            ${Number(alerta.monto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            ${Number(alerta.monto || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                           <ChevronRight className="w-4 h-4 text-gray-500 mt-1" />
                         </div>
@@ -242,7 +242,7 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 text-sm">Total pendiente:</span>
                     <span className="text-xl font-bold text-white">
-                      ${alertas.reduce((sum, a) => sum + Number(a.monto || 0), 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      ${alertas.reduce((sum, a) => sum + Number(a.monto || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

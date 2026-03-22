@@ -18,12 +18,12 @@ function Footer({ className = "" }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Acerca de */}
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">FinTrack App</h3>
+              <h3 className="text-white font-bold text-lg mb-4">FinGuide</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Tu asistente personal de finanzas. Toma el control de tu dinero con inteligencia y simplicidad.
+                Your personal finance assistant. Take control of your money with intelligence and simplicity.
               </p>
               <p className="text-gray-500 text-xs">
-                Versión 1.0.0 • Enero 2026
+                Version 1.0.0 • Jan 2026
               </p>
             </div>
 
@@ -84,9 +84,9 @@ function Footer({ className = "" }) {
           {/* Copyright */}
           <div className="mt-8 pt-8 border-t border-gray-800 text-center">
             <p className="text-gray-500 text-sm">
-              © 2026 FinTrack App. Desarrollado por{' '}
-              <span className="text-white font-semibold">Edwin Evangelista</span>. 
-              Todos los derechos reservados.
+              © 2026 FinGuide. Built by{' '}
+              <span className="text-white font-semibold">Edwin Evangelista</span>.
+              All rights reserved.
             </p>
             <p className="text-gray-600 text-xs mt-2">
               Windsor, Connecticut, USA

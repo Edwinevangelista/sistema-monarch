@@ -6,6 +6,7 @@ import {
   Clock, CheckSquare, RefreshCw,
   ArrowRight, Trophy
 } from 'lucide-react';
+import { showConfirm } from '../utils/confirm';
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados';
 import { supabase } from '../lib/supabaseClient';
 
@@ -218,9 +219,10 @@ function PlanCard2026({ plan, stats, onClick, onDelete, delay }) {
           </div>
 
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              if (window.confirm('¿Eliminar este plan?')) onDelete(plan.id);
+              const ok = await showConfirm({ titulo: 'Delete plan?', mensaje: 'This financial plan will be permanently removed.', textoConfirmar: 'Delete' });
+              if (ok) onDelete(plan.id);
             }}
             className="p-1.5 rounded-xl hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-all shrink-0"
           >
@@ -405,7 +407,7 @@ function ModalPlan2026({ plan, stats, onClose, onDelete, onComplete }) {
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Inicio</span>
-                  <span className="text-white font-bold">{fechaInicio.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>
+                  <span className="text-white font-bold">{fechaInicio.toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-500">Días transcurridos</span>
@@ -479,7 +481,7 @@ function ModalPlan2026({ plan, stats, onClose, onDelete, onComplete }) {
               </div>
             )}
             <button
-              onClick={() => { if (window.confirm('¿Eliminar este plan?')) onDelete(plan.id); }}
+              onClick={async () => { const ok = await showConfirm({ titulo: 'Delete plan?', mensaje: 'This financial plan will be permanently removed.', textoConfirmar: 'Delete' }); if (ok) onDelete(plan.id); }}
               className="py-3 px-4 rounded-2xl text-sm font-bold text-red-400 border border-red-500/25 hover:bg-red-500/10 active:scale-[0.97] transition-all"
             >
               <Trash2 className="w-4 h-4" />

@@ -16,6 +16,7 @@ import {
 import { usePlanExecution } from '../hooks/usePlanExecution';
 import PlanCheckInModal from './PlanCheckInModal';
 import { toast } from 'sonner'
+import { showConfirm } from '../utils/confirm'
 
 export default function PlanExecutionWidget({ 
   activePlan, 
@@ -232,19 +233,23 @@ export default function PlanExecutionWidget({
     
 <button
   onClick={async () => {
-    if (window.confirm('¿Recalcular el plan con los saldos actuales?\n\nEsto ajustará el cronograma de pagos.')) {
-      try {
-        // Forzar recálculo desde el hook
-        if (window.refreshPlanesGlobally) {
-          await window.refreshPlanesGlobally()
-          toast.success('Plan actualizado con los saldos actuales')
-        } else {
-          toast.warning('Recarga la página para actualizar el plan')
-        }
-      } catch (error) {
-        console.error('Error actualizando plan:', error)
-        toast.error('❌ Error al actualizar: ' + error.message)
+    const ok = await showConfirm({
+      titulo: 'Recalculate plan?',
+      mensaje: 'This will update the payment schedule based on your current balances.',
+      textoConfirmar: 'Recalculate',
+      textoCancel: 'Cancel',
+    });
+    if (!ok) return;
+    try {
+      if (window.refreshPlanesGlobally) {
+        await window.refreshPlanesGlobally()
+        toast.success('Plan updated with current balances')
+      } else {
+        toast.warning('Reload the page to update the plan')
       }
+    } catch (error) {
+      console.error('Error actualizando plan:', error)
+      toast.error('❌ Error updating: ' + error.message)
     }
   }}
   className="flex-1 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg text-xs font-semibold transition-all border border-blue-500/30"

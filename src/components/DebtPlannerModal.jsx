@@ -1695,7 +1695,7 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
       <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4 text-center">
         <div className="text-green-300 text-xs uppercase font-bold mb-1">Fecha de libertad</div>
         <div className="text-2xl font-black text-white">
-          {plan.simulation.freedomDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+          {plan.simulation.freedomDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </div>
       </div>
 
@@ -1805,7 +1805,7 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
             <div className="text-white font-semibold">Me comprometo con este plan</div>
             <div className="text-gray-400 text-sm mt-1">
               Pagaré ${plan.monthlyPayment.toLocaleString()} cada mes, ejecutaré las acciones listadas, 
-              y no usaré las tarjetas con deuda. Revisión: {plan.reviewDate?.toLocaleDateString('es-ES')}.
+              y no usaré las tarjetas con deuda. Revisión: {plan.reviewDate?.toLocaleDateString('en-US')}.
             </div>
           </div>
         </div>
@@ -1876,7 +1876,7 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
 
           <div className="bg-white/10 rounded-xl p-3 mb-6 text-left">
             <div className="text-white/70 text-xs">
-              🔒 Este plan quedará sellado hasta: <span className="text-white font-bold">{plan.reviewDate?.toLocaleDateString('es-ES')}</span>
+              🔒 Este plan quedará sellado hasta: <span className="text-white font-bold">{plan.reviewDate?.toLocaleDateString('en-US')}</span>
             </div>
           </div>
 

@@ -45,7 +45,7 @@ export default function CardSuscripcion({ suscripcion, onEditar, onEliminar }) {
         {suscripcion.proximo_pago && (
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <Calendar className="w-4 h-4" />
-            <span>Próximo: {new Date(suscripcion.proximo_pago).toLocaleDateString('es-ES')}</span>
+            <span>Próximo: {new Date(suscripcion.proximo_pago).toLocaleDateString('en-US')}</span>
           </div>
         )}
       </div>

@@ -4,6 +4,13 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Silenciar console.log en producción para proteger datos financieros del usuario
+if (process.env.NODE_ENV === 'production') {
+  console.log = () => {}
+  console.debug = () => {}
+  // console.error y console.warn se mantienen para detectar errores reales
+}
+
 // ✅ Limpiar caches corruptos (arrays vacíos) al arrancar
 const CACHE_KEYS_GASTOS = ['gastos_cache_v2', 'gastos_variables_cache'];
 CACHE_KEYS_GASTOS.forEach(key => {

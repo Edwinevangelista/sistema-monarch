@@ -13,7 +13,8 @@ import PrivacyPolicy from './PrivacyPolicy';
 import FAQ from './FAQ';
 
 import { subscribeToPushFCM, sendTestNotification } from '../lib/subscribeToPushFCM';
-import { toast } from 'sonner'
+import { toast } from 'sonner';
+import { showConfirm } from '../utils/confirm';
 
 export default function ModalUsuario({ 
   onClose, 
@@ -138,7 +139,7 @@ export default function ModalUsuario({
       
       if (authError || !user) {
         console.error('Error obteniendo usuario:', authError);
-        const usuarioLocal = localStorage.getItem('usuario_fintrack');
+        const usuarioLocal = localStorage.getItem('usuario_finguide');
         if (usuarioLocal) {
           setUsuario(JSON.parse(usuarioLocal));
         }
@@ -184,7 +185,7 @@ export default function ModalUsuario({
         pais: datosUsuario.pais,
       });
       
-      localStorage.setItem('usuario_fintrack', JSON.stringify(datosUsuario));
+      localStorage.setItem('usuario_finguide', JSON.stringify(datosUsuario));
 
       if (datosUsuario.moneda) {
         setPreferencias(prev => ({ ...prev, moneda: datosUsuario.moneda }));
@@ -235,7 +236,7 @@ export default function ModalUsuario({
       }
 
       setUsuario(prev => ({ ...prev, ...datosEdicion }));
-      localStorage.setItem('usuario_fintrack', JSON.stringify({ ...usuario, ...datosEdicion }));
+      localStorage.setItem('usuario_finguide', JSON.stringify({ ...usuario, ...datosEdicion }));
 
       toast.success('Perfil actualizado correctamente');
       setModoEdicion(false);
@@ -505,30 +506,38 @@ export default function ModalUsuario({
   };
 
   const handleLogout = async () => {
-    if(window.confirm("¿Estás seguro de cerrar sesión?")) {
-      try {
-        await supabase.auth.signOut();
-        localStorage.removeItem('usuario_fintrack');
-        localStorage.removeItem('preferenciasUsuario');
-        if (onLogout) onLogout();
-      } catch (e) {
-        localStorage.clear();
-        if (onLogout) onLogout();
-      }
+    const ok = await showConfirm({
+      titulo: "Sign out?",
+      mensaje: "You'll need to sign in again to access your financial data.",
+      textoConfirmar: "Sign Out",
+      textoCancel: "Stay",
+    });
+    if (!ok) return;
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('usuario_finguide');
+      localStorage.removeItem('preferenciasUsuario');
+      if (onLogout) onLogout();
+    } catch (e) {
+      localStorage.clear();
+      if (onLogout) onLogout();
     }
   };
 
   const handleCerrarTodasSesiones = async () => {
-    if (window.confirm("¿Cerrar todas las sesiones en otros dispositivos?")) {
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-        localStorage.clear();
-        toast.success('Sesiones cerradas correctamente.');
-        if (onLogout) onLogout();
-      } catch (e) {
-        console.error(e);
-        toast.info('❌ Error: ' + e.message);
-      }
+    const ok = await showConfirm({
+      titulo: "Sign out all devices?",
+      mensaje: "This will end all active sessions across every device. You'll need to sign in again.",
+      textoConfirmar: "Sign Out All",
+    });
+    if (!ok) return;
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+      localStorage.clear();
+      toast.success('All sessions ended.');
+      if (onLogout) onLogout();
+    } catch (e) {
+      toast.error('Error: ' + e.message);
     }
   };
 
@@ -666,7 +675,7 @@ export default function ModalUsuario({
                         )}
                       </div>
                       <div className="text-gray-500 text-xs md:text-sm mt-1">
-                        Miembro desde {new Date(usuario.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })}
+                        Miembro desde {new Date(usuario.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                       </div>
                     </div>
 
@@ -791,7 +800,7 @@ export default function ModalUsuario({
                           <History className="w-4 h-4" /> Último acceso
                         </div>
                         <span className="text-white font-medium">
-                          {usuario.last_sign_in ? new Date(usuario.last_sign_in).toLocaleDateString('es-ES') : 'N/A'}
+                          {usuario.last_sign_in ? new Date(usuario.last_sign_in).toLocaleDateString('en-US') : 'N/A'}
                         </span>
                       </div>
                     </div>

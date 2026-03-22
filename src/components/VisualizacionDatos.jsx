@@ -37,7 +37,7 @@ const RANGOS = [
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt  = (n) => `$${Number(n || 0).toLocaleString('es-DO', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+const fmt  = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 const fmtK = (n) => Math.abs(n) >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${Number(n||0).toFixed(0)}`
 
 // Rango de fechas según selección
@@ -299,7 +299,7 @@ const VisualizacionDatos = ({
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
       doc.setTextColor(180, 180, 200)
-      doc.text(`${rangoLabel}  |  Generado: ${new Date().toLocaleDateString('es-DO')}  |  Periodo: ${metricas.inicio.toLocaleDateString('es-DO')} - ${metricas.fin.toLocaleDateString('es-DO')}`, W/2, 26, { align: 'center' })
+      doc.text(`${rangoLabel}  |  Generado: ${new Date().toLocaleDateString('en-US')}  |  Periodo: ${metricas.inicio.toLocaleDateString('en-US')} - ${metricas.fin.toLocaleDateString('en-US')}`, W/2, 26, { align: 'center' })
 
       doc.setTextColor(100, 100, 150)
       doc.setFontSize(7.5)
@@ -969,7 +969,7 @@ const VisualizacionDatos = ({
         {/* Footer */}
         <div className="px-5 pb-6 pt-3 shrink-0">
           <div className="flex items-center justify-between text-[10px] text-gray-700">
-            <span>{metricas.inicio?.toLocaleDateString('es-DO')} – {metricas.fin?.toLocaleDateString('es-DO')}</span>
+            <span>{metricas.inicio?.toLocaleDateString('en-US')} – {metricas.fin?.toLocaleDateString('en-US')}</span>
             <button onClick={cerrar} className="flex items-center gap-1 text-gray-600 hover:text-gray-400 touch-manipulation transition-colors">
               Cerrar <ChevronRight className="w-3 h-3"/>
             </button>

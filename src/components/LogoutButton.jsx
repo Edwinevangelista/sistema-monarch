@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User } from "lucide-react";
+import { showConfirm } from "../utils/confirm";
 
 export default function LogoutButton() {
   const navigate = useNavigate();
@@ -11,8 +12,14 @@ export default function LogoutButton() {
     setUser(userData);
   }, []);
 
-  const handleLogout = () => {
-    if (!window.confirm("¿Estás seguro de que quieres cerrar sesión?")) return;
+  const handleLogout = async () => {
+    const ok = await showConfirm({
+      titulo: "Sign out?",
+      mensaje: "You'll need to sign in again to access your financial data.",
+      textoConfirmar: "Sign Out",
+      textoCancel: "Stay",
+    });
+    if (!ok) return;
 
     // Limpiar sesión y caches
     localStorage.removeItem("usuario_finguide");

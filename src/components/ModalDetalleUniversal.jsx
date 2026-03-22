@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { showConfirm } from '../utils/confirm'
 import { ITEM_TYPES } from '../constants/itemTypes'
 import {
   X,
@@ -59,11 +60,11 @@ export default function ModalDetalleUniversal({
   }
 
   const fmtMonto = (n) =>
-    `$${Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   const fmtFechaCorta = (fechaStr) => {
     if (!fechaStr) return null
-    return new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+    return new Date(fechaStr + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
   const getDiaSemana = (fechaStr) => {
@@ -301,7 +302,17 @@ export default function ModalDetalleUniversal({
           {isSuscripcionPagada ? (
             <>
               <button
-                onClick={() => { if (window.confirm('¿Deshacer el pago?\n\nEsto devolverá el dinero a tu cuenta y ajustará la fecha de próximo pago.')) { onClose(); window.deshacerPagoSuscripcion?.(item, type) } }}
+                onClick={async () => {
+                  const ok = await showConfirm({
+                    titulo: 'Undo payment?',
+                    mensaje: 'This will return the amount to your account and adjust the next payment date.',
+                    textoConfirmar: 'Undo Payment',
+                    textoCancel: 'Keep it',
+                  });
+                  if (!ok) return;
+                  onClose();
+                  window.deshacerPagoSuscripcion?.(item, type);
+                }}
                 disabled={isPagando}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 rounded-xl font-medium transition-all border border-red-900/30 active:scale-95"
               >
@@ -443,7 +454,7 @@ export default function ModalDetalleUniversal({
       ? Math.round((new Date(fechaLimitePago) - new Date()) / (1000 * 60 * 60 * 24))
       : null
     const fmtFecha = (f) => f
-      ? new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: '2-digit' })
+      ? new Date(f).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: '2-digit' })
       : null
 
     // ── Historial: tabs y filtro por mes ──────────────────────
@@ -695,7 +706,7 @@ export default function ModalDetalleUniversal({
               <div className="flex items-center gap-2 mb-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                 {mesesDisponibles.map(mes => {
                   const [a, m] = mes.split('-')
-                  const label = new Date(Number(a), Number(m) - 1).toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })
+                  const label = new Date(Number(a), Number(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
                   return (
                     <button key={mes}
                       onClick={() => setMesFiltro(mes)}

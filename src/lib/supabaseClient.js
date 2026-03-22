@@ -11,12 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('- REACT_APP_SUPABASE_ANON_KEY')
 }
 
+// No se especifica `storage` — el SDK usa localStorage por defecto en web
+// y es compatible con Capacitor nativo (no usa window directamente)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storage: window.localStorage
   }
 })
 

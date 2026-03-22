@@ -2,9 +2,9 @@ import { Calendar, TrendingUp } from 'lucide-react';
 
 export default function InfoMes() {
   const hoy = new Date();
-  const nombreMes = hoy.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const nombreMes = hoy.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const diaMes = hoy.getDate();
-  const nombreDia = hoy.toLocaleDateString('es-ES', { weekday: 'long' });
+  const nombreDia = hoy.toLocaleDateString('en-US', { weekday: 'long' });
   
   const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
   const diasRestantes = ultimoDiaMes - diaMes;

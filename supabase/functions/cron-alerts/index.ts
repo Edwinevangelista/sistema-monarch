@@ -74,7 +74,7 @@ serve(async (req) => {
 
     // 2. GASTOS FIJOS CON AUTOPAGO (vencen en ≤ 3 días)
     const gfRes = await fetch(
-      `${PROJECT_URL}/rest/v1/gastos_fijos?select=nombre,monto,dia_venc&user_id=eq.${userId}&autopago=eq.true`,
+      `${PROJECT_URL}/rest/v1/gastos_fijos?select=nombre,monto,dia_venc&user_id=eq.${userId}&auto_pago=eq.true`,
       { headers }
     );
     const gastosFijos: any[] = await gfRes.json();

@@ -63,6 +63,7 @@ import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 import VisualizacionDatos from './VisualizacionDatos'
 import OnboardingModal from './OnboardingModal'
 import TourNuevoUsuario, { useTourNuevoUsuario } from './TourNuevoUsuario'
+import ModalUpgrade from './ModalUpgrade'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -73,6 +74,7 @@ import { toast } from 'sonner'
 import {
   obtenerDatosFiltrados
 } from '../utils/filtrosInteligentes'
+import { showConfirm } from '../utils/confirm'
 
 const FILTRO_TIPOS = {
   MES_ACTUAL: 'MES_ACTUAL',
@@ -112,6 +114,7 @@ export default function DashboardCompleto()  {
     return !localStorage.getItem('onboarding_completado')
   })
 
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
@@ -366,49 +369,38 @@ useEffect(() => {
 }, []) // Solo al montar
 
 // --- EFECTOS DE SINCRONIZACIÓN ---
-// ✅ CORREGIDO: Se eliminó "if (x.length > 0)" para no bloquear sync cuando
-// el hook devuelve un array vacío o cuando el primer registro viene del servidor.
+// Once the initial fetch completes (loading=false), always sync — even empty arrays.
+// This ensures UI clears when the user deletes their last record.
 useEffect(() => {
-  if (ingresos.length > 0) {
-    setIngresosInstant(ingresos);
-    localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos));
-  }
-}, [ingresos]);
+  if (ingresosLoading) return // skip during initial fetch
+  setIngresosInstant(ingresos)
+  localStorage.setItem('ingresos_cache_v2', JSON.stringify(ingresos))
+}, [ingresos, ingresosLoading])
 
 useEffect(() => {
-  // Solo sincronizar cuando el hook tiene datos reales
-  // NUNCA sobreescribir con [] — eso causa el race condition con la carga directa
   if (!Array.isArray(gastos) || gastosLoading) return
-  if (gastos.length > 0) {
-    setGastosInstant(gastos)
-    localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
-  }
-  // Si hook devuelve [] → no hacer nada, la carga directa al montar ya lo maneja
-}, [gastos, gastosLoading]);
+  setGastosInstant(gastos)
+  localStorage.setItem('gastos_cache_v2', JSON.stringify(gastos))
+}, [gastos, gastosLoading])
 
 useEffect(() => {
-    if (gastosFijos.length > 0) {
-      setGastosFijosInstant(gastosFijos);
-      localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos));
-    }
-  }, [gastosFijos]);
+  // gastosFijos hook has no loading flag; skip only if undefined (pre-mount)
+  if (!Array.isArray(gastosFijos)) return
+  setGastosFijosInstant(gastosFijos)
+  localStorage.setItem('gastos_fijos_cache_v2', JSON.stringify(gastosFijos))
+}, [gastosFijos])
 
 useEffect(() => {
-    if (suscripciones.length > 0) {
-      setSuscripcionesInstant(suscripciones);
-      localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones));
-    }
-  }, [suscripciones]);
+  if (!Array.isArray(suscripciones)) return
+  setSuscripcionesInstant(suscripciones)
+  localStorage.setItem('suscripciones_cache_v2', JSON.stringify(suscripciones))
+}, [suscripciones])
 
 useEffect(() => {
-  // Sincronizar deudas del hook → estado instant
-  // Pero si acabamos de hacer un update optimista, los datos del servidor
-  // pueden tardar un ciclo: siempre aplicar si hay datos frescos del servidor
-  if (Array.isArray(deudas) && deudas.length > 0) {
-    setDeudasInstant(deudas);
-    localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas));
-  }
-}, [deudas]);
+  if (deudasLoading || !Array.isArray(deudas)) return
+  setDeudasInstant(deudas)
+  localStorage.setItem('deudas_cache_v2', JSON.stringify(deudas))
+}, [deudas, deudasLoading])
 
 useEffect(() => {
   if (Array.isArray(pagos) && pagos.length > 0) {
@@ -611,9 +603,14 @@ useEffect(() => {
     }
   }
 
-  const handleEliminarUnificado = (item, type) => {
-    const confirmMsg = `¿Estás seguro de eliminar este ${type === 'deuda' ? 'registro de deuda' : type === 'fijo' ? 'gasto fijo' : type === 'suscripcion' ? 'servicio' : 'gasto'}?`
-    if (!window.confirm(confirmMsg)) return
+  const handleEliminarUnificado = async (item, type) => {
+    const typeLabel = type === 'deuda' ? 'debt record' : type === 'fijo' ? 'fixed expense' : type === 'suscripcion' ? 'subscription' : 'expense';
+    const ok = await showConfirm({
+      titulo: `Delete ${typeLabel}?`,
+      mensaje: 'This record will be permanently removed from your financial history.',
+      textoConfirmar: 'Delete',
+    });
+    if (!ok) return
 
     if (type === ITEM_TYPES.SUSCRIPCION) {
       handleEliminarSuscripcion(item.id)
@@ -720,7 +717,7 @@ useEffect(() => {
         console.log('✅ Movimiento guardado en BD:', data.id)
         guardarEnLocalStorage({
           ...data,
-          fecha: new Date(data.created_at).toLocaleString('es-MX'),
+          fecha: new Date(data.created_at).toLocaleString('en-US'),
           ref: data.descripcion
         })
       }
@@ -736,7 +733,7 @@ useEffect(() => {
       const movimientoConFecha = {
         ...movimiento,
         id: movimiento.id || Date.now(),
-        fecha: movimiento.fecha || new Date().toLocaleString('es-MX', { 
+        fecha: movimiento.fecha || new Date().toLocaleString('en-US', { 
           day: '2-digit', 
           month: 'short', 
           hour: '2-digit', 
@@ -1050,18 +1047,14 @@ const handleDeshacerPago = useCallback(async (item, type) => {
   }
 
   // Confirmar con el usuario
-  const confirmar = window.confirm(
-    `¿Deshacer el pago de "${item.servicio}"?\n\n` +
-    `• Se devolverá $${Number(item.costo).toFixed(2)} a la cuenta\n` +
-    `• La fecha de próximo pago retrocederá\n` +
-    `• Se eliminará el registro del historial\n\n` +
-    `⚠️ Esta acción no se puede deshacer automáticamente.`
-  );
+  const confirmar = await showConfirm({
+    titulo: `Undo payment for "${item.servicio}"?`,
+    mensaje: `$${Number(item.costo).toFixed(2)} will be returned to your account and the payment record will be removed. This cannot be automatically reversed.`,
+    textoConfirmar: 'Undo Payment',
+    textoCancel: 'Keep It',
+  });
 
-  if (!confirmar) {
-    console.log('❌ Usuario canceló la operación');
-    return;
-  }
+  if (!confirmar) return;
 
   try {
     console.log('🚀 Ejecutando deshacer pago...');
@@ -1167,12 +1160,16 @@ const handleDeshacerPago = useCallback(async (item, type) => {
   }
 
   const handleEliminarSuscripcion = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar esta suscripción?')) {
+    const ok = await showConfirm({
+      titulo: 'Delete subscription?',
+      mensaje: 'This subscription will be removed. You can always add it back later.',
+      textoConfirmar: 'Delete',
+    });
+    if (ok) {
       try {
         await deleteSuscripcion(id);
       } catch (error) {
-        console.error('Error al eliminar suscripción:', error);
-        toast.error('Error al eliminar la suscripción');
+        toast.error('Error deleting subscription');
       }
     }
   }
@@ -1401,6 +1398,13 @@ if (planDeudaActivo) {
     return () => window.removeEventListener('openExport', handleOpenExportEvent)
   }, [])
 
+  // Listen for PremiumGate upgrade events
+  useEffect(() => {
+    const handler = () => setShowUpgrade(true)
+    window.addEventListener('open-upgrade-modal', handler)
+    return () => window.removeEventListener('open-upgrade-modal', handler)
+  }, [])
+
   // 📅 FILTRO VISUAL: MOSTRAR SOLO DATOS DEL MES ACTUAL
 // DATOS FILTRADOS CON LÓGICA DE TRANSICIÓN
 const ingresosDelMes = datosFiltradosInteligentes.ingresos
@@ -1522,7 +1526,7 @@ useEffect(() => {
     const ahora = new Date();
     const hoyLocal = ahora.toISOString().split('T')[0];
     
-    console.log(`🔄 Ejecutando verificación de autopagos: ${ahora.toLocaleTimeString('es-MX')}`);
+    console.log(`🔄 Ejecutando verificación de autopagos: ${ahora.toLocaleTimeString('en-US')}`);
     
     // ✅ OBTENER REGISTRO DE PAGOS YA EJECUTADOS HOY
     const registroHoy = getAutopagosHoy();
@@ -2461,7 +2465,7 @@ const dataGraficaDona = useMemo(() =>
                   for (let i = 0; i < 12; i++) {
                     const d = new Date(ahoraH.getFullYear(), ahoraH.getMonth() - i, 1)
                     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-                    const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
+                    const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                     mesesDisponibles.push({ key, label })
                   }
 
@@ -2512,17 +2516,17 @@ const dataGraficaDona = useMemo(() =>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5 text-center">
                           <p className="text-[10px] text-rose-400 font-bold uppercase mb-0.5">Variables</p>
-                          <p className="text-sm font-black text-rose-300">${totalVariables.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-sm font-black text-rose-300">${totalVariables.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                           <p className="text-[10px] text-gray-600">{gastosDelPeriodo.length} gastos</p>
                         </div>
                         <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-2.5 text-center">
                           <p className="text-[10px] text-orange-400 font-bold uppercase mb-0.5">Fijos</p>
-                          <p className="text-sm font-black text-orange-300">${totalFijos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-sm font-black text-orange-300">${totalFijos.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                           <p className="text-[10px] text-gray-600">{gastosFijosDelPeriodo.length} fijos</p>
                         </div>
                         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-2.5 text-center">
                           <p className="text-[10px] text-blue-400 font-bold uppercase mb-0.5">Pagos</p>
-                          <p className="text-sm font-black text-blue-300">${totalPagos.toLocaleString('es-MX', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-sm font-black text-blue-300">${totalPagos.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                           <p className="text-[10px] text-gray-600">{pagosDelPeriodo.length} pagos</p>
                         </div>
                       </div>
@@ -2540,7 +2544,7 @@ const dataGraficaDona = useMemo(() =>
                                     <p className="text-[10px] text-gray-500">Día {gf.dia_venc} · {gf.estadoPeriodo}</p>
                                   </div>
                                 </div>
-                                <span className={`text-sm font-bold shrink-0 ${gf.estadoPeriodo === 'Pagado' ? 'text-green-400' : 'text-orange-300'}`}>${Number(gf.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                                <span className={`text-sm font-bold shrink-0 ${gf.estadoPeriodo === 'Pagado' ? 'text-green-400' : 'text-orange-300'}`}>${Number(gf.monto||0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                               </div>
                             ))}
                           </div>
@@ -2557,7 +2561,7 @@ const dataGraficaDona = useMemo(() =>
                                   <p className="text-sm text-white font-medium truncate">{g.descripcion || g.categoria}</p>
                                   <p className="text-[10px] text-gray-500">{g.fecha} · {g.metodo || g.categoria}</p>
                                 </div>
-                                <span className="text-sm font-bold text-rose-300 shrink-0">${Number(g.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                                <span className="text-sm font-bold text-rose-300 shrink-0">${Number(g.monto||0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                               </div>
                             ))}
                           </div>
@@ -2576,7 +2580,7 @@ const dataGraficaDona = useMemo(() =>
                                     <p className="text-sm text-white font-medium truncate">{deuda?.cuenta || 'Tarjeta'}</p>
                                     <p className="text-[10px] text-gray-500">{p.fecha} · {p.tipo === 'minimo' ? 'Pago mínimo' : p.tipo === 'total' ? 'Pago total' : 'Abono'}</p>
                                   </div>
-                                  <span className="text-sm font-bold text-blue-300 shrink-0">${Number(p.monto||0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}</span>
+                                  <span className="text-sm font-bold text-blue-300 shrink-0">${Number(p.monto||0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               )
                             })}
@@ -2773,13 +2777,13 @@ const dataGraficaDona = useMemo(() =>
 
                 const fmtMes = (mes) => {
                   const [a, m] = mes.split('-')
-                  return new Date(Number(a), Number(m) - 1).toLocaleDateString('es-MX', { month: 'short', year: '2-digit' })
+                  return new Date(Number(a), Number(m) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
                 }
                 const fmtFechaCorta = (f) => f
-                  ? new Date(f).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+                  ? new Date(f).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
                   : ''
                 const fmtMonto2 = (n) =>
-                  `$${Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
                 return (
                   <div key={deuda.id}>
@@ -2787,7 +2791,12 @@ const dataGraficaDona = useMemo(() =>
                       deuda={deuda}
                       onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
                       onEliminar={async () => {
-                        if (window.confirm(`¿Eliminar ${deuda.cuenta}?`)) {
+                        const ok = await showConfirm({
+                          titulo: `Delete "${deuda.cuenta}"?`,
+                          mensaje: 'This debt record will be permanently removed.',
+                          textoConfirmar: 'Delete',
+                        });
+                        if (ok) {
                           await deleteDebt(deuda.id)
                           setDeudasInstant(prev => {
                             const updated = prev.filter(d => d.id !== deuda.id)
@@ -3021,6 +3030,12 @@ const dataGraficaDona = useMemo(() =>
         .animate-bounce-in { animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .slide-in-from-bottom-10 { animation: slide-in-from-bottom-10 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
+
+      {/* ── UPGRADE MODAL ── */}
+      <ModalUpgrade
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+      />
 
       {/* ── ONBOARDING (solo nuevos usuarios) ── */}
       {showOnboarding && (

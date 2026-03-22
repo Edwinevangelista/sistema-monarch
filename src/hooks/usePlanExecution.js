@@ -337,7 +337,7 @@ function getSmartNotifications(plan, financialHealth, showLocalNotification, get
       {
         title: "Tu progreso importa",
         body: montoPago > 0
-          ? `Si pagaste ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(montoPago)} este mes, vas por buen camino. No pares.`
+          ? `Si pagaste ${new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(montoPago)} este mes, vas por buen camino. No pares.`
           : `Cada peso extra que pagues reduce los intereses que debes.`
       },
       // 3 Miercoles: consejo de ahorro
@@ -354,7 +354,7 @@ function getSmartNotifications(plan, financialHealth, showLocalNotification, get
       {
         title: "Fin de semana: evalua tu semana",
         body: totalOriginal > 0
-          ? `Tu meta total del plan: ${new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(totalOriginal)}. Cada pago te acerca mas.`
+          ? `Tu meta total del plan: ${new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(totalOriginal)}. Cada pago te acerca mas.`
           : `Revisa tu progreso en el plan y celebra cada avance.`
       },
       // 6 Sabado: habito de revision

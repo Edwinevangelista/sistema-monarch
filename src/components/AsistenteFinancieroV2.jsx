@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 // --- CONSTANTES ---
-const formatMoney = (v) => `$${Number(v || 0).toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
+const formatMoney = (v) => `$${Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 const formatPct = (v) => `${(Number(v || 0) * 100).toFixed(1)}%`;
 
 const PROMEDIOS_NACIONALES = {
@@ -448,7 +448,7 @@ export default function AsistenteFinancieroV2({
     if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
     
     analysisTimeoutRef.current = setTimeout(() => {
-      setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+      setUltimoAnalisis(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
       if (showLocalNotification) showLocalNotification(`✨ Análisis actualizado`, 'success');
       setLoading(false);
       setTimeout(() => setShowAnalysisAnimation(false), 500);
@@ -459,7 +459,7 @@ export default function AsistenteFinancieroV2({
   useEffect(() => {
     if (!hasInitialized.current && (ingresos.length || gastosFijos.length || gastosVariables.length)) {
       hasInitialized.current = true;
-      const timer = setTimeout(() => setUltimoAnalisis(new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })), 500);
+      const timer = setTimeout(() => setUltimoAnalisis(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })), 500);
       return () => clearTimeout(timer);
     }
   }, [ingresos.length, gastosFijos.length, gastosVariables.length]);
@@ -1489,7 +1489,7 @@ function TarjetaLibertad({ prediccionLibertad, kpis }) {
             <div className="flex items-center justify-end gap-1 mb-1">
               <Calendar className="w-3 h-3 text-gray-500" />
               <span className="text-[11px] text-gray-400">
-                {fechaLibertad.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}
+                {fechaLibertad.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </span>
             </div>
           )}

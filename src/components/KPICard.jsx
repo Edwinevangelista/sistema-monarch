@@ -3,7 +3,7 @@ import React from 'react'
 const KPICard = ({ icon, label, value, color, formatAsCurrency = true }) => {
   const formatValue = (val) => {
     if (formatAsCurrency) {
-      return `$${Math.abs(val).toLocaleString('es-MX')}`
+      return `$${Math.abs(val).toLocaleString('en-US')}`
     }
     return `${(val * 100).toFixed(1)}%`
   }
