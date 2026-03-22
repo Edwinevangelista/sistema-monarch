@@ -120,7 +120,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
               <p className="text-gray-400 text-xs">Cancel anytime • No hidden fees</p>
             </div>
             <div className="text-right">
-              <p className="text-white font-black text-2xl">$4.99</p>
+              <p className="text-white font-black text-2xl">$6.99</p>
               <p className="text-gray-500 text-xs">/month</p>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             ) : (
               <Crown className="w-5 h-5" />
             )}
-            {checkoutLoading ? 'Opening checkout...' : 'Subscribe — $4.99/mo'}
+            {checkoutLoading ? 'Opening checkout...' : 'Subscribe — $6.99/mo'}
           </button>
 
           {/* Trial CTA — only if not used */}

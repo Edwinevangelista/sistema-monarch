@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FinGuide</string>
+    <string name="title_activity_main">FinGuide</string>
+    <string name="package_name">com.finguide.app</string>
+    <string name="custom_url_scheme">com.finguide.app</string>
+</resources>

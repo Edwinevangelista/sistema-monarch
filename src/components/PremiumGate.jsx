@@ -75,7 +75,7 @@ export default function PremiumGate({ feature, currentCount, onUpgrade, children
         className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-amber-900/30"
       >
         <Crown className="w-5 h-5" />
-        Upgrade to Premium — $4.99/mo
+        Upgrade to Premium — $6.99/mo
       </button>
     </div>
   )
