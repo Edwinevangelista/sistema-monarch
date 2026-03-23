@@ -2014,25 +2014,98 @@ const dataGraficaDona = useMemo(() =>
 )
 
   // --- LÓGICA DE INTELIGENCIA FINANCIERA ---
-  const financialHealth = useMemo(() => {
-    let score = 60;
-    const tasaAhorroNum = (totalIngresos - totalGastosReales) / (totalIngresos ||1);
-    const deudaTotal = deudasInstant.reduce((sum, d) => sum + (d.saldo || 0), 0);
-    
-    if (tasaAhorroNum > 0.2) score += 20;
-    else if (tasaAhorroNum > 0.1) score += 10;
-    else score -= 10;
-    
-    if (deudaTotal > totalIngresos * 3) score -= 20;
-    
-    return Math.max(0, Math.min(100, score));
-  }, [totalIngresos, totalGastosReales, deudasInstant]);
 
+  // ── PATRIMONIO NETO = activos bancarios - deudas totales ─────────
+  const netWorth = useMemo(() => {
+    const totalActivos = cuentas.reduce((sum, c) => sum + Number(c.balance || 0), 0)
+    const totalPasivos = deudasInstant.reduce((sum, d) => sum + Number(d.saldo || 0), 0)
+    return totalActivos - totalPasivos
+  }, [cuentas, deudasInstant])
+
+  // ── DTI mensual = pagos mínimos / ingreso mensual ───────────────
+  // Regla: <20% excelente, 20-36% aceptable, >43% peligro
+  const dti = useMemo(() => {
+    if (!totalIngresos) return 0
+    const pagosMensuales = deudasInstant.reduce((sum, d) => sum + Number(d.pago_minimo || 0), 0)
+    return Math.round((pagosMensuales / totalIngresos) * 100)
+  }, [deudasInstant, totalIngresos])
+
+  // ── REGLA 50/30/20 ───────────────────────────────────────────────
+  // Necesidades: gastos fijos + pagos mínimos de deuda
+  // Deseos: gastos variables + suscripciones
+  // Ahorro: lo que sobra (meta ≥ 20%)
+  const regla503020 = useMemo(() => {
+    if (!totalIngresos) return { necesidades: 0, deseos: 0, ahorro: 0 }
+    const pagosMensualesDeuda = deudasInstant.reduce((s, d) => s + Number(d.pago_minimo || 0), 0)
+    const necesidades = totalGastosFijosReales + pagosMensualesDeuda
+    const deseos = totalGastosVariablesReales + totalSuscripcionesReales
+    const ahorro = Math.max(0, totalIngresos - necesidades - deseos)
+    return {
+      necesidades: Math.round((necesidades / totalIngresos) * 100),
+      deseos: Math.round((deseos / totalIngresos) * 100),
+      ahorro: Math.round((ahorro / totalIngresos) * 100),
+    }
+  }, [totalIngresos, totalGastosFijosReales, totalGastosVariablesReales, totalSuscripcionesReales, deudasInstant])
+
+  // ── FINANCIAL HEALTH SCORE — 5 factores profesionales ───────────
+  // Antes: arrancaba en 60 (falso positivo) y solo medía 2 cosas.
+  // Ahora: arranca en 50 (neutral) con 5 factores estándar de finanzas.
+  const financialHealth = useMemo(() => {
+    let score = 50 // Punto neutral — hay que ganarse cada punto
+
+    // Factor 1: Tasa de ahorro (0-25 pts)
+    const tasaAhorro = totalIngresos > 0 ? (totalIngresos - totalGastosReales) / totalIngresos : 0
+    if (tasaAhorro >= 0.20) score += 25       // Excelente: ahorra ≥20%
+    else if (tasaAhorro >= 0.10) score += 15  // Bueno: ahorra 10-19%
+    else if (tasaAhorro >= 0.05) score += 5   // Mínimo: ahorra 5-9%
+    else if (tasaAhorro < 0) score -= 15      // Gasta más de lo que gana
+
+    // Factor 2: DTI mensual (0-15 pts)
+    const dtiLocal = totalIngresos > 0
+      ? deudasInstant.reduce((s, d) => s + Number(d.pago_minimo || 0), 0) / totalIngresos
+      : 0
+    if (dtiLocal <= 0.20) score += 15        // Excelente: ≤20%
+    else if (dtiLocal <= 0.36) score += 8    // Aceptable: 20-36%
+    else if (dtiLocal > 0.43) score -= 15    // Peligro: >43% (bancos rechazan préstamos)
+
+    // Factor 3: Deuda total vs ingreso ANUAL (0-15 pts)
+    // Error anterior: comparaba deuda contra ingreso mensual × 3 (muy permisivo)
+    const ingresoAnual = totalIngresos * 12
+    const deudaTotal = deudasInstant.reduce((s, d) => s + Number(d.saldo || 0), 0)
+    if (deudaTotal === 0) score += 15
+    else if (deudaTotal < ingresoAnual * 0.36) score += 10 // Deuda manejable
+    else if (deudaTotal < ingresoAnual) score += 5         // Deuda elevada
+    else score -= 10                                        // Deuda > ingreso anual
+
+    // Factor 4: Gastos fijos como % del ingreso (0-10 pts)
+    const pctFijos = totalIngresos > 0
+      ? (totalGastosFijosReales + totalSuscripcionesReales) / totalIngresos
+      : 1
+    if (pctFijos <= 0.50) score += 10       // Saludable: compromisos ≤50% ingresos
+    else if (pctFijos <= 0.70) score += 5   // Ajustado
+    else score -= 10                         // Peligro: compromisos >70%
+
+    // Factor 5: Suscripciones no excesivas (0-5 pts)
+    const pctSubs = totalIngresos > 0 ? totalSuscripcionesReales / totalIngresos : 0
+    if (pctSubs <= 0.05) score += 5         // Controlado: subs ≤5% ingresos
+    else if (pctSubs > 0.10) score -= 5     // Excesivo: subs >10% ingresos
+
+    return Math.max(0, Math.min(100, Math.round(score)))
+  }, [totalIngresos, totalGastosReales, totalGastosFijosReales, totalSuscripcionesReales, deudasInstant])
+
+  // ── DAILY BUDGET corregido — descuenta gastos fijos pendientes ───
+  // Antes: dividía todo el saldo sin considerar qué falta por pagar.
+  // Ahora: descuenta gastos fijos aún sin pagar que vencen este mes.
   const dailyBudget = useMemo(() => {
-    const diasRestantes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate() - hoy.getDate() + 1;
-    if (saldoReal <= 0 || diasRestantes <= 0) return 0;
-    return Math.floor(saldoReal / diasRestantes);
-  }, [saldoReal, hoy]);
+    const diasRestantes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate() - hoy.getDate() + 1
+    if (diasRestantes <= 0) return 0
+    const fijosPendientes = gastosFijosInstant
+      .filter(gf => gf.estado !== 'Pagado' && Number(gf.dia_venc || 0) >= hoy.getDate())
+      .reduce((sum, gf) => sum + Number(gf.monto || 0), 0)
+    const saldoDisponible = saldoReal - fijosPendientes
+    if (saldoDisponible <= 0) return 0
+    return Math.floor(saldoDisponible / diasRestantes)
+  }, [saldoReal, hoy, gastosFijosInstant])
 
   const { textoHora, frase } = useMemo(() => {
     const hora = new Date().getHours()
@@ -2060,7 +2133,10 @@ const dataGraficaDona = useMemo(() =>
     tasaAhorro: parseFloat(tasaAhorroReal || 0) / 100,
     totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.saldo), 0),
     financialHealth,
-    dailyBudget
+    dailyBudget,
+    netWorth,
+    dti,
+    regla503020,
   }
 
   // ============================================
@@ -2127,6 +2203,55 @@ const dataGraficaDona = useMemo(() =>
         hoy={hoy}
       />
 
+
+      {/* ── MÉTRICAS FINANCIERAS CLAVE ─────────────────────────────── */}
+      {/* Patrimonio Neto · DTI · Tasa de Ahorro — visibles de un vistazo */}
+      <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
+        <div className="grid grid-cols-3 gap-2">
+
+          {/* PATRIMONIO NETO */}
+          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">Patrimonio</p>
+            <p className={`text-sm font-black tabular-nums ${netWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {netWorth >= 0 ? '+' : ''}
+              {Math.abs(netWorth) >= 10000
+                ? `$${(netWorth / 1000).toFixed(1)}K`
+                : `$${netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+            </p>
+            <p className="text-[9px] text-gray-600 mt-0.5">activos − deudas</p>
+          </div>
+
+          {/* DTI — Debt-to-Income ratio */}
+          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">DTI</p>
+            <p className={`text-sm font-black tabular-nums ${
+              dti === 0 ? 'text-gray-400'
+              : dti <= 20 ? 'text-emerald-400'
+              : dti <= 36 ? 'text-yellow-400'
+              : 'text-red-400'
+            }`}>
+              {dti}%
+            </p>
+            <p className="text-[9px] text-gray-600 mt-0.5">
+              {dti === 0 ? 'sin deudas' : dti <= 20 ? 'excelente' : dti <= 36 ? 'aceptable' : 'alto ⚠️'}
+            </p>
+          </div>
+
+          {/* TASA DE AHORRO (Regla 50/30/20) */}
+          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">Ahorro</p>
+            <p className={`text-sm font-black tabular-nums ${
+              regla503020.ahorro >= 20 ? 'text-emerald-400'
+              : regla503020.ahorro >= 10 ? 'text-yellow-400'
+              : 'text-red-400'
+            }`}>
+              {regla503020.ahorro}%
+            </p>
+            <p className="text-[9px] text-gray-600 mt-0.5">meta ≥ 20%</p>
+          </div>
+
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
