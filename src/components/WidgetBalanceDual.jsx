@@ -111,7 +111,7 @@ const WidgetBalanceDual = ({
                       : 'text-gray-400 hover:text-gray-200'
                   }`}
                 >
-                  {v === 'real' ? 'HOY' : 'MES'}
+                  {v === 'real' ? 'Actual' : 'Proyectado'}
                 </button>
               ))}
             </div>
@@ -119,14 +119,18 @@ const WidgetBalanceDual = ({
             {/* Indicador de días */}
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <div className={`w-1.5 h-1.5 rounded-full ${colorConfig.dotColor} animate-pulse`} />
-              <span className="font-medium">{infoContextual.diasTranscurridos}/{infoContextual.diasTotales}d</span>
+              <span className="font-medium">
+                {vistaActiva === 'real'
+                  ? `Día ${infoContextual.diasTranscurridos} de ${infoContextual.diasTotales}`
+                  : `${infoContextual.diasRestantes}d restantes`}
+              </span>
             </div>
           </div>
 
           {/* ── ROW 2: Balance principal ── */}
           <div className="mb-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 mb-1.5">
-              {colorConfig.label} {vistaActiva === 'proyectado' && '· Proyección'}
+              {colorConfig.label} {vistaActiva === 'proyectado' ? '· al cierre del mes' : `· hasta hoy (día ${hoy.getDate()})`}
             </p>
             <div className="flex items-end gap-3 flex-wrap">
               <span
@@ -287,9 +291,9 @@ const WidgetBalanceDual = ({
           {mostrarDetalles && (
             <div className="mt-3 pt-3 border-t border-white/6 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
               {[
-                { label: 'Variables', valor: datosActivos.gastosVariables, gradColor: 'from-rose-400 to-red-500', textColor: 'text-rose-400' },
-                { label: 'Fijos', valor: datosActivos.gastosFijos, gradColor: 'from-amber-400 to-orange-500', textColor: 'text-amber-400' },
-                { label: 'Suscripciones', valor: datosActivos.suscripciones, gradColor: 'from-violet-400 to-indigo-500', textColor: 'text-violet-400' },
+                { label: '🛍️ Día a día', valor: datosActivos.gastosVariables, gradColor: 'from-rose-400 to-red-500', textColor: 'text-rose-400' },
+                { label: '🏠 Gastos fijos', valor: datosActivos.gastosFijos, gradColor: 'from-amber-400 to-orange-500', textColor: 'text-amber-400' },
+                { label: '🔄 Suscripciones', valor: datosActivos.suscripciones, gradColor: 'from-violet-400 to-indigo-500', textColor: 'text-violet-400' },
               ].map(({ label, valor, gradColor, textColor }) => {
                 const pct = datosActivos.totalGastos > 0
                   ? Math.round(((valor || 0) / datosActivos.totalGastos) * 100)
