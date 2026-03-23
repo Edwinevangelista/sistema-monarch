@@ -60,6 +60,7 @@ import ModalAlertas from './ModalAlertas'
 import ModalCoberturaCuentas from './ModalCoberturaCuentas'
 import PanelSaludFinanciera from './PanelSaludFinanciera'
 import ComparativoMensual from './ComparativoMensual'
+import PresupuestoCategorias from './PresupuestoCategorias'
 import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
@@ -2212,6 +2213,9 @@ const dataGraficaDona = useMemo(() =>
 
       {/* ── COMPARATIVO MENSUAL — este mes vs mes anterior ─────────── */}
       <ComparativoMensual ingresos={ingresosInstant} gastos={gastosInstant} />
+
+      {/* ── PRESUPUESTO POR CATEGORÍA ──────────────────────────────── */}
+      <PresupuestoCategorias gastos={gastosInstant} />
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
