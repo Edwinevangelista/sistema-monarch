@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.finguide.app',
+  appId: 'com.finguide.financeapp',
   appName: 'FinGuide',
   webDir: 'build',
   bundledWebRuntime: false,
