@@ -3179,11 +3179,27 @@ const dataGraficaDona = useMemo(() =>
 function ModalWrapper({ show, onClose, children }) {
   if (!show) return null
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-      <div className="bg-gray-900 w-full md:max-w-lg max-h-[calc(100dvh-3.5rem)] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/10 animate-slide-in-from-bottom-10">
-        <div className="flex justify-end p-4 border-b border-white/5 md:hidden">
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-2"><X className="w-6 h-6" /></button>
+    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
+      <div
+        className="relative w-full md:max-w-lg max-h-[calc(100dvh-3.5rem)] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/12 animate-in slide-in-from-bottom-10 duration-300"
+        style={{
+          background: 'linear-gradient(160deg, rgba(17,24,39,0.97) 0%, rgba(9,9,11,0.97) 100%)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}
+      >
+        {/* Shimmer top line */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+        {/* Drag handle mobile */}
+        <div className="flex justify-center pt-3 pb-1 md:hidden">
+          <div className="w-10 h-1 rounded-full bg-white/15" />
         </div>
+        {/* Close button desktop */}
+        <button
+          onClick={onClose}
+          className="absolute top-3.5 right-3.5 p-2 bg-white/6 hover:bg-white/12 rounded-full text-gray-400 hover:text-white transition-colors z-20 touch-manipulation hidden md:flex items-center justify-center"
+        >
+          <X className="w-4 h-4" />
+        </button>
         <div className="flex-1 overflow-y-auto p-0 md:p-0">
           {children}
         </div>
