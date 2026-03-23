@@ -2469,16 +2469,35 @@ const dataGraficaDona = useMemo(() =>
             </button>
 
             {/* Suscripciones */}
-            <button
-              onClick={() => { setOverviewMode('SUSCRIPCIONES'); abrirModal('gastosOverview') }}
-              className="group flex flex-col gap-1.5 p-3.5 bg-indigo-500/10 hover:bg-indigo-500/20 active:scale-95 border border-indigo-500/20 rounded-2xl text-left touch-manipulation transition-all"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">🔄 Suscripc.</span>
-              <span className="text-lg font-bold text-white leading-none">
-                ${suscripcionesInstant.filter(s => s.estado !== 'Cancelado').reduce((s, sub) => s + Number(sub.costo || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-[10px] text-gray-500">{suscripcionesInstant.filter(s => s.estado !== 'Cancelado').length} activa{suscripcionesInstant.filter(s => s.estado !== 'Cancelado').length !== 1 ? 's' : ''}</span>
-            </button>
+            {(() => {
+              const subsActivas  = suscripcionesInstant.filter(s => s.estado !== 'Cancelado')
+              const totalSubs    = subsActivas.reduce((s, sub) => s + Number(sub.costo || 0), 0)
+              const pctSubsCard  = totalIngresos > 0 ? Math.round((totalSubs / totalIngresos) * 100) : 0
+              const subsAlerta   = pctSubsCard > 5 && totalIngresos > 0
+              return (
+                <button
+                  onClick={() => { setOverviewMode('SUSCRIPCIONES'); abrirModal('gastosOverview') }}
+                  className={`group flex flex-col gap-1.5 p-3.5 active:scale-95 rounded-2xl text-left touch-manipulation transition-all relative ${
+                    subsAlerta
+                      ? 'bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/30'
+                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20'
+                  }`}
+                >
+                  {subsAlerta && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${subsAlerta ? 'text-amber-400' : 'text-indigo-400'}`}>
+                    🔄 Suscripc.
+                  </span>
+                  <span className="text-lg font-bold text-white leading-none">
+                    ${totalSubs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                  <span className={`text-[10px] ${subsAlerta ? 'text-amber-500 font-semibold' : 'text-gray-500'}`}>
+                    {subsAlerta ? `${pctSubsCard}% ingresos ⚠️` : `${subsActivas.length} activa${subsActivas.length !== 1 ? 's' : ''}`}
+                  </span>
+                </button>
+              )
+            })()}
           </div>
         </div>
 
