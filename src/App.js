@@ -16,6 +16,7 @@ import CargandoApp from './components/CargandoApp'
 
 // 🔐 RESET DE CONTRASEÑA
 import ResetPassword from './pages/auth/ResetPassword'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 // ============================================
 // 🔐 COMPONENTE PARA DETECTAR TOKENS DE RECOVERY
@@ -100,6 +101,7 @@ function AppRoutes() {
             </AuthGuard>
           }
         />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
