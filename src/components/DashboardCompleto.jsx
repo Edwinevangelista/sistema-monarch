@@ -58,6 +58,7 @@ import { ITEM_TYPES } from '../constants/itemTypes'
 import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
 import ModalCoberturaCuentas from './ModalCoberturaCuentas'
+import PanelSaludFinanciera from './PanelSaludFinanciera'
 import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
@@ -2204,54 +2205,9 @@ const dataGraficaDona = useMemo(() =>
       />
 
 
-      {/* ── MÉTRICAS FINANCIERAS CLAVE ─────────────────────────────── */}
-      {/* Patrimonio Neto · DTI · Tasa de Ahorro — visibles de un vistazo */}
-      <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
-        <div className="grid grid-cols-3 gap-2">
-
-          {/* PATRIMONIO NETO */}
-          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">Patrimonio</p>
-            <p className={`text-sm font-black tabular-nums ${netWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {netWorth >= 0 ? '+' : ''}
-              {Math.abs(netWorth) >= 10000
-                ? `$${(netWorth / 1000).toFixed(1)}K`
-                : `$${netWorth.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
-            </p>
-            <p className="text-[9px] text-gray-600 mt-0.5">activos − deudas</p>
-          </div>
-
-          {/* DTI — Debt-to-Income ratio */}
-          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">DTI</p>
-            <p className={`text-sm font-black tabular-nums ${
-              dti === 0 ? 'text-gray-400'
-              : dti <= 20 ? 'text-emerald-400'
-              : dti <= 36 ? 'text-yellow-400'
-              : 'text-red-400'
-            }`}>
-              {dti}%
-            </p>
-            <p className="text-[9px] text-gray-600 mt-0.5">
-              {dti === 0 ? 'sin deudas' : dti <= 20 ? 'excelente' : dti <= 36 ? 'aceptable' : 'alto ⚠️'}
-            </p>
-          </div>
-
-          {/* TASA DE AHORRO (Regla 50/30/20) */}
-          <div className="bg-white/5 border border-white/8 rounded-2xl p-3 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 font-medium">Ahorro</p>
-            <p className={`text-sm font-black tabular-nums ${
-              regla503020.ahorro >= 20 ? 'text-emerald-400'
-              : regla503020.ahorro >= 10 ? 'text-yellow-400'
-              : 'text-red-400'
-            }`}>
-              {regla503020.ahorro}%
-            </p>
-            <p className="text-[9px] text-gray-600 mt-0.5">meta ≥ 20%</p>
-          </div>
-
-        </div>
-      </div>
+      {/* ── PANEL SALUD FINANCIERA ─────────────────────────────────── */}
+      {/* Score · Patrimonio · DTI · Ahorro · Fondo de Emergencia · 50/30/20 */}
+      <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
