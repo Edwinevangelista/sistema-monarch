@@ -1,37 +1,83 @@
 // src/components/ModalUpgrade.jsx
-// Pricing modal — triggers Stripe checkout or app store IAP
-// Shown when user hits a free limit or clicks "Upgrade"
+// Pricing modal — uses RevenueCat on native (Android/iOS), Stripe on web
 
 import React, { useState, useEffect } from 'react'
 import { X, Crown, Zap, TrendingUp, Shield, Repeat, Sparkles } from 'lucide-react'
 import { usePlan } from '../hooks/usePlan'
+import { useRevenueCat } from '../hooks/useRevenueCat'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from 'sonner'
 
 const PREMIUM_FEATURES = [
-  { icon: Zap, text: 'Unlimited expenses, income & subscriptions' },
-  { icon: TrendingUp, text: 'AI Financial Assistant — unlimited analysis' },
-  { icon: Shield, text: 'Debt tracker & savings plans — unlimited' },
-  { icon: Repeat, text: 'Fixed expenses & bill reminders — unlimited' },
-  { icon: Crown, text: 'Advanced reports & PDF/Excel export' },
-  { icon: Sparkles, text: 'Priority support & early access to new features' },
+  { icon: Zap,         text: 'Unlimited expenses, income & subscriptions' },
+  { icon: TrendingUp,  text: 'AI Financial Assistant — unlimited analysis' },
+  { icon: Shield,      text: 'Debt tracker & savings plans — unlimited' },
+  { icon: Repeat,      text: 'Fixed expenses & bill reminders — unlimited' },
+  { icon: Crown,       text: 'Advanced reports & PDF/Excel export' },
+  { icon: Sparkles,    text: 'Priority support & early access to new features' },
 ]
 
 export default function ModalUpgrade({ isOpen, onClose }) {
   const { isTrial, trialUsed, trialDaysRemaining, startTrial } = usePlan()
+  const [userId, setUserId] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [trialLoading, setTrialLoading] = useState(false)
 
-  // Listen for global event to open this modal
+  const { isNative, loadOfferings, purchasePackage, restorePurchases } = useRevenueCat(userId)
+
   useEffect(() => {
-    const handler = () => { /* parent controls isOpen */ }
-    window.addEventListener('open-upgrade-modal', handler)
-    return () => window.removeEventListener('open-upgrade-modal', handler)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
   }, [])
 
   if (!isOpen) return null
 
-  const handleCheckout = async () => {
+  // ── Native (Android/iOS): use RevenueCat ──────────────────────────────────
+  const handleNativePurchase = async () => {
+    setCheckoutLoading(true)
+    try {
+      const offering = await loadOfferings()
+      if (!offering) throw new Error('Could not load subscription options.')
+
+      // Use the monthly package by default
+      const pkg = offering.monthly ?? offering.availablePackages?.[0]
+      if (!pkg) throw new Error('No subscription package available.')
+
+      const success = await purchasePackage(pkg)
+      if (success) {
+        toast.success('🎉 Welcome to FinGuide Premium!')
+        onClose()
+      }
+    } catch (err) {
+      if (err?.message !== 'PURCHASE_CANCELLED') {
+        toast.error('Purchase failed. Please try again.')
+        console.error('RC purchase error:', err)
+      }
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    setCheckoutLoading(true)
+    try {
+      const restored = await restorePurchases()
+      if (restored) {
+        toast.success('✅ Purchases restored!')
+        onClose()
+      } else {
+        toast.info('No active subscription found.')
+      }
+    } catch {
+      toast.error('Could not restore purchases.')
+    } finally {
+      setCheckoutLoading(false)
+    }
+  }
+
+  // ── Web: use Stripe ───────────────────────────────────────────────────────
+  const handleStripeCheckout = async () => {
     setCheckoutLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -44,7 +90,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
           userId: user.id,
           userEmail: user.email,
           successUrl: `${window.location.origin}/dashboard?upgrade=success`,
-          cancelUrl: `${window.location.origin}/dashboard?upgrade=cancelled`,
+          cancelUrl:  `${window.location.origin}/dashboard?upgrade=cancelled`,
         }),
       })
       const { url, error } = await res.json()
@@ -52,11 +98,13 @@ export default function ModalUpgrade({ isOpen, onClose }) {
       window.location.href = url
     } catch (err) {
       toast.error('Could not start checkout. Please try again.')
-      console.error('Checkout error:', err)
+      console.error('Stripe error:', err)
     } finally {
       setCheckoutLoading(false)
     }
   }
+
+  const handleCheckout = isNative ? handleNativePurchase : handleStripeCheckout
 
   const handleStartTrial = async () => {
     setTrialLoading(true)
@@ -117,7 +165,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex items-center justify-between">
             <div>
               <p className="text-white font-bold text-lg">Premium Monthly</p>
-              <p className="text-gray-400 text-xs">Cancel anytime • No hidden fees</p>
+              <p className="text-gray-400 text-xs">Cancel anytime · No hidden fees</p>
             </div>
             <div className="text-right">
               <p className="text-white font-black text-2xl">$6.99</p>
@@ -135,10 +183,10 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             ) : (
               <Crown className="w-5 h-5" />
             )}
-            {checkoutLoading ? 'Opening checkout...' : 'Subscribe — $6.99/mo'}
+            {checkoutLoading ? 'Processing...' : 'Subscribe — $6.99/mo'}
           </button>
 
-          {/* Trial CTA — only if not used */}
+          {/* Trial CTA */}
           {!trialUsed && !isTrial && (
             <button
               onClick={handleStartTrial}
@@ -154,8 +202,19 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             </button>
           )}
 
+          {/* Restore purchases (native only) */}
+          {isNative && (
+            <button
+              onClick={handleRestore}
+              disabled={checkoutLoading}
+              className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all"
+            >
+              Restore purchases
+            </button>
+          )}
+
           <p className="text-center text-gray-600 text-xs">
-            Secure payment via Stripe · iOS & Android supported
+            {isNative ? 'Payment processed by Google Play' : 'Secure payment via Stripe'}
           </p>
         </div>
       </div>
