@@ -119,7 +119,8 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
 
           {/* Panel */}
           <div
-            className="md:hidden fixed bottom-16 left-3 right-3 z-50 bg-gray-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
+            className="md:hidden fixed left-3 right-3 z-50 bg-gray-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
+          style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
           >
             <div className="p-4">
 
