@@ -59,6 +59,7 @@ import ModuloCuentasBancarias from './ModuloCuentasBancarias'
 import ModalAlertas from './ModalAlertas'
 import ModalCoberturaCuentas from './ModalCoberturaCuentas'
 import PanelSaludFinanciera from './PanelSaludFinanciera'
+import ComparativoMensual from './ComparativoMensual'
 import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
@@ -2208,6 +2209,9 @@ const dataGraficaDona = useMemo(() =>
       {/* ── PANEL SALUD FINANCIERA ─────────────────────────────────── */}
       {/* Score · Patrimonio · DTI · Ahorro · Fondo de Emergencia · 50/30/20 */}
       <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
+
+      {/* ── COMPARATIVO MENSUAL — este mes vs mes anterior ─────────── */}
+      <ComparativoMensual ingresos={ingresosInstant} gastos={gastosInstant} />
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (
