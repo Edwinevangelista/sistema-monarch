@@ -17,6 +17,7 @@ import CargandoApp from './components/CargandoApp'
 // 🔐 RESET DE CONTRASEÑA
 import ResetPassword from './pages/auth/ResetPassword'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import DeleteAccount from './pages/DeleteAccount'
 
 // ============================================
 // 🔐 COMPONENTE PARA DETECTAR TOKENS DE RECOVERY
@@ -102,6 +103,7 @@ function AppRoutes() {
           }
         />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
