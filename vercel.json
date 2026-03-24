@@ -13,11 +13,6 @@
       "use": "@vercel/node"
     }
   ],
-  "functions": {
-    "api/stripe-webhook.js": {
-      "bodyParser": false
-    }
-  },
   "routes": [
     {
       "src": "/api/(.*)",
