@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bienvenido a FinGuide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0f0f0f;
+      color: #e5e7eb;
+      padding: 32px 16px;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+      padding: 40px 32px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .header-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-size: 14px;
+      color: #6ee7b7;
+      font-weight: 500;
+    }
+    /* Body */
+    .body {
+      padding: 32px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #d1d5db;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .greeting strong {
+      color: #34d399;
+    }
+    /* Steps */
+    .steps-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      margin-bottom: 10px;
+    }
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #065f46;
+      border: 2px solid #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      color: #34d399;
+      flex-shrink: 0;
+      text-align: center;
+      line-height: 1;
+      padding-top: 7px;
+    }
+    .step-emoji {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-text h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f3f4f6;
+      margin-bottom: 3px;
+    }
+    .step-text p {
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    /* CTA */
+    .cta-section {
+      text-align: center;
+      margin-top: 28px;
+      margin-bottom: 4px;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 100px;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+    .cta-sub {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 12px;
+    }
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 28px 0;
+    }
+    /* Tip box */
+    .tip {
+      background: rgba(251,191,36,0.06);
+      border: 1px solid rgba(251,191,36,0.15);
+      border-radius: 16px;
+      padding: 16px 20px;
+    }
+    .tip p {
+      font-size: 13px;
+      color: #fcd34d;
+      line-height: 1.6;
+    }
+    .tip p strong { color: #fbbf24; }
+    /* Footer */
+    .footer {
+      padding: 24px 32px;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      text-align: center;
+    }
+    .footer p {
+      font-size: 12px;
+      color: #374151;
+      line-height: 1.6;
+    }
+    .footer a { color: #4b5563; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">🦋</div>
+      <h1>¡Bienvenido a FinGuide!</h1>
+      <p>Tu camino hacia el control financiero empieza hoy</p>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+
+      <p class="greeting">
+        Hola <strong>{{ .Name }}</strong>, nos alegra tenerte aquí.<br><br>
+        En menos de 5 minutos puedes tener tu situación financiera completa en pantalla.
+        Solo sigue estos 4 pasos:
+      </p>
+
+      <p class="steps-title">🚀 Tus primeros pasos</p>
+
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-emoji">🏦</div>
+        <div class="step-text">
+          <h3>Agrega tu cuenta bancaria</h3>
+          <p>Sin cuenta no hay balance real. Es la base de todo.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-emoji">💰</div>
+        <div class="step-text">
+          <h3>Registra tu ingreso del mes</h3>
+          <p>Tu sueldo, freelance o cualquier entrada de dinero.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-emoji">🏠</div>
+        <div class="step-text">
+          <h3>Agrega tus gastos fijos</h3>
+          <p>Renta, luz, agua, internet — lo que pagas cada mes.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-emoji">🛍️</div>
+        <div class="step-text">
+          <h3>Registra un gasto del día a día</h3>
+          <p>Comida, transporte, salidas — lo que varía cada mes.</p>
+        </div>
+      </div>
+
+      <div class="cta-section">
+        <a href="{{ .SiteURL }}/dashboard" class="cta-button">
+          Empezar ahora →
+        </a>
+        <p class="cta-sub">La guía de inicio te espera dentro de la app</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="tip">
+        <p>
+          <strong>💡 Consejo:</strong> Muchas personas no saben cuánto gastan realmente hasta que lo ven en pantalla.
+          Solo necesitas 2 semanas de datos para que el sistema te dé recomendaciones reales.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>
+        ¿Tienes preguntas? Escríbenos a
+        <a href="mailto:edwin_evangelista@hotmail.com">soporte@finguide.app</a><br><br>
+        Recibiste este email porque creaste una cuenta en FinGuide.<br>
+        <a href="{{ .SiteURL }}">finguide.app</a>
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

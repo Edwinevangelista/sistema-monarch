@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirma tu cuenta — FinGuide</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0f0f0f;
+      color: #e5e7eb;
+      padding: 32px 16px;
+    }
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+      padding: 40px 32px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .header-icon { font-size: 48px; margin-bottom: 16px; }
+    .header h1 { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .header p { font-size: 14px; color: #93c5fd; }
+    .body { padding: 32px; }
+    .body p { font-size: 15px; color: #d1d5db; line-height: 1.7; margin-bottom: 16px; }
+    .body p strong { color: #60a5fa; }
+    .cta-section { text-align: center; margin: 28px 0; }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 40px;
+      border-radius: 100px;
+      text-decoration: none;
+    }
+    .expiry {
+      font-size: 12px;
+      color: #4b5563;
+      margin-top: 12px;
+    }
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 24px 0; }
+    .info-box {
+      background: rgba(59,130,246,0.06);
+      border: 1px solid rgba(59,130,246,0.15);
+      border-radius: 16px;
+      padding: 16px 20px;
+    }
+    .info-box p { font-size: 13px; color: #93c5fd; margin: 0; }
+    .footer {
+      padding: 24px 32px;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      text-align: center;
+    }
+    .footer p { font-size: 12px; color: #374151; line-height: 1.6; }
+    .footer a { color: #4b5563; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">✉️</div>
+      <h1>Confirma tu cuenta</h1>
+      <p>Un solo clic y ya estás dentro</p>
+    </div>
+
+    <div class="body">
+      <p>Hola <strong>{{ .Name }}</strong>,</p>
+      <p>
+        Alguien (esperamos que seas tú) creó una cuenta en FinGuide con este email.
+        Para activarla, confirma tu dirección haciendo clic en el botón:
+      </p>
+
+      <div class="cta-section">
+        <a href="{{ .ConfirmationURL }}" class="cta-button">
+          ✅ Confirmar mi cuenta
+        </a>
+        <p class="expiry">Este enlace expira en 24 horas</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-box">
+        <p>
+          🔒 Si no creaste esta cuenta, puedes ignorar este email.
+          Tu dirección no será usada sin confirmación.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        ¿Necesitas ayuda? <a href="mailto:edwin_evangelista@hotmail.com">soporte@finguide.app</a><br><br>
+        <a href="{{ .SiteURL }}">finguide.app</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

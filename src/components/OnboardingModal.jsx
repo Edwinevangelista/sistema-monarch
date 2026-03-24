@@ -93,7 +93,7 @@ const MONEDAS = [
   { codigo: 'BRL', simbolo: 'R$', nombre: 'Real', pais: 'Brasil', flag: '🇧🇷' },
   { codigo: 'PAB', simbolo: 'B/.', nombre: 'Balboa', pais: 'Panamá', flag: '🇵🇦' },
   // Global
-  { codigo: 'USD', simbolo: '$', nombre: 'US Dollar', pais: 'United States', flag: '🇺🇸' },
+  { codigo: 'USD', simbolo: '$', nombre: 'Dólar Estadounidense', pais: 'Estados Unidos', flag: '🇺🇸' },
   { codigo: 'EUR', simbolo: '€', nombre: 'Euro', pais: 'Europa', flag: '🇪🇺' },
   { codigo: 'GBP', simbolo: '£', nombre: 'Libra', pais: 'Reino Unido', flag: '🇬🇧' },
   { codigo: 'CAD', simbolo: 'C$', nombre: 'Dólar Canadiense', pais: 'Canadá', flag: '🇨🇦' },
