@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, ScanLine, X, ChevronRight, Activity, Target, Download, ShieldAlert } from 'lucide-react';
+import { Wallet, Plus, CreditCard, Repeat, Bell, ScanLine, X, ChevronRight, ChevronDown, ChevronUp, Activity, Target, Download, ShieldAlert } from 'lucide-react';
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -122,7 +122,8 @@ export default function DashboardCompleto()  {
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
-  const [planUpdateCounter, setPlanUpdateCounter] = useState(0);
+  const [planUpdateCounter, setPlanUpdateCounter] = useState(0)
+  const [calendarioExpandido, setCalendarioExpandido] = useState(false)
   
   // NUEVO: Estado de exportación
   const [showExportacion, setShowExportacion] = useState(false)
@@ -2207,12 +2208,58 @@ const dataGraficaDona = useMemo(() =>
       />
 
 
+      {/* ── ALERTAS COMPACTAS — lo más urgente primero ─────────────── */}
+      {alertas.length > 0 && (
+        <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
+          <div
+            className="relative overflow-hidden rounded-3xl border border-yellow-500/20"
+            style={{ background: 'rgba(234,179,8,0.05)', boxShadow: 'inset 0 1px 0 rgba(234,179,8,0.08)' }}
+          >
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                <span className="text-xs font-bold text-yellow-300">
+                  {alertas.length} pago{alertas.length > 1 ? 's' : ''} próximo{alertas.length > 1 ? 's' : ''}
+                </span>
+                {cuentasEnRiesgo.length > 0 && (
+                  <button
+                    onClick={() => abrirModal('cobertura')}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/15 border border-orange-500/30 rounded-full text-orange-400 text-[10px] font-semibold touch-manipulation"
+                  >
+                    <ShieldAlert className="w-3 h-3" />
+                    {cuentasEnRiesgo.length} en riesgo
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => abrirModal('alertas')}
+                className="text-[11px] text-yellow-500 font-semibold hover:text-yellow-300 transition-colors touch-manipulation"
+              >
+                Ver todo →
+              </button>
+            </div>
+            {/* Primeras 3 alertas compactas */}
+            <div className="px-3 pb-3 space-y-1.5">
+              <Notificaciones
+                alertas={alertas.slice(0, 3)}
+                onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── PANEL SALUD FINANCIERA ─────────────────────────────────── */}
       {/* Score · Patrimonio · DTI · Ahorro · Fondo de Emergencia · 50/30/20 */}
       <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
 
       {/* ── COMPARATIVO MENSUAL — este mes vs mes anterior ─────────── */}
-      <ComparativoMensual ingresos={ingresosInstant} gastos={gastosInstant} />
+      <ComparativoMensual
+        ingresos={ingresosInstant}
+        gastos={gastosInstant}
+        gastosFijos={gastosFijosInstant}
+        suscripciones={suscripcionesInstant}
+      />
 
       {/* ── PRESUPUESTO POR CATEGORÍA ──────────────────────────────── */}
       <PresupuestoCategorias gastos={gastosInstant} />
@@ -2286,18 +2333,6 @@ const dataGraficaDona = useMemo(() =>
       {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">
         
-        {/* CALENDARIO */}
-        <div className="animate-in fade-in slide-in-from-top-4 delay-200">
-          <CalendarioPagos 
-            key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
-            gastosFijos={gastosFijosInstant}
-            suscripciones={suscripcionesInstant}
-            deudas={deudasInstant}
-            ingresos={ingresosInstant}
-            gastos={gastosInstant}
-          />
-        </div>
-
         {/* BOTONES DE ACCIÓN (Solo Desktop) */}
         <div className="hidden md:flex flex-wrap gap-3 bg-white/5 backdrop-blur-sm p-4 rounded-2xl border border-white/10 animate-in fade-in delay-300">
           <button onClick={() => abrirModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-green-500/50"><Plus className="w-4 h-4" /> Ingreso</button>
@@ -2307,30 +2342,9 @@ const dataGraficaDona = useMemo(() =>
           <button onClick={() => abrirModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-gray-500/50"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
         </div>
 
-        {/* ── ALERTAS ── */}
-        <div id="dashboard-alertas" className="animate-in fade-in slide-in-from-top-4 delay-300">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Bell className="w-4 h-4 text-yellow-400" />
-              Próximos pagos
-              {alertas.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">
-                  {alertas.length}
-                </span>
-              )}
-            </h3>
-            {cuentasEnRiesgo.length > 0 && (
-              <button
-                onClick={() => abrirModal('cobertura')}
-                className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-full text-orange-400 text-xs font-semibold hover:bg-orange-500/25 active:scale-95 transition-all touch-manipulation"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                {cuentasEnRiesgo.length} en riesgo
-              </button>
-            )}
-          </div>
-
-          {alertas.length === 0 ? (
+        {/* ── ALERTAS (todo al día — solo si no hay alertas) ── */}
+        {alertas.length === 0 && (
+          <div className="animate-in fade-in delay-300">
             <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/15 rounded-2xl">
               <div className="text-xl">✅</div>
               <div>
@@ -2338,27 +2352,8 @@ const dataGraficaDona = useMemo(() =>
                 <p className="text-xs text-gray-500">No tienes pagos urgentes esta semana</p>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Primeras 5 alertas */}
-              <Notificaciones
-                alertas={alertas.slice(0, 5)}
-                onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)}
-              />
-              {/* Ver más — si hay más de 5 */}
-              {alertas.length > 5 && (
-                <button
-                  onClick={() => abrirModal('alertas')}
-                  className="w-full mt-2 py-2.5 rounded-2xl border border-white/10 bg-white/4 hover:bg-white/8 text-sm text-gray-400 hover:text-white font-semibold transition-all active:scale-[0.98] touch-manipulation flex items-center justify-center gap-2"
-                >
-                  <Bell className="w-4 h-4 text-yellow-400" />
-                  Ver {alertas.length - 5} más
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        )}
         {/* ASISTENTE FINANCIERO */}
         <div className="animate-in fade-in delay-300">
           <AsistenteFinancieroV2
@@ -2499,6 +2494,38 @@ const dataGraficaDona = useMemo(() =>
               )
             })()}
           </div>
+        </div>
+
+        {/* ── CALENDARIO DE PAGOS (colapsable) ── */}
+        <div className="animate-in fade-in delay-500">
+          <button
+            onClick={() => setCalendarioExpandido(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-white/4 hover:bg-white/7 border border-white/10 rounded-2xl transition-colors touch-manipulation"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">📅</span>
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-200">Calendario de pagos</p>
+                <p className="text-[10px] text-gray-600 mt-0.5">Ver fechas de vencimiento del mes</p>
+              </div>
+            </div>
+            {calendarioExpandido
+              ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" />
+              : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+            }
+          </button>
+          {calendarioExpandido && (
+            <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <CalendarioPagos
+                key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
+                gastosFijos={gastosFijosInstant}
+                suscripciones={suscripcionesInstant}
+                deudas={deudasInstant}
+                ingresos={ingresosInstant}
+                gastos={gastosInstant}
+              />
+            </div>
+          )}
         </div>
 
       </div>
