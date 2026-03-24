@@ -108,7 +108,7 @@ const gastosPagados =
   suscripciones
     .filter(s => {
       if (s.estado !== 'Activo' || !s.proximo_pago) return false
-      const proxPago = new Date(s.proximo_pago + 'T00:00:00')
+      const proxPago = new Date(s.proximo_pago.split('T')[0] + 'T00:00:00')
       proxPago.setHours(0, 0, 0, 0)
       
       // Si próximo pago es en el mes SIGUIENTE, significa que ya se pagó ESTE mes

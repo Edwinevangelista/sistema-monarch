@@ -11,7 +11,7 @@ const TIPS = {
   netWorth: 'Es lo que tendrías si pagaras todas tus deudas hoy. Cuentas bancarias menos lo que debes.',
   dti:      'De cada $100 que ganas, ¿cuántos van a pagar deudas? Menos del 20% es ideal.',
   ahorro:   'De cada $100 que ganas, ¿cuántos estás ahorrando? La meta profesional es el 20% o más.',
-  fondo:    'Meta: tener ahorrado el equivalente a 3 meses de gastos fijos por si algo sale mal.',
+  fondo:    'Meta: tener ahorrado el equivalente a 3 meses de todos tus gastos (fijos + día a día) por si algo sale mal.',
 }
 
 export default function PanelSaludFinanciera({ kpis, cuentas = [] }) {
@@ -25,17 +25,19 @@ export default function PanelSaludFinanciera({ kpis, cuentas = [] }) {
     regla503020 = { necesidades: 0, deseos: 0, ahorro: 0 },
     totalGastosFijos = 0,
     totalSuscripciones = 0,
+    totalGastosVariables = 0,
   } = kpis
 
   // ── Fondo de Emergencia ─────────────────────────────────────────
+  // Incluye gastos variables (día a día) para reflejar el gasto real mensual
   const { totalActivos, metaFondo, mesesCubiertos, progresoFondo } = useMemo(() => {
-    const esenciales = totalGastosFijos + totalSuscripciones
+    const esenciales = totalGastosFijos + totalSuscripciones + totalGastosVariables
     const activos    = cuentas.reduce((s, c) => s + Number(c.balance || 0), 0)
     const meta       = esenciales * 3
     const meses      = meta > 0 ? Math.min(3, activos / esenciales) : (activos > 0 ? 3 : 0)
     const prog       = meta > 0 ? Math.min(100, (activos / meta) * 100) : (activos > 0 ? 100 : 0)
     return { totalActivos: activos, metaFondo: meta, mesesCubiertos: meses, progresoFondo: prog }
-  }, [cuentas, totalGastosFijos, totalSuscripciones])
+  }, [cuentas, totalGastosFijos, totalSuscripciones, totalGastosVariables])
 
   // ── Colores por umbral ──────────────────────────────────────────
   const scoreColor = financialHealth >= 75 ? '#34d399' : financialHealth >= 50 ? '#fbbf24' : '#f87171'

@@ -917,7 +917,7 @@ useEffect(() => {
   }
 
   const calcularProximoPago = (fechaActualStr, ciclo) => {
-    const fecha = new Date(fechaActualStr + 'T00:00:00');
+    const fecha = new Date(fechaActualStr.split('T')[0] + 'T00:00:00');
     let nuevaFecha = new Date(fecha);
     if (ciclo === 'Mensual') nuevaFecha.setMonth(nuevaFecha.getMonth() + 1);
     else if (ciclo === 'Anual') nuevaFecha.setFullYear(nuevaFecha.getFullYear() + 1);
@@ -928,7 +928,7 @@ useEffect(() => {
 // 📅 CALCULAR FECHA ANTERIOR (para deshacer)
 // ===========================================
 const calcularFechaAnterior = (fechaActual, ciclo) => {
-  const fecha = new Date(fechaActual + 'T00:00:00');
+  const fecha = new Date(fechaActual.split('T')[0] + 'T00:00:00');
   
   switch (ciclo) {
     case 'Semanal':
@@ -1028,7 +1028,7 @@ const handleDeshacerPago = useCallback(async (item, type) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   
-  const proximoPago = new Date(item.proximo_pago + 'T00:00:00');
+  const proximoPago = new Date(item.proximo_pago.split('T')[0] + 'T00:00:00');
   proximoPago.setHours(0, 0, 0, 0);
   
   const esMesSiguiente = (
@@ -1742,12 +1742,12 @@ useEffect(() => {
       for (const sub of suscripcionesInstant) {
         if (sub.estado !== 'Activo' || !sub.proximo_pago) continue
         
-        const fechaProxima = new Date(sub.proximo_pago + 'T00:00:00')
-        
+        const fechaProxima = new Date(sub.proximo_pago.split('T')[0] + 'T00:00:00')
+
         if (fechaProxima < hoyLocal) {
           console.log(`⚠️ Fecha vencida detectada: ${sub.servicio} (${sub.proximo_pago})`)
-          
-          let nuevaFecha = new Date(sub.proximo_pago + 'T00:00:00')
+
+          let nuevaFecha = new Date(sub.proximo_pago.split('T')[0] + 'T00:00:00')
           
           while (nuevaFecha < hoyLocal) {
             if (sub.ciclo === 'Mensual') {
@@ -1920,7 +1920,7 @@ deudasInstant.forEach(d => {
 
         suscripcionesInstant.forEach(sub => {
           if (sub.cuenta_id !== cuenta.id || !sub.autopago || sub.estado === 'Cancelado' || !sub.proximo_pago) return
-          const fechaCargo = new Date(sub.proximo_pago + 'T00:00:00')
+          const fechaCargo = new Date(sub.proximo_pago.split('T')[0] + 'T00:00:00')
           if (fechaCargo >= hoy && fechaCargo <= hoy30) {
             cargosProximos.push({
               nombre: sub.servicio,
@@ -1977,7 +1977,7 @@ deudasInstant.forEach(d => {
         ).map(gf => Number(gf.monto || 0)),
         ...suscripcionesInstant.filter(sub =>
           sub.cuenta_id === cuenta.id && sub.autopago && sub.estado !== 'Cancelado' && sub.proximo_pago &&
-          (() => { const f = new Date(sub.proximo_pago + 'T00:00:00'); return f >= hoy && f <= hoy3 })()
+          (() => { const f = new Date(sub.proximo_pago.split('T')[0] + 'T00:00:00'); return f >= hoy && f <= hoy3 })()
         ).map(sub => Number(sub.costo || 0))
       ]
       const total = cargos3d.reduce((s, m) => s + m, 0)
@@ -2044,9 +2044,16 @@ const dataGraficaDona = useMemo(() =>
     const necesidades = totalGastosFijosReales + pagosMensualesDeuda
     const deseos = totalGastosVariablesReales + totalSuscripcionesReales
     const ahorro = Math.max(0, totalIngresos - necesidades - deseos)
+    // Cap each segment so total never exceeds 100% (spending > income scenario)
+    const totalGastoPct = Math.round(((necesidades + deseos) / totalIngresos) * 100)
+    const overflow = totalGastoPct > 100
+    const necPct = Math.round((necesidades / totalIngresos) * 100)
+    const desPct = overflow
+      ? Math.max(0, 100 - necPct)   // squeeze deseos to fit
+      : Math.round((deseos / totalIngresos) * 100)
     return {
-      necesidades: Math.round((necesidades / totalIngresos) * 100),
-      deseos: Math.round((deseos / totalIngresos) * 100),
+      necesidades: necPct,
+      deseos: desPct,
       ahorro: Math.round((ahorro / totalIngresos) * 100),
     }
   }, [totalIngresos, totalGastosFijosReales, totalGastosVariablesReales, totalSuscripcionesReales, deudasInstant])
@@ -2106,7 +2113,7 @@ const dataGraficaDona = useMemo(() =>
     const fijosPendientes = gastosFijosInstant
       .filter(gf => gf.estado !== 'Pagado' && Number(gf.dia_venc || 0) >= hoy.getDate())
       .reduce((sum, gf) => sum + Number(gf.monto || 0), 0)
-    const saldoDisponible = saldoReal - fijosPendientes
+    const saldoDisponible = (saldoReal || 0) - fijosPendientes
     if (saldoDisponible <= 0) return 0
     return Math.floor(saldoDisponible / diasRestantes)
   }, [saldoReal, hoy, gastosFijosInstant])
