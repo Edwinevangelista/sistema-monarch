@@ -4,11 +4,14 @@ import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { useDeudas } from '../hooks/useDeudas'
 import { toast } from 'sonner'
 
-const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null }) => {
+const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null, tipoInicial = 'variable' }) => {
   const { cuentas } = useCuentasBancarias()
   const { deudas } = useDeudas()
-  
-  const [tipoGasto, setTipoGasto] = useState('variable')
+
+  // gastoInicial.dia_venc indicates a fixed expense being edited — takes precedence over tipoInicial
+  const [tipoGasto, setTipoGasto] = useState(
+    gastoInicial?.dia_venc != null ? 'fijo' : tipoInicial
+  )
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
     categoria: '',

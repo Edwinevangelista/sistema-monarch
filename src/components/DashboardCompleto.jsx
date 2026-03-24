@@ -66,6 +66,7 @@ import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 import VisualizacionDatos from './VisualizacionDatos'
 import OnboardingModal from './OnboardingModal'
 import TourNuevoUsuario, { useTourNuevoUsuario } from './TourNuevoUsuario'
+import GuiaPrimerPaso from './GuiaPrimerPaso'
 import ModalUpgrade from './ModalUpgrade'
 
 // --- LIBRERÍA DE BD ---
@@ -151,6 +152,14 @@ export default function DashboardCompleto()  {
     if (nombre) setShowModal(nombre)
   }
 
+  // Maneja las acciones de la GuiaPrimerPaso — abre el modal correcto con el tipo correcto
+  const handleAccionGuia = (accion) => {
+    if (accion === 'cuenta')    { abrirModal('cuentas') }
+    else if (accion === 'ingreso')   { abrirModal('ingreso') }
+    else if (accion === 'gastoFijo') { setGastoTipoInicial('fijo');     abrirModal('gastos') }
+    else if (accion === 'gasto')     { setGastoTipoInicial('variable'); abrirModal('gastos') }
+  }
+
   // NUEVO: Estado para ocultar/mostrar menú móvil por inactividad
   
   const inactivityTimerRef = useRef(null)
@@ -166,6 +175,7 @@ export default function DashboardCompleto()  {
   const [ingresoEditando, setIngresoEditando] = useState(null)
   const [gastoEditando, setGastoEditando] = useState(null)
   const [gastoFijoEditando, setGastoFijoEditando] = useState(null)
+  const [gastoTipoInicial, setGastoTipoInicial] = useState('variable')
   const [suscripcionEditando, setSuscripcionEditando] = useState(null)
   const [deudaEditando, setDeudaEditando] = useState(null)
 
@@ -2215,6 +2225,15 @@ const dataGraficaDona = useMemo(() =>
       />
 
 
+      {/* ── GUÍA DE PRIMEROS PASOS — solo aparece hasta que el usuario tenga datos ── */}
+      <GuiaPrimerPaso
+        cuentas={cuentas}
+        ingresos={ingresosInstant}
+        gastosFijos={gastosFijosInstant}
+        gastos={gastosInstant}
+        onAccion={handleAccionGuia}
+      />
+
       {/* ── ALERTAS COMPACTAS — lo más urgente primero ─────────────── */}
       {alertas.length > 0 && (
         <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
@@ -2788,8 +2807,14 @@ const dataGraficaDona = useMemo(() =>
         />
       )}
 
-      <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null); }}>        
-        <ModalGastos onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null) }} onSaveVariable={handleGuardarGasto} onSaveFijo={handleGuardarGastoFijo} gastoInicial={gastoEditando || gastoFijoEditando} />
+      <ModalWrapper show={showModal === 'gastos'} onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null); setGastoTipoInicial('variable') }}>
+        <ModalGastos
+          onClose={() => { setShowModal(null); setGastoEditando(null); setGastoFijoEditando(null); setGastoTipoInicial('variable') }}
+          onSaveVariable={handleGuardarGasto}
+          onSaveFijo={handleGuardarGastoFijo}
+          gastoInicial={gastoEditando || gastoFijoEditando}
+          tipoInicial={gastoTipoInicial}
+        />
       </ModalWrapper>
 
       <ModalWrapper show={showModal === 'usuario'} onClose={() => setShowModal(null)}>
