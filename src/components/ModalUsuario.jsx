@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  X, Brain, Shield, DollarSign, Target, AlertTriangle, Bell, 
+  X, Brain, Shield, DollarSign, Target, AlertTriangle, Bell,
   Smartphone, CreditCard, Repeat, User, Mail, Phone, Globe,
   Edit2, Save, Camera, Loader2, Lock, Key, Trash2, Download,
   FileText, HelpCircle, MessageSquare, Star, ChevronRight,
   Eye, EyeOff, CheckCircle2, XCircle, Info,
-  ShieldCheck, History, Fingerprint, LogOut
+  ShieldCheck, History, Fingerprint, LogOut, Rocket
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import TermsOfService from './TermsOfService';
@@ -526,18 +526,18 @@ export default function ModalUsuario({
 
   const handleCerrarTodasSesiones = async () => {
     const ok = await showConfirm({
-      titulo: "Sign out all devices?",
-      mensaje: "This will end all active sessions across every device. You'll need to sign in again.",
-      textoConfirmar: "Sign Out All",
+      titulo: '¿Cerrar sesión en todos los dispositivos?',
+      mensaje: 'Esto cerrará todas las sesiones activas. Tendrás que iniciar sesión de nuevo.',
+      textoConfirmar: 'Cerrar todas las sesiones',
     });
     if (!ok) return;
     try {
       await supabase.auth.signOut({ scope: 'global' });
       localStorage.clear();
-      toast.success('All sessions ended.');
+      toast.success('Sesiones cerradas en todos los dispositivos.');
       if (onLogout) onLogout();
     } catch (e) {
-      toast.error('Error: ' + e.message);
+      toast.error('Error al cerrar sesiones: ' + e.message);
     }
   };
 
@@ -1179,7 +1179,28 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Contactar soporte</p>
-                          <p className="text-gray-500 text-xs">Envía un mensaje</p>
+                          <p className="text-gray-500 text-xs">Envía un mensaje a soporte</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                    </button>
+
+                    {/* Volver a ver la guía de inicio */}
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('guia_primer_paso_cerrada')
+                        toast.success('✅ Guía de inicio activada — vuelve al dashboard')
+                        if (onClose) onClose()
+                      }}
+                      className="w-full flex items-center justify-between p-4 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/20 rounded-lg">
+                          <Rocket className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-medium">Ver guía de inicio</p>
+                          <p className="text-gray-500 text-xs">Vuelve a ver los primeros pasos</p>
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-500" />

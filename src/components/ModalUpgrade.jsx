@@ -9,12 +9,12 @@ import { supabase } from '../lib/supabaseClient'
 import { toast } from 'sonner'
 
 const PREMIUM_FEATURES = [
-  { icon: Zap,         text: 'Unlimited expenses, income & subscriptions' },
-  { icon: TrendingUp,  text: 'AI Financial Assistant — unlimited analysis' },
-  { icon: Shield,      text: 'Debt tracker & savings plans — unlimited' },
-  { icon: Repeat,      text: 'Fixed expenses & bill reminders — unlimited' },
-  { icon: Crown,       text: 'Advanced reports & PDF/Excel export' },
-  { icon: Sparkles,    text: 'Priority support & early access to new features' },
+  { icon: Zap,         text: 'Gastos, ingresos y suscripciones ilimitados' },
+  { icon: TrendingUp,  text: 'Asistente financiero IA — análisis ilimitado' },
+  { icon: Shield,      text: 'Seguimiento de deudas y planes de ahorro' },
+  { icon: Repeat,      text: 'Gastos fijos y recordatorios de pagos' },
+  { icon: Crown,       text: 'Reportes avanzados y exportación PDF/Excel' },
+  { icon: Sparkles,    text: 'Soporte prioritario y acceso anticipado a novedades' },
 ]
 
 export default function ModalUpgrade({ isOpen, onClose }) {
@@ -38,20 +38,20 @@ export default function ModalUpgrade({ isOpen, onClose }) {
     setCheckoutLoading(true)
     try {
       const offering = await loadOfferings()
-      if (!offering) throw new Error('Could not load subscription options.')
+      if (!offering) throw new Error('No se pudieron cargar las opciones de suscripción.')
 
       // Use the monthly package by default
       const pkg = offering.monthly ?? offering.availablePackages?.[0]
-      if (!pkg) throw new Error('No subscription package available.')
+      if (!pkg) throw new Error('No hay paquete de suscripción disponible.')
 
       const success = await purchasePackage(pkg)
       if (success) {
-        toast.success('🎉 Welcome to FinGuide Premium!')
+        toast.success('🎉 ¡Bienvenido a FinGuide Premium!')
         onClose()
       }
     } catch (err) {
       if (err?.message !== 'PURCHASE_CANCELLED') {
-        toast.error('Purchase failed. Please try again.')
+        toast.error('No se pudo completar la compra. Intenta de nuevo.')
         console.error('RC purchase error:', err)
       }
     } finally {
@@ -64,13 +64,13 @@ export default function ModalUpgrade({ isOpen, onClose }) {
     try {
       const restored = await restorePurchases()
       if (restored) {
-        toast.success('✅ Purchases restored!')
+        toast.success('✅ ¡Compras restauradas!')
         onClose()
       } else {
-        toast.info('No active subscription found.')
+        toast.info('No se encontró una suscripción activa.')
       }
     } catch {
-      toast.error('Could not restore purchases.')
+      toast.error('No se pudieron restaurar las compras.')
     } finally {
       setCheckoutLoading(false)
     }
@@ -81,7 +81,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
     setCheckoutLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('You must be signed in to upgrade.')
+      if (!user) throw new Error('Debes iniciar sesión para mejorar tu plan.')
 
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -97,7 +97,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
       if (error) throw new Error(error)
       window.location.href = url
     } catch (err) {
-      toast.error('Could not start checkout. Please try again.')
+      toast.error('No se pudo iniciar el pago. Intenta de nuevo.')
       console.error('Stripe error:', err)
     } finally {
       setCheckoutLoading(false)
@@ -111,10 +111,10 @@ export default function ModalUpgrade({ isOpen, onClose }) {
     try {
       const { error } = await startTrial()
       if (error) throw new Error(error)
-      toast.success('🎉 Your 7-day free trial has started!')
+      toast.success('🎉 ¡Tu prueba gratuita de 7 días ha comenzado!')
       onClose()
     } catch (err) {
-      toast.error(err.message || 'Could not start trial. Please try again.')
+      toast.error(err.message || 'No se pudo iniciar la prueba. Intenta de nuevo.')
     } finally {
       setTrialLoading(false)
     }
@@ -138,12 +138,12 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">FinGuide Premium</h2>
-              <p className="text-amber-300 text-sm">Full financial control, zero limits</p>
+              <p className="text-amber-300 text-sm">Control total de tus finanzas, sin límites</p>
             </div>
           </div>
           {isTrial && trialDaysRemaining > 0 && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2 text-amber-300 text-sm font-medium">
-              ⏳ {trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} left in your free trial
+              ⏳ Te quedan {trialDaysRemaining} día{trialDaysRemaining !== 1 ? 's' : ''} de prueba gratuita
             </div>
           )}
         </div>
@@ -164,8 +164,8 @@ export default function ModalUpgrade({ isOpen, onClose }) {
         <div className="px-6 pb-6 space-y-3">
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex items-center justify-between">
             <div>
-              <p className="text-white font-bold text-lg">Premium Monthly</p>
-              <p className="text-gray-400 text-xs">Cancel anytime · No hidden fees</p>
+              <p className="text-white font-bold text-lg">Premium Mensual</p>
+              <p className="text-gray-400 text-xs">Cancela cuando quieras · Sin cargos ocultos</p>
             </div>
             <div className="text-right">
               <p className="text-white font-black text-2xl">$6.99</p>
@@ -183,7 +183,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             ) : (
               <Crown className="w-5 h-5" />
             )}
-            {checkoutLoading ? 'Processing...' : 'Subscribe — $6.99/mo'}
+            {checkoutLoading ? 'Procesando...' : 'Suscribirme — $6.99/mes'}
           </button>
 
           {/* Trial CTA */}
@@ -198,7 +198,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
               ) : (
                 <Sparkles className="w-4 h-4 text-amber-400" />
               )}
-              {trialLoading ? 'Starting trial...' : 'Start 7-day free trial'}
+              {trialLoading ? 'Iniciando prueba...' : 'Probar 7 días gratis'}
             </button>
           )}
 
@@ -209,12 +209,12 @@ export default function ModalUpgrade({ isOpen, onClose }) {
               disabled={checkoutLoading}
               className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all"
             >
-              Restore purchases
+              Restaurar compras
             </button>
           )}
 
           <p className="text-center text-gray-600 text-xs">
-            {isNative ? 'Payment processed by Google Play' : 'Secure payment via Stripe'}
+            {isNative ? 'Pago procesado por Google Play' : 'Pago seguro a través de Stripe'}
           </p>
         </div>
       </div>

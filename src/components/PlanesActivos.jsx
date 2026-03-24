@@ -17,32 +17,32 @@ export default function PlanesActivos({ onEditarPlan, onEliminarPlan }) {
 
   const handleMarcarCompletado = async (planId) => {
     const ok = await showConfirm({
-      titulo: "Mark as completed?",
-      mensaje: "Congratulations on completing this plan! It will be moved to your completed plans.",
-      textoConfirmar: "Complete Plan",
-      textoCancel: "Not yet",
+      titulo: '¿Marcar como completado?',
+      mensaje: '¡Felicidades por terminar este plan! Se moverá a tus planes completados.',
+      textoConfirmar: 'Completar plan',
+      textoCancel: 'Todavía no',
     });
     if (!ok) return;
     try {
       await marcarComoCompletado(planId);
-      toast.success('🎉 Plan completed!');
+      toast.success('🎉 ¡Plan completado!');
     } catch (error) {
-      toast.error('Error completing plan');
+      toast.error('Error al completar el plan');
     }
   };
 
   const handleEliminar = async (planId) => {
     const ok = await showConfirm({
-      titulo: "Delete this plan?",
-      mensaje: "This financial plan will be permanently deleted. This action cannot be undone.",
-      textoConfirmar: "Delete Plan",
+      titulo: '¿Eliminar este plan?',
+      mensaje: 'Este plan financiero se eliminará permanentemente. Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar plan',
     });
     if (!ok) return;
     try {
       await deletePlan(planId);
-      toast.success('Plan deleted');
+      toast.success('Plan eliminado');
     } catch (error) {
-      toast.error('Error deleting plan');
+      toast.error('Error al eliminar el plan');
     }
   };
 
