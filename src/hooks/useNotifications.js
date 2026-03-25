@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react'
+import { Capacitor } from '@capacitor/core'
 
-// Detección síncrona — Capacitor inyecta window.Capacitor antes de que React monte
 const isNative = () => {
   try {
-    return !!(window.Capacitor?.isNativePlatform?.())
+    return Capacitor.isNativePlatform()
   } catch {
     return false
   }
 }
 
-// Inicialización síncrona: en nativo siempre soportado, en web verificar API
-const getInitialSupported = () => {
-  if (isNative()) return true
-  return !!(typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window)
-}
-
 export const useNotifications = () => {
   const [permission, setPermission] = useState('default')
-  const [supported] = useState(getInitialSupported) // síncrono, no cambia
+  // Capacitor.isNativePlatform() es síncrono y confiable desde el import
+  const [supported] = useState(() => {
+    if (isNative()) return true
+    return !!(typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window)
+  })
 
   useEffect(() => {
     if (isNative()) {
