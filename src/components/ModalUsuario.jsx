@@ -1254,7 +1254,7 @@ export default function ModalUsuario({
           </div>
 
           {/* FOOTER - CERRAR SESIÓN */}
-          <div className="sticky bottom-0 p-4 md:p-6 border-t border-white/5 bg-gray-900/95 backdrop-blur-sm shrink-0">
+          <div className="sticky bottom-0 p-4 md:p-6 pb-safe border-t border-white/5 bg-gray-900/95 backdrop-blur-sm shrink-0">
             <button
               onClick={handleLogout}
               className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 py-3 rounded-xl font-semibold transition-all border border-red-500/30 flex items-center justify-center gap-2"

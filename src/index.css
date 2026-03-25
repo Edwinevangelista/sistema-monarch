@@ -30,7 +30,10 @@ body {
 /* Ensure root respects safe area on all platforms */
 #root {
   padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px); }
 /* Animación para el menú slide-up */
 @keyframes slide-up {
   from {
