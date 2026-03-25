@@ -67,8 +67,9 @@ export default function ConfiguracionNotificaciones() {
           <BellOff className="w-6 h-6 text-gray-400" />
           <h2 className="text-xl font-bold text-white">Notificaciones Push</h2>
         </div>
-        <p className="text-gray-400">
-          Tu navegador no soporta notificaciones push. Prueba con Chrome, Firefox o Edge.
+        <p className="text-gray-400 text-sm">
+          Las notificaciones están disponibles en la app de Android.
+          Desde el navegador, abre la app instalada para activarlas.
         </p>
       </div>
     );
