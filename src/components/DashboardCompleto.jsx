@@ -2164,7 +2164,7 @@ const dataGraficaDona = useMemo(() =>
   // RENDERIZADO UI MODERNA
   // ============================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30 safe-area-top">
       
       {/* FONDO AMBIENTAL */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">

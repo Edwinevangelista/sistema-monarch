@@ -7,6 +7,11 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Safe area top — prevents status bar from overlapping app content */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -20,6 +25,11 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure root respects safe area on all platforms */
+#root {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 /* Animación para el menú slide-up */
 @keyframes slide-up {
