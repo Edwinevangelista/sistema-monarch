@@ -1,6 +1,7 @@
 // src/components/WidgetBalanceDual.jsx — 2026 Design System
 import React, { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Zap } from 'lucide-react'
+import { fmt } from '../utils/formatters'
 
 const WidgetBalanceDual = ({
   calculosReales,
@@ -137,7 +138,7 @@ const WidgetBalanceDual = ({
                 className={`text-[2.6rem] md:text-5xl font-black tracking-tighter leading-none ${colorConfig.saldo}`}
                 style={{ textShadow: esPositivo ? '0 0 40px rgba(52,211,153,0.3)' : '' }}
               >
-                {datosActivos.saldo < 0 ? '-' : ''}${Math.abs(datosActivos.saldo).toLocaleString()}
+                {fmt(datosActivos.saldo)}
               </span>
               {vistaActiva === 'real' && diferenciaSaldo !== 0 && (
                 <div className={`flex items-center gap-1 mb-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
@@ -146,7 +147,7 @@ const WidgetBalanceDual = ({
                     : 'bg-red-500/10 border-red-500/25 text-red-400'
                 }`}>
                   {diferenciaSaldo > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {diferenciaSaldo > 0 ? '+' : ''}{Math.abs(diferenciaSaldo).toLocaleString()} proyect.
+                  {diferenciaSaldo > 0 ? '+' : ''}{fmt(Math.abs(diferenciaSaldo))} proyect.
                 </div>
               )}
             </div>
@@ -204,10 +205,10 @@ const WidgetBalanceDual = ({
                 </div>
                 {/* Mini labels debajo */}
                 <div className="flex justify-between mt-1">
-                  <span className="text-[9px] text-gray-600">${(datosActivos.totalGastos || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} gastados</span>
+                  <span className="text-[9px] text-gray-600">{fmt(datosActivos.totalGastos)} gastados</span>
                   {datosActivos.saldo > 0
-                    ? <span className="text-[9px] text-indigo-500 font-semibold">${datosActivos.saldo.toLocaleString('en-US', { maximumFractionDigits: 0 })} libres</span>
-                    : <span className="text-[9px] text-orange-500 font-semibold">déficit ${Math.abs(datosActivos.saldo || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                    ? <span className="text-[9px] text-indigo-500 font-semibold">{fmt(datosActivos.saldo)} libres</span>
+                    : <span className="text-[9px] text-orange-500 font-semibold">déficit {fmt(Math.abs(datosActivos.saldo || 0))}</span>
                   }
                 </div>
               </div>
@@ -229,7 +230,7 @@ const WidgetBalanceDual = ({
               </div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1.5">Ingresos</p>
               <p className="text-lg font-black text-emerald-400 leading-none">
-                ${datosActivos.totalIngresos.toLocaleString()}
+                {fmt(datosActivos.totalIngresos)}
               </p>
               {tasaAhorro != null && (
                 <div className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
@@ -258,18 +259,18 @@ const WidgetBalanceDual = ({
               </div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 mb-1.5">Gastos</p>
               <p className="text-lg font-black text-red-400 leading-none">
-                ${datosActivos.totalGastos.toLocaleString()}
+                {fmt(datosActivos.totalGastos)}
               </p>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 <span className="text-[10px] text-gray-500">
-                  <span className="text-emerald-400 font-bold">${(datosActivos.gastosPagados || 0).toLocaleString()}</span> pag.
+                  <span className="text-emerald-400 font-bold">{fmt(datosActivos.gastosPagados || 0)}</span> pag.
                 </span>
                 {((datosActivos.totalGastos || 0) - (datosActivos.gastosPagados || 0)) > 0 && (
                   <>
                     <span className="text-gray-700">·</span>
                     <span className="text-[10px] text-gray-500">
                       <span className="text-orange-400 font-bold">
-                        ${((datosActivos.totalGastos || 0) - (datosActivos.gastosPagados || 0)).toLocaleString()}
+                        {fmt((datosActivos.totalGastos || 0) - (datosActivos.gastosPagados || 0))}
                       </span> pend.
                     </span>
                   </>
@@ -308,7 +309,7 @@ const WidgetBalanceDual = ({
                       />
                     </div>
                     <span className={`text-[11px] font-bold ${textColor} w-20 text-right shrink-0`}>
-                      ${(valor || 0).toLocaleString()}
+                      {fmt(valor || 0)}
                     </span>
                   </div>
                 )
