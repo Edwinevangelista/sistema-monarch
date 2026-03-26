@@ -36,7 +36,7 @@ function ModalDetalleIngreso({ ingreso, onClose, onEditar, onEliminar }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       style={{
         background: 'rgba(0,0,0,0.75)',
         backdropFilter: 'blur(12px)',
@@ -46,7 +46,7 @@ function ModalDetalleIngreso({ ingreso, onClose, onEditar, onEliminar }) {
       onClick={(e) => { if (e.target === e.currentTarget) cerrar() }}
     >
       <div
-        className="relative w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden"
+        className="relative w-full max-w-sm rounded-3xl overflow-hidden"
         style={{
           background: 'linear-gradient(160deg, rgba(12,17,35,0.99) 0%, rgba(5,8,18,0.99) 100%)',
           border: '1px solid rgba(255,255,255,0.08)',
@@ -143,7 +143,7 @@ function ModalDetalleIngreso({ ingreso, onClose, onEditar, onEliminar }) {
         </div>
 
         {/* Acciones */}
-        <div className="px-5 pb-6 flex gap-2">
+        <div className="px-5 pb-6 flex gap-2" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
           <button
             onClick={() => { onEditar(ingreso); cerrar() }}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all touch-manipulation active:scale-[0.97]"
@@ -159,9 +159,9 @@ function ModalDetalleIngreso({ ingreso, onClose, onEditar, onEliminar }) {
           <button
             onClick={async () => {
               const ok = await showConfirm({
-                titulo: 'Delete this income?',
-                mensaje: 'This income record will be permanently removed.',
-                textoConfirmar: 'Delete',
+                titulo: '¿Eliminar ingreso?',
+                mensaje: 'Este ingreso será eliminado permanentemente.',
+                textoConfirmar: 'Eliminar',
               });
               if (!ok) return;
               onEliminar(ingreso.id);

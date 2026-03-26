@@ -507,10 +507,10 @@ export default function ModalUsuario({
 
   const handleLogout = async () => {
     const ok = await showConfirm({
-      titulo: "Sign out?",
-      mensaje: "You'll need to sign in again to access your financial data.",
-      textoConfirmar: "Sign Out",
-      textoCancel: "Stay",
+      titulo: "¿Cerrar sesión?",
+      mensaje: "Tendrás que iniciar sesión de nuevo para acceder a tus finanzas.",
+      textoConfirmar: "Cerrar sesión",
+      textoCancel: "Quedarse",
     });
     if (!ok) return;
     try {
@@ -519,7 +519,8 @@ export default function ModalUsuario({
       localStorage.removeItem('preferenciasUsuario');
       if (onLogout) onLogout();
     } catch (e) {
-      localStorage.clear();
+      const keysToRemove = ['usuario_finguide', 'preferenciasUsuario', 'ingresos_cache_v2', 'gastos_cache_v2'];
+      keysToRemove.forEach(k => localStorage.removeItem(k));
       if (onLogout) onLogout();
     }
   };

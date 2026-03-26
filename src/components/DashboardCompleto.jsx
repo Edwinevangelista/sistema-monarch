@@ -113,9 +113,13 @@ export default function DashboardCompleto()  {
 
   const [showModal, setShowModal] = useState(null)
 
-  // Onboarding: se muestra solo si nunca se completó
+  // Onboarding: se muestra solo si nunca se completó.
+  // El logout solo elimina claves específicas (no onboarding_completado),
+  // por lo que usuarios existentes que vuelven a iniciar sesión no verán el onboarding.
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('onboarding_completado')
+    // Never show if already completed
+    if (localStorage.getItem('onboarding_completado')) return false
+    return true
   })
 
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -1382,6 +1386,8 @@ if (planDeudaActivo) {
   const handleEliminarIngreso = async (id) => {
     try {
       await deleteIngreso(id);
+      // Force immediate UI update — remove from local instant state
+      setIngresosInstant(prev => prev.filter(i => i.id !== id));
     } catch (error) {
       console.error('Error al eliminar ingreso:', error);
       toast.error('Error al eliminar el ingreso');

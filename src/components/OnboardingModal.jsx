@@ -366,7 +366,8 @@ export default function OnboardingModal({ onClose, onAccionRapida }) {
               {!esUltimoPaso && (
                 <button
                   onClick={guardarYCerrar}
-                  className="w-full text-center text-xs text-gray-600 hover:text-gray-400 mt-3 py-1 transition-colors"
+                  className="w-full text-center text-sm text-gray-500 hover:text-gray-300 mt-2 py-3 transition-colors touch-manipulation"
+                  style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 12px)' }}
                 >
                   Omitir por ahora
                 </button>
