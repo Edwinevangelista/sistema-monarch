@@ -1,9 +1,10 @@
 import { AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
-export default function ModalConfirmacion({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
+export default function ModalConfirmacion({
+  isOpen,
+  onClose,
+  onConfirm,
   titulo = "¿Estás seguro?",
   mensaje = "Esta acción no se puede deshacer",
   textoConfirmar = "Eliminar",
@@ -11,8 +12,8 @@ export default function ModalConfirmacion({
 }) {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999999] p-4">
       <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
         <div className="flex items-start gap-4 mb-6">
           <div className="bg-red-500/20 p-3 rounded-xl">
@@ -42,6 +43,7 @@ export default function ModalConfirmacion({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

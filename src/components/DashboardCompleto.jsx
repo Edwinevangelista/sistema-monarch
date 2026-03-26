@@ -3240,8 +3240,9 @@ function ModalWrapper({ show, onClose, children }) {
   return (
     <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
       <div
-        className="relative w-full md:max-w-lg max-h-[calc(100dvh-3.5rem)] md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/12 animate-in slide-in-from-bottom-10 duration-300"
+        className="relative w-full md:max-w-lg md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/12 animate-in slide-in-from-bottom-10 duration-300"
         style={{
+          maxHeight: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))',
           background: 'linear-gradient(160deg, rgba(17,24,39,0.97) 0%, rgba(9,9,11,0.97) 100%)',
           boxShadow: '0 25px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
         }}
@@ -3259,7 +3260,7 @@ function ModalWrapper({ show, onClose, children }) {
         >
           <X className="w-4 h-4" />
         </button>
-        <div className="flex-1 overflow-y-auto p-0 md:p-0">
+        <div className="flex-1 overflow-y-auto p-0 md:p-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
           {children}
         </div>
       </div>
