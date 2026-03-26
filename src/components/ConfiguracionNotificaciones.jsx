@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { subscribeToPushFCM } from '../lib/subscribeToPushFCM';
+import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner'
 
 export default function ConfiguracionNotificaciones() {
@@ -37,17 +38,23 @@ export default function ConfiguracionNotificaciones() {
   const handleActivarNotificaciones = async () => {
     setLoading(true);
     try {
-      // requestPermission primero para que el hook actualice el estado
       const perm = await requestPermission();
 
       if (perm === 'granted') {
-        // Usar subscribeToPushFCM que activa el SW (funciona en Android/iOS)
-        await subscribeToPushFCM();
-        // La notificación de confirmación ya la lanza subscribeToPushFCM
+        if (Capacitor.isNativePlatform()) {
+          // En Android/iOS nativo: el permiso ya está concedido, listo.
+          // PushNotifications.register() ya fue llamado dentro de requestPermission()
+          toast.success('¡Notificaciones activadas! 🔔');
+        } else {
+          // Solo en web/PWA usar Service Worker y Web Push
+          await subscribeToPushFCM();
+        }
+      } else {
+        toast.error('Permiso denegado. Actívalo en Configuración del teléfono.');
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Error al activar notificaciones: ' + error.message);
+      toast.error('Error al activar: ' + error.message);
     } finally {
       setLoading(false);
     }
