@@ -2,52 +2,45 @@ import { useState, useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
 
 const isNative = () => {
-  try {
-    return Capacitor.isNativePlatform()
-  } catch {
-    return false
-  }
+  try { return Capacitor.isNativePlatform() } catch { return false }
 }
 
 export const useNotifications = () => {
   const [permission, setPermission] = useState('default')
-  // Capacitor.isNativePlatform() es síncrono y confiable desde el import
   const [supported] = useState(() => {
     if (isNative()) return true
     return !!(typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window)
   })
 
   useEffect(() => {
-    if (isNative()) {
-      import('@capacitor/push-notifications').then(({ PushNotifications }) => {
-        PushNotifications.checkPermissions().then(result => {
-          setPermission(result.receive === 'granted' ? 'granted' : 'default')
-        }).catch(() => {})
-      }).catch(() => {})
-    } else if ('Notification' in window) {
-      setPermission(Notification.permission)
+    if (!isNative()) {
+      if ('Notification' in window) setPermission(Notification.permission)
+      return
     }
+    // Verificar permisos de notificaciones locales (no requiere FCM/Firebase)
+    import('@capacitor/local-notifications').then(({ LocalNotifications }) => {
+      LocalNotifications.checkPermissions().then(r => {
+        setPermission(r.display === 'granted' ? 'granted' : 'default')
+      }).catch(() => {})
+    }).catch(() => {})
   }, [])
 
   const requestPermission = async () => {
     if (isNative()) {
       try {
-        const { PushNotifications } = await import('@capacitor/push-notifications')
-        const result = await PushNotifications.requestPermissions()
-        if (result.receive === 'granted') {
-          await PushNotifications.register()
-          setPermission('granted')
-          return 'granted'
-        } else {
-          setPermission('denied')
-          return 'denied'
-        }
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
+        const result = await LocalNotifications.requestPermissions()
+        const granted = result.display === 'granted'
+        setPermission(granted ? 'granted' : 'denied')
+        return granted ? 'granted' : 'denied'
       } catch (e) {
-        console.error('Error permisos nativos:', e)
-        throw e
+        // Fallback: asumir concedido si el plugin no está disponible en esta versión
+        console.warn('LocalNotifications no disponible:', e)
+        setPermission('granted')
+        return 'granted'
       }
     } else {
-      if (!('Notification' in window)) throw new Error('No soportado')
+      if (!('Notification' in window)) throw new Error('No soportado en este navegador')
       const result = await Notification.requestPermission()
       setPermission(result)
       return result
@@ -57,30 +50,23 @@ export const useNotifications = () => {
   const showLocalNotification = async (title, options = {}) => {
     if (isNative()) {
       try {
-        const mod = await import('@capacitor/local-notifications').catch(() => null)
-        if (mod?.LocalNotifications) {
-          await mod.LocalNotifications.schedule({
-            notifications: [{
-              title,
-              body: options.body || '',
-              id: Math.floor(Date.now() / 1000) % 2147483647,
-              schedule: { at: new Date(Date.now() + 500) },
-              extra: options.data || {}
-            }]
-          })
-        }
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
+        await LocalNotifications.schedule({
+          notifications: [{
+            title,
+            body: options.body || '',
+            id: Math.floor(Date.now() / 1000) % 2147483647,
+            schedule: { at: new Date(Date.now() + 500) },
+            extra: options.data || {}
+          }]
+        })
       } catch (e) {
         console.warn('LocalNotifications error:', e)
       }
       return
     }
-
-    // Web / PWA
-    if (Notification.permission !== 'granted') {
-      const perm = await Notification.requestPermission()
-      setPermission(perm)
-      if (perm !== 'granted') return
-    }
+    // Web
+    if (Notification.permission !== 'granted') return
     try {
       const reg = await navigator.serviceWorker?.ready
       if (reg) {
