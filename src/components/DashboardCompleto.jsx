@@ -61,6 +61,7 @@ import ModalCoberturaCuentas from './ModalCoberturaCuentas'
 import PanelSaludFinanciera from './PanelSaludFinanciera'
 import ComparativoMensual from './ComparativoMensual'
 import PresupuestoCategorias from './PresupuestoCategorias'
+import MetasFinancieras from './MetasFinancieras'
 import ModalProyeccion3Dias from './ModalProyeccion3Dias'
 
 import VisualizacionDatos from './VisualizacionDatos'
@@ -2295,6 +2296,9 @@ const dataGraficaDona = useMemo(() =>
 
       {/* ── PRESUPUESTO POR CATEGORÍA ──────────────────────────────── */}
       <PresupuestoCategorias gastos={gastosInstant} />
+
+      {/* ── METAS FINANCIERAS ─────────────────────────────────────── */}
+      <MetasFinancieras />
 
       <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
         {planDeudaActivo ? (

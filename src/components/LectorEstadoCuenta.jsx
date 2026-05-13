@@ -457,6 +457,7 @@ export default function LectorEstadoCuenta({ onClose }) {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [editableTx, setEditableTx] = useState([]);
+  const [selectedIdx, setSelectedIdx] = useState(new Set());
   const [showRawText, setShowRawText] = useState(false);
   const [rawText, setRawText] = useState("");
 
@@ -471,8 +472,15 @@ export default function LectorEstadoCuenta({ onClose }) {
       if (t.tipo === "gasto" || n < 0) gastos += Math.abs(n);
       else ingresos += Math.abs(n);
     }
-    return { gastos, ingresos, neto: ingresos - gastos };
-  }, [editableTx]);
+    let selGastos = 0, selIngresos = 0;
+    editableTx.forEach((t, i) => {
+      if (!selectedIdx.has(i)) return;
+      const n = Number(t.monto || 0);
+      if (t.tipo === "gasto" || n < 0) selGastos += Math.abs(n);
+      else selIngresos += Math.abs(n);
+    });
+    return { gastos, ingresos, neto: ingresos - gastos, selGastos, selIngresos, selCount: selectedIdx.size };
+  }, [editableTx, selectedIdx]);
 
   const resetAll = useCallback(() => {
     setFile(null);
@@ -484,8 +492,21 @@ export default function LectorEstadoCuenta({ onClose }) {
     setError(null);
     setResult(null);
     setEditableTx([]);
+    setSelectedIdx(new Set());
     setRawText("");
   }, []);
+
+  const toggleSelect = (idx) => {
+    setSelectedIdx(prev => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIdx(new Set(editableTx.map((_, i) => i)));
+  const selectNone = () => setSelectedIdx(new Set());
+  const selectByTipo = (tipo) => setSelectedIdx(new Set(editableTx.map((t, i) => t.tipo === tipo ? i : -1).filter(i => i >= 0)));
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
@@ -555,6 +576,7 @@ export default function LectorEstadoCuenta({ onClose }) {
       setProgress(100);
       setResult(parsed);
       setEditableTx(parsed.transacciones);
+      setSelectedIdx(new Set(parsed.transacciones.map((_, i) => i)));
       setMode("reviewing");
       
       console.log(`✅ Resultado: ${parsed.transacciones.length} transacciones de ${parsed.meta.banco}`);
@@ -591,7 +613,8 @@ export default function LectorEstadoCuenta({ onClose }) {
   };
 
   const handleSave = async () => {
-    if (!editableTx?.length) return;
+    const toSave = editableTx.filter((_, i) => selectedIdx.has(i));
+    if (!toSave.length) return;
 
     setLoading(true);
     setMode("saving");
@@ -599,10 +622,10 @@ export default function LectorEstadoCuenta({ onClose }) {
 
     try {
       let saved = 0;
-      
-      for (let i = 0; i < editableTx.length; i++) {
-        const tx = editableTx[i];
-        setProgress(Math.round(((i + 1) / editableTx.length) * 100));
+
+      for (let i = 0; i < toSave.length; i++) {
+        const tx = toSave[i];
+        setProgress(Math.round(((i + 1) / toSave.length) * 100));
         
         if (!tx.fecha || tx.monto === 0) continue;
         
@@ -762,39 +785,56 @@ export default function LectorEstadoCuenta({ onClose }) {
               )}
 
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="bg-rose-500/10 rounded-xl p-4 border border-rose-500/20">
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">
                   <p className="text-gray-400 text-xs uppercase">Gastos</p>
-                  <p className="text-rose-400 text-xl font-bold">${totals.gastos.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                  <p className="text-rose-400 text-lg font-bold">${totals.gastos.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                 </div>
-                <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20">
+                <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
                   <p className="text-gray-400 text-xs uppercase">Ingresos</p>
-                  <p className="text-emerald-400 text-xl font-bold">${totals.ingresos.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                  <p className="text-emerald-400 text-lg font-bold">${totals.ingresos.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                 </div>
-                <div className={`rounded-xl p-4 border ${totals.neto >= 0 ? "bg-blue-500/10 border-blue-500/20" : "bg-red-500/10 border-red-500/20"}`}>
-                  <p className="text-gray-400 text-xs uppercase">Balance</p>
-                  <p className={`text-xl font-bold ${totals.neto >= 0 ? "text-blue-400" : "text-red-400"}`}>${totals.neto.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                <div className={`rounded-xl p-3 border ${totals.neto >= 0 ? "bg-blue-500/10 border-blue-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+                  <p className="text-gray-400 text-xs uppercase">Neto</p>
+                  <p className={`text-lg font-bold ${totals.neto >= 0 ? "text-blue-400" : "text-red-400"}`}>${totals.neto.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                </div>
+              </div>
+
+              {/* Bulk-select controls */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-xs text-gray-400">{totals.selCount} de {editableTx.length} seleccionadas</span>
+                <div className="flex gap-1.5 ml-auto">
+                  <button onClick={selectAll} className="text-xs px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/14 text-gray-300 border border-white/10">Todas</button>
+                  <button onClick={selectNone} className="text-xs px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/14 text-gray-300 border border-white/10">Ninguna</button>
+                  <button onClick={() => selectByTipo("gasto")} className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20">Solo gastos</button>
+                  <button onClick={() => selectByTipo("ingreso")} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/20">Solo ingresos</button>
                 </div>
               </div>
 
               {/* Transactions List */}
-              <div className="space-y-2 mb-6 max-h-[350px] overflow-y-auto pr-1">
+              <div className="space-y-2 mb-4 max-h-[320px] overflow-y-auto pr-1">
                 {editableTx.map((tx, idx) => {
                   const isGasto = tx.tipo === "gasto";
                   const montoAbs = Math.abs(Number(tx.monto || 0));
+                  const isSelected = selectedIdx.has(idx);
 
                   return (
-                    <div key={idx} className={`bg-white/5 border rounded-xl p-3 ${isGasto ? "border-rose-500/20" : "border-emerald-500/20"}`}>
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => toggleTipo(idx)} className={`p-2 rounded-lg ${isGasto ? "bg-rose-500/20 text-rose-400" : "bg-emerald-500/20 text-emerald-400"}`}>
-                          {isGasto ? <TrendingDown className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
+                    <div key={idx} className={`border rounded-xl p-3 transition-all ${isSelected ? (isGasto ? "bg-rose-500/8 border-rose-500/25" : "bg-emerald-500/8 border-emerald-500/25") : "bg-white/3 border-white/8 opacity-50"}`}>
+                      <div className="flex items-center gap-2">
+                        {/* Checkbox */}
+                        <button onClick={() => toggleSelect(idx)} className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all ${isSelected ? (isGasto ? "bg-rose-500 border-rose-500" : "bg-emerald-500 border-emerald-500") : "border-gray-600 bg-transparent"}`}>
+                          {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </button>
+
+                        <button onClick={() => toggleTipo(idx)} className={`p-1.5 rounded-lg flex-shrink-0 ${isGasto ? "bg-rose-500/20 text-rose-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                          {isGasto ? <TrendingDown className="w-3.5 h-3.5" /> : <Wallet className="w-3.5 h-3.5" />}
                         </button>
 
                         <div className="flex-1 min-w-0">
                           <input className="w-full bg-transparent text-white font-medium text-sm outline-none truncate" value={tx.descripcion} onChange={(e) => updateTx(idx, { descripcion: e.target.value })} />
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-0.5">
                             <input className="bg-transparent text-gray-400 text-xs outline-none w-24" value={tx.fecha} onChange={(e) => updateTx(idx, { fecha: e.target.value })} />
-                            <select className="bg-transparent text-gray-400 text-xs outline-none" value={tx.categoria} onChange={(e) => updateTx(idx, { categoria: e.target.value })}>
+                            <select className="bg-transparent text-gray-500 text-xs outline-none max-w-[120px] truncate" value={tx.categoria} onChange={(e) => updateTx(idx, { categoria: e.target.value })}>
                               {CATEGORY_RULES.map(r => <option key={r.cat} value={r.cat}>{r.cat}</option>)}
                               <option value="📦 Otros">📦 Otros</option>
                               <option value="💰 Ingresos">💰 Ingresos</option>
@@ -802,12 +842,12 @@ export default function LectorEstadoCuenta({ onClose }) {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">$</span>
-                          <input className={`w-20 bg-transparent text-right font-bold outline-none ${isGasto ? "text-rose-400" : "text-emerald-400"}`} value={montoAbs.toFixed(2)} onChange={(e) => updateTx(idx, { monto: isGasto ? -Math.abs(Number(e.target.value)) : Math.abs(Number(e.target.value)) })} type="number" step="0.01" />
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500 text-sm">$</span>
+                          <input className={`w-20 bg-transparent text-right font-bold outline-none text-sm ${isGasto ? "text-rose-400" : "text-emerald-400"}`} value={montoAbs.toFixed(2)} onChange={(e) => updateTx(idx, { monto: isGasto ? -Math.abs(Number(e.target.value)) : Math.abs(Number(e.target.value)) })} type="number" step="0.01" />
                         </div>
 
-                        <button onClick={() => removeTx(idx)} className="p-2 text-gray-500 hover:text-rose-400">
+                        <button onClick={() => removeTx(idx)} className="p-1.5 text-gray-600 hover:text-rose-400 flex-shrink-0">
                           <XCircle className="w-4 h-4" />
                         </button>
                       </div>
@@ -824,9 +864,10 @@ export default function LectorEstadoCuenta({ onClose }) {
               </div>
 
               {/* Save Button */}
-              <button onClick={handleSave} disabled={loading || !editableTx.length} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg disabled:opacity-50">
+              <button onClick={handleSave} disabled={loading || totals.selCount === 0} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg disabled:opacity-50">
                 <Save className="w-5 h-5 inline mr-2" />
-                Guardar {editableTx.length} Transacciones
+                Importar {totals.selCount} transacciones
+                {totals.selCount < editableTx.length && <span className="text-sm font-normal opacity-75 ml-1">({editableTx.length - totals.selCount} excluidas)</span>}
               </button>
             </div>
           )}

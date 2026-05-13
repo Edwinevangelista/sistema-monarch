@@ -1,6 +1,6 @@
 // src/hooks/useSupabaseData.js
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase' // Asegúrate de usar el archivo correcto
+import { supabase } from '../lib/supabaseClient'
 
 /**
  * Hook genérico optimizado para cargar datos de Supabase con caché

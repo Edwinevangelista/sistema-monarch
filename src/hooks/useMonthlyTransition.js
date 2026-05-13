@@ -236,13 +236,83 @@ export const useMonthlyTransition = () => {
   }, [calcularProximoPago])
 
   /**
+   * 📸 PASO 0: Guarda snapshot KPIs del mes que cierra
+   */
+  const guardarSnapshotMensual = useCallback(async (userId) => {
+    const hoy = new Date()
+    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+    const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
+    const mesKey = `${mesAnterior.getFullYear()}-${String(mesAnterior.getMonth() + 1).padStart(2, '0')}`
+
+    // Verificar que no existe ya el snapshot para este mes
+    const { data: existing } = await supabase
+      .from('snapshots_mensuales')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('mes', mesKey)
+      .single()
+    if (existing) { console.log(`📸 Snapshot ${mesKey} ya existe, omitiendo`); return }
+
+    const ini = mesAnterior.toISOString().split('T')[0]
+    const fin = finMesAnterior.toISOString().split('T')[0]
+
+    // Consultar datos del mes anterior en paralelo
+    const [
+      { data: ingresos },
+      { data: gastosVar },
+      { data: gastosFijos },
+      { data: suscripciones },
+      { data: deudas },
+    ] = await Promise.all([
+      supabase.from('ingresos').select('monto').eq('user_id', userId).gte('fecha', ini).lte('fecha', fin),
+      supabase.from('gastos_variables').select('monto').eq('user_id', userId).gte('fecha', ini).lte('fecha', fin),
+      supabase.from('gastos_fijos').select('monto').eq('user_id', userId),
+      supabase.from('suscripciones').select('costo,ciclo').eq('user_id', userId).eq('estado', 'Activo'),
+      supabase.from('deudas').select('saldo,balance').eq('user_id', userId),
+    ])
+
+    const sum = (arr, key) => (arr || []).reduce((s, r) => s + Number(r[key] || 0), 0)
+
+    const totalIngresos       = sum(ingresos, 'monto')
+    const totalGastosVariables = sum(gastosVar, 'monto')
+    const totalGastosFijos    = sum(gastosFijos, 'monto')
+    const totalSuscripciones  = (suscripciones || []).reduce((s, sub) => {
+      const c = Number(sub.costo || 0)
+      if (sub.ciclo === 'Anual') return s + c / 12
+      if (sub.ciclo === 'Semanal') return s + c * 4.33
+      return s + c
+    }, 0)
+    const totalGastos  = totalGastosVariables + totalGastosFijos + totalSuscripciones
+    const totalDeudas  = (deudas || []).reduce((s, d) => s + Number(d.saldo || d.balance || 0), 0)
+    const saldo        = totalIngresos - totalGastos
+    const tasaAhorro   = totalIngresos > 0 ? saldo / totalIngresos : 0
+
+    const { error } = await supabase.from('snapshots_mensuales').insert({
+      user_id: userId,
+      mes: mesKey,
+      total_ingresos: totalIngresos,
+      total_gastos_variables: totalGastosVariables,
+      total_gastos_fijos: totalGastosFijos,
+      total_suscripciones: totalSuscripciones,
+      total_gastos: totalGastos,
+      total_deudas: totalDeudas,
+      saldo,
+      tasa_ahorro: tasaAhorro,
+      num_transacciones: (ingresos?.length || 0) + (gastosVar?.length || 0),
+    })
+
+    if (error) console.warn('⚠️ No se pudo guardar snapshot mensual:', error.message)
+    else console.log(`📸 Snapshot ${mesKey} guardado: ingresos=$${totalIngresos.toFixed(0)} saldo=$${saldo.toFixed(0)}`)
+  }, [])
+
+  /**
    * 🛠️ Procesa la transición completa
    */
   const procesarTransicionCompleta = useCallback(async (userId) => {
     console.log('🔄 ========================================')
     console.log('🔄 INICIANDO TRANSICIÓN MENSUAL COMPLETA')
     console.log('🔄 ========================================')
-    
+
     const estadisticas = {
       gastosArchivados: 0,
       gastosFijosReseteados: 0,
@@ -251,37 +321,36 @@ export const useMonthlyTransition = () => {
     }
 
     try {
+      console.log('\n📸 PASO 0: Guardando snapshot del mes que cierra...')
+      await guardarSnapshotMensual(userId)
+
       console.log('\n📦 PASO 1: Archivando gastos variables...')
       estadisticas.gastosArchivados = await archivarGastosVariablesAnteriores(userId)
-      
+
       console.log('\n🔄 PASO 2: Reseteando gastos fijos...')
       estadisticas.gastosFijosReseteados = await resetearGastosFijosParaNuevoMes(userId)
-      
+
       console.log('\n💰 PASO 3: Generando ingresos recurrentes...')
       estadisticas.ingresosGenerados = await generarIngresosRecurrentes(userId)
-      
+
       console.log('\n🔄 PASO 4: Actualizando suscripciones...')
       estadisticas.suscripcionesActualizadas = await actualizarSuscripcionesVencidas(userId)
 
       console.log('\n✅ ========================================')
       console.log('✅ TRANSICIÓN MENSUAL COMPLETADA')
       console.log('✅ ========================================')
-      console.log('📊 Estadísticas:')
-      console.log(`   - Gastos archivados: ${estadisticas.gastosArchivados}`)
-      console.log(`   - Gastos fijos reseteados: ${estadisticas.gastosFijosReseteados}`)
-      console.log(`   - Ingresos generados: ${estadisticas.ingresosGenerados}`)
-      console.log(`   - Suscripciones actualizadas: ${estadisticas.suscripcionesActualizadas}`)
 
       return estadisticas
-      
+
     } catch (error) {
       console.error('❌ Error en transición mensual:', error)
       throw error
     }
   }, [
-    archivarGastosVariablesAnteriores, 
-    resetearGastosFijosParaNuevoMes, 
-    generarIngresosRecurrentes, 
+    guardarSnapshotMensual,
+    archivarGastosVariablesAnteriores,
+    resetearGastosFijosParaNuevoMes,
+    generarIngresosRecurrentes,
     actualizarSuscripcionesVencidas
   ])
 

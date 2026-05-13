@@ -1,26 +1,10 @@
 // src/components/PresupuestoCategorias.jsx
 // Presupuesto por categoría — gasto real vs límite definido por el usuario
-// Persiste en localStorage — sin queries adicionales a Supabase
+// Sincronizado con Supabase (perfiles.presupuesto_categorias)
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { Target, Edit3, Check, X, ChevronDown, ChevronUp, Plus } from 'lucide-react'
-
-const LS_KEY = 'monarch_budget_by_cat'
-
-// Carga presupuestos del localStorage
-const loadBudgets = () => {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}')
-  } catch {
-    return {}
-  }
-}
-
-const saveBudgets = (budgets) => {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(budgets))
-  } catch {}
-}
+import { usePresupuestoCategorias } from '../hooks/usePresupuestoCategorias'
 
 // ── ProgressBar inline ──────────────────────────────────────────────────
 function ProgBar({ pct, color }) {
@@ -156,7 +140,7 @@ function FilaCategoria({ cat, gastado, budget, onSetBudget }) {
 
 // ── Componente principal ─────────────────────────────────────────────────
 export default function PresupuestoCategorias({ gastos = [] }) {
-  const [budgets, setBudgets] = useState(loadBudgets)
+  const { budgets, setBudget, loading } = usePresupuestoCategorias()
   const [expandido, setExpandido] = useState(false)
 
   // Gasto real del mes actual por categoría
@@ -178,13 +162,7 @@ export default function PresupuestoCategorias({ gastos = [] }) {
       .sort((a, b) => b.gastado - a.gastado)
   }, [gastos])
 
-  const handleSetBudget = useCallback((cat, val) => {
-    setBudgets(prev => {
-      const next = { ...prev, [cat]: val }
-      saveBudgets(next)
-      return next
-    })
-  }, [])
+  const handleSetBudget = (cat, val) => setBudget(cat, val)
 
   // Resumen: cuántas categorías están en riesgo
   const catConBudget   = categorias.filter(c => (budgets[c.cat] || 0) > 0)
@@ -277,7 +255,7 @@ export default function PresupuestoCategorias({ gastos = [] }) {
             ))}
 
             <p className="text-center text-[10px] text-gray-700 mt-2 pt-2 border-t border-white/5">
-              Los límites se guardan en este dispositivo
+              {loading ? 'Sincronizando…' : '✓ Límites sincronizados en la nube'}
             </p>
           </div>
         )}
