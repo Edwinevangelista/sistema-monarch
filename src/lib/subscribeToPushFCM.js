@@ -9,7 +9,7 @@ import { supabase } from './supabaseClient'
 // La private key NUNCA va aquí — solo en Supabase Edge Secrets
 const VAPID_PUBLIC_KEY =
   (typeof process !== 'undefined' && process.env?.REACT_APP_VAPID_PUBLIC_KEY) ||
-  'BKRqTmX8OlceT1bK5hgZ-gdTFUmd7hAWFa-2FUbJaFbG_1IkkE-eMTSJgLxthgYKJPzMXjJW525XwfuYGZ9KLG8'
+  'BPNpjiRIjO5GUm8kplBVt1J-NLZhkrl1BN3GZ3g-NuXo9ns4euIMFJyqGR1yDvyuJ76vbhLbd1qFEHf8aRKo0QM'
 
 // ============================================================
 // HELPER: convertir VAPID key base64url → Uint8Array
@@ -171,12 +171,16 @@ export async function subscribeToPushFCM() {
       ? pushSubscription.endpoint
       : 'sw://' + subscriptionData.token
 
+    // Extract p256dh + auth as flat columns so the cron job can read them directly
+    const subJSON = pushSubscription ? pushSubscription.toJSON() : null
     const { error: dbError } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
         subscription: subscriptionData,
         endpoint,
+        p256dh: subJSON?.keys?.p256dh || null,
+        auth: subJSON?.keys?.auth || null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' })
 

@@ -87,7 +87,7 @@ export default function GuiaPrimerPaso({
   const primerPendiente = PASOS.find(p => !completados[p.key])?.key
 
   return (
-    <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
+    <div className="w-full">
       <div
         className="relative overflow-hidden rounded-3xl border border-emerald-500/15"
         style={{

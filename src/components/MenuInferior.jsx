@@ -11,8 +11,7 @@ import {
   BarChart2,
   CreditCard,
   Repeat,
-  TrendingUp,
-  TrendingDown,
+  Plus,
 } from 'lucide-react';
 
 export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, coberturaBadge = 0, nombreUsuario = 'Usuario', onLogout }) {
@@ -49,41 +48,21 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
           {/* Inicio */}
           <button
             onClick={() => { setShowMenu(false); onOpenModal(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-white transition-colors flex-1 py-2 touch-manipulation"
+            className="flex flex-col items-center justify-center gap-0.5 text-white/30 hover:text-white/70 transition-colors flex-1 py-2 touch-manipulation"
           >
             <Home className="w-[22px] h-[22px]" />
             <span className="text-[10px] font-medium">Inicio</span>
           </button>
 
-          {/* Ingresos */}
-          <button
-            onClick={() => handleOpenModal('ingreso')}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-emerald-400 active:text-emerald-400 transition-colors flex-1 py-2 touch-manipulation"
-          >
-            <TrendingUp className="w-[22px] h-[22px]" />
-            <span className="text-[10px] font-medium">Ingreso</span>
-          </button>
-
-          {/* Botón central — Agregar gasto (más prominente) */}
-          <button
-            onClick={() => handleOpenModal('gastos')}
-            className="flex flex-col items-center justify-center touch-manipulation"
-          >
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-95 transition-transform">
-              <TrendingDown className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-500 mt-0.5">Gasto</span>
-          </button>
-
           {/* Alertas */}
           <button
             onClick={() => handleOpenModal('alertas')}
-            className="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-yellow-400 active:text-yellow-400 transition-colors flex-1 py-2 relative touch-manipulation"
+            className="flex flex-col items-center justify-center gap-0.5 text-white/30 hover:text-yellow-400 active:text-yellow-400 transition-colors flex-1 py-2 relative touch-manipulation"
           >
             <div className="relative">
               <Bell className="w-[22px] h-[22px]" />
               {alertasCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full border-2 border-gray-950 animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full border-2 border-gray-950">
                   {alertasCount > 9 ? '9+' : alertasCount}
                 </span>
               )}
@@ -91,11 +70,31 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
             <span className="text-[10px] font-medium">Alertas</span>
           </button>
 
+          {/* FAB central — Agregar */}
+          <button
+            onClick={() => handleOpenModal('gastos')}
+            className="flex flex-col items-center justify-center touch-manipulation -mt-5"
+          >
+            <div className="w-13 h-13 w-[52px] h-[52px] bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
+              <Plus className="w-6 h-6 text-white/80" />
+            </div>
+            <span className="text-[10px] font-medium text-white/30 mt-1">Agregar</span>
+          </button>
+
+          {/* Perfil */}
+          <button
+            onClick={() => handleOpenModal('usuario')}
+            className="flex flex-col items-center justify-center gap-0.5 text-white/30 hover:text-white/70 transition-colors flex-1 py-2 touch-manipulation"
+          >
+            <User className="w-[22px] h-[22px]" />
+            <span className="text-[10px] font-medium">Perfil</span>
+          </button>
+
           {/* Más */}
           <button
             onClick={() => setShowMenu(!showMenu)}
             className={`flex flex-col items-center justify-center gap-0.5 transition-colors flex-1 py-2 touch-manipulation ${
-              showMenu ? 'text-white' : 'text-gray-500 hover:text-white'
+              showMenu ? 'text-white/80' : 'text-white/30 hover:text-white/70'
             }`}
           >
             {showMenu

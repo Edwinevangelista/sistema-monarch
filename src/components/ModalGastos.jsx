@@ -1,14 +1,52 @@
+// src/components/ModalGastos.jsx — v2
+// Rendered inside ModalWrapper (no own overlay/wrapper needed)
+// Chip-based category selection, prominent amount input, clean dark theme
+
 import React, { useState, useEffect } from 'react'
-import { ShoppingCart, X, Calendar, DollarSign, FileText, Tag, CreditCard, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
+import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { useDeudas } from '../hooks/useDeudas'
 import { toast } from 'sonner'
 
-const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null, tipoInicial = 'variable' }) => {
+const CATS_VAR = [
+  { e: '🍔', l: 'Comida' },
+  { e: '🚗', l: 'Transporte' },
+  { e: '🎬', l: 'Entretenim.' },
+  { e: '👕', l: 'Ropa' },
+  { e: '💊', l: 'Salud' },
+  { e: '🏠', l: 'Hogar' },
+  { e: '🎓', l: 'Educación' },
+  { e: '🎁', l: 'Regalos' },
+  { e: '📱', l: 'Teléfono' },
+  { e: '⚡', l: 'Servicios' },
+  { e: '📦', l: 'Otros' },
+]
+
+const CATS_FIJO = [
+  { e: '🏠', l: 'Renta' },
+  { e: '⚡', l: 'Luz' },
+  { e: '💧', l: 'Agua' },
+  { e: '📡', l: 'Internet' },
+  { e: '📱', l: 'Teléfono' },
+  { e: '🚗', l: 'Seguro Auto' },
+  { e: '🏥', l: 'Seg. Médico' },
+  { e: '🎓', l: 'Colegiatura' },
+  { e: '💳', l: 'Préstamo' },
+  { e: '📦', l: 'Otros' },
+]
+
+const catVal = ({ e, l }) => `${e} ${l}`
+
+export default function ModalGastos({
+  onClose,
+  onSaveVariable,
+  onSaveFijo,
+  gastoInicial = null,
+  tipoInicial = 'variable',
+}) {
   const { cuentas } = useCuentasBancarias()
   const { deudas } = useDeudas()
 
-  // gastoInicial.dia_venc indicates a fixed expense being edited — takes precedence over tipoInicial
   const [tipoGasto, setTipoGasto] = useState(
     gastoInicial?.dia_venc != null ? 'fijo' : tipoInicial
   )
@@ -22,29 +60,17 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null,
     deuda_id: '',
     nombre: '',
     dia_venc: '',
-    estado: 'Pendiente'
+    estado: 'Pendiente',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const categoriasVariable = [
-    '🍔 Comida', '🚗 Transporte', '🎬 Entretenimiento', '👕 Ropa',
-    '💊 Salud', '🏠 Hogar', '🎓 Educación', '🎁 Regalos', '📱 Teléfono',
-    '⚡ Servicios', '📦 Otros'
-  ]
-
-  const categoriasFijo = [
-    '🏠 Renta/Hipoteca', '⚡ Luz', '💧 Agua', '📡 Internet', '📱 Teléfono',
-    '🚗 Seguro Auto', '🏥 Seguro Médico', '🎓 Colegiatura', '💳 Préstamo', '📦 Otros'
-  ]
-
-  const metodosPago = ['Efectivo', 'Tarjeta', 'Transferencia', 'Cheque']
+  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }))
 
   useEffect(() => {
     if (gastoInicial) {
-      const esFijo = gastoInicial.dia_venc !== undefined
+      const esFijo = gastoInicial.dia_venc != null
       setTipoGasto(esFijo ? 'fijo' : 'variable')
-      
       setFormData({
         fecha: gastoInicial.fecha || new Date().toISOString().split('T')[0],
         categoria: gastoInicial.categoria || '',
@@ -55,42 +81,45 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null,
         deuda_id: gastoInicial.deuda_id || '',
         nombre: gastoInicial.nombre || '',
         dia_venc: gastoInicial.dia_venc?.toString() || '',
-        estado: gastoInicial.estado || 'Pendiente'
+        estado: gastoInicial.estado || 'Pendiente',
       })
     } else {
-      setTipoGasto('variable')
+      setTipoGasto(tipoInicial)
       setFormData({
         fecha: new Date().toISOString().split('T')[0],
-        categoria: '',
-        descripcion: '',
-        monto: '',
-        metodo: 'Efectivo',
-        cuenta_id: '',
-        deuda_id: '',
-        nombre: '',
-        dia_venc: '',
-        estado: 'Pendiente'
+        categoria: '', descripcion: '', monto: '', metodo: 'Efectivo',
+        cuenta_id: '', deuda_id: '', nombre: '', dia_venc: '', estado: 'Pendiente',
       })
     }
-  }, [gastoInicial])
+  }, [gastoInicial]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAccountChange = (val) => {
+    const esCuenta = cuentas.some(c => c.id === val)
+    const esTarjeta = deudas.some(d => d.id === val)
+    setFormData(p => ({
+      ...p,
+      cuenta_id: esCuenta ? val : '',
+      deuda_id: esTarjeta ? val : '',
+      metodo: (esCuenta || esTarjeta) ? 'Tarjeta' : 'Efectivo',
+    }))
+  }
 
   const handleSubmit = async () => {
     if (!formData.categoria || !formData.monto) {
-      setError('Por favor completa categoría y monto')
+      setError('Completa categoría y monto')
       return
     }
     if (tipoGasto === 'fijo' && !formData.nombre) {
-      setError('Por favor completa el nombre del gasto fijo')
+      setError('Escribe el nombre del gasto fijo')
       return
     }
     if (tipoGasto === 'fijo' && !formData.dia_venc) {
-      setError('Por favor ingresa el día de vencimiento (1-31)')
+      setError('Indica el día de vencimiento (1-31)')
       return
     }
 
     setLoading(true)
     setError('')
-
     try {
       if (tipoGasto === 'variable') {
         const payload = {
@@ -100,15 +129,11 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null,
           monto: parseFloat(formData.monto),
           metodo: formData.metodo,
           cuenta_id: formData.cuenta_id || null,
-          deuda_id: formData.deuda_id || null
+          deuda_id: formData.deuda_id || null,
         }
-
-        if (gastoInicial?.id) {
-          payload.id = gastoInicial.id
-        }
-
+        if (gastoInicial?.id) payload.id = gastoInicial.id
         await onSaveVariable(payload)
-        toast.success('Gasto variable registrado correctamente')
+        toast.success('Gasto registrado ✓')
       } else {
         await onSaveFijo({
           id: gastoInicial?.id,
@@ -118,409 +143,307 @@ const ModalGastos = ({ onClose, onSaveVariable, onSaveFijo, gastoInicial = null,
           dia_venc: parseInt(formData.dia_venc),
           estado: formData.estado,
           cuenta_id: formData.cuenta_id || null,
-          deuda_id: formData.deuda_id || null
+          deuda_id: formData.deuda_id || null,
         })
-        toast.success('Gasto fijo registrado correctamente')
+        toast.success('Gasto fijo registrado ✓')
       }
-      
       onClose()
     } catch (err) {
-      console.error('Error al guardar gasto:', err)
-      setError(err?.message || 'Error al guardar el gasto')
+      setError(err?.message || 'Error al guardar')
     } finally {
       setLoading(false)
     }
   }
 
+  const cats = tipoGasto === 'variable' ? CATS_VAR : CATS_FIJO
+  const accountVal = formData.deuda_id || formData.cuenta_id || ''
+  const isVar = tipoGasto === 'variable'
+
+  const inputCls = `w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 placeholder-gray-600 transition-colors ${
+    isVar
+      ? 'focus:ring-rose-500/40 focus:border-rose-500/30'
+      : 'focus:ring-amber-500/40 focus:border-amber-500/30'
+  }`
+
   return (
-    // ✅ RESPONSIVO: Padding y centrado mejorados
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 md:p-6">
-      <div className="bg-gray-900 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-gray-700 shadow-2xl relative">
-        
-        {/* HEADER */}
-        <div className="bg-gradient-to-r from-red-600 to-red-800/80 p-4 md:p-6 rounded-t-2xl border-b border-red-500/30 sticky top-0 z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="bg-red-500/20 p-2 rounded-xl border border-red-400/30">
-                <ShoppingCart className="w-5 h-5 md:w-6 md:h-6 text-red-400" />
-              </div>
-              <div>
-                <h2 className="text-lg md:text-xl font-bold text-white">
-                  {gastoInicial ? 'Editar Gasto' : 'Nuevo Gasto'}
-                </h2>
-                {gastoInicial && (
-                  <p className="text-xs text-red-300 mt-0.5">
-                    Editando: {gastoInicial.nombre || gastoInicial.descripcion}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button 
-              onClick={onClose} 
-              disabled={loading} 
-              className="p-2 bg-black/20 hover:bg-black/40 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-            >
-              <X className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
+    <div className="flex flex-col">
+
+      {/* ── HEADER ── */}
+      <div className="px-5 pt-3 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-[17px] font-bold text-white leading-tight">
+              {gastoInicial ? 'Editar gasto' : 'Nuevo gasto'}
+            </h2>
+            {gastoInicial && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                {gastoInicial.nombre || gastoInicial.descripcion}
+              </p>
+            )}
           </div>
+          <button
+            onClick={onClose}
+            className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* SELECTOR TIPO */}
-        <div className="p-4 md:p-6 border-b border-gray-700">
-          <label className="block text-gray-300 mb-3 font-medium text-sm">Tipo de Gasto</label>
-          <div className="grid grid-cols-2 gap-3">
-            <button 
-              type="button" 
-              onClick={() => setTipoGasto('variable')} 
-              disabled={loading} 
-              className={`p-3 md:p-4 rounded-xl border-2 transition-all ${
-                tipoGasto === 'variable' 
-                  ? 'bg-red-600 border-red-600 text-white' 
-                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500 disabled:opacity-50'
+        {/* Type toggle */}
+        <div className="flex gap-1.5 p-1 bg-white/[0.03] rounded-2xl border border-white/[0.06]">
+          {[
+            { id: 'variable', emoji: '🛒', label: 'Variable' },
+            { id: 'fijo',     emoji: '📅', label: 'Fijo mensual' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => { setTipoGasto(t.id); set('categoria', '') }}
+              disabled={loading}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation ${
+                tipoGasto === t.id
+                  ? t.id === 'variable'
+                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
+                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
+                  : 'text-gray-500 border border-transparent hover:text-gray-300'
               }`}
             >
-              <div className="text-xl md:text-2xl mb-1">🛒</div>
-              <div className="font-semibold text-sm md:text-base">Variable</div>
-              <div className="text-[10px] md:text-xs opacity-80">Gasto único</div>
+              <span>{t.emoji}</span>
+              <span>{t.label}</span>
             </button>
-            <button 
-              type="button" 
-              onClick={() => setTipoGasto('fijo')} 
-              disabled={loading} 
-              className={`p-3 md:p-4 rounded-xl border-2 transition-all ${
-                tipoGasto === 'fijo' 
-                  ? 'bg-yellow-600 border-yellow-600 text-white' 
-                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500 disabled:opacity-50'
-              }`}
-            >
-              <div className="text-xl md:text-2xl mb-1">📅</div>
-              <div className="font-semibold text-sm md:text-base">Fijo</div>
-              <div className="text-[10px] md:text-xs opacity-80">Recurrente</div>
-            </button>
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* MENSAJE ERROR */}
+      {/* ── MONTO (prominente) ── */}
+      <div className="px-5 py-5 border-y border-white/[0.06] bg-white/[0.015]">
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          Monto *
+        </p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-light text-gray-500">$</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={formData.monto}
+            onChange={e => set('monto', e.target.value)}
+            disabled={loading}
+            autoFocus
+            className="flex-1 bg-transparent font-bold text-white focus:outline-none placeholder-gray-700"
+            style={{ fontSize: '36px' }}
+          />
+        </div>
+      </div>
+
+      {/* ── FORM BODY ── */}
+      <div className="px-5 py-5 space-y-5">
+
+        {/* Error */}
         {error && (
-          <div className="mx-4 md:mx-6 mt-4 bg-red-500/10 border border-red-500 text-red-200 px-3 md:px-4 py-2 md:py-3 rounded-lg flex items-center gap-2 text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-300 text-sm">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
           </div>
         )}
 
-        {/* FORMULARIO */}
-        <div className="p-4 md:p-6 space-y-4">
-          {tipoGasto === 'variable' ? (
-            <>
-              {/* FECHA */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4" /> Fecha
-                </label>
-                <input 
-                  type="date" 
-                  value={formData.fecha} 
-                  onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                  style={{ fontSize: '16px' }} // ✅ iOS fix
-                />
-              </div>
+        {/* FIJO — Nombre */}
+        {tipoGasto === 'fijo' && (
+          <div>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              Nombre *
+            </p>
+            <input
+              type="text"
+              placeholder="Ej: Renta, Luz, Seguro..."
+              value={formData.nombre}
+              onChange={e => set('nombre', e.target.value)}
+              disabled={loading}
+              className={inputCls}
+              style={{ fontSize: '16px' }}
+            />
+          </div>
+        )}
 
-              {/* CATEGORÍA */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <Tag className="w-4 h-4" /> Categoría *
-                </label>
-                <select 
-                  value={formData.categoria} 
-                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
+        {/* CATEGORÍA — chips */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Categoría *
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {cats.map(c => {
+              const val = catVal(c)
+              const active = formData.categoria === val
+              return (
+                <button
+                  key={val}
+                  onClick={() => set('categoria', val)}
                   disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                  style={{ fontSize: '16px' }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation active:scale-95 ${
+                    active
+                      ? isVar
+                        ? 'bg-rose-500/20 border-rose-500/35 text-rose-200'
+                        : 'bg-amber-500/20 border-amber-500/35 text-amber-200'
+                      : 'bg-white/[0.04] border-white/[0.07] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08]'
+                  }`}
                 >
-                  <option value="">Selecciona una categoría</option>
-                  {categoriasVariable.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-
-              {/* DESCRIPCIÓN */}
-              <div>
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4" /> Descripción
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: Supermercado" 
-                  value={formData.descripcion} 
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 text-sm md:text-base border border-gray-700"
-                  style={{ fontSize: '16px' }}
-                />
-              </div>
-
-              {/* MONTO */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <DollarSign className="w-4 h-4" /> Monto *
-                </label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="0.00" 
-                  value={formData.monto} 
-                  onChange={(e) => setFormData({ ...formData, monto: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                  style={{ fontSize: '16px' }}
-                />
-              </div>
-              
-              {/* CUENTA / TARJETA DE CRÉDITO */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta o tarjeta de pago</label>
-                <select
-                  value={formData.deuda_id || formData.cuenta_id || ''}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    const esCuenta = cuentas.some(c => c.id === val)
-                    const esTarjeta = deudas.some(d => d.id === val)
-                    let metodo = formData.metodo
-                    if (esCuenta || esTarjeta) metodo = 'Tarjeta'
-                    else if (!val) metodo = 'Efectivo'
-                    setFormData({
-                      ...formData,
-                      cuenta_id: esCuenta ? val : '',
-                      deuda_id: esTarjeta ? val : '',
-                      metodo
-                    })
-                  }}
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg disabled:opacity-50 text-sm md:text-base border border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  style={{ fontSize: '16px' }}
-                >
-                  <option value="">Sin cuenta vinculada (Efectivo)</option>
-                  {cuentas.length > 0 && (
-                    <optgroup label="🏦 Cuentas bancarias">
-                      {cuentas.map(c => (
-                        <option key={`cuenta-${c.id}`} value={c.id}>
-                          {c.nombre} — ${Number(c.balance || 0).toFixed(2)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {deudas.filter(d => d.estado !== 'Saldada').length > 0 && (
-                    <optgroup label="💳 Tarjetas de crédito">
-                      {deudas.filter(d => d.estado !== 'Saldada').map(d => (
-                        <option key={`deuda-${d.id}`} value={d.id}>
-                          {d.cuenta} — Saldo: ${Number(d.saldo || 0).toFixed(2)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
-
-              {/* MÉTODO */}
-              <div>
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <CreditCard className="w-4 h-4" /> Método de Pago
-                </label>
-                <select 
-                  value={formData.metodo} 
-                  onChange={(e) => setFormData({ ...formData, metodo: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 text-sm md:text-base border border-gray-700"
-                  style={{ fontSize: '16px' }}
-                >
-                  {metodosPago.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* NOMBRE */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4" /> Nombre del Gasto *
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="Ej: Renta, Luz" 
-                  value={formData.nombre} 
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                  style={{ fontSize: '16px' }}
-                />
-              </div>
-
-              {/* CATEGORÍA */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                  <Tag className="w-4 h-4" /> Categoría *
-                </label>
-                <select 
-                  value={formData.categoria} 
-                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                  style={{ fontSize: '16px' }}
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {categoriasFijo.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-
-              {/* MONTO Y DÍA */}
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                  <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                    <DollarSign className="w-4 h-4" /> Monto *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    value={formData.monto} 
-                    onChange={(e) => setFormData({ ...formData, monto: e.target.value })} 
-                    disabled={loading}
-                    className="w-full bg-gray-700 text-white px-2 py-2 md:px-3 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
-                <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                  <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4" /> Día
-                  </label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="31" 
-                    placeholder="15" 
-                    value={formData.dia_venc} 
-                    onChange={(e) => setFormData({ ...formData, dia_venc: e.target.value })} 
-                    disabled={loading}
-                    className="w-full bg-gray-700 text-white px-2 py-2 md:px-3 md:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 text-sm md:text-base border border-gray-600"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
-              </div>
-              
-              {/* CUENTA / TARJETA DE CRÉDITO - FIJO */}
-              <div className="bg-gray-800/50 p-3 md:p-4 rounded-xl border border-gray-700">
-                <label className="block text-gray-300 mb-2 text-sm font-semibold">Cuenta o tarjeta de pago</label>
-                <select
-                  value={formData.deuda_id || formData.cuenta_id || ''}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    const esCuenta = cuentas.some(c => c.id === val)
-                    const esTarjeta = deudas.some(d => d.id === val)
-                    let metodo = formData.metodo
-                    if (esCuenta || esTarjeta) metodo = 'Tarjeta'
-                    else if (!val) metodo = 'Efectivo'
-                    setFormData({
-                      ...formData,
-                      cuenta_id: esCuenta ? val : '',
-                      deuda_id: esTarjeta ? val : '',
-                      metodo
-                    })
-                  }}
-                  disabled={loading}
-                  className="w-full bg-gray-700 text-white px-3 py-2 md:px-4 md:py-3 rounded-lg disabled:opacity-50 text-sm md:text-base border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  style={{ fontSize: '16px' }}
-                >
-                  <option value="">Sin cuenta vinculada (Efectivo)</option>
-                  {cuentas.length > 0 && (
-                    <optgroup label="🏦 Cuentas bancarias">
-                      {cuentas.map(c => (
-                        <option key={`cuenta-${c.id}`} value={c.id}>
-                          {c.nombre} — ${Number(c.balance || 0).toFixed(2)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {deudas.filter(d => d.estado !== 'Saldada').length > 0 && (
-                    <optgroup label="💳 Tarjetas de crédito">
-                      {deudas.filter(d => d.estado !== 'Saldada').map(d => (
-                        <option key={`deuda-${d.id}`} value={d.id}>
-                          {d.cuenta} — Saldo: ${Number(d.saldo || 0).toFixed(2)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
-
-              {/* ESTADO */}
-              <div>
-                <label className="block text-gray-300 mb-2 text-sm">Estado</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setFormData({ ...formData, estado: 'Pendiente' })} 
-                    disabled={loading} 
-                    className={`p-2.5 md:p-3 rounded-xl border-2 transition-all text-sm md:text-base ${
-                      formData.estado === 'Pendiente' 
-                        ? 'bg-yellow-600 border-yellow-600 text-white' 
-                        : 'bg-gray-700 border-gray-600 text-gray-300 disabled:opacity-50'
-                    }`}
-                  >
-                    ⏳ Pendiente
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setFormData({ ...formData, estado: 'Pagado' })} 
-                    disabled={loading} 
-                    className={`p-2.5 md:p-3 rounded-xl border-2 transition-all text-sm md:text-base ${
-                      formData.estado === 'Pagado' 
-                        ? 'bg-green-600 border-green-600 text-white' 
-                        : 'bg-gray-700 border-gray-600 text-gray-300 disabled:opacity-50'
-                    }`}
-                  >
-                    ✅ Pagado
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* BOTONES */}
-        <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm p-4 border-t border-gray-700 z-20">
-          <div className="flex gap-3">
-            <button 
-              onClick={onClose} 
-              disabled={loading} 
-              className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 text-sm md:text-base"
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={handleSubmit} 
-              disabled={loading} 
-              className={`flex-1 px-3 md:px-4 py-2.5 md:py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base ${
-                tipoGasto === 'variable' ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-600 hover:bg-yellow-700'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  {gastoInicial ? 'Actualizar' : 'Guardar'}
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
-                </>
-              )}
-            </button>
+                  <span>{c.e}</span>
+                  <span>{c.l}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
+
+        {/* VARIABLE — Descripción + Fecha */}
+        {tipoGasto === 'variable' && (
+          <>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+                Descripción
+              </p>
+              <input
+                type="text"
+                placeholder="Ej: Supermercado, Gasolina..."
+                value={formData.descripcion}
+                onChange={e => set('descripcion', e.target.value)}
+                disabled={loading}
+                className={inputCls}
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+                Fecha
+              </p>
+              <input
+                type="date"
+                value={formData.fecha}
+                onChange={e => set('fecha', e.target.value)}
+                disabled={loading}
+                className={inputCls}
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+          </>
+        )}
+
+        {/* FIJO — Día de vencimiento + Estado */}
+        {tipoGasto === 'fijo' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+                Día de venc. *
+              </p>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="31"
+                placeholder="15"
+                value={formData.dia_venc}
+                onChange={e => set('dia_venc', e.target.value)}
+                disabled={loading}
+                className={inputCls}
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+                Estado
+              </p>
+              <div className="flex gap-2 h-[50px]">
+                {[
+                  { val: 'Pendiente', label: '⏳', color: 'amber' },
+                  { val: 'Pagado',    label: '✅', color: 'emerald' },
+                ].map(s => (
+                  <button
+                    key={s.val}
+                    onClick={() => set('estado', s.val)}
+                    disabled={loading}
+                    className={`flex-1 flex items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
+                      formData.estado === s.val
+                        ? s.color === 'amber'
+                          ? 'bg-amber-500/15 border-amber-500/25 text-amber-300'
+                          : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'
+                        : 'bg-white/[0.04] border-white/[0.07] text-gray-500'
+                    }`}
+                  >
+                    <span>{s.label}</span>
+                    <span>{s.val}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CUENTA / TARJETA */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Cuenta de pago
+          </p>
+          <select
+            value={accountVal}
+            onChange={e => handleAccountChange(e.target.value)}
+            disabled={loading}
+            className={inputCls}
+            style={{ fontSize: '16px' }}
+          >
+            <option value="">Efectivo (sin cuenta)</option>
+            {cuentas.length > 0 && (
+              <optgroup label="🏦 Cuentas bancarias">
+                {cuentas.map(c => (
+                  <option key={`c-${c.id}`} value={c.id}>
+                    {c.nombre} — ${Number(c.balance || 0).toFixed(2)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {deudas.filter(d => d.estado !== 'Saldada').length > 0 && (
+              <optgroup label="💳 Tarjetas de crédito">
+                {deudas.filter(d => d.estado !== 'Saldada').map(d => (
+                  <option key={`d-${d.id}`} value={d.id}>
+                    {d.cuenta} — ${Number(d.saldo || 0).toFixed(2)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
+
       </div>
+
+      {/* ── FOOTER ── */}
+      <div
+        className="sticky bottom-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/95 backdrop-blur-sm"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      >
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className={`flex-[2] py-3.5 text-white rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg ${
+              isVar
+                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/30'
+                : 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/30'
+            }`}
+          >
+            {loading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</>
+            ) : (
+              <><CheckCircle className="w-4 h-4" />{gastoInicial ? 'Actualizar' : 'Guardar gasto'}</>
+            )}
+          </button>
+        </div>
+      </div>
+
     </div>
   )
 }
-
-export default ModalGastos

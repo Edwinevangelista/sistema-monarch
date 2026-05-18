@@ -1,319 +1,288 @@
-// src/components/ModalIngreso.jsx
-// 💰 VERSIÓN FINAL - Fusión de ambas versiones
-// Mantiene: Loading states, error handling, UX de tu versión
-// Agrega: Campo de frecuencia para proyecciones automáticas
+// src/components/ModalIngreso.jsx — v2
+// Rendered inside ModalWrapper (no own overlay needed)
+// Compact frequency pills, prominent amount, clean dark theme
 
-import React, { useState, useEffect } from 'react';
-import { DollarSign, X, Building2, Calendar, FileText, Loader2, CheckCircle, AlertCircle, Repeat, Info } from 'lucide-react';
-import { useCuentasBancarias } from '../hooks/useCuentasBancarias';
+import React, { useState, useEffect } from 'react'
+import { X, Loader2, CheckCircle, AlertCircle, Repeat, Info } from 'lucide-react'
+import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { toast } from 'sonner'
 
 const FRECUENCIAS = [
-  { value: 'Único', label: 'Único', icon: '📅', descripcion: 'Ingreso que ocurre una sola vez' },
-  { value: 'Semanal', label: 'Semanal', icon: '📆', descripcion: 'Se repite cada semana' },
-  { value: 'Quincenal', label: 'Quincenal', icon: '🗓️', descripcion: 'Se repite cada 15 días' },
-  { value: 'Mensual', label: 'Mensual', icon: '📊', descripcion: 'Se repite cada mes' }
-];
+  { value: 'Único',     icon: '📅' },
+  { value: 'Semanal',   icon: '📆' },
+  { value: 'Quincenal', icon: '🗓️' },
+  { value: 'Mensual',   icon: '📊' },
+]
 
 export default function ModalIngreso({ onClose, onSave, ingresoInicial = null }) {
-  const { cuentas } = useCuentasBancarias();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [mostrarInfoFrecuencia, setMostrarInfoFrecuencia] = useState(false);
+  const { cuentas } = useCuentasBancarias()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showFreqInfo, setShowFreqInfo] = useState(false)
 
   const [formData, setFormData] = useState({
-    fecha: new Date().toISOString().split('T')[0],
-    fuente: '',
-    descripcion: '',
-    monto: '',
-    cuenta_id: '',
-    frecuencia: 'Único' // NUEVO CAMPO
-  });
+    fecha:      new Date().toISOString().split('T')[0],
+    fuente:     '',
+    descripcion:'',
+    monto:      '',
+    cuenta_id:  '',
+    frecuencia: 'Único',
+  })
+
+  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }))
 
   useEffect(() => {
     if (ingresoInicial) {
       setFormData({
-        fecha: ingresoInicial.fecha || new Date().toISOString().split('T')[0],
-        fuente: ingresoInicial.fuente || '',
+        fecha:       ingresoInicial.fecha || new Date().toISOString().split('T')[0],
+        fuente:      ingresoInicial.fuente || '',
         descripcion: ingresoInicial.descripcion || '',
-        monto: ingresoInicial.monto?.toString() || '',
-        cuenta_id: ingresoInicial.cuenta_id || '',
-        frecuencia: ingresoInicial.frecuencia || 'Único' // NUEVO
-      });
+        monto:       ingresoInicial.monto?.toString() || '',
+        cuenta_id:   ingresoInicial.cuenta_id || '',
+        frecuencia:  ingresoInicial.frecuencia || 'Único',
+      })
     }
-  }, [ingresoInicial]);
+  }, [ingresoInicial])
 
   const handleSubmit = async () => {
     if (!formData.fuente || !formData.monto) {
-      setError('Por favor completa los campos requeridos (Fuente y Monto)');
-      return;
+      setError('Completa fuente y monto')
+      return
     }
-
-    setIsLoading(true);
-    setError('');
-
+    setIsLoading(true)
+    setError('')
     try {
       const dataToSave = {
-        fecha: formData.fecha,
-        fuente: formData.fuente,
+        fecha:       formData.fecha,
+        fuente:      formData.fuente,
         descripcion: formData.descripcion,
-        monto: parseFloat(formData.monto),
-        cuenta_id: formData.cuenta_id || null,
-        frecuencia: formData.frecuencia // NUEVO
-      };
-
-      if (ingresoInicial?.id) {
-        dataToSave.id = ingresoInicial.id;
+        monto:       parseFloat(formData.monto),
+        cuenta_id:   formData.cuenta_id || null,
+        frecuencia:  formData.frecuencia,
       }
+      if (ingresoInicial?.id) dataToSave.id = ingresoInicial.id
 
-      await onSave(dataToSave);
-      
-      // Mensaje personalizado según frecuencia
+      await onSave(dataToSave)
+
       if (formData.frecuencia !== 'Único') {
-        toast.success(`Ingreso guardado como ${formData.frecuencia}. Se proyectará automáticamente en el balance.`);
+        toast.success(`Ingreso ${formData.frecuencia.toLowerCase()} guardado — se proyectará en tu balance`)
       } else {
-        toast.success(`Ingreso guardado correctamente`);
+        toast.success('Ingreso registrado ✓')
       }
-      
-      onClose();
-    } catch (error) {
-      console.error("Error guardando ingreso:", error);
-      setError('Error al guardar el ingreso. Intenta nuevamente.');
+      onClose()
+    } catch (err) {
+      console.error('Error guardando ingreso:', err)
+      setError('Error al guardar el ingreso. Intenta de nuevo.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
-  // Calcular proyección para mostrar preview
-  const calcularProyeccionMensual = () => {
-    const monto = parseFloat(formData.monto);
-    if (!monto || formData.frecuencia === 'Único') return null;
-    
-    if (formData.frecuencia === 'Semanal') return monto * 4;
-    if (formData.frecuencia === 'Quincenal') return monto * 2;
-    if (formData.frecuencia === 'Mensual') return monto;
-    return null;
-  };
+  // Proyección mensual preview
+  const monto = parseFloat(formData.monto) || 0
+  const proyeccion =
+    formData.frecuencia === 'Semanal'   ? monto * 4 :
+    formData.frecuencia === 'Quincenal' ? monto * 2 :
+    formData.frecuencia === 'Mensual'   ? monto      : null
 
-  const proyeccionMensual = calcularProyeccionMensual();
+  const inputCls = 'w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/30 placeholder-gray-600 transition-colors'
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-      <div className="bg-gray-900 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-3xl border border-emerald-500/20 shadow-2xl relative flex flex-col">
-        
-        {/* HEADER */}
-        <div className="bg-gradient-to-r from-emerald-600 to-green-600/80 p-4 md:p-6 rounded-t-3xl border-b border-emerald-500/30 sticky top-0 z-10 shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-500/20 p-2 rounded-xl border border-emerald-400/30">
-                <DollarSign className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  {ingresoInicial ? 'Editar Ingreso' : 'Nuevo Ingreso'}
-                </h2>
-                {ingresoInicial && (
-                  <p className="text-emerald-200 text-xs">Editando: {ingresoInicial.fuente}</p>
-                )}
-              </div>
-            </div>
-            <button 
-              onClick={onClose} 
-              disabled={isLoading}
-              className="p-2 bg-black/30 hover:bg-black/50 rounded-full text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
+    <div className="flex flex-col">
 
-        {/* MENSAJE ERROR */}
+      {/* ── HEADER ── */}
+      <div className="px-5 pt-3 pb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-[17px] font-bold text-white leading-tight">
+            {ingresoInicial ? 'Editar ingreso' : 'Nuevo ingreso'}
+          </h2>
+          {ingresoInicial && (
+            <p className="text-xs text-gray-500 mt-0.5">{ingresoInicial.fuente}</p>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* ── MONTO (prominente) ── */}
+      <div className="px-5 py-5 border-y border-white/[0.06] bg-white/[0.015]">
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          Monto *
+        </p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-light text-gray-500">$</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={formData.monto}
+            onChange={e => set('monto', e.target.value)}
+            disabled={isLoading}
+            autoFocus
+            className="flex-1 bg-transparent font-bold text-white focus:outline-none placeholder-gray-700"
+            style={{ fontSize: '36px' }}
+          />
+        </div>
+        {/* Proyección inline */}
+        {proyeccion && (
+          <p className="mt-2 text-xs text-emerald-400 font-medium">
+            ≈ ${proyeccion.toLocaleString()} / mes
+          </p>
+        )}
+      </div>
+
+      {/* ── FORM BODY ── */}
+      <div className="px-5 py-5 space-y-5">
+
+        {/* Error */}
         {error && (
-          <div className="mx-4 mt-4 bg-red-500/10 border border-red-500 text-red-200 px-4 py-3 rounded-lg flex items-center gap-2 text-sm md:text-base">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-300 text-sm">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
           </div>
         )}
 
-        {/* FORMULARIO */}
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5 overflow-y-auto custom-scrollbar">
-          
-          {/* FECHA */}
-          <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/10">
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-medium">
-              <Calendar className="w-4 h-4 text-emerald-400" /> Fecha
-            </label>
-            <input 
-              type="date" 
-              value={formData.fecha} 
-              onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} 
-              disabled={isLoading}
-              className="w-full bg-gray-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50 text-sm md:text-base border border-gray-700"
-              style={{ fontSize: '16px' }}
-            />
-          </div>
+        {/* FUENTE */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Fuente *
+          </p>
+          <input
+            type="text"
+            placeholder="Ej: Salario, Freelance, Nómina..."
+            value={formData.fuente}
+            onChange={e => set('fuente', e.target.value)}
+            disabled={isLoading}
+            className={inputCls}
+            style={{ fontSize: '16px' }}
+          />
+        </div>
 
-          {/* FUENTE */}
-          <div>
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
-              <DollarSign className="w-4 h-4 text-emerald-400" /> Fuente del Ingreso *
-            </label>
-            <input 
-              type="text" 
-              placeholder="Ej: Salario, Freelance, Nómina..." 
-              value={formData.fuente} 
-              onChange={(e) => setFormData({ ...formData, fuente: e.target.value })} 
-              disabled={isLoading}
-              className="w-full bg-gray-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50 text-sm md:text-base border border-gray-700"
-              style={{ fontSize: '16px' }}
-            />
-          </div>
-
-          {/* MONTO */}
-          <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/10">
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
-              <DollarSign className="w-4 h-4 text-emerald-400" /> Monto *
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base md:text-lg font-bold">$</span>
-              <input 
-                type="number" 
-                step="0.01" 
-                placeholder="0.00" 
-                value={formData.monto} 
-                onChange={(e) => setFormData({ ...formData, monto: e.target.value })} 
-                disabled={isLoading}
-                className="w-full bg-gray-800 text-white pl-7 md:pl-8 pr-3 md:pr-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50 text-sm md:text-base font-bold border border-gray-700"
-                style={{ fontSize: '16px' }}
-              />
-            </div>
-          </div>
-
-          {/* FRECUENCIA (NUEVO) */}
-          <div className="bg-indigo-500/5 p-3 md:p-4 rounded-2xl border border-indigo-500/20">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-gray-300 flex items-center gap-2 text-sm md:text-base font-semibold">
-                <Repeat className="w-4 h-4 text-indigo-400" /> Frecuencia
-              </label>
-              <button
-                type="button"
-                onClick={() => setMostrarInfoFrecuencia(!mostrarInfoFrecuencia)}
-                className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                disabled={isLoading}
-              >
-                <Info className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-
-            {/* Tooltip informativo */}
-            {mostrarInfoFrecuencia && (
-              <div className="mb-3 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl">
-                <p className="text-xs text-indigo-200 leading-relaxed">
-                  💡 <strong>¿Para qué sirve esto?</strong><br/>
-                  Si marcas este ingreso como "Semanal" o "Mensual", FinGuide lo proyectará automáticamente en tu balance para darte una vista más realista del mes completo.
-                </p>
-              </div>
-            )}
-
-            {/* Grid de opciones */}
-            <div className="grid grid-cols-2 gap-2">
-              {FRECUENCIAS.map((frec) => (
-                <button
-                  key={frec.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, frecuencia: frec.value })}
-                  disabled={isLoading}
-                  className={`p-2.5 md:p-3 rounded-xl border transition-all text-left disabled:opacity-50 ${
-                    formData.frecuencia === frec.value
-                      ? 'bg-indigo-500/20 border-indigo-500/50 ring-2 ring-indigo-500/30'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base md:text-lg">{frec.icon}</span>
-                    <span className={`text-xs md:text-sm font-semibold ${
-                      formData.frecuencia === frec.value ? 'text-indigo-200' : 'text-white'
-                    }`}>
-                      {frec.label}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 leading-tight">
-                    {frec.descripcion}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            {/* PREVIEW DE PROYECCIÓN */}
-            {proyeccionMensual && (
-              <div className="mt-3 p-2.5 md:p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                <div className="flex items-center gap-2 text-xs text-emerald-300">
-                  <span className="font-bold">📊 Proyección mensual:</span>
-                  <span className="font-mono font-bold text-sm">
-                    ~${proyeccionMensual.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CUENTA BANCARIA */}
-          <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/10">
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-medium">
-              <Building2 className="w-4 h-4 text-blue-400" /> Cuenta Bancaria
-            </label>
-            <select 
-              value={formData.cuenta_id} 
-              onChange={(e) => setFormData({ ...formData, cuenta_id: e.target.value })} 
-              disabled={isLoading}
-              className="w-full bg-gray-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 text-sm md:text-base border border-gray-700"
-              style={{ fontSize: '16px' }}
+        {/* FRECUENCIA — pill row */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+              Frecuencia
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowFreqInfo(v => !v)}
+              className="text-gray-600 hover:text-gray-400 transition-colors"
             >
-              <option value="">Sin asignar</option>
-              {cuentas.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre} (${Number(c.balance).toFixed(2)})</option>
-              ))}
-            </select>
+              <Info className="w-3.5 h-3.5" />
+            </button>
           </div>
-
-          {/* DESCRIPCIÓN */}
-          <div>
-            <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-medium">
-              <FileText className="w-4 h-4 text-gray-400" /> Descripción (Opcional)
-            </label>
-            <textarea
-              placeholder="Detalles adicionales..."
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              rows={2}
-              disabled={isLoading}
-              className="w-full bg-gray-800 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500/50 disabled:opacity-50 resize-none text-sm md:text-base border border-gray-700"
-              style={{ fontSize: '16px' }}
-            />
+          {showFreqInfo && (
+            <div className="mb-3 px-3 py-2.5 bg-indigo-500/8 border border-indigo-500/20 rounded-xl">
+              <p className="text-[11px] text-indigo-300 leading-relaxed">
+                <Repeat className="w-3 h-3 inline mr-1" />
+                Si es recurrente, se proyectará en tu balance mensual automáticamente.
+              </p>
+            </div>
+          )}
+          <div className="flex gap-2">
+            {FRECUENCIAS.map(f => (
+              <button
+                key={f.value}
+                onClick={() => set('frecuencia', f.value)}
+                disabled={isLoading}
+                className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
+                  formData.frecuencia === f.value
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                    : 'bg-white/[0.04] border-white/[0.07] text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                <span className="text-base leading-none">{f.icon}</span>
+                <span>{f.value}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* FOOTER BOTONES */}
-        <div className="sticky bottom-0 bg-gray-900/95 backdrop-blur-sm p-4 border-t border-white/5 z-20 shrink-0">
-          <div className="flex gap-3 md:gap-4">
-            <button 
-              onClick={onClose} 
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-2xl font-semibold transition-all disabled:opacity-50 text-sm md:text-base"
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={handleSubmit} 
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base"
-            >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-              {isLoading ? 'Guardando...' : (ingresoInicial ? 'Actualizar' : 'Guardar')}
-            </button>
-          </div>
+        {/* CUENTA BANCARIA */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Cuenta destino
+          </p>
+          <select
+            value={formData.cuenta_id}
+            onChange={e => set('cuenta_id', e.target.value)}
+            disabled={isLoading}
+            className={inputCls}
+            style={{ fontSize: '16px' }}
+          >
+            <option value="">Sin asignar</option>
+            {cuentas.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} (${Number(c.balance).toFixed(2)})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* FECHA */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Fecha
+          </p>
+          <input
+            type="date"
+            value={formData.fecha}
+            onChange={e => set('fecha', e.target.value)}
+            disabled={isLoading}
+            className={inputCls}
+            style={{ fontSize: '16px' }}
+          />
+        </div>
+
+        {/* DESCRIPCIÓN */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            Notas (opcional)
+          </p>
+          <textarea
+            placeholder="Detalles adicionales..."
+            value={formData.descripcion}
+            onChange={e => set('descripcion', e.target.value)}
+            rows={2}
+            disabled={isLoading}
+            className={`${inputCls} resize-none`}
+            style={{ fontSize: '16px' }}
+          />
+        </div>
+
+      </div>
+
+      {/* ── FOOTER ── */}
+      <div
+        className="sticky bottom-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/95 backdrop-blur-sm"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      >
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="flex-[2] py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-900/30"
+          >
+            {isLoading
+              ? <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</>
+              : <><CheckCircle className="w-4 h-4" />{ingresoInicial ? 'Actualizar' : 'Guardar ingreso'}</>
+            }
+          </button>
         </div>
       </div>
+
     </div>
-  );
+  )
 }

@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Wallet, Plus, CreditCard, Repeat, Bell, ScanLine, X, ChevronRight, ChevronDown, ChevronUp, Activity, Target, Download, ShieldAlert } from 'lucide-react';
+import { Plus, CreditCard, Bell, X, ChevronRight, Target, Download, ShieldAlert } from 'lucide-react';
+
+// --- LIBRERÍA DE BD ---
+import { supabase } from '../lib/supabaseClient'
+import { toast } from 'sonner'
+import { obtenerDatosFiltrados } from '../utils/filtrosInteligentes'
+import { showConfirm } from '../utils/confirm'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -20,66 +26,58 @@ import { useMonthlyTransition } from '../hooks/useMonthlyTransition'
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados'
 
 
-// --- COMPONENTES ---
+// --- COMPONENTES SIEMPRE VISIBLES (carga inmediata) ---
 import ModalIngreso from './ModalIngreso'
 import ModalGastos from './ModalGastos'
 import ModalSuscripcion from './ModalSuscripcion'
 import ModalPagoTarjeta from './ModalPagoTarjeta'
 import ModalAgregarDeuda from './ModalAgregarDeuda'
 import CardDeuda from './CardDeuda'
-import LectorEstadoCuenta from './LectorEstadoCuenta'
-import Notificaciones from './Notificaciones'
-import GraficaDona from './GraficaDona'
-import GraficaBarras from './GraficaBarras'
-import AsistenteFinancieroV2 from './AsistenteFinancieroV2' 
-
 import LogoutButton from './LogoutButton'
-import ModalDetallesCategorias from './ModalDetallesCategorias'
 import MenuInferior from './MenuInferior'
-import ModalUsuario from './ModalUsuario'
 import Footer from './Footer'
-import ListaIngresos from './ListaIngresos'
-import ModalDetalleUniversal from './ModalDetalleUniversal'
-import CalendarioPagos from './CalendarioPagos'
-
-// --- MODALES Y WIDGETS (Default Imports corregidos) ---
-import WidgetBalanceDual from './WidgetBalanceDual'
-import PlanExecutionWidget from './PlanExecutionWidget'
-import PlanTipsWidget from './PlanTipsWidget'
-
-// --- MODALES NUEVOS (Default Imports corregidos) ---
-import DebtPlannerModal from './DebtPlannerModal'
-import SavingsPlannerModal from './SavingsPlannerModal'
-import SpendingControlModal from './SpendingControlModal'
-import SavedPlansList from './SavedPlansList'
-
-import ListaGastosCompleta from './ListaGastosCompleta'
-import { ITEM_TYPES } from '../constants/itemTypes'
-import ModuloCuentasBancarias from './ModuloCuentasBancarias'
-import ModalAlertas from './ModalAlertas'
-import ModalCoberturaCuentas from './ModalCoberturaCuentas'
-import PanelSaludFinanciera from './PanelSaludFinanciera'
-import ComparativoMensual from './ComparativoMensual'
-import PresupuestoCategorias from './PresupuestoCategorias'
-import MetasFinancieras from './MetasFinancieras'
-import ModalProyeccion3Dias from './ModalProyeccion3Dias'
-
-import VisualizacionDatos from './VisualizacionDatos'
-import OnboardingModal from './OnboardingModal'
-import TourNuevoUsuario, { useTourNuevoUsuario } from './TourNuevoUsuario'
+import DashboardHero from './DashboardHero'
+import SectionCollapse from './SectionCollapse'
+import QuickAddBar from './QuickAddBar'
+import DailySnapshot from './DailySnapshot'
+import FinancialCoach from './FinancialCoach'
 import GuiaPrimerPaso from './GuiaPrimerPaso'
-import ModalUpgrade from './ModalUpgrade'
+import { ITEM_TYPES } from '../constants/itemTypes'
+// Hook de tour (sólo el hook, el componente se carga lazy)
+import { useTourNuevoUsuario } from './TourNuevoUsuario'
+import ErrorBoundary from './ErrorBoundary'
 
-// --- LIBRERÍA DE BD ---
-import { supabase } from '../lib/supabaseClient'
+// --- LAZY: secciones colapsables (cargan al expandir) ---
+const SpendingInsights    = React.lazy(() => import('./SpendingInsights'))
+const SmartTips           = React.lazy(() => import('./SmartTips'))
+const CashFlowForecast    = React.lazy(() => import('./CashFlowForecast'))
+const NetWorthTimeline    = React.lazy(() => import('./NetWorthTimeline'))
+const PanelSaludFinanciera = React.lazy(() => import('./PanelSaludFinanciera'))
+const ComparativoMensual  = React.lazy(() => import('./ComparativoMensual'))
+const PresupuestoCategorias = React.lazy(() => import('./PresupuestoCategorias'))
+const MetasFinancieras    = React.lazy(() => import('./MetasFinancieras'))
+const CalendarioPagos     = React.lazy(() => import('./CalendarioPagos'))
+const AsistenteFinancieroV2 = React.lazy(() => import('./AsistenteFinancieroV2'))
+const PlanExecutionWidget = React.lazy(() => import('./PlanExecutionWidget'))
+const PlanTipsWidget      = React.lazy(() => import('./PlanTipsWidget'))
 
-// --- NUEVOS IMPORTS PARA TRANSICIÓN MENSUAL ---
-
-import { toast } from 'sonner'
-import {
-  obtenerDatosFiltrados
-} from '../utils/filtrosInteligentes'
-import { showConfirm } from '../utils/confirm'
+// --- LAZY: modales pesados (cargan al abrir) ---
+const DebtPlannerModal      = React.lazy(() => import('./DebtPlannerModal'))
+const SavingsPlannerModal   = React.lazy(() => import('./SavingsPlannerModal'))
+const SpendingControlModal  = React.lazy(() => import('./SpendingControlModal'))
+const ModalUsuario          = React.lazy(() => import('./ModalUsuario'))
+const ModalDetalleUniversal = React.lazy(() => import('./ModalDetalleUniversal'))
+const LectorEstadoCuenta    = React.lazy(() => import('./LectorEstadoCuenta'))
+const OnboardingModal       = React.lazy(() => import('./OnboardingModal'))
+const VisualizacionDatos    = React.lazy(() => import('./VisualizacionDatos'))
+const ModalDetallesCategorias = React.lazy(() => import('./ModalDetallesCategorias'))
+const ModuloCuentasBancarias  = React.lazy(() => import('./ModuloCuentasBancarias'))
+const ModalAlertas          = React.lazy(() => import('./ModalAlertas'))
+const ModalCoberturaCuentas = React.lazy(() => import('./ModalCoberturaCuentas'))
+const ModalProyeccion3Dias  = React.lazy(() => import('./ModalProyeccion3Dias'))
+const ModalUpgrade          = React.lazy(() => import('./ModalUpgrade'))
+const TourNuevoUsuario      = React.lazy(() => import('./TourNuevoUsuario'))
+const ListaGastosCompleta   = React.lazy(() => import('./ListaGastosCompleta'))
 
 const FILTRO_TIPOS = {
   MES_ACTUAL: 'MES_ACTUAL',
@@ -128,8 +126,9 @@ export default function DashboardCompleto()  {
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
   const [showSpendingControl, setShowSpendingControl] = useState(false)
+  // eslint-disable-next-line no-unused-vars
   const [planUpdateCounter, setPlanUpdateCounter] = useState(0)
-  const [calendarioExpandido, setCalendarioExpandido] = useState(false)
+  // calendarioExpandido removido — ahora usa SectionCollapse
   
   // NUEVO: Estado de exportación
   const [showExportacion, setShowExportacion] = useState(false)
@@ -138,6 +137,8 @@ export default function DashboardCompleto()  {
   const [showProyeccion3d, setShowProyeccion3d] = useState(false)
   const [tarjetaExpandidaId, setTarjetaExpandidaId] = useState(null) // historial expandido por tarjeta
   const [tarjetaHistTab, setTarjetaHistTab] = useState({})   // { [deudaId]: 'pagos' | 'compras' }
+  const [historialSearch, setHistorialSearch] = useState('')  // búsqueda en historial
+  const [historialCatFiltro, setHistorialCatFiltro] = useState('') // filtro categoría historial
   const [tarjetaMesFiltro, setTarjetaMesFiltro] = useState({}) // { [deudaId]: 'YYYY-MM' }
 
   // ── Función central: cierra TODOS los paneles/modales antes de abrir uno nuevo ──
@@ -170,7 +171,7 @@ export default function DashboardCompleto()  {
   const inactivityTimerRef = useRef(null)
 
   // ESTADO DUAL DE VISTA (Definido aquí para evitar duplicados)
-  const [vistaActiva, setVistaActiva] = useState('real') // 'real' o 'proyectado'
+  const [vistaActiva] = useState('real') // 'real' o 'proyectado'
 
   const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
     const guardado = localStorage.getItem('historial_bancarios_v2');
@@ -211,7 +212,7 @@ export default function DashboardCompleto()  {
   // Hook de transición mensual automática (ejecuta en background)
   useMonthlyTransition()
 
-  const { ingresos, loading: ingresosLoading, addIngreso, updateIngreso, deleteIngreso } = useIngresos()
+  const { ingresos, loading: ingresosLoading, addIngreso, updateIngreso } = useIngresos()
   const { gastos, loading: gastosLoading, addGasto, updateGasto, deleteGasto, refresh: refreshGastos } = useGastosVariables()
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
@@ -1384,16 +1385,7 @@ if (planDeudaActivo) {
   }
 }
 
-  const handleEliminarIngreso = async (id) => {
-    try {
-      await deleteIngreso(id);
-      // Force immediate UI update — remove from local instant state
-      setIngresosInstant(prev => prev.filter(i => i.id !== id));
-    } catch (error) {
-      console.error('Error al eliminar ingreso:', error);
-      toast.error('Error al eliminar el ingreso');
-    }
-  };
+  // handleEliminarIngreso: accesible desde modal, no desde el dashboard principal
 
   // 📋 Funciones de debug eliminadas (solo usadas en botones de desarrollo)
 
@@ -1452,6 +1444,18 @@ const gastosDelMes = useMemo(() => {
   })
 }, [gastosInstant])
 
+
+// Gastos del mes anterior (para SpendingInsights anomaly detection)
+const gastosAnteriorMes = useMemo(() => {
+  const ahora = new Date()
+  const inicioAnt = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1)
+  const finAnt    = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59)
+  return gastosInstant.filter(g => {
+    if (!g.fecha) return false
+    const f = new Date(g.fecha + 'T00:00:00')
+    return f >= inicioAnt && f <= finAnt
+  })
+}, [gastosInstant])
 
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
 const overviewData = useMemo(() => {
@@ -2029,10 +2033,7 @@ const gastosPorCategoria = useMemo(() => {
   return categorias
 }, [gastosFijosInstant, gastosInstant, suscripcionesInstant])
 
-const dataGraficaDona = useMemo(() => 
-  Object.entries(gastosPorCategoria).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 8),
-  [gastosPorCategoria]
-)
+// dataGraficaDona removido — GraficaDona fue removida del dashboard principal
 
   // --- LÓGICA DE INTELIGENCIA FINANCIERA ---
 
@@ -2135,6 +2136,7 @@ const dataGraficaDona = useMemo(() =>
     return Math.floor(saldoDisponible / diasRestantes)
   }, [saldoReal, hoy, gastosFijosInstant])
 
+  // eslint-disable-next-line no-unused-vars
   const { textoHora, frase } = useMemo(() => {
     const hora = new Date().getHours()
     const texto = hora >= 5 && hora < 12 ? 'Buenos días'
@@ -2171,158 +2173,191 @@ const dataGraficaDona = useMemo(() =>
   // RENDERIZADO UI MODERNA
   // ============================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30 safe-area-top" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
-      
-      {/* FONDO AMBIENTAL */}
+    <div className="min-h-screen bg-[#0a0b0f] pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30 safe-area-top" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+
+      {/* ── BARRA TOP (export + logout) ── */}
+      <div className="flex justify-end gap-2 px-4 pt-4 pb-1">
+        <button
+          onClick={() => { cerrarTodo(); setShowExportacion(true) }}
+          className="p-2 bg-white/[0.04] hover:bg-white/[0.08] rounded-xl border border-white/[0.06] text-white/30 hover:text-emerald-400 transition-colors touch-manipulation"
+          title="Exportar datos"
+        >
+          <Download className="w-4 h-4" />
+        </button>
+        <LogoutButton />
+      </div>
+
+      {/* FONDO AMBIENTAL — suave, sin pulso */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-[-15%] left-[-5%] w-[50vw] h-[50vw] bg-purple-700/10 rounded-full blur-[160px]" />
+        <div className="absolute bottom-[-15%] right-[-5%] w-[45vw] h-[45vw] bg-blue-700/8 rounded-full blur-[160px]" />
       </div>
 
-{/* ── HEADER COMPACTO ── */}
-<div className="max-w-7xl mx-auto mb-3 px-3 md:px-4 pt-4 md:pt-6 animate-in fade-in slide-in-from-top-4">
-  <div className="flex items-center justify-between gap-3">
-
-    {/* Saludo + Nombre */}
-    <div className="flex items-center gap-3 min-w-0">
-      <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/30 shrink-0">
-        <Wallet className="w-5 h-5 text-white" />
-      </div>
-      <div className="min-w-0">
-        <h1 className="text-base md:text-xl font-bold text-white truncate leading-tight">
-          {textoHora}, {usuario.nombre || usuario.email?.split('@')[0]} 👋
-        </h1>
-        {/* Score + presupuesto diario — visible en móvil */}
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className={`text-xs font-semibold ${dailyBudget > 0 ? 'text-green-400' : 'text-red-400'}`}>
-            ${Math.abs(dailyBudget).toLocaleString()}/día
-          </span>
-          <span className="text-gray-600">·</span>
-          <span className="text-xs text-gray-400 flex items-center gap-1">
-            <Activity className="w-3 h-3 text-blue-400" />
-            Score {kpis.financialHealth}/100
-          </span>
-          <span className="hidden md:inline text-gray-600">·</span>
-          <span className="hidden md:inline text-xs text-gray-400 italic">{frase}</span>
-        </div>
-      </div>
-    </div>
-
-    {/* Controles */}
-    <div className="flex items-center gap-2 shrink-0">
-      <button
-        onClick={() => { cerrarTodo(); setShowExportacion(true) }}
-        className="p-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-gray-400 hover:text-emerald-400 transition-colors"
-        title="Exportar datos"
-      >
-        <Download className="w-4 h-4" />
-      </button>
-      <div className="hidden md:block"><LogoutButton /></div>
-    </div>
-
-  </div>
-</div>
-      {/* WIDGET DE PRESUPUESTO INTELIGENTE CON VISTA DUAL */}
-      <WidgetBalanceDual
-        calculosReales={calculosReales}
-        calculosProyectados={calculosProyectados}
-        vistaActiva={vistaActiva}
-        setVistaActiva={setVistaActiva}
-        hoy={hoy}
+      {/* ── HERO ── */}
+      <DashboardHero
+        saldo={saldoReal}
+        totalIngresos={totalIngresos}
+        totalGastos={totalGastosReales}
+        tasaAhorro={tasaAhorroReal}
+        dailyBudget={dailyBudget}
+        textoHora={textoHora}
+        nombreUsuario={usuario.nombre || usuario.email?.split('@')[0]}
       />
 
+      {/* ── QUICK ADD ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
+        <QuickAddBar
+          onAddGasto={async ({ monto, categoria, fecha, descripcion }) => {
+            await addGasto({ monto, categoria, fecha, descripcion, tipo: 'variable' })
+          }}
+          onAddIngreso={async ({ monto, descripcion, fecha }) => {
+            await addIngreso({ monto, descripcion, fecha, tipo: 'otro' })
+          }}
+        />
+      </div>
 
-      {/* ── GUÍA DE PRIMEROS PASOS — solo aparece hasta que el usuario tenga datos ── */}
-      <GuiaPrimerPaso
-        cuentas={cuentas}
-        ingresos={ingresosInstant}
-        gastosFijos={gastosFijosInstant}
-        gastos={gastosInstant}
-        onAccion={handleAccionGuia}
-      />
-
-      {/* ── ALERTAS COMPACTAS — lo más urgente primero ─────────────── */}
+      {/* ── ALERTA COMPACTA (solo si hay pagos urgentes) ── */}
       {alertas.length > 0 && (
-        <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
-          <div
-            className="relative overflow-hidden rounded-3xl border border-yellow-500/20"
-            style={{ background: 'rgba(234,179,8,0.05)', boxShadow: 'inset 0 1px 0 rgba(234,179,8,0.08)' }}
+        <div className="max-w-7xl mx-auto px-4 md:px-5 mt-3">
+          <button
+            onClick={() => abrirModal('alertas')}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl border border-yellow-500/15 touch-manipulation"
+            style={{ background: 'rgba(234,179,8,0.04)' }}
           >
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                <span className="text-xs font-bold text-yellow-300">
-                  {alertas.length} pago{alertas.length > 1 ? 's' : ''} próximo{alertas.length > 1 ? 's' : ''}
+            <div className="flex items-center gap-2">
+              <Bell className="w-3.5 h-3.5 text-yellow-400/70 shrink-0" />
+              <span className="text-xs font-semibold text-yellow-300/70">
+                {alertas.length} pago{alertas.length > 1 ? 's' : ''} próximo{alertas.length > 1 ? 's' : ''} · toca para ver
+              </span>
+              {cuentasEnRiesgo.length > 0 && (
+                <span className="px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-400/80 text-[10px] font-semibold">
+                  <ShieldAlert className="w-3 h-3 inline mr-0.5" />{cuentasEnRiesgo.length} en riesgo
                 </span>
-                {cuentasEnRiesgo.length > 0 && (
-                  <button
-                    onClick={() => abrirModal('cobertura')}
-                    className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/15 border border-orange-500/30 rounded-full text-orange-400 text-[10px] font-semibold touch-manipulation"
-                  >
-                    <ShieldAlert className="w-3 h-3" />
-                    {cuentasEnRiesgo.length} en riesgo
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => abrirModal('alertas')}
-                className="text-[11px] text-yellow-500 font-semibold hover:text-yellow-300 transition-colors touch-manipulation"
-              >
-                Ver todo →
-              </button>
+              )}
             </div>
-            {/* Primeras 3 alertas compactas */}
-            <div className="px-3 pb-3 space-y-1.5">
-              <Notificaciones
-                alertas={alertas.slice(0, 3)}
-                onAlertClick={(alerta) => handleOpenDetail(alerta.item, alerta.tipoItem)}
-              />
-            </div>
-          </div>
+            <ChevronRight className="w-4 h-4 text-yellow-500/40" />
+          </button>
         </div>
       )}
 
-      {/* ── PANEL SALUD FINANCIERA ─────────────────────────────────── */}
-      {/* Score · Patrimonio · DTI · Ahorro · Fondo de Emergencia · 50/30/20 */}
-      <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
+      {/* ── SNAPSHOT DEL DÍA ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
+        <ErrorBoundary label="Resumen del día">
+          <DailySnapshot gastos={gastosInstant} dailyBudget={dailyBudget} />
+        </ErrorBoundary>
+      </div>
 
-      {/* ── COMPARATIVO MENSUAL — este mes vs mes anterior ─────────── */}
-      <ComparativoMensual
-        ingresos={ingresosInstant}
-        gastos={gastosInstant}
-        gastosFijos={gastosFijosInstant}
-        suscripciones={suscripcionesInstant}
-      />
+      {/* ── GUÍA (solo usuarios nuevos sin datos) ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
+        <GuiaPrimerPaso
+          cuentas={cuentas}
+          ingresos={ingresosInstant}
+          gastosFijos={gastosFijosInstant}
+          gastos={gastosInstant}
+          onAccion={handleAccionGuia}
+        />
+      </div>
 
-      {/* ── PRESUPUESTO POR CATEGORÍA ──────────────────────────────── */}
-      <PresupuestoCategorias gastos={gastosInstant} />
+      {/* ── COACH SEMANAL ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
+        <ErrorBoundary label="Coach semanal">
+          <FinancialCoach
+            totalIngresos={totalIngresos}
+            totalGastos={totalGastosReales}
+            tasaAhorro={tasaAhorroReal}
+            gastosMes={gastosDelMes}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
+            deudas={deudasInstant}
+            dailyBudget={dailyBudget}
+          />
+        </ErrorBoundary>
+      </div>
 
-      {/* ── METAS FINANCIERAS ─────────────────────────────────────── */}
-      <MetasFinancieras />
+      {/* ── SEPARADOR VISUAL ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-8">
+        <div className="h-px bg-white/[0.05]" />
+      </div>
 
-      <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
-        {planDeudaActivo ? (
-          <>
-            {/* Widget de tips y recomendaciones del plan */}
-            <PlanTipsWidget
-              activePlan={planDeudaActivo}
-              deudas={deudasInstant}
-              gastos={gastosInstant}
-              gastosFijos={gastosFijosInstant}
-              ingresos={ingresosInstant}
-              alertas={alertas}
-              onOpenPlan={() => { cerrarTodo(); setShowDebtPlanner(true) }}
-              onRegisterPayment={() => {
-                const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
-                if (targetDebt) {
-                  const deudaReal = deudasInstant.find(d =>
-                    d.cuenta === targetDebt.nombre || d.id === targetDebt.id
-                  );
-                  setDeudaEditando(deudaReal || null);
-                  abrirModal('pagoTarjeta');
-                }
-              }}
-            />
+      {/* ── SECCIONES COLAPSABLES ── */}
+
+      <SectionCollapse title="Análisis de gastos" icon="📊">
+        <SpendingInsights
+          gastosMes={gastosDelMes}
+          gastosAnterior={gastosAnteriorMes}
+          totalIngresos={totalIngresos}
+        />
+        <div className="mt-4">
+          <SmartTips
+            totalIngresos={totalIngresos}
+            totalGastos={totalGastosReales}
+            tasaAhorro={tasaAhorroReal}
+            gastosMes={gastosDelMes}
+            gastosAnterior={gastosAnteriorMes}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
+            deudas={deudasInstant}
+          />
+        </div>
+      </SectionCollapse>
+
+      <SectionCollapse title="Proyección 30 días" icon="🔮">
+        <CashFlowForecast
+          saldoActual={saldoReal}
+          totalIngresos={totalIngresos}
+          totalGastosFijos={totalGastosFijosReales}
+          totalSuscripciones={totalSuscripcionesReales}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+        />
+      </SectionCollapse>
+
+      <SectionCollapse title="Salud financiera" icon="💚" badge={`${kpis.financialHealth}/100`}>
+        <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
+        <div className="mt-4">
+          <NetWorthTimeline netWorthActual={kpis.netWorth || 0} />
+        </div>
+      </SectionCollapse>
+
+      <SectionCollapse title="Presupuesto y comparativo" icon="🎯">
+        <PresupuestoCategorias gastos={gastosInstant} />
+        <div className="mt-4">
+          <ComparativoMensual
+            ingresos={ingresosInstant}
+            gastos={gastosInstant}
+            gastosFijos={gastosFijosInstant}
+            suscripciones={suscripcionesInstant}
+          />
+        </div>
+      </SectionCollapse>
+
+      <SectionCollapse title="Mis Metas de Ahorro" icon="🏆" defaultOpen={true}>
+        <MetasFinancieras />
+      </SectionCollapse>
+
+      {/* ── PLAN ACTIVO (solo si existe) ── */}
+      {planDeudaActivo && (
+        <SectionCollapse title="Mi plan activo" icon="🎯" defaultOpen={true}>
+          <PlanTipsWidget
+            activePlan={planDeudaActivo}
+            deudas={deudasInstant}
+            gastos={gastosInstant}
+            gastosFijos={gastosFijosInstant}
+            ingresos={ingresosInstant}
+            alertas={alertas}
+            onOpenPlan={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+            onRegisterPayment={() => {
+              const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0]
+              if (targetDebt) {
+                const deudaReal = deudasInstant.find(d =>
+                  d.cuenta === targetDebt.nombre || d.id === targetDebt.id
+                )
+                setDeudaEditando(deudaReal || null)
+                abrirModal('pagoTarjeta')
+              }
+            }}
+          />
+          <div className="mt-3">
             <PlanExecutionWidget
               activePlan={planDeudaActivo}
               realFinancialData={{
@@ -2334,242 +2369,87 @@ const dataGraficaDona = useMemo(() =>
               showLocalNotification={showLocalNotification}
               onOpenPlanDetails={() => { cerrarTodo(); setShowDebtPlanner(true) }}
               onRegisterPayment={() => {
-                const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0];
+                const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0]
                 if (targetDebt) {
                   const deudaReal = deudasInstant.find(d =>
                     d.cuenta === targetDebt.nombre || d.id === targetDebt.id
-                  );
-                  setDeudaEditando(deudaReal || null);
-                  abrirModal('pagoTarjeta');
+                  )
+                  setDeudaEditando(deudaReal || null)
+                  abrirModal('pagoTarjeta')
                 }
               }}
             />
-          </>
-        ) : deudasInstant.length > 0 && (
-          <button
-            onClick={() => { cerrarTodo(); setShowDebtPlanner(true) }}
-            className="w-full bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-2xl p-4 flex items-center justify-between hover:from-purple-600/30 hover:to-indigo-600/30 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/30 rounded-xl">
-                <Target className="w-6 h-6 text-purple-400" />
-              </div>
-              <div className="text-left">
-                <div className="text-white font-semibold">Crea tu plan de eliminación de deudas</div>
-                <div className="text-gray-400 text-sm">
-                  Tienes {deudasInstant.length} deuda{deudasInstant.length > 1 ? 's' : ''} registrada{deudasInstant.length > 1 ? 's' : ''}
-                </div>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-purple-400" />
-          </button>
-        )}
-      </div>
-
-      {/* CONTENIDO PRINCIPAL */}
-      <div className="max-w-7xl mx-auto px-3 md:px-4 space-y-6">
-        
-        {/* BOTONES DE ACCIÓN (Solo Desktop) */}
-        <div className="hidden md:flex flex-wrap gap-3 bg-white/5 backdrop-blur-sm p-4 rounded-2xl border border-white/10 animate-in fade-in delay-300">
-          <button onClick={() => abrirModal('ingreso')} className="flex items-center gap-2 px-4 py-2 bg-green-600/80 hover:bg-green-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-green-500/50"><Plus className="w-4 h-4" /> Ingreso</button>
-          <button onClick={() => abrirModal('gastos')} className="flex items-center gap-2 px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-red-500/50"><Plus className="w-4 h-4" /> Gasto</button>
-          <button onClick={() => abrirModal('suscripcion')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-indigo-500/50"><Repeat className="w-4 h-4" /> Suscripción</button>
-          <button onClick={() => abrirModal('tarjetas')} className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-purple-500/50"><CreditCard className="w-4 h-4" /> Tarjetas</button>
-          <button onClick={() => abrirModal('lectorEstado')} className="flex items-center gap-2 px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white rounded-xl transition-all active:scale-95 text-sm border border-gray-500/50"><ScanLine className="w-4 h-4" /> Escanear PDF</button>
-        </div>
-
-        {/* ── ALERTAS (todo al día — solo si no hay alertas) ── */}
-        {alertas.length === 0 && (
-          <div className="animate-in fade-in delay-300">
-            <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/15 rounded-2xl">
-              <div className="text-xl">✅</div>
-              <div>
-                <p className="text-sm font-semibold text-green-400">Todo al día</p>
-                <p className="text-xs text-gray-500">No tienes pagos urgentes esta semana</p>
-              </div>
-            </div>
           </div>
-        )}
-        {/* ASISTENTE FINANCIERO */}
-        <div className="animate-in fade-in delay-300">
-          <AsistenteFinancieroV2
-            ingresos={ingresosDelMes}
-            gastos={gastosDelMes}
-            gastosFijos={gastosFijosInstant}
-            suscripciones={suscripcionesInstant}
-            deudas={deudasInstant}
-            showLocalNotification={showLocalNotification}
-            onOpenDebtPlanner={() => { cerrarTodo(); setShowDebtPlanner(true) }}
-            onOpenSavingsPlanner={() => { cerrarTodo(); setShowSavingsPlanner(true) }}
-            onOpenSpendingControl={() => { cerrarTodo(); setShowSpendingControl(true) }}
-              dashboardKpis={kpis}                     // ← NUEVO
-  calculosReales={calculosReales}           // ← NUEVO  
-  calculosProyectados={calculosProyectados} // ← NUEVO
-          />
-        </div>
+        </SectionCollapse>
+      )}
 
-        {/* ── MIS PLANES ── */}
-        <div className="animate-in fade-in delay-400">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-white">Mis Planes</h3>
-            <button onClick={() => { cerrarTodo(); setShowSavingsPlanner(true) }} className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors touch-manipulation flex items-center gap-1">
-              <Plus className="w-3 h-3" /> Nuevo
-            </button>
-          </div>
-          <SavedPlansList
-            refreshSignal={planUpdateCounter}
-            realFinancialData={{
-              ingresos: ingresosInstant,
-              gastos: gastosInstant,
-              gastosFijos: gastosFijosInstant,
-              deudas: deudasInstant
-            }}
-          />
-        </div>
-
-       {/* ── GRÁFICAS ── */}
-        <div id="graficas-section" className="animate-in fade-in delay-500">
-          <h3 className="text-base font-bold text-white mb-3">¿En qué va tu dinero?</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-              <GraficaDona data={dataGraficaDona} onCategoryClick={() => { cerrarTodo(); setShowDetallesCategorias(true) }} />
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-              <GraficaBarras
-                ingresos={ingresosDelMes}
-                gastos={gastosDelMes}
-                gastosFijos={gastosFijosInstant}
-                suscripciones={suscripcionesInstant}
+      {/* ── TARJETAS Y DEUDAS ── */}
+      {deudasInstant.length > 0 && (
+        <SectionCollapse title={`Tarjetas y deudas (${deudasInstant.length})`} icon="💳">
+          <div className="space-y-3">
+            {deudasInstant.map(deuda => (
+              <CardDeuda
+                key={deuda.id}
+                deuda={deuda}
+                onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
+                onEliminar={() => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA)}
+                onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
               />
-            </div>
+            ))}
           </div>
-        </div>
-
-        {/* ── INGRESOS DEL MES ── */}
-        <div className="animate-in fade-in delay-500">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-white">Ingresos este mes</h3>
+          {!planDeudaActivo && (
             <button
-              onClick={() => abrirModal('ingreso')}
-              className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors touch-manipulation flex items-center gap-1"
+              onClick={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+              className="mt-3 w-full flex items-center justify-between px-4 py-3 bg-purple-500/8 hover:bg-purple-500/15 border border-purple-500/20 rounded-2xl transition-colors touch-manipulation"
             >
-              <Plus className="w-3 h-3" /> Agregar
-            </button>
-          </div>
-          <ListaIngresos
-            ingresos={ingresosDelMes}
-            onEditar={(ingreso) => { setIngresoEditando(ingreso); abrirModal('ingreso'); }}
-            onEliminar={handleEliminarIngreso}
-          />
-        </div>
-
-        {/* ── RESUMEN FINANCIERO: acceso rápido con montos reales ── */}
-        <div className="animate-in fade-in delay-500">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold text-white">Mis Finanzas</h3>
-            <button
-              onClick={() => { setOverviewMode('ALL'); abrirModal('gastosOverview') }}
-              className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors touch-manipulation"
-            >
-              Ver todo →
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2.5">
-            {/* Deudas */}
-            <button
-              onClick={() => { setOverviewMode('DEUDAS'); abrirModal('gastosOverview') }}
-              className="group flex flex-col gap-1.5 p-3.5 bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 rounded-2xl text-left touch-manipulation transition-all"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">💳 Deudas</span>
-              <span className="text-lg font-bold text-white leading-none">
-                ${deudasInstant.reduce((s, d) => s + Number(d.saldo || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-[10px] text-gray-500">{deudasInstant.length} tarjeta{deudasInstant.length !== 1 ? 's' : ''}</span>
-            </button>
-
-            {/* Gastos Fijos */}
-            <button
-              onClick={() => { setOverviewMode('FIJOS'); abrirModal('gastosOverview') }}
-              className="group flex flex-col gap-1.5 p-3.5 bg-yellow-500/10 hover:bg-yellow-500/20 active:scale-95 border border-yellow-500/20 rounded-2xl text-left touch-manipulation transition-all"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-400">📌 Fijos</span>
-              <span className="text-lg font-bold text-white leading-none">
-                ${gastosFijosInstant.reduce((s, g) => s + Number(g.monto || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-              <span className="text-[10px] text-gray-500">{gastosFijosInstant.length} gasto{gastosFijosInstant.length !== 1 ? 's' : ''}</span>
-            </button>
-
-            {/* Suscripciones */}
-            {(() => {
-              const subsActivas  = suscripcionesInstant.filter(s => s.estado !== 'Cancelado')
-              const totalSubs    = subsActivas.reduce((s, sub) => s + Number(sub.costo || 0), 0)
-              const pctSubsCard  = totalIngresos > 0 ? Math.round((totalSubs / totalIngresos) * 100) : 0
-              const subsAlerta   = pctSubsCard > 5 && totalIngresos > 0
-              return (
-                <button
-                  onClick={() => { setOverviewMode('SUSCRIPCIONES'); abrirModal('gastosOverview') }}
-                  className={`group flex flex-col gap-1.5 p-3.5 active:scale-95 rounded-2xl text-left touch-manipulation transition-all relative ${
-                    subsAlerta
-                      ? 'bg-amber-500/12 hover:bg-amber-500/20 border border-amber-500/30'
-                      : 'bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20'
-                  }`}
-                >
-                  {subsAlerta && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  )}
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${subsAlerta ? 'text-amber-400' : 'text-indigo-400'}`}>
-                    🔄 Suscripc.
-                  </span>
-                  <span className="text-lg font-bold text-white leading-none">
-                    ${totalSubs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className={`text-[10px] ${subsAlerta ? 'text-amber-500 font-semibold' : 'text-gray-500'}`}>
-                    {subsAlerta ? `${pctSubsCard}% ingresos ⚠️` : `${subsActivas.length} activa${subsActivas.length !== 1 ? 's' : ''}`}
-                  </span>
-                </button>
-              )
-            })()}
-          </div>
-        </div>
-
-        {/* ── CALENDARIO DE PAGOS (colapsable) ── */}
-        <div className="animate-in fade-in delay-500">
-          <button
-            onClick={() => setCalendarioExpandido(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white/4 hover:bg-white/7 border border-white/10 rounded-2xl transition-colors touch-manipulation"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="text-base">📅</span>
-              <div className="text-left">
-                <p className="text-sm font-bold text-gray-200">Calendario de pagos</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">Ver fechas de vencimiento del mes</p>
+              <div className="flex items-center gap-2.5">
+                <Target className="w-4 h-4 text-purple-400 shrink-0" />
+                <span className="text-sm font-semibold text-white/70">Crear plan de eliminación de deudas</span>
               </div>
-            </div>
-            {calendarioExpandido
-              ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" />
-              : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
-            }
-          </button>
-          {calendarioExpandido && (
-            <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <CalendarioPagos
-                key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
-                gastosFijos={gastosFijosInstant}
-                suscripciones={suscripcionesInstant}
-                deudas={deudasInstant}
-                ingresos={ingresosInstant}
-                gastos={gastosInstant}
-              />
-            </div>
+              <ChevronRight className="w-4 h-4 text-purple-400/50" />
+            </button>
           )}
-        </div>
+        </SectionCollapse>
+      )}
 
-      </div>
+      {/* ── ASISTENTE IA ── */}
+      <SectionCollapse title="Asistente financiero IA" icon="🤖">
+        <AsistenteFinancieroV2
+          ingresos={ingresosDelMes}
+          gastos={gastosDelMes}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+          deudas={deudasInstant}
+          showLocalNotification={showLocalNotification}
+          onOpenDebtPlanner={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+          onOpenSavingsPlanner={() => { cerrarTodo(); setShowSavingsPlanner(true) }}
+          onOpenSpendingControl={() => { cerrarTodo(); setShowSpendingControl(true) }}
+          dashboardKpis={kpis}
+          calculosReales={calculosReales}
+          calculosProyectados={calculosProyectados}
+        />
+      </SectionCollapse>
+
+      {/* ── CALENDARIO DE PAGOS ── */}
+      <SectionCollapse title="Calendario de pagos" icon="📅">
+        <CalendarioPagos
+          key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
+          gastosFijos={gastosFijosInstant}
+          suscripciones={suscripcionesInstant}
+          deudas={deudasInstant}
+          ingresos={ingresosInstant}
+          gastos={gastosInstant}
+        />
+      </SectionCollapse>
+
+
+      <div className="mb-8" />
 
       <Footer className="hidden md:block" />
 
-      {/* --- MODALES (RESPONSIVE BOTTOM SHEET) --- */}
-      
+      {/* --- MODALES (lazy + error boundary) --- */}
+      <React.Suspense fallback={null}>
+
       {/* DETALLE UNIVERSAL */}
       {itemSeleccionado && (
         <div 
@@ -2629,14 +2509,14 @@ const dataGraficaDona = useMemo(() =>
 
             <div className="p-4 overflow-y-auto flex-1">
               {overviewMode === 'HISTORIAL' ? (
-                // ── HISTORIAL: gastos con filtro por mes ──
+                // ── HISTORIAL: gastos con filtro por mes + búsqueda ──
                 (() => {
                   const mesesDisponibles = []
                   const ahoraH = new Date()
                   for (let i = 0; i < 12; i++) {
                     const d = new Date(ahoraH.getFullYear(), ahoraH.getMonth() - i, 1)
                     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-                    const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                    const label = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
                     mesesDisponibles.push({ key, label })
                   }
 
@@ -2644,6 +2524,7 @@ const dataGraficaDona = useMemo(() =>
                   const inicioPeriodo = new Date(filtroAño, filtroMes - 1, 1)
                   const finPeriodo = new Date(filtroAño, filtroMes, 0, 23, 59, 59)
                   const esMesActual = filtroAño === ahoraH.getFullYear() && filtroMes === (ahoraH.getMonth() + 1)
+                  const searchQ = historialSearch.toLowerCase().trim()
 
                   const gastosDelPeriodo = gastosInstant.filter(g => {
                     if (!g.fecha) return false
@@ -2651,37 +2532,92 @@ const dataGraficaDona = useMemo(() =>
                     if (g.descripcion?.includes('Autopago:')) return false
                     if (g.categoria === '📅 Suscripciones') return false
                     const fecha = new Date(g.fecha + 'T00:00:00')
-                    return fecha >= inicioPeriodo && fecha <= finPeriodo
+                    if (!(fecha >= inicioPeriodo && fecha <= finPeriodo)) return false
+                    if (historialCatFiltro && g.categoria !== historialCatFiltro) return false
+                    if (searchQ && !(
+                      (g.descripcion || '').toLowerCase().includes(searchQ) ||
+                      (g.categoria || '').toLowerCase().includes(searchQ) ||
+                      String(g.monto || '').includes(searchQ)
+                    )) return false
+                    return true
                   }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
 
-                  const gastosFijosDelPeriodo = gastosFijosInstant.map(gf => ({
-                    ...gf,
-                    estadoPeriodo: esMesActual ? gf.estado : 'Recurrente'
-                  }))
+                  const gastosFijosDelPeriodo = gastosFijosInstant
+                    .filter(gf => !searchQ || (gf.nombre||'').toLowerCase().includes(searchQ))
+                    .map(gf => ({
+                      ...gf,
+                      estadoPeriodo: esMesActual ? gf.estado : 'Recurrente'
+                    }))
 
                   const pagosDelPeriodo = pagos.filter(p => {
                     if (!p.fecha) return false
                     const fecha = new Date(p.fecha + 'T00:00:00')
-                    return fecha >= inicioPeriodo && fecha <= finPeriodo
+                    if (!(fecha >= inicioPeriodo && fecha <= finPeriodo)) return false
+                    if (searchQ) {
+                      const deuda = deudasInstant.find(d => d.id === p.deuda_id)
+                      if (!((deuda?.cuenta||'').toLowerCase().includes(searchQ) || String(p.monto||'').includes(searchQ))) return false
+                    }
+                    return true
                   }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+
+                  // Categorías únicas del mes para el filtro
+                  const categoriasDisponibles = [...new Set(
+                    gastosInstant
+                      .filter(g => {
+                        if (!g.fecha) return false
+                        const f = new Date(g.fecha + 'T00:00:00')
+                        return f >= inicioPeriodo && f <= finPeriodo
+                      })
+                      .map(g => g.categoria)
+                      .filter(Boolean)
+                  )]
 
                   const totalVariables = gastosDelPeriodo.reduce((s, g) => s + Number(g.monto || 0), 0)
                   const totalFijos = gastosFijosDelPeriodo.reduce((s, g) => s + Number(g.monto || 0), 0)
                   const totalPagos = pagosDelPeriodo.reduce((s, p) => s + Number(p.monto || 0), 0)
 
                   return (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 shrink-0">Mes:</span>
+                    <div className="space-y-3">
+                      {/* ── Barra de búsqueda ── */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={historialSearch}
+                          onChange={e => setHistorialSearch(e.target.value)}
+                          placeholder="Buscar gasto, categoría o monto…"
+                          className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-xl pl-4 pr-10 py-2.5 placeholder-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                        />
+                        {historialSearch && (
+                          <button
+                            onClick={() => setHistorialSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                          >✕</button>
+                        )}
+                      </div>
+
+                      {/* ── Fila: mes + categoría ── */}
+                      <div className="flex gap-2">
                         <select
                           value={historialMesFiltro}
                           onChange={e => setHistorialMesFiltro(e.target.value)}
-                          className="flex-1 bg-gray-800 border border-white/10 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                          className="flex-1 bg-white/5 border border-white/10 text-white/80 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/25 appearance-none"
                         >
                           {mesesDisponibles.map(m => (
                             <option key={m.key} value={m.key}>{m.label}</option>
                           ))}
                         </select>
+                        {categoriasDisponibles.length > 0 && (
+                          <select
+                            value={historialCatFiltro}
+                            onChange={e => setHistorialCatFiltro(e.target.value)}
+                            className="flex-1 bg-white/5 border border-white/10 text-white/80 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-white/25 appearance-none"
+                          >
+                            <option value="">Todas las categorías</option>
+                            {categoriasDisponibles.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
@@ -3240,6 +3176,8 @@ const dataGraficaDona = useMemo(() =>
           }}
         />
       )}
+
+      </React.Suspense>
     </div>
   )
 }
