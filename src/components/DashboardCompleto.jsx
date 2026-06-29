@@ -208,6 +208,8 @@ export default function DashboardCompleto()  {
     if (accion === 'cuenta')    { abrirModal('cuentas') }
     else if (accion === 'ingreso')   { abrirModal('ingreso') }
     else if (accion === 'gastoFijo') { setGastoTipoInicial('fijo');     abrirModal('gastos') }
+    else if (accion === 'deuda')     { setDeudaEditando(null); abrirModal('agregarDeuda') }
+    else if (accion === 'suscripcion') { abrirModal('suscripcion') }
     else if (accion === 'gasto')     { setGastoTipoInicial('variable'); abrirModal('gastos') }
   }
 
@@ -2390,6 +2392,8 @@ const gastosPorCategoria = useMemo(() => {
           cuentas={cuentas}
           ingresos={ingresosInstant}
           gastosFijos={gastosFijosInstant}
+          deudas={deudasInstant}
+          suscripciones={suscripcionesInstant}
           gastos={gastosInstant}
           onAccion={handleAccionGuia}
         />

@@ -1,7 +1,9 @@
 // src/components/GuiaPrimerPaso.jsx
-// Guía de inicio para usuarios nuevos — 4 pasos en el orden correcto
-// Aparece mientras el usuario no haya completado los 4 pasos base
-// Se puede minimizar; se cierra automáticamente al completar todo
+// Guía de inicio para usuarios nuevos — 6 pasos en el orden correcto.
+// El orden no es arbitrario: cada paso alimenta los cálculos del paso
+// siguiente (patrimonio neto, DTI, presupuesto diario, salud financiera).
+// Aparece mientras el usuario no haya completado los pasos base.
+// Se puede minimizar; se cierra automáticamente al completar todo.
 
 import { useState, useEffect, useMemo } from 'react'
 import { CheckCircle2, ChevronDown, ChevronUp, X, Rocket } from 'lucide-react'
@@ -11,7 +13,7 @@ const PASOS = [
     key: 'cuenta',
     emoji: '🏦',
     titulo: 'Agrega tu cuenta bancaria',
-    detalle: 'Sin una cuenta no hay balance real. Es el primer paso.',
+    detalle: 'Es la base de todo: sin saldo en cuentas, tu patrimonio neto y tu "libre real" no pueden calcularse bien.',
     cta: 'Agregar cuenta',
     accion: 'cuenta',
   },
@@ -19,7 +21,7 @@ const PASOS = [
     key: 'ingreso',
     emoji: '💰',
     titulo: 'Registra tu ingreso del mes',
-    detalle: '¿Cuánto ganaste este mes? Sueldo, freelance, negocio...',
+    detalle: 'Sueldo, freelance, negocio — con su frecuencia correcta. Todos los porcentajes (ahorro, DTI, 50/30/20) se calculan sobre este número.',
     cta: 'Registrar ingreso',
     accion: 'ingreso',
   },
@@ -27,25 +29,43 @@ const PASOS = [
     key: 'gastoFijo',
     emoji: '🏠',
     titulo: 'Agrega tus gastos fijos',
-    detalle: 'Renta, luz, agua, internet — lo que pagas cada mes sin falta.',
+    detalle: 'Renta, luz, agua, internet — con el día de vencimiento correcto. De esto depende tu presupuesto diario seguro.',
     cta: 'Agregar gasto fijo',
     accion: 'gastoFijo',
+  },
+  {
+    key: 'deuda',
+    emoji: '💳',
+    titulo: 'Agrega tus tarjetas y deudas',
+    detalle: 'Saldo, APR y pago mínimo reales. Sin esto tu DTI y tu score de salud financiera no reflejan tu situación real.',
+    cta: 'Agregar deuda',
+    accion: 'deuda',
+  },
+  {
+    key: 'suscripcion',
+    emoji: '🔄',
+    titulo: 'Agrega tus suscripciones',
+    detalle: 'Netflix, Spotify, gimnasio — lo que pagas cada mes o año de forma recurrente.',
+    cta: 'Agregar suscripción',
+    accion: 'suscripcion',
   },
   {
     key: 'gasto',
     emoji: '🛍️',
     titulo: 'Registra un gasto del día a día',
-    detalle: 'Comida, transporte, salidas — los gastos que varían cada mes.',
+    detalle: 'Comida, transporte, salidas — los gastos que varían cada mes. Este es el último paso porque cambia todos los días.',
     cta: 'Registrar gasto',
     accion: 'gasto',
   },
 ]
 
 export default function GuiaPrimerPaso({
-  cuentas      = [],
-  ingresos     = [],
-  gastosFijos  = [],
-  gastos       = [],
+  cuentas       = [],
+  ingresos      = [],
+  gastosFijos   = [],
+  deudas        = [],
+  suscripciones = [],
+  gastos        = [],
   onAccion,
 }) {
   const [minimizado, setMinimizado] = useState(false)
@@ -55,14 +75,17 @@ export default function GuiaPrimerPaso({
   const [celebrando, setCelebrando] = useState(false)
 
   const completados = useMemo(() => ({
-    cuenta:    cuentas.length > 0,
-    ingreso:   ingresos.length > 0,
-    gastoFijo: gastosFijos.length > 0,
-    gasto:     gastos.length > 0,
-  }), [cuentas, ingresos, gastosFijos, gastos])
+    cuenta:       cuentas.length > 0,
+    ingreso:      ingresos.length > 0,
+    gastoFijo:    gastosFijos.length > 0,
+    deuda:        deudas.length > 0,
+    suscripcion:  suscripciones.length > 0,
+    gasto:        gastos.length > 0,
+  }), [cuentas, ingresos, gastosFijos, deudas, suscripciones, gastos])
 
+  const TOTAL_PASOS = PASOS.length
   const totalCompletos = Object.values(completados).filter(Boolean).length
-  const todoCompleto   = totalCompletos === 4
+  const todoCompleto   = totalCompletos === TOTAL_PASOS
 
   // Celebrate + auto-close when all 4 steps are done
   useEffect(() => {
@@ -115,7 +138,7 @@ export default function GuiaPrimerPaso({
               <Rocket className="w-4 h-4 text-emerald-400 shrink-0" />
               <div>
                 <p className="text-xs font-bold text-gray-200">Primeros pasos</p>
-                <p className="text-[10px] text-gray-500">Configura tu cuenta en 4 pasos</p>
+                <p className="text-[10px] text-gray-500">Configura tu cuenta en {TOTAL_PASOS} pasos, en el orden correcto</p>
               </div>
             </div>
 
@@ -125,7 +148,7 @@ export default function GuiaPrimerPaso({
                 className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border"
                 style={{ color: '#34d399', borderColor: '#34d39935', background: '#34d39912' }}
               >
-                {totalCompletos}/4
+                {totalCompletos}/{TOTAL_PASOS}
               </span>
               <button
                 onClick={() => setMinimizado(v => !v)}
@@ -151,7 +174,7 @@ export default function GuiaPrimerPaso({
             <div
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
-                width: `${(totalCompletos / 4) * 100}%`,
+                width: `${(totalCompletos / TOTAL_PASOS) * 100}%`,
                 background: 'linear-gradient(90deg, #10b981, #34d399)',
               }}
             />
