@@ -53,11 +53,11 @@ function Metric({ icon: Icon, label, value, helper, tone = 'slate' }) {
     blue: 'bg-accent-info/10 text-accent-info border-accent-info/25',
     amber: 'bg-accent-warning/10 text-accent-warning border-accent-warning/25',
     rose: 'bg-accent-negative/10 text-accent-negative border-accent-negative/25',
-    slate: 'bg-base-elevated text-ink-muted border-base-border',
+    slate: 'bg-canvas-elevated text-ink-muted border-canvas-border',
   }
 
   return (
-    <div className="rounded-xl border border-base-border bg-base-surface p-3 shadow-card">
+    <div className="rounded-xl border border-canvas-border bg-canvas-surface p-3 shadow-card">
       <div className="flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${toneClasses[tone]}`}>
           <Icon className="h-4 w-4" />
@@ -94,7 +94,7 @@ export default function MoneyCommandCenter({
 
   return (
     <section className="max-w-7xl mx-auto px-4 md:px-5 mt-4">
-      <div className="rounded-2xl border border-base-border bg-base-surface p-4 shadow-card">
+      <div className="rounded-2xl border border-canvas-border bg-canvas-surface p-4 shadow-card">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${status.bg} ${status.border} ${status.color}`}>
@@ -109,7 +109,7 @@ export default function MoneyCommandCenter({
           <button
             type="button"
             onClick={actionHandler}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-positive px-4 py-2.5 text-sm font-bold text-base shadow-sm transition-colors hover:bg-accent-positive/90"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent-positive px-4 py-2.5 text-sm font-bold text-canvas shadow-sm transition-colors hover:bg-accent-positive/90"
           >
             {action?.cta || 'Registrar gasto'}
             <ArrowRight className="h-4 w-4" />
@@ -148,7 +148,7 @@ export default function MoneyCommandCenter({
         </div>
 
         {action && (
-          <div className="mt-4 rounded-xl border border-base-border bg-base-elevated p-3">
+          <div className="mt-4 rounded-xl border border-canvas-border bg-canvas-elevated p-3">
             <div className="flex items-start gap-2">
               <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-accent-positive" />
               <div>

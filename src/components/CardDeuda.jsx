@@ -67,17 +67,17 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
     ciclo.dias === 0 ? 'bg-accent-info/10 text-accent-info border-accent-info/25' :
     ciclo.dias <= 3  ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/25' :
     ciclo.dias <= 7  ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/25' :
-                       'bg-base-elevated text-ink-muted border-base-border'
+                       'bg-canvas-elevated text-ink-muted border-canvas-border'
 
   // Pay button color
   const colorBotonPagar =
     urgente
-      ? 'bg-accent-warning hover:bg-accent-warning/90 active:bg-accent-warning/80 text-base'
-      : 'bg-accent-positive hover:bg-accent-positive/90 active:bg-accent-positive/80 text-base'
+      ? 'bg-accent-warning hover:bg-accent-warning/90 active:bg-accent-warning/80 text-canvas'
+      : 'bg-accent-positive hover:bg-accent-positive/90 active:bg-accent-positive/80 text-canvas'
 
   return (
     <div
-      className="rounded-2xl p-4 border transition-all bg-base-surface"
+      className="rounded-2xl p-4 border transition-all bg-canvas-surface"
       style={{
         borderColor: urgente ? 'rgba(251,191,36,0.35)' : '#262B36',
         boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
@@ -113,12 +113,12 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
 
           {/* CreditCard icon with urgency badge */}
           <div className="relative ml-1">
-            <div className="p-2 bg-base-elevated border border-base-border rounded-xl">
+            <div className="p-2 bg-canvas-elevated border border-canvas-border rounded-xl">
               <CreditCard className="w-4 h-4 text-ink-muted" />
             </div>
             {urgente && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-accent-warning border border-base flex items-center justify-center">
-                <AlertCircle className="w-2 h-2 text-base" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-accent-warning border border-canvas flex items-center justify-center">
+                <AlertCircle className="w-2 h-2 text-canvas" />
               </span>
             )}
           </div>

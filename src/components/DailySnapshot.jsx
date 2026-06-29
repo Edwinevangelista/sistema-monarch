@@ -124,7 +124,7 @@ export default function DailySnapshot({ gastos = [], dailyBudget = 0 }) {
 
   return (
     <div
-      className="rounded-2xl border border-base-border bg-base-surface p-4 space-y-4 shadow-card"
+      className="rounded-2xl border border-canvas-border bg-canvas-surface p-4 space-y-4 shadow-card"
     >
       {/* ── Header ── */}
       <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function DailySnapshot({ gastos = [], dailyBudget = 0 }) {
             </p>
 
             {/* Progress bar */}
-            <div className="w-full bg-base-elevated rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-canvas-elevated rounded-full h-2 overflow-hidden">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${barColor(pct)}`}
                 style={{ width: `${Math.min(pct, 100)}%` }}
@@ -168,7 +168,7 @@ export default function DailySnapshot({ gastos = [], dailyBudget = 0 }) {
       )}
 
       {/* ── Separator ── */}
-      <div className="border-t border-base-border" />
+      <div className="border-t border-canvas-border" />
 
       {/* ── Recent movements ── */}
       <div className="space-y-2">
@@ -217,9 +217,9 @@ export default function DailySnapshot({ gastos = [], dailyBudget = 0 }) {
             {/* Divider when fewer than 3 more exist */}
             {gastosHoy.length <= 3 && (
               <div className="flex items-center gap-2 py-1">
-                <div className="flex-1 border-t border-base-border" />
+                <div className="flex-1 border-t border-canvas-border" />
                 <span className="text-xs text-ink-faint shrink-0">Sin más movimientos hoy</span>
-                <div className="flex-1 border-t border-base-border" />
+                <div className="flex-1 border-t border-canvas-border" />
               </div>
             )}
           </>

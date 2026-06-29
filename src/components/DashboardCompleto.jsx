@@ -2289,7 +2289,7 @@ const gastosPorCategoria = useMemo(() => {
       <div className="flex justify-end gap-2 px-4 pt-4 pb-1">
         <button
           onClick={abrirExportacion}
-          className="p-2 bg-base-surface hover:bg-base-elevated rounded-xl border border-base-border text-ink-muted hover:text-accent-positive shadow-sm transition-colors touch-manipulation"
+          className="p-2 bg-canvas-surface hover:bg-canvas-elevated rounded-xl border border-canvas-border text-ink-muted hover:text-accent-positive shadow-sm transition-colors touch-manipulation"
           title="Exportar datos"
         >
           <Download className="w-4 h-4" />
@@ -2326,12 +2326,12 @@ const gastosPorCategoria = useMemo(() => {
       />
 
       <div className="max-w-7xl mx-auto px-4 md:px-5 mt-3">
-        <div className="inline-flex w-full rounded-xl border border-base-border bg-base-surface p-1 shadow-sm md:w-auto">
+        <div className="inline-flex w-full rounded-xl border border-canvas-border bg-canvas-surface p-1 shadow-sm md:w-auto">
           <button
             type="button"
             onClick={() => setVistaSimple(true)}
             className={`flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-colors md:flex-none ${
-              vistaSimple ? 'bg-accent-positive text-base' : 'text-ink-muted hover:bg-base-elevated'
+              vistaSimple ? 'bg-accent-positive text-canvas' : 'text-ink-muted hover:bg-canvas-elevated'
             }`}
           >
             Básico
@@ -2340,7 +2340,7 @@ const gastosPorCategoria = useMemo(() => {
             type="button"
             onClick={() => setVistaSimple(false)}
             className={`flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-colors md:flex-none ${
-              !vistaSimple ? 'bg-accent-positive text-base' : 'text-ink-muted hover:bg-base-elevated'
+              !vistaSimple ? 'bg-accent-positive text-canvas' : 'text-ink-muted hover:bg-canvas-elevated'
             }`}
           >
             Avanzado
@@ -2413,7 +2413,7 @@ const gastosPorCategoria = useMemo(() => {
 
       {/* ── SEPARADOR VISUAL ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-5 mt-8">
-        <div className="h-px bg-base-border" />
+        <div className="h-px bg-canvas-border" />
       </div>
 
       {/* ── SECCIONES COLAPSABLES ── */}

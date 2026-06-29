@@ -61,7 +61,7 @@ export default function DashboardHero({
         </div>
         <button
           onClick={() => setHidden(v => !v)}
-          className="p-2 bg-base-surface rounded-xl border border-base-border text-ink-muted active:bg-base-elevated shadow-sm transition-colors touch-manipulation"
+          className="p-2 bg-canvas-surface rounded-xl border border-canvas-border text-ink-muted active:bg-canvas-elevated shadow-sm transition-colors touch-manipulation"
           aria-label={hidden ? 'Mostrar montos' : 'Ocultar montos'}
         >
           {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -145,7 +145,7 @@ export default function DashboardHero({
 
       {/* ── STATS ROW ── */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="flex items-center gap-2.5 p-3 rounded-2xl border border-base-border bg-base-surface shadow-card">
+        <div className="flex items-center gap-2.5 p-3 rounded-2xl border border-canvas-border bg-canvas-surface shadow-card">
           <div className="p-1.5 bg-accent-positive/20 rounded-xl shrink-0">
             <TrendingUp className="w-4 h-4 text-accent-positive" />
           </div>
@@ -154,7 +154,7 @@ export default function DashboardHero({
             <p className="text-sm font-bold text-ink">{hidden ? '••••' : fmt(totalIngresos)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2.5 p-3 rounded-2xl border border-base-border bg-base-surface shadow-card">
+        <div className="flex items-center gap-2.5 p-3 rounded-2xl border border-canvas-border bg-canvas-surface shadow-card">
           <div className="p-1.5 bg-accent-negative/20 rounded-xl shrink-0">
             <TrendingDown className="w-4 h-4 text-accent-negative" />
           </div>

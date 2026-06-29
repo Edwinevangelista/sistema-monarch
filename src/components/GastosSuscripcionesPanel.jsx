@@ -16,7 +16,7 @@ const dateLabel = (value) => {
 
 function EmptyState({ type }) {
   return (
-    <div className="rounded-xl border border-dashed border-base-border bg-base-elevated px-4 py-8 text-center">
+    <div className="rounded-xl border border-dashed border-canvas-border bg-canvas-elevated px-4 py-8 text-center">
       <p className="text-sm font-bold text-ink-muted">
         {type === 'gastos' ? 'Sin gastos variables este mes' : 'Sin suscripciones activas'}
       </p>
@@ -37,7 +37,7 @@ function Row({ item, type, onEditar, onEliminar }) {
   const Icon = isSub ? Repeat : ReceiptText
 
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-base-border bg-base-elevated px-3 py-3 shadow-sm">
+    <div className="flex items-center gap-3 rounded-xl border border-canvas-border bg-canvas-elevated px-3 py-3 shadow-sm">
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
         isSub ? 'border-accent-info/25 bg-accent-info/10 text-accent-info' : 'border-accent-negative/25 bg-accent-negative/10 text-accent-negative'
       }`}>
@@ -87,24 +87,24 @@ export default function GastosSuscripcionesPanel({
   const total = items.reduce((sum, item) => sum + Number(tab === 'gastos' ? item.monto || 0 : item.costo || 0), 0)
 
   return (
-    <div className="rounded-2xl border border-base-border bg-base-surface p-4 shadow-card">
+    <div className="rounded-2xl border border-canvas-border bg-canvas-surface p-4 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-black text-ink">Lista del mes</p>
           <p className="text-xs text-ink-muted">{items.length} registro{items.length !== 1 ? 's' : ''} · {money(total)}</p>
         </div>
-        <div className="flex rounded-xl border border-base-border bg-base-elevated p-1">
+        <div className="flex rounded-xl border border-canvas-border bg-canvas-elevated p-1">
           <button
             type="button"
             onClick={() => setTab('gastos')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'gastos' ? 'bg-base-surface text-accent-negative shadow-sm' : 'text-ink-muted'}`}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'gastos' ? 'bg-canvas-surface text-accent-negative shadow-sm' : 'text-ink-muted'}`}
           >
             Gastos
           </button>
           <button
             type="button"
             onClick={() => setTab('suscripciones')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'suscripciones' ? 'bg-base-surface text-accent-info shadow-sm' : 'text-ink-muted'}`}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'suscripciones' ? 'bg-canvas-surface text-accent-info shadow-sm' : 'text-ink-muted'}`}
           >
             Suscripciones
           </button>

@@ -160,7 +160,7 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
           onClick={() => abrirModo('gasto')}
           className={`flex items-center justify-center gap-2 font-bold text-base transition-all duration-200 select-none
             ${modo === 'gasto'
-              ? 'bg-accent-negative text-base'
+              ? 'bg-accent-negative text-canvas'
               : 'text-accent-negative hover:bg-accent-negative/10 active:bg-accent-negative/15'
             }`}
           style={{ minHeight: '52px' }}
@@ -174,9 +174,9 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
         <button
           onClick={() => abrirModo('ingreso')}
           className={`flex items-center justify-center gap-2 font-bold text-base transition-all duration-200 select-none
-            border-l border-base-border
+            border-l border-canvas-border
             ${modo === 'ingreso'
-              ? 'bg-accent-positive text-base'
+              ? 'bg-accent-positive text-canvas'
               : 'text-accent-positive hover:bg-accent-positive/10 active:bg-accent-positive/15'
             }`}
           style={{ minHeight: '52px' }}
@@ -211,7 +211,7 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
               </span>
               <button
                 onClick={cerrar}
-                className="w-7 h-7 flex items-center justify-center rounded-full text-ink-muted hover:text-ink hover:bg-base-elevated transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-full text-ink-muted hover:text-ink hover:bg-canvas-elevated transition-colors"
                 aria-label="Cerrar"
               >
                 ✕
@@ -229,7 +229,7 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
                 onKeyDown={handleKeyDown}
                 placeholder="$0.00"
                 disabled={guardando}
-                className={`w-full bg-base-elevated border rounded-xl px-4 py-3 text-ink text-2xl font-bold
+                className={`w-full bg-canvas-elevated border rounded-xl px-4 py-3 text-ink text-2xl font-bold
                   placeholder-ink-faint outline-none transition-colors
                   ${modo === 'gasto'
                   ? 'border-accent-negative/40 focus:border-accent-negative focus:ring-2 focus:ring-accent-negative/15'
@@ -253,8 +253,8 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
                       className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl text-xs font-medium
                         transition-all duration-150 select-none
                         ${activa
-                          ? 'bg-accent-negative text-base'
-                          : 'bg-base-elevated text-ink-muted hover:bg-base-border active:bg-base-border'
+                          ? 'bg-accent-negative text-canvas'
+                          : 'bg-canvas-elevated text-ink-muted hover:bg-canvas-border active:bg-canvas-border'
                         }
                         disabled:opacity-50`}
                       style={{ minWidth: '56px', minHeight: '48px' }}
@@ -278,7 +278,7 @@ export default function QuickAddBar({ onAddGasto, onAddIngreso }) {
                 onKeyDown={handleKeyDown}
                 placeholder="Descripción (ej. Sueldo, Freelance…)"
                 disabled={guardando}
-                className="w-full bg-base-elevated border border-accent-positive/40 focus:border-accent-positive
+                className="w-full bg-canvas-elevated border border-accent-positive/40 focus:border-accent-positive
                   rounded-xl px-4 py-3 text-ink text-sm placeholder-ink-faint
                   outline-none transition-colors disabled:opacity-50"
                 aria-label="Descripción del ingreso"

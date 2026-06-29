@@ -391,7 +391,7 @@ function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-base flex flex-col">
+    <div className="min-h-screen bg-canvas flex flex-col">
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-accent-positive/15 flex items-center justify-center">
@@ -402,7 +402,7 @@ function Auth() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-base-surface rounded-2xl p-8 w-full max-w-lg border border-base-border shadow-card">
+        <div className="bg-canvas-surface rounded-2xl p-8 w-full max-w-lg border border-canvas-border shadow-card">
 
           <div className="mb-6">
             {mode !== 'login' && (
@@ -466,9 +466,9 @@ function Auth() {
 
               {/* Separador */}
               <div className="flex items-center gap-3 mt-5 mb-1">
-                <div className="flex-1 h-px bg-base-border" />
+                <div className="flex-1 h-px bg-canvas-border" />
                 <span className="text-xs text-ink-muted font-medium">o continúa con email</span>
-                <div className="flex-1 h-px bg-base-border" />
+                <div className="flex-1 h-px bg-canvas-border" />
               </div>
             </div>
           )}
@@ -485,10 +485,10 @@ function Auth() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 bg-base-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full pl-10 pr-4 py-3 bg-canvas-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
                     email && !validateEmail(email) 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-base-border focus:ring-accent-positive'
+                      : 'border-canvas-border focus:ring-accent-positive'
                   }`}
                   placeholder="tu@email.com"
                   required
@@ -520,7 +520,7 @@ function Auth() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors"
+                    className="w-full pl-10 pr-12 py-3 bg-canvas-elevated border border-canvas-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors"
                     placeholder={mode === 'login' ? 'Tu contraseña' : 'Mínimo 8 caracteres'}
                     required
                   />
@@ -536,7 +536,7 @@ function Auth() {
                 {(mode === 'signup' || mode === 'reset') && password && (
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-base-elevated h-2 rounded-full overflow-hidden">
+                      <div className="flex-1 bg-canvas-elevated h-2 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${getStrengthColor()} transition-all duration-300`}
                           style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
@@ -581,7 +581,7 @@ function Auth() {
 
             {/* DATOS PERSONALES (Solo Signup) */}
             {mode === 'signup' && (
-              <div className="space-y-4 pb-6 border-b border-base-border mb-6">
+              <div className="space-y-4 pb-6 border-b border-canvas-border mb-6">
                 <h3 className="text-sm font-bold text-emerald-700 mb-3 uppercase tracking-wider">
                   Información del Cliente
                 </h3>
@@ -595,7 +595,7 @@ function Auth() {
                       placeholder="Juan"
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
-                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
+                      className="w-full bg-canvas-elevated border border-canvas-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                       required
                     />
                   </div>
@@ -608,7 +608,7 @@ function Auth() {
                       placeholder="Pérez"
                       value={apellido}
                       onChange={(e) => setApellido(e.target.value)}
-                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
+                      className="w-full bg-canvas-elevated border border-canvas-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                       required
                     />
                   </div>
@@ -622,7 +622,7 @@ function Auth() {
                     placeholder="55 1234 5678"
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
-                    className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
+                    className="w-full bg-canvas-elevated border border-canvas-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     required
                   />
                 </div>
@@ -664,7 +664,7 @@ function Auth() {
                         }
                         if (mapa[p]) setMoneda(mapa[p])
                       }}
-                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
+                      className="w-full bg-canvas-elevated border border-canvas-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     >
                       <optgroup label="🌎 América Central y El Caribe">
                         <option value="RepublicaDominicana">🇩🇴 República Dominicana</option>
@@ -704,7 +704,7 @@ function Auth() {
                     <select
                       value={moneda}
                       onChange={(e) => setMoneda(e.target.value)}
-                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
+                      className="w-full bg-canvas-elevated border border-canvas-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     >
                       <optgroup label="🇺🇸 United States">
                         <option value="USD">USD — US Dollar ($)</option>
@@ -751,10 +751,10 @@ function Auth() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full pl-10 pr-12 py-3 bg-base-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
+                    className={`w-full pl-10 pr-12 py-3 bg-canvas-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
                       confirmPassword && password !== confirmPassword
                         ? 'border-red-500 focus:ring-red-500'
-                        : 'border-base-border focus:ring-accent-positive'
+                        : 'border-canvas-border focus:ring-accent-positive'
                     }`}
                     placeholder="Confirma tu contraseña"
                     required
@@ -785,7 +785,7 @@ function Auth() {
             <button
               type="submit"
               disabled={loading || ((mode === 'signup' || mode === 'reset') && passwordStrength.strength < 3)}
-              className="w-full py-3 bg-accent-positive hover:bg-accent-positive/90 disabled:bg-base-border disabled:cursor-not-allowed text-base font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
+              className="w-full py-3 bg-accent-positive hover:bg-accent-positive/90 disabled:bg-canvas-border disabled:cursor-not-allowed text-canvas font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">

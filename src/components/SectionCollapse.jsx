@@ -6,7 +6,7 @@ function SectionSkeleton() {
   return (
     <div className="space-y-2 py-1">
       {[1, 2].map(i => (
-        <div key={i} className="h-14 rounded-2xl bg-base-elevated animate-pulse" />
+        <div key={i} className="h-14 rounded-2xl bg-canvas-elevated animate-pulse" />
       ))}
     </div>
   )
@@ -19,11 +19,11 @@ export default function SectionCollapse({ title, icon, defaultOpen = false, badg
     <div id={id} className={`max-w-7xl mx-auto px-4 md:px-5 mt-6 ${className}`}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3.5 bg-base-surface hover:bg-base-elevated active:bg-base-elevated border border-base-border rounded-card shadow-card transition-colors touch-manipulation"
+        className="w-full flex items-center justify-between px-4 py-3.5 bg-canvas-surface hover:bg-canvas-elevated active:bg-canvas-elevated border border-canvas-border rounded-card shadow-card transition-colors touch-manipulation"
       >
         <div className="flex items-center gap-3">
           {icon && (
-            <span className="w-8 h-8 rounded-xl bg-base-elevated border border-base-border flex items-center justify-center text-base shrink-0">
+            <span className="w-8 h-8 rounded-xl bg-canvas-elevated border border-canvas-border flex items-center justify-center text-base shrink-0">
               {icon}
             </span>
           )}

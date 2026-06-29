@@ -185,7 +185,7 @@ function ActionRow({ accion, checked, onToggle }) {
   const borderClass = accion.urgente ? 'border-l-2 border-accent-negative' : 'border-l-2 border-accent-info'
   const bgClass = accion.urgente
     ? 'bg-accent-negative/10 hover:bg-accent-negative/15'
-    : 'bg-base-elevated hover:bg-base-border'
+    : 'bg-canvas-elevated hover:bg-canvas-border'
 
   return (
     <button
@@ -265,7 +265,7 @@ function ProgressBar({ completadas, total }) {
               key={i}
               className={[
                 'h-1.5 rounded-full transition-colors duration-300',
-                i < filled ? 'bg-accent-positive w-3' : 'bg-base-border w-3',
+                i < filled ? 'bg-accent-positive w-3' : 'bg-canvas-border w-3',
               ].join(' ')}
             />
           ))}
@@ -332,13 +332,13 @@ export default function FinancialCoach({
   const completadas = acciones.filter((a) => checkedIds.includes(a.id)).length
 
   return (
-    <section className="flex flex-col gap-0 rounded-2xl border border-base-border overflow-hidden bg-base-surface shadow-card">
+    <section className="flex flex-col gap-0 rounded-2xl border border-canvas-border overflow-hidden bg-canvas-surface shadow-card">
       {/* ------------------------------------------------------------------ */}
       {/* Header                                                               */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-base-elevated px-4 py-3 flex items-start gap-3 border-b border-base-border">
+      <div className="bg-canvas-elevated px-4 py-3 flex items-start gap-3 border-b border-canvas-border">
         <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg bg-accent-info flex items-center justify-center">
-          <Target size={17} className="text-base" strokeWidth={2} />
+          <Target size={17} className="text-canvas" strokeWidth={2} />
         </div>
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-black text-ink leading-tight">
@@ -367,7 +367,7 @@ export default function FinancialCoach({
       {/* ------------------------------------------------------------------ */}
       {/* Progress bar                                                         */}
       {/* ------------------------------------------------------------------ */}
-      <div className="px-4 pb-4 pt-1 border-t border-base-border">
+      <div className="px-4 pb-4 pt-1 border-t border-canvas-border">
         <ProgressBar completadas={completadas} total={acciones.length} />
       </div>
     </section>

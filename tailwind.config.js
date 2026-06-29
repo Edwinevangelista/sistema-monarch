@@ -8,7 +8,9 @@ module.exports = {
     extend: {
       colors: {
         // Superficies — fondo de app tipo fintech moderna (Mercury/Copilot Money)
-        base: {
+        // Nombrado "canvas" (no "base") para no colisionar con la utilidad nativa
+        // de Tailwind text-base (font-size), que volvía invisible cualquier texto.
+        canvas: {
           DEFAULT: '#0B0E14',
           surface: '#12151C',
           elevated: '#1A1E27',
