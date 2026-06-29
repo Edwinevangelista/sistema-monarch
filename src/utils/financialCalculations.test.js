@@ -134,6 +134,21 @@ describe('calcularRegla503020', () => {
     expect(resultado.deseos).toBe(20)
   })
 
+  test('topa necesidades en 100% cuando solas ya superan el ingreso', () => {
+    // Usuario en crisis: gastos fijos + deuda mínima ya exceden el ingreso total.
+    // Antes de este fix, necesidades podía reportar >100% (ej. 141%) y romper la barra visual.
+    const resultado = calcularRegla503020({
+      totalIngresos: 800,
+      totalGastosFijos: 600,
+      totalGastosVariables: 950,
+      totalSuscripciones: 0,
+      deudas: [{ pago_minimo: 350 }, { pago_minimo: 180 }],
+    })
+    expect(resultado.necesidades).toBe(100)
+    expect(resultado.deseos).toBe(0)
+    expect(resultado.necesidades + resultado.deseos).toBeLessThanOrEqual(100)
+  })
+
   test('retorna ceros sin ingresos', () => {
     expect(calcularRegla503020({ totalIngresos: 0 })).toEqual({ necesidades: 0, deseos: 0, ahorro: 0 })
   })

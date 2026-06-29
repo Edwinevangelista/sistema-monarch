@@ -397,10 +397,12 @@ export const calcularRegla503020 = ({
   const necesidades = totalGastosFijos + pagosMensualesDeuda
   const deseos = totalGastosVariables + totalSuscripciones
   const ahorro = Math.max(0, totalIngresos - necesidades - deseos)
-  // Cap each segment so total never exceeds 100% (spending > income scenario)
+  // Cap each segment so total never exceeds 100% (spending > income scenario).
+  // necPct se topa en 100 primero: si las necesidades solas ya igualan o superan
+  // el ingreso, no tiene sentido mostrar más de 100% en la barra.
   const totalGastoPct = Math.round(((necesidades + deseos) / totalIngresos) * 100)
   const overflow = totalGastoPct > 100
-  const necPct = Math.round((necesidades / totalIngresos) * 100)
+  const necPct = Math.min(100, Math.round((necesidades / totalIngresos) * 100))
   const desPct = overflow
     ? Math.max(0, 100 - necPct)   // squeeze deseos to fit
     : Math.round((deseos / totalIngresos) * 100)
