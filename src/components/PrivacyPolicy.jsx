@@ -196,7 +196,7 @@ export default function PrivacyPolicy({ onClose }) {
         <div className="p-6 border-t border-white/5 bg-gray-900/50">
           <button
             onClick={onClose}
-            className="w-full bg-white text-gray-900 font-bold py-4 rounded-2xl hover:bg-gray-100 transition-colors"
+            className="w-full bg-accent-positive text-canvas font-bold py-4 rounded-2xl hover:bg-accent-positive/90 transition-colors"
           >
             Entendido y Acepto
           </button>
