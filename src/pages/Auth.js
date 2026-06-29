@@ -391,38 +391,38 @@ function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] flex flex-col">
+    <div className="min-h-screen bg-base flex flex-col">
       <div className="w-full py-6 px-4">
         <div className="max-w-md mx-auto flex items-center justify-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center">
-            <Wallet className="w-7 h-7 text-emerald-700" />
+          <div className="w-11 h-11 rounded-2xl bg-accent-positive/15 flex items-center justify-center">
+            <Wallet className="w-7 h-7 text-accent-positive" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-950">FinGuide</h1>
+          <h1 className="text-3xl font-bold text-ink">FinGuide</h1>
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 w-full max-w-lg border border-slate-200 shadow-xl">
-          
+        <div className="bg-base-surface rounded-2xl p-8 w-full max-w-lg border border-base-border shadow-card">
+
           <div className="mb-6">
             {mode !== 'login' && (
               <button
                 onClick={() => switchMode('login')}
-                className="flex items-center gap-2 text-emerald-700 hover:text-emerald-800 transition-colors mb-4"
+                className="flex items-center gap-2 text-accent-positive hover:text-accent-positive/80 transition-colors mb-4"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Volver
               </button>
             )}
-            
-            <h2 className="text-2xl font-bold text-slate-950 text-center">
+
+            <h2 className="text-2xl font-bold text-ink text-center">
               {mode === 'login' && 'Iniciar Sesión'}
               {mode === 'signup' && 'Crear Cuenta'}
               {mode === 'forgot' && 'Recuperar Contraseña'}
             </h2>
-            
+
             {mode === 'forgot' && (
-              <p className="text-slate-500 text-sm text-center mt-2">
+              <p className="text-ink-muted text-sm text-center mt-2">
                 Te enviaremos un enlace para restablecer tu contraseña
               </p>
             )}
@@ -430,11 +430,11 @@ function Auth() {
 
           {message.text && (
             <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-              message.type === 'success' 
-                ? 'bg-green-50 border border-green-200 text-green-700' 
+              message.type === 'success'
+                ? 'bg-accent-positive/10 border border-accent-positive/25 text-accent-positive'
                 : message.type === 'info'
-                ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
+                ? 'bg-accent-info/10 border border-accent-info/25 text-accent-info'
+                : 'bg-accent-negative/10 border border-accent-negative/25 text-accent-negative'
             }`}>
               {message.type === 'success' ? (
                 <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -466,9 +466,9 @@ function Auth() {
 
               {/* Separador */}
               <div className="flex items-center gap-3 mt-5 mb-1">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-500 font-medium">o continúa con email</span>
-                <div className="flex-1 h-px bg-slate-200" />
+                <div className="flex-1 h-px bg-base-border" />
+                <span className="text-xs text-ink-muted font-medium">o continúa con email</span>
+                <div className="flex-1 h-px bg-base-border" />
               </div>
             </div>
           )}
@@ -476,19 +476,19 @@ function Auth() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* EMAIL INPUT */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-ink-muted mb-2">
                 Correo Electrónico
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-faint" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 bg-white border rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full pl-10 pr-4 py-3 bg-base-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
                     email && !validateEmail(email) 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-slate-300 focus:ring-emerald-500'
+                      : 'border-base-border focus:ring-accent-positive'
                   }`}
                   placeholder="tu@email.com"
                   required
@@ -511,23 +511,23 @@ function Auth() {
             {/* PASSWORD INPUT */}
             {mode !== 'forgot' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-ink-muted mb-2">
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-faint" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-white border border-slate-300 rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                    className="w-full pl-10 pr-12 py-3 bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors"
                     placeholder={mode === 'login' ? 'Tu contraseña' : 'Mínimo 8 caracteres'}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -536,7 +536,7 @@ function Auth() {
                 {(mode === 'signup' || mode === 'reset') && password && (
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div className="flex-1 bg-base-elevated h-2 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${getStrengthColor()} transition-all duration-300`}
                           style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
@@ -581,13 +581,13 @@ function Auth() {
 
             {/* DATOS PERSONALES (Solo Signup) */}
             {mode === 'signup' && (
-              <div className="space-y-4 pb-6 border-b border-slate-200 mb-6">
+              <div className="space-y-4 pb-6 border-b border-base-border mb-6">
                 <h3 className="text-sm font-bold text-emerald-700 mb-3 uppercase tracking-wider">
                   Información del Cliente
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-ink-muted mb-2 flex items-center gap-2">
                       <User className="w-4 h-4 text-emerald-700" /> Nombre
                     </label>
                     <input
@@ -595,12 +595,12 @@ function Auth() {
                       placeholder="Juan"
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors p-3"
+                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-ink-muted mb-2 flex items-center gap-2">
                       <User className="w-4 h-4 text-emerald-700" /> Apellido
                     </label>
                     <input
@@ -608,13 +608,13 @@ function Auth() {
                       placeholder="Pérez"
                       value={apellido}
                       onChange={(e) => setApellido(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors p-3"
+                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                       required
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                  <label className="block text-sm font-medium text-ink-muted mb-2 flex items-center gap-2">
                     <Phone className="w-4 h-4 text-emerald-700" /> Teléfono
                   </label>
                   <input
@@ -622,13 +622,13 @@ function Auth() {
                     placeholder="55 1234 5678"
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors p-3"
+                    className="w-full bg-base-elevated border border-base-border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     required
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-ink-muted mb-2 flex items-center gap-2">
                       <Globe className="w-4 h-4 text-emerald-700" /> País
                     </label>
                     <select
@@ -664,7 +664,7 @@ function Auth() {
                         }
                         if (mapa[p]) setMoneda(mapa[p])
                       }}
-                      className="w-full bg-white border border-slate-300 rounded-lg text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors p-3"
+                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     >
                       <optgroup label="🌎 América Central y El Caribe">
                         <option value="RepublicaDominicana">🇩🇴 República Dominicana</option>
@@ -698,13 +698,13 @@ function Auth() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-medium text-ink-muted mb-2 flex items-center gap-2">
                       💵 Divisa
                     </label>
                     <select
                       value={moneda}
                       onChange={(e) => setMoneda(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-lg text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors p-3"
+                      className="w-full bg-base-elevated border border-base-border rounded-lg text-ink focus:outline-none focus:ring-2 focus:ring-accent-positive transition-colors p-3"
                     >
                       <optgroup label="🇺🇸 United States">
                         <option value="USD">USD — US Dollar ($)</option>
@@ -742,19 +742,19 @@ function Auth() {
             {/* CONFIRM PASSWORD */}
             {(mode === 'signup' || mode === 'reset') && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-ink-muted mb-2">
                   Confirmar Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-faint" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full pl-10 pr-12 py-3 bg-white border rounded-lg text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors ${
+                    className={`w-full pl-10 pr-12 py-3 bg-base-elevated border rounded-lg text-ink placeholder-ink-faint focus:outline-none focus:ring-2 transition-colors ${
                       confirmPassword && password !== confirmPassword
                         ? 'border-red-500 focus:ring-red-500'
-                        : 'border-slate-300 focus:ring-emerald-500'
+                        : 'border-base-border focus:ring-accent-positive'
                     }`}
                     placeholder="Confirma tu contraseña"
                     required
@@ -762,7 +762,7 @@ function Auth() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -785,7 +785,7 @@ function Auth() {
             <button
               type="submit"
               disabled={loading || ((mode === 'signup' || mode === 'reset') && passwordStrength.strength < 3)}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
+              className="w-full py-3 bg-accent-positive hover:bg-accent-positive/90 disabled:bg-base-border disabled:cursor-not-allowed text-base font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -814,13 +814,13 @@ function Auth() {
                     onClick={() => switchMode('signup')}
                     className="text-emerald-700 hover:text-emerald-800 text-sm transition-colors font-semibold"
                   >
-                    ¿No tienes cuenta? <span className="text-slate-950">Regístrate aquí</span>
+                    ¿No tienes cuenta? <span className="text-ink">Regístrate aquí</span>
                   </button>
                 </div>
                 <div className="text-center">
                   <button
                     onClick={() => switchMode('forgot')}
-                    className="text-slate-500 hover:text-slate-800 text-sm transition-colors"
+                    className="text-ink-muted hover:text-ink text-sm transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
@@ -834,7 +834,7 @@ function Auth() {
                   onClick={() => switchMode('login')}
                   className="text-emerald-700 hover:text-emerald-800 text-sm transition-colors font-semibold"
                 >
-                  ¿Ya tienes cuenta? <span className="text-slate-950">Inicia sesión</span>
+                  ¿Ya tienes cuenta? <span className="text-ink">Inicia sesión</span>
                 </button>
               </div>
             )}
