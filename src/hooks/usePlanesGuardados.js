@@ -3,7 +3,7 @@
 
 import { useSupabaseData } from "./useSupabaseData";
 // ⚠️ IMPORTANTE: Asegúrate de que esta ruta sea donde tengas tu cliente de supabase
-import { supabase } from "../lib/supabase"; 
+import { supabase } from "../lib/supabaseClient";
 import { toast } from 'sonner'
 
 export const usePlanesGuardados = (lazyLoad = false) => {

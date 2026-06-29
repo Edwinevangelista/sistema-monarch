@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ShoppingCart, X, CreditCard, Loader2, CheckCircle } from 'lucide-react'
 import { CATEGORIAS, METODOS_PAGO } from '../constants/categorias'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { toast } from 'sonner'
 
+const createIdempotencyKey = () => {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  return `expense-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
   const { cuentas } = useCuentasBancarias() // ✅ Agregado para seleccionar cuenta
   const [loading, setLoading] = useState(false) // ✅ Estado de carga
+  const idempotencyKeyRef = useRef(createIdempotencyKey())
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -42,7 +48,8 @@ const ModalGastoVariable = ({ onClose, onSave, gastoInicial = null }) => {
       // ✅ FIX: Sintaxis corregida (faltaban los dos puntos)
       const payload = {
         ...formData,
-        monto: parseFloat(formData.monto)
+        monto: parseFloat(formData.monto),
+        idempotency_key: idempotencyKeyRef.current
       }
       
       // Incluir ID si estamos editando

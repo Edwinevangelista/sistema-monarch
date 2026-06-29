@@ -50,10 +50,14 @@ export function useMetas() {
   }, [])
 
   const updateMeta = useCallback(async (id, updates) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
     const { data, error } = await supabase
       .from('metas')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single()
     if (error) throw error
@@ -62,10 +66,14 @@ export function useMetas() {
   }, [])
 
   const deleteMeta = useCallback(async (id) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('No autenticado')
+
     const { error } = await supabase
       .from('metas')
       .update({ activa: false })
       .eq('id', id)
+      .eq('user_id', user.id)
     if (error) throw error
     setMetas(prev => prev.filter(m => m.id !== id))
   }, [])

@@ -13,28 +13,28 @@ function Footer({ className = "" }) {
     <div>
       {/* 2. Inyectamos el className en el footer usando template literals */}
       {/* Las clases originales se mantienen y se suma la nueva clase condicional */}
-      <footer className={`bg-gray-900 border-t border-gray-800 py-8 mt-16 ${className}`}>
+      <footer className={`bg-white border-t border-slate-200 py-8 mt-16 ${className}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Acerca de */}
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">FinGuide</h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <h3 className="text-slate-950 font-bold text-lg mb-4">FinGuide</h3>
+              <p className="text-slate-600 text-sm mb-4">
                 Your personal finance assistant. Take control of your money with intelligence and simplicity.
               </p>
-              <p className="text-gray-500 text-xs">
+              <p className="text-slate-500 text-xs">
                 Version 1.0.0 • Jan 2026
               </p>
             </div>
 
             {/* Enlaces legales */}
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">Legal</h3>
+              <h3 className="text-slate-950 font-bold text-lg mb-4">Legal</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <button
                     onClick={() => setShowPrivacy(true)}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                    className="text-slate-600 hover:text-emerald-700 transition-colors flex items-center gap-2"
                   >
                     <Shield className="w-4 h-4" />
                     Política de Privacidad
@@ -43,7 +43,7 @@ function Footer({ className = "" }) {
                 <li>
                   <button
                     onClick={() => setShowTerms(true)}
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                    className="text-slate-600 hover:text-emerald-700 transition-colors flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     Términos de Servicio
@@ -54,12 +54,12 @@ function Footer({ className = "" }) {
 
             {/* Contacto y soporte */}
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">Soporte</h3>
+              <h3 className="text-slate-950 font-bold text-lg mb-4">Soporte</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <a
                     href="mailto:edwin_evangelista@hotmail.com"
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                    className="text-slate-600 hover:text-emerald-700 transition-colors flex items-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
                     Contacto
@@ -70,7 +70,7 @@ function Footer({ className = "" }) {
                     href="https://github.com/Edwinevangelista/sistema-monarch"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                    className="text-slate-600 hover:text-emerald-700 transition-colors flex items-center gap-2"
                   >
                     <Github className="w-4 h-4" />
                     Código Fuente
@@ -82,13 +82,13 @@ function Footer({ className = "" }) {
           </div>
 
           {/* Copyright */}
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center">
-            <p className="text-gray-500 text-sm">
+          <div className="mt-8 pt-8 border-t border-slate-200 text-center">
+            <p className="text-slate-500 text-sm">
               © 2026 FinGuide. Built by{' '}
-              <span className="text-white font-semibold">Edwin Evangelista</span>.
+              <span className="text-slate-900 font-semibold">Edwin Evangelista</span>.
               All rights reserved.
             </p>
-            <p className="text-gray-600 text-xs mt-2">
+            <p className="text-slate-400 text-xs mt-2">
               Windsor, Connecticut, USA
             </p>
           </div>

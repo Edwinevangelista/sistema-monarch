@@ -29,7 +29,7 @@ const WidgetBalanceDual = ({
   // Sistema de colores 2026 - glassmorphism + 3D depth
   const colorConfig = esPositivo
     ? {
-        saldo: 'text-white',
+        saldo: 'text-emerald-300',
         glow: 'shadow-emerald-500/20',
         gradTop: 'from-emerald-500/20 via-teal-500/10 to-transparent',
         borderAccent: 'border-emerald-500/20',
@@ -64,7 +64,7 @@ const WidgetBalanceDual = ({
     ? Math.min(100, Math.round((datosActivos.totalGastos / datosActivos.totalIngresos) * 100))
     : 0
 
-  const tasaAhorro = datosActivos.tasaAhorro != null ? Number(datosActivos.tasaAhorro).toFixed(0) : null
+  const tasaAhorro = datosActivos.tasaAhorro != null ? Math.round(Number(datosActivos.tasaAhorro) * 100) : null
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-4 mb-4">

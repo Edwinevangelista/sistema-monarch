@@ -69,15 +69,16 @@ function ModalMeta({ meta, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="bg-gray-900 w-full md:max-w-md rounded-t-3xl md:rounded-2xl border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="bg-gray-900 w-full md:max-w-md rounded-t-3xl md:rounded-2xl border border-white/10 shadow-2xl flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 1rem)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10">
+        <div className="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
           <h3 className="text-white font-bold text-lg">{editando ? 'Editar meta' : 'Nueva meta'}</h3>
           <button onClick={onClose} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Tipo */}
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 block">Tipo de meta</label>
@@ -146,12 +147,12 @@ function ModalMeta({ meta, onSave, onClose }) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="p-5 pt-0">
+        {/* Actions — siempre visible, fuera del scroll */}
+        <div className="p-5 pt-3 border-t border-white/10 shrink-0" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-3.5 rounded-xl font-bold text-white text-sm disabled:opacity-50 transition-all"
+            className="w-full py-3.5 rounded-xl font-bold text-white text-sm disabled:opacity-50 transition-all active:scale-95"
             style={{ background: `linear-gradient(135deg, ${cfg.color}, ${cfg.color}bb)` }}
           >
             {saving ? 'Guardando…' : editando ? 'Guardar cambios' : `Crear meta ${cfg.emoji}`}
@@ -185,42 +186,47 @@ function ModalAbono({ meta, onAbono, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="bg-gray-900 w-full md:max-w-sm rounded-t-3xl md:rounded-2xl border border-white/10 shadow-2xl p-6 space-y-5">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="bg-gray-900 w-full md:max-w-sm rounded-t-3xl md:rounded-2xl border border-white/10 shadow-2xl flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 1rem)' }}>
+        <div className="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
           <h3 className="text-white font-bold">Abonar a meta</h3>
           <button onClick={onClose} className="p-2 rounded-full bg-white/5 text-gray-400"><X className="w-5 h-5" /></button>
         </div>
-        <div className="text-center py-2">
-          <p className="text-gray-400 text-sm">{meta.nombre}</p>
-          <p className="text-white text-2xl font-black mt-1">{fmt(meta.monto_actual)} <span className="text-gray-600 text-base font-normal">/ {fmt(meta.monto_objetivo)}</span></p>
-          <p className="text-gray-500 text-xs mt-1">Faltan {fmt(faltante)}</p>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">¿Cuánto abonás?</label>
-          <div className="flex gap-2 mb-3">
-            {[50, 100, 200].map(v => (
-              <button key={v} onClick={() => setMonto(String(v))} className="flex-1 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-gray-300 text-sm font-bold border border-white/10">
-                {fmt(v)}
-              </button>
-            ))}
+        <div className="p-5 space-y-5 overflow-y-auto flex-1">
+          <div className="text-center py-2">
+            <p className="text-gray-400 text-sm">{meta.nombre}</p>
+            <p className="text-white text-2xl font-black mt-1">{fmt(meta.monto_actual)} <span className="text-gray-600 text-base font-normal">/ {fmt(meta.monto_objetivo)}</span></p>
+            <p className="text-gray-500 text-xs mt-1">Faltan {fmt(faltante)}</p>
           </div>
-          <input
-            type="number"
-            min="1"
-            placeholder="Otro monto…"
-            value={monto}
-            onChange={e => setMonto(e.target.value)}
-            className="w-full bg-white/6 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-emerald-500"
-          />
+          <div>
+            <label className="text-xs font-semibold text-gray-400 uppercase mb-1.5 block">¿Cuánto abonás?</label>
+            <div className="flex gap-2 mb-3">
+              {[50, 100, 200].map(v => (
+                <button key={v} onClick={() => setMonto(String(v))} className="flex-1 py-2 rounded-lg bg-white/6 hover:bg-white/10 text-gray-300 text-sm font-bold border border-white/10">
+                  {fmt(v)}
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              min="1"
+              placeholder="Otro monto…"
+              value={monto}
+              onChange={e => setMonto(e.target.value)}
+              className="w-full bg-white/6 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
         </div>
-        <button
-          onClick={handleAbono}
-          disabled={saving || !monto}
-          className="w-full py-3.5 rounded-xl font-bold text-white text-sm bg-gradient-to-r from-emerald-600 to-teal-600 disabled:opacity-50"
-        >
-          {saving ? 'Guardando…' : `Abonar ${monto ? fmt(monto) : ''}`}
-        </button>
+        <div className="p-5 pt-3 border-t border-white/10 shrink-0" style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}>
+          <button
+            onClick={handleAbono}
+            disabled={saving || !monto}
+            className="w-full py-3.5 rounded-xl font-bold text-white text-sm bg-gradient-to-r from-emerald-600 to-teal-600 disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            {saving ? 'Guardando…' : `Abonar ${monto ? fmt(monto) : ''}`}
+          </button>
+        </div>
       </div>
     </div>
   )

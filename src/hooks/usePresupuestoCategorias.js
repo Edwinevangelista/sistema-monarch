@@ -31,7 +31,7 @@ export function usePresupuestoCategorias() {
           .from('perfiles')
           .select('presupuesto_categorias')
           .eq('id', user.id)
-          .single()
+          .maybeSingle()
 
         if (!cancelled && !error && data?.presupuesto_categorias) {
           const remote = data.presupuesto_categorias

@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders the FinGuide auth screen', async () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: /FinGuide/i, level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
 });

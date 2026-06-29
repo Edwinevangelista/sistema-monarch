@@ -2,7 +2,7 @@
 // Rendered inside ModalWrapper (no own overlay/wrapper needed)
 // Chip-based category selection, prominent amount input, clean dark theme
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { useDeudas } from '../hooks/useDeudas'
@@ -37,6 +37,11 @@ const CATS_FIJO = [
 
 const catVal = ({ e, l }) => `${e} ${l}`
 
+const createIdempotencyKey = () => {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  return `expense-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 export default function ModalGastos({
   onClose,
   onSaveVariable,
@@ -46,6 +51,7 @@ export default function ModalGastos({
 }) {
   const { cuentas } = useCuentasBancarias()
   const { deudas } = useDeudas()
+  const idempotencyKeyRef = useRef(createIdempotencyKey())
 
   const [tipoGasto, setTipoGasto] = useState(
     gastoInicial?.dia_venc != null ? 'fijo' : tipoInicial
@@ -130,6 +136,7 @@ export default function ModalGastos({
           metodo: formData.metodo,
           cuenta_id: formData.cuenta_id || null,
           deuda_id: formData.deuda_id || null,
+          idempotency_key: idempotencyKeyRef.current,
         }
         if (gastoInicial?.id) payload.id = gastoInicial.id
         await onSaveVariable(payload)

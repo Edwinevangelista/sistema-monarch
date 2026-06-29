@@ -6,6 +6,9 @@ import { supabase } from '../lib/supabaseClient'
 import { toast } from 'sonner'
 import { obtenerDatosFiltrados } from '../utils/filtrosInteligentes'
 import { showConfirm } from '../utils/confirm'
+import { addMoney, roundMoney, subtractMoney } from '../utils/money'
+import { reconciliar } from '../utils/reconciliacion'
+import { crearResumenFinanciero } from '../utils/financialSnapshot'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -18,9 +21,17 @@ import { usePagosTarjeta } from '../hooks/usePagosTarjeta'
 import { useNotifications } from '../hooks/useNotifications'
 import { getDeudaStatus } from '../lib/finance/deudaStatus'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
+import { usePlan } from '../hooks/usePlan'
 
 // --- NUEVOS HOOKS Y UTILIDADES ---
-import { calcularBalanceInteligente } from '../utils/financialCalculations'
+import {
+  calcularBalanceInteligente,
+  calcularNetWorth,
+  calcularDTI,
+  calcularRegla503020,
+  calcularFinancialHealthScore,
+  calcularDailyBudget,
+} from '../utils/financialCalculations'
 import { calcularProximoCorte, calcularPagoMinimo as calcPagoMin } from '../utils/tarjetasCalculos'
 import { useMonthlyTransition } from '../hooks/useMonthlyTransition'
 import { usePlanesGuardados } from '../hooks/usePlanesGuardados'
@@ -42,6 +53,9 @@ import QuickAddBar from './QuickAddBar'
 import DailySnapshot from './DailySnapshot'
 import FinancialCoach from './FinancialCoach'
 import GuiaPrimerPaso from './GuiaPrimerPaso'
+import PremiumGate from './PremiumGate'
+import MoneyCommandCenter from './MoneyCommandCenter'
+import GastosSuscripcionesPanel from './GastosSuscripcionesPanel'
 import { ITEM_TYPES } from '../constants/itemTypes'
 // Hook de tour (sólo el hook, el componente se carga lazy)
 import { useTourNuevoUsuario } from './TourNuevoUsuario'
@@ -92,6 +106,7 @@ export default function DashboardCompleto()  {
   
   // --- ESTADOS PRINCIPALES ---
   const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
+  const { isPremium, limites, canAddMore, getLimit } = usePlan()
 
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem('usuario_finguide');
@@ -106,6 +121,7 @@ export default function DashboardCompleto()  {
     const hoy = new Date()
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   })
+  const [vistaSimple, setVistaSimple] = useState(() => localStorage.getItem('monarch_dashboard_view') !== 'advanced')
   const [itemSeleccionado, setItemSeleccionado] = useState(null)
 
   const [isPagandoSuscripcion, setIsPagandoSuscripcion] = useState(false)
@@ -142,7 +158,7 @@ export default function DashboardCompleto()  {
   const [tarjetaMesFiltro, setTarjetaMesFiltro] = useState({}) // { [deudaId]: 'YYYY-MM' }
 
   // ── Función central: cierra TODOS los paneles/modales antes de abrir uno nuevo ──
-  const cerrarTodo = () => {
+  const cerrarTodo = useCallback(() => {
     setShowDebtPlanner(false)
     setShowSavingsPlanner(false)
     setShowSpendingControl(false)
@@ -150,13 +166,42 @@ export default function DashboardCompleto()  {
     setShowProyeccion3d(false)
     setShowDetallesCategorias(false)
     setShowModal(null)
-  }
+  }, [])
 
   // Wrapper que garantiza cerrar todo antes de abrir el nuevo modal
-  const abrirModal = (nombre) => {
+  const abrirModal = useCallback((nombre) => {
     cerrarTodo()
     if (nombre) setShowModal(nombre)
-  }
+  }, [cerrarTodo])
+
+  const abrirExportacion = useCallback(() => {
+    if (!limites.exportarDatos) {
+      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
+      return
+    }
+    cerrarTodo()
+    setShowExportacion(true)
+  }, [cerrarTodo, limites.exportarDatos])
+
+  const abrirDebtPlanner = useCallback(() => {
+    if (!limites.estrategiaPagoDeuda) {
+      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
+      return
+    }
+    cerrarTodo()
+    setShowDebtPlanner(true)
+  }, [cerrarTodo, limites.estrategiaPagoDeuda])
+
+  const scrollToSection = useCallback((sectionId) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const abrirSeccionAvanzada = useCallback((sectionId) => {
+    setVistaSimple(false)
+    window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }, [])
 
   // Maneja las acciones de la GuiaPrimerPaso — abre el modal correcto con el tipo correcto
   const handleAccionGuia = (accion) => {
@@ -172,6 +217,10 @@ export default function DashboardCompleto()  {
 
   // ESTADO DUAL DE VISTA (Definido aquí para evitar duplicados)
   const [vistaActiva] = useState('real') // 'real' o 'proyectado'
+
+  useEffect(() => {
+    localStorage.setItem('monarch_dashboard_view', vistaSimple ? 'basic' : 'advanced')
+  }, [vistaSimple])
 
   const [movimientosBancarios, setMovimientosBancarios] = useState(() => {
     const guardado = localStorage.getItem('historial_bancarios_v2');
@@ -217,7 +266,7 @@ export default function DashboardCompleto()  {
   const { gastosFijos, addGastoFijo, updateGastoFijo, deleteGastoFijo } = useGastosFijos()
   const { suscripciones, addSuscripcion, updateSuscripcion, deleteSuscripcion } = useSuscripciones()
   const { deudas, loading: deudasLoading, updateDeuda: updateDebt, refresh: refreshDeudas, deleteDeuda: deleteDebt } = useDeudas()
-  const { pagos, addPago, refresh: refreshPagos } = usePagosTarjeta()
+  const { pagos, refresh: refreshPagos } = usePagosTarjeta()
 const { planesActivos, refresh: refreshPlanes } = usePlanesGuardados();
 
   // ── Tour para nuevos usuarios (solo si todo está en cero Y los datos ya cargaron) ──
@@ -261,7 +310,7 @@ useEffect(() => {
         'deudas':       () => abrirModal('agregarDeuda'),
         'suscripciones':() => abrirModal('suscripcion'),
         'alertas':      () => {}, // scroll al top (ya visible)
-        'exportar':     () => { cerrarTodo(); setShowExportacion(true) },
+        'exportar':     abrirExportacion,
       }
       const accion = SECCIONES_MAPA[seccion]
       if (accion) {
@@ -669,16 +718,18 @@ useEffect(() => {
           // Fallback: consultar Supabase directamente si no se encontró en memoria
           if (!cuenta) {
             console.warn('⚠️ Cuenta no encontrada en memoria, consultando Supabase...')
+            const { data: { user } } = await supabase.auth.getUser()
             const { data: cuentaDB } = await supabase
               .from('cuentas_bancarias')
               .select('*')
               .eq('id', data.cuenta_id)
+              .eq('user_id', user.id)
               .single()
             cuenta = cuentaDB
           }
 
           if (cuenta) {
-            const nuevoBalance = Number(cuenta.balance || 0) + Number(data.monto)
+            const nuevoBalance = addMoney(cuenta.balance, data.monto)
             await updateCuenta(cuenta.id, { balance: nuevoBalance })
             console.log('✅ Saldo actualizado:', cuenta.nombre, '→', nuevoBalance)
 
@@ -777,6 +828,10 @@ useEffect(() => {
       // Limpiar campos vacíos que podrían causar error en Supabase
       if (!data.cuenta_id) delete data.cuenta_id
 
+      if (data.cuenta_id && deuda_id) {
+        throw new Error('Selecciona solo una fuente de pago: cuenta bancaria o tarjeta de crédito')
+      }
+
       if (data.id) {
         await updateGasto(data.id, data)
         // ✅ Actualización optimista del estado instantáneo al editar
@@ -800,6 +855,12 @@ useEffect(() => {
 
         // Si falló el insert, abortar — no hacer optimistic update falso
         if (!result?.success || !result?.data?.[0]) {
+          if (result?.duplicate) {
+            console.info('Gasto duplicado ignorado por idempotency_key')
+            setShowModal(null)
+            setGastoEditando(null)
+            return
+          }
           console.error('❌ addGasto falló:', result?.error)
           const errMsg = result?.error?.message || result?.error?.details || result?.error?.hint || JSON.stringify(result?.error) || 'Error al guardar en base de datos'
           throw new Error(errMsg)
@@ -815,13 +876,13 @@ useEffect(() => {
           return updated
         })
 
-        const monto = Number(data.monto)
+        const monto = roundMoney(data.monto)
 
         // 🏦 Cuenta bancaria → RESTAR del balance
         if (data.cuenta_id && monto > 0) {
           const cuenta = cuentas.find(c => c.id === data.cuenta_id)
           if (cuenta) {
-            const nuevoBalance = Number(cuenta.balance) - monto
+            const nuevoBalance = subtractMoney(cuenta.balance, monto)
             await updateCuenta(cuenta.id, { balance: nuevoBalance })
             console.log('🏦 Cuenta debitada:', cuenta.nombre, '→', nuevoBalance)
             await registrarMovimientoEnHistorial({
@@ -838,7 +899,7 @@ useEffect(() => {
         if (deuda_id && monto > 0) {
           const deuda = deudasInstant.find(d => d.id === deuda_id)
           if (deuda) {
-            const nuevoSaldo = Number(deuda.saldo || 0) + monto
+            const nuevoSaldo = addMoney(deuda.saldo, monto)
             await updateDebt(deuda.id, { saldo: nuevoSaldo })
             // Actualizar estado local de deudas para reflejar nuevo saldo
             setDeudasInstant(prev => {
@@ -1152,6 +1213,12 @@ const handleDeshacerPago = useCallback(async (item, type) => {
 
   const handleGuardarDeuda = async (data) => {
     try {
+      if (!data.id && !canAddMore('tarjetas', deudasInstant.length)) {
+        toast.error(`Has alcanzado el límite del plan gratis (${getLimit('tarjetas')} tarjetas)`)
+        window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('Error: No se pudo identificar al usuario.')
@@ -1161,7 +1228,7 @@ const handleDeshacerPago = useCallback(async (item, type) => {
       const dataConUser = { ...data, user_id: user.id }
 
       if (data.id) {
-        const { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id)
+        const { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id).eq('user_id', user.id)
         if (error) throw error
       } else {
         const { error } = await supabase.from('deudas').insert([dataConUser])
@@ -1177,6 +1244,15 @@ const handleDeshacerPago = useCallback(async (item, type) => {
       console.error("❌ Error guardando deuda:", e)
       toast.error(`Error al guardar: ${e.message || 'Error desconocido'}`)
     }
+  }
+
+  const handleAgregarCuenta = async (cuentaData) => {
+    if (!canAddMore('cuentas', cuentas.length)) {
+      toast.error(`Has alcanzado el límite del plan gratis (${getLimit('cuentas')} cuentas)`)
+      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
+      return null
+    }
+    return addCuenta(cuentaData)
   }
 
   const handleEliminarSuscripcion = async (id) => {
@@ -1199,22 +1275,32 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     const deuda = deudasInstant.find(d => d.id === pago.deuda_id)
     if (!deuda) throw new Error('Deuda no encontrada')
 
-    const principal = Number(pago.a_principal || 0)
-    const intereses = Number(pago.intereses || 0)
-    const total = Number(pago.monto_total || 0)
+    const principal = roundMoney(pago.a_principal)
+    const intereses = roundMoney(pago.intereses)
+    const total = roundMoney(pago.monto_total)
+    const cuentaPago = pago.cuenta_id ? cuentas.find(c => c.id === pago.cuenta_id) : null
 
     // Validaciones
     if (principal < 0 || intereses < 0 || total <= 0) {
       throw new Error('Montos inválidos')
     }
+    if (roundMoney(principal + intereses) !== total) {
+      throw new Error('El total del pago debe cuadrar con principal + intereses')
+    }
+    if (!cuentaPago) {
+      throw new Error('Selecciona la cuenta bancaria desde donde saldrá el pago')
+    }
+    if (Number(cuentaPago.balance || 0) < total) {
+      throw new Error(`Fondos insuficientes en ${cuentaPago.nombre}`)
+    }
 
     // Detectar pago completo
-    const esPagoCompleto = total >= deuda.saldo
+    const esPagoCompleto = total >= Number(deuda.saldo || 0)
 
     // Calcular nuevo saldo
     const nuevoSaldo = esPagoCompleto 
       ? 0 
-      : Math.max(0, Number(deuda.saldo) - principal)
+      : roundMoney(Math.max(0, Number(deuda.saldo || 0) - principal))
 
     // Calcular nuevo pago mínimo con APR real (usa función centralizada)
     const nuevoPagoMinimo = calcPagoMin(nuevoSaldo, deuda.apr)
@@ -1229,23 +1315,38 @@ const handleRegistrarPagoTarjeta = async (pago) => {
       esPagoCompleto
     })
 
-    // Registrar el pago
-    await addPago(pago)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuario no autenticado')
 
-    // Actualizar la deuda en BD
-    const updatePayload = {
-      saldo: nuevoSaldo,
-      pago_minimo: nuevoPagoMinimo,
-      ultimo_pago: pago.fecha,
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('pagar_tarjeta', {
+      p_user_id: user.id,
+      p_tarjeta_id: deuda.id,
+      p_cuenta_id: cuentaPago.id,
+      p_monto: total,
+      p_idem_key: pago.idempotency_key,
+      p_fecha: pago.fecha,
+      p_metodo: pago.metodo || 'Débito',
+      p_notas: pago.notas || null,
+      p_pago_minimo: nuevoPagoMinimo,
+      p_vence: nuevoVence || null,
+    })
+
+    if (rpcError) throw rpcError
+
+    if (rpcResult?.status === 'duplicate') {
+      toast.info('Pago ya procesado')
+      await refreshPagos()
+      await refreshDeudas()
+      await refreshCuentas()
+      return
     }
-    if (nuevoVence) updatePayload.vence = nuevoVence
 
-    await updateDebt(deuda.id, updatePayload)
+    const saldoRpc = roundMoney(rpcResult?.nueva_deuda ?? nuevoSaldo)
 
     // Actualización optimista: actualiza UI al instante
     const deudasActualizadas = deudasInstant.map(d =>
       d.id === deuda.id
-        ? { ...d, saldo: nuevoSaldo, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha, vence: nuevoVence || d.vence }
+        ? { ...d, saldo: saldoRpc, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha, vence: nuevoVence || d.vence }
         : d
     )
     setDeudasInstant(deudasActualizadas)
@@ -1256,9 +1357,12 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     // ✅ Actualización optimista de pagos: agregar pago al historial al instante
     const pagoOptimista = {
       ...pago,
-      id: 'temp-' + Date.now(),
+      id: rpcResult?.pago_id || 'temp-' + Date.now(),
       created_at: new Date().toISOString(),
-      monto_total: Number(pago.monto_total)
+      monto_total: total,
+      a_principal: total,
+      intereses: 0,
+      cuenta_id: cuentaPago.id,
     }
     const pagosActualizados = [pagoOptimista, ...pagosInstant]
     setPagosInstant(pagosActualizados)
@@ -1350,6 +1454,7 @@ if (planDeudaActivo) {
           progreso: nuevoProgreso
         })
         .eq('id', planDeudaActivo.id)
+        .eq('user_id', user.id)
       
       if (updateError) {
         console.error('❌ Error actualizando plan en BD:', updateError)
@@ -1373,7 +1478,7 @@ if (planDeudaActivo) {
     if (esPagoCompleto) {
       toast.success(`🎉 ¡${deuda.cuenta} está SALDADA! Saldo: $0.00`)
     } else {
-      toast.success(`Pago registrado — ${deuda.cuenta}: $${nuevoSaldo.toFixed(2)}`)
+      toast.success(`Pago registrado — ${deuda.cuenta}: $${saldoRpc.toFixed(2)}`)
     }
 
     setShowModal(null)
@@ -1400,7 +1505,7 @@ if (planDeudaActivo) {
 
   useEffect(() => {
     const handleOpenExportEvent = (e) => {
-      setShowExportacion(true)
+      abrirExportacion()
       // Opcional: Pre-seleccionar tipo basado en el evento si se disparó desde el widget
       if (e.detail?.tipo) {
         console.log('Solicitando exportación tipo:', e.detail.tipo)
@@ -1409,7 +1514,7 @@ if (planDeudaActivo) {
 
     window.addEventListener('openExport', handleOpenExportEvent)
     return () => window.removeEventListener('openExport', handleOpenExportEvent)
-  }, [])
+  }, [abrirExportacion])
 
   // Listen for PremiumGate upgrade events
   useEffect(() => {
@@ -1432,6 +1537,9 @@ const gastosDelMes = useMemo(() => {
   const ahora = new Date()
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
   const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59)
+  const inicioHistorial = Number.isFinite(limites.mesesHistorial)
+    ? new Date(ahora.getFullYear(), ahora.getMonth() - limites.mesesHistorial + 1, 1)
+    : null
 
   return gastosInstant.filter(g => {
     if (g.archivado === true) return false
@@ -1440,13 +1548,15 @@ const gastosDelMes = useMemo(() => {
     if (g.descripcion?.includes('Autopago:')) return false
     if (!g.fecha) return false
     const fecha = new Date(g.fecha + 'T00:00:00')
+    if (inicioHistorial && fecha < inicioHistorial) return false
     return fecha >= inicioMes && fecha <= finMes
   })
-}, [gastosInstant])
+}, [gastosInstant, limites.mesesHistorial])
 
 
 // Gastos del mes anterior (para SpendingInsights anomaly detection)
 const gastosAnteriorMes = useMemo(() => {
+  if (!isPremium && limites.mesesHistorial <= 1) return []
   const ahora = new Date()
   const inicioAnt = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1)
   const finAnt    = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59)
@@ -1455,7 +1565,7 @@ const gastosAnteriorMes = useMemo(() => {
     const f = new Date(g.fecha + 'T00:00:00')
     return f >= inicioAnt && f <= finAnt
   })
-}, [gastosInstant])
+}, [gastosInstant, isPremium, limites.mesesHistorial])
 
   // 📊 FILTRAR DATOS SEGÚN EL MODO DE VISTA SELECCIONADO
 const overviewData = useMemo(() => {
@@ -2038,103 +2148,61 @@ const gastosPorCategoria = useMemo(() => {
   // --- LÓGICA DE INTELIGENCIA FINANCIERA ---
 
   // ── PATRIMONIO NETO = activos bancarios - deudas totales ─────────
-  const netWorth = useMemo(() => {
-    const totalActivos = cuentas.reduce((sum, c) => sum + Number(c.balance || 0), 0)
-    const totalPasivos = deudasInstant.reduce((sum, d) => sum + Number(d.saldo || 0), 0)
-    return totalActivos - totalPasivos
-  }, [cuentas, deudasInstant])
+  const netWorth = useMemo(() => calcularNetWorth(cuentas, deudasInstant), [cuentas, deudasInstant])
+
+  const reconciliacionFinanciera = useMemo(() => {
+    const transacciones = gastosDelMes.map((g) => ({
+      ...g,
+      tipo: 'gasto',
+      monto: Number(g.monto || 0),
+      categoria: g.categoria || 'Sin categoria',
+    }))
+
+    return reconciliar({
+      cuentas,
+      tarjetas: deudasInstant,
+      transacciones,
+      patrimonioNeto: netWorth,
+    })
+  }, [cuentas, deudasInstant, gastosDelMes, netWorth])
+
+  useEffect(() => {
+    if (!reconciliacionFinanciera.ok) {
+      console.warn('Descuadre financiero detectado:', reconciliacionFinanciera.problemas)
+    }
+  }, [reconciliacionFinanciera])
 
   // ── DTI mensual = pagos mínimos / ingreso mensual ───────────────
   // Regla: <20% excelente, 20-36% aceptable, >43% peligro
-  const dti = useMemo(() => {
-    if (!totalIngresos) return 0
-    const pagosMensuales = deudasInstant.reduce((sum, d) => sum + Number(d.pago_minimo || 0), 0)
-    return Math.round((pagosMensuales / totalIngresos) * 100)
-  }, [deudasInstant, totalIngresos])
+  const dti = useMemo(() => calcularDTI(deudasInstant, totalIngresos), [deudasInstant, totalIngresos])
 
   // ── REGLA 50/30/20 ───────────────────────────────────────────────
   // Necesidades: gastos fijos + pagos mínimos de deuda
   // Deseos: gastos variables + suscripciones
   // Ahorro: lo que sobra (meta ≥ 20%)
-  const regla503020 = useMemo(() => {
-    if (!totalIngresos) return { necesidades: 0, deseos: 0, ahorro: 0 }
-    const pagosMensualesDeuda = deudasInstant.reduce((s, d) => s + Number(d.pago_minimo || 0), 0)
-    const necesidades = totalGastosFijosReales + pagosMensualesDeuda
-    const deseos = totalGastosVariablesReales + totalSuscripcionesReales
-    const ahorro = Math.max(0, totalIngresos - necesidades - deseos)
-    // Cap each segment so total never exceeds 100% (spending > income scenario)
-    const totalGastoPct = Math.round(((necesidades + deseos) / totalIngresos) * 100)
-    const overflow = totalGastoPct > 100
-    const necPct = Math.round((necesidades / totalIngresos) * 100)
-    const desPct = overflow
-      ? Math.max(0, 100 - necPct)   // squeeze deseos to fit
-      : Math.round((deseos / totalIngresos) * 100)
-    return {
-      necesidades: necPct,
-      deseos: desPct,
-      ahorro: Math.round((ahorro / totalIngresos) * 100),
-    }
-  }, [totalIngresos, totalGastosFijosReales, totalGastosVariablesReales, totalSuscripcionesReales, deudasInstant])
+  const regla503020 = useMemo(() => calcularRegla503020({
+    totalIngresos,
+    totalGastosFijos: totalGastosFijosReales,
+    totalGastosVariables: totalGastosVariablesReales,
+    totalSuscripciones: totalSuscripcionesReales,
+    deudas: deudasInstant,
+  }), [totalIngresos, totalGastosFijosReales, totalGastosVariablesReales, totalSuscripcionesReales, deudasInstant])
 
   // ── FINANCIAL HEALTH SCORE — 5 factores profesionales ───────────
-  // Antes: arrancaba en 60 (falso positivo) y solo medía 2 cosas.
-  // Ahora: arranca en 50 (neutral) con 5 factores estándar de finanzas.
-  const financialHealth = useMemo(() => {
-    let score = 50 // Punto neutral — hay que ganarse cada punto
+  // Arranca en 50 (neutral) con 5 factores estándar de finanzas.
+  const financialHealth = useMemo(() => calcularFinancialHealthScore({
+    totalIngresos,
+    totalGastosReales,
+    totalGastosFijos: totalGastosFijosReales,
+    totalSuscripciones: totalSuscripcionesReales,
+    deudas: deudasInstant,
+  }), [totalIngresos, totalGastosReales, totalGastosFijosReales, totalSuscripcionesReales, deudasInstant])
 
-    // Factor 1: Tasa de ahorro (0-25 pts)
-    const tasaAhorro = totalIngresos > 0 ? (totalIngresos - totalGastosReales) / totalIngresos : 0
-    if (tasaAhorro >= 0.20) score += 25       // Excelente: ahorra ≥20%
-    else if (tasaAhorro >= 0.10) score += 15  // Bueno: ahorra 10-19%
-    else if (tasaAhorro >= 0.05) score += 5   // Mínimo: ahorra 5-9%
-    else if (tasaAhorro < 0) score -= 15      // Gasta más de lo que gana
-
-    // Factor 2: DTI mensual (0-15 pts)
-    const dtiLocal = totalIngresos > 0
-      ? deudasInstant.reduce((s, d) => s + Number(d.pago_minimo || 0), 0) / totalIngresos
-      : 0
-    if (dtiLocal <= 0.20) score += 15        // Excelente: ≤20%
-    else if (dtiLocal <= 0.36) score += 8    // Aceptable: 20-36%
-    else if (dtiLocal > 0.43) score -= 15    // Peligro: >43% (bancos rechazan préstamos)
-
-    // Factor 3: Deuda total vs ingreso ANUAL (0-15 pts)
-    // Error anterior: comparaba deuda contra ingreso mensual × 3 (muy permisivo)
-    const ingresoAnual = totalIngresos * 12
-    const deudaTotal = deudasInstant.reduce((s, d) => s + Number(d.saldo || 0), 0)
-    if (deudaTotal === 0) score += 15
-    else if (deudaTotal < ingresoAnual * 0.36) score += 10 // Deuda manejable
-    else if (deudaTotal < ingresoAnual) score += 5         // Deuda elevada
-    else score -= 10                                        // Deuda > ingreso anual
-
-    // Factor 4: Gastos fijos como % del ingreso (0-10 pts)
-    const pctFijos = totalIngresos > 0
-      ? (totalGastosFijosReales + totalSuscripcionesReales) / totalIngresos
-      : 1
-    if (pctFijos <= 0.50) score += 10       // Saludable: compromisos ≤50% ingresos
-    else if (pctFijos <= 0.70) score += 5   // Ajustado
-    else score -= 10                         // Peligro: compromisos >70%
-
-    // Factor 5: Suscripciones no excesivas (0-5 pts)
-    const pctSubs = totalIngresos > 0 ? totalSuscripcionesReales / totalIngresos : 0
-    if (pctSubs <= 0.05) score += 5         // Controlado: subs ≤5% ingresos
-    else if (pctSubs > 0.10) score -= 5     // Excesivo: subs >10% ingresos
-
-    return Math.max(0, Math.min(100, Math.round(score)))
-  }, [totalIngresos, totalGastosReales, totalGastosFijosReales, totalSuscripcionesReales, deudasInstant])
-
-  // ── DAILY BUDGET corregido — descuenta gastos fijos pendientes ───
-  // Antes: dividía todo el saldo sin considerar qué falta por pagar.
-  // Ahora: descuenta gastos fijos aún sin pagar que vencen este mes.
-  const dailyBudget = useMemo(() => {
-    const diasRestantes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate() - hoy.getDate() + 1
-    if (diasRestantes <= 0) return 0
-    const fijosPendientes = gastosFijosInstant
-      .filter(gf => gf.estado !== 'Pagado' && Number(gf.dia_venc || 0) >= hoy.getDate())
-      .reduce((sum, gf) => sum + Number(gf.monto || 0), 0)
-    const saldoDisponible = (saldoReal || 0) - fijosPendientes
-    if (saldoDisponible <= 0) return 0
-    return Math.floor(saldoDisponible / diasRestantes)
-  }, [saldoReal, hoy, gastosFijosInstant])
+  // ── DAILY BUDGET — descuenta gastos fijos pendientes ─────────────
+  const dailyBudget = useMemo(
+    () => calcularDailyBudget(saldoReal, gastosFijosInstant, hoy),
+    [saldoReal, hoy, gastosFijosInstant]
+  )
 
   // eslint-disable-next-line no-unused-vars
   const { textoHora, frase } = useMemo(() => {
@@ -2160,7 +2228,7 @@ const gastosPorCategoria = useMemo(() => {
     totalGastosVariables: totalGastosVariablesReales,
     totalSuscripciones: totalSuscripcionesReales,
     saldo: saldoReal,
-    tasaAhorro: parseFloat(tasaAhorroReal || 0) / 100,
+    tasaAhorro: parseFloat(tasaAhorroReal || 0),
     totalDeudas: deudasInstant.reduce((sum, d) => sum + validarMonto(d.saldo), 0),
     financialHealth,
     dailyBudget,
@@ -2169,17 +2237,59 @@ const gastosPorCategoria = useMemo(() => {
     regla503020,
   }
 
+  const resumenFinanciero = useMemo(() => crearResumenFinanciero({
+    cuentas,
+    deudas: deudasInstant,
+    ingresos: ingresosInstant,
+    gastosMes: gastosDelMes,
+    gastosFijos: gastosFijosInstant,
+    suscripciones: suscripcionesInstant,
+    saldoMes: saldoReal,
+    totalIngresos,
+    totalGastos: totalGastosReales,
+    tasaAhorro: tasaAhorroReal,
+    dti,
+    financialHealth,
+    referenceDate: hoy,
+  }), [
+    cuentas,
+    deudasInstant,
+    ingresosInstant,
+    gastosDelMes,
+    gastosFijosInstant,
+    suscripcionesInstant,
+    saldoReal,
+    totalIngresos,
+    totalGastosReales,
+    tasaAhorroReal,
+    dti,
+    financialHealth,
+    hoy,
+  ])
+
   // ============================================
   // RENDERIZADO UI MODERNA
   // ============================================
   return (
-    <div className="min-h-screen bg-[#0a0b0f] pb-32 md:pb-4 relative text-gray-100 selection:bg-purple-500/30 safe-area-top" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div
+      className="min-h-screen pb-32 md:pb-4 relative text-ink selection:bg-accent-positive/30 safe-area-top"
+      style={{
+        paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))',
+        backgroundColor: '#0B0E14',
+        backgroundImage: [
+          'radial-gradient(circle at 50% -10%, rgba(52,211,153,0.08) 0%, transparent 60%)',
+          'linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
+          'linear-gradient(180deg, rgba(255,255,255,0.025) 1px, transparent 1px)'
+        ].join(', '),
+        backgroundSize: 'auto, 36px 36px, 36px 36px',
+      }}
+    >
 
       {/* ── BARRA TOP (export + logout) ── */}
       <div className="flex justify-end gap-2 px-4 pt-4 pb-1">
         <button
-          onClick={() => { cerrarTodo(); setShowExportacion(true) }}
-          className="p-2 bg-white/[0.04] hover:bg-white/[0.08] rounded-xl border border-white/[0.06] text-white/30 hover:text-emerald-400 transition-colors touch-manipulation"
+          onClick={abrirExportacion}
+          className="p-2 bg-base-surface hover:bg-base-elevated rounded-xl border border-base-border text-ink-muted hover:text-accent-positive shadow-sm transition-colors touch-manipulation"
           title="Exportar datos"
         >
           <Download className="w-4 h-4" />
@@ -2187,13 +2297,15 @@ const gastosPorCategoria = useMemo(() => {
         <LogoutButton />
       </div>
 
-      {/* FONDO AMBIENTAL — suave, sin pulso */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-15%] left-[-5%] w-[50vw] h-[50vw] bg-purple-700/10 rounded-full blur-[160px]" />
-        <div className="absolute bottom-[-15%] right-[-5%] w-[45vw] h-[45vw] bg-blue-700/8 rounded-full blur-[160px]" />
-      </div>
-
       {/* ── HERO ── */}
+      {!reconciliacionFinanciera.ok && (
+        <div className="max-w-7xl mx-auto px-4 md:px-5 mt-2">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 shadow-sm">
+            ⚠️ Detectamos un descuadre en tus números. Estamos revisando.
+          </div>
+        </div>
+      )}
+
       <DashboardHero
         saldo={saldoReal}
         totalIngresos={totalIngresos}
@@ -2204,11 +2316,44 @@ const gastosPorCategoria = useMemo(() => {
         nombreUsuario={usuario.nombre || usuario.email?.split('@')[0]}
       />
 
+      <MoneyCommandCenter
+        resumen={resumenFinanciero}
+        onAddGasto={() => { setGastoTipoInicial('variable'); abrirModal('gastos') }}
+        onOpenDebtPlanner={abrirDebtPlanner}
+        onOpenPayments={() => abrirModal('alertas')}
+        onOpenGoals={() => scrollToSection('metas-ahorro')}
+        onOpenInsights={() => abrirSeccionAvanzada('analisis-gastos')}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-3">
+        <div className="inline-flex w-full rounded-xl border border-base-border bg-base-surface p-1 shadow-sm md:w-auto">
+          <button
+            type="button"
+            onClick={() => setVistaSimple(true)}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-colors md:flex-none ${
+              vistaSimple ? 'bg-accent-positive text-base' : 'text-ink-muted hover:bg-base-elevated'
+            }`}
+          >
+            Básico
+          </button>
+          <button
+            type="button"
+            onClick={() => setVistaSimple(false)}
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-colors md:flex-none ${
+              !vistaSimple ? 'bg-accent-positive text-base' : 'text-ink-muted hover:bg-base-elevated'
+            }`}
+          >
+            Avanzado
+          </button>
+        </div>
+      </div>
+
       {/* ── QUICK ADD ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
         <QuickAddBar
-          onAddGasto={async ({ monto, categoria, fecha, descripcion }) => {
-            await addGasto({ monto, categoria, fecha, descripcion, tipo: 'variable' })
+          onAddGasto={async ({ monto, categoria, fecha, descripcion, idempotency_key }) => {
+            const result = await addGasto({ monto, categoria, fecha, descripcion, tipo: 'variable', idempotency_key })
+            if (result?.success === false) throw result.error
           }}
           onAddIngreso={async ({ monto, descripcion, fecha }) => {
             await addIngreso({ monto, descripcion, fecha, tipo: 'otro' })
@@ -2221,31 +2366,23 @@ const gastosPorCategoria = useMemo(() => {
         <div className="max-w-7xl mx-auto px-4 md:px-5 mt-3">
           <button
             onClick={() => abrirModal('alertas')}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl border border-yellow-500/15 touch-manipulation"
-            style={{ background: 'rgba(234,179,8,0.04)' }}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-accent-warning/25 bg-accent-warning/10 shadow-sm touch-manipulation"
           >
             <div className="flex items-center gap-2">
-              <Bell className="w-3.5 h-3.5 text-yellow-400/70 shrink-0" />
-              <span className="text-xs font-semibold text-yellow-300/70">
+              <Bell className="w-3.5 h-3.5 text-accent-warning shrink-0" />
+              <span className="text-xs font-semibold text-accent-warning">
                 {alertas.length} pago{alertas.length > 1 ? 's' : ''} próximo{alertas.length > 1 ? 's' : ''} · toca para ver
               </span>
               {cuentasEnRiesgo.length > 0 && (
-                <span className="px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-400/80 text-[10px] font-semibold">
+                <span className="px-2 py-0.5 bg-accent-negative/10 border border-accent-negative/25 rounded-full text-accent-negative text-[10px] font-semibold">
                   <ShieldAlert className="w-3 h-3 inline mr-0.5" />{cuentasEnRiesgo.length} en riesgo
                 </span>
               )}
             </div>
-            <ChevronRight className="w-4 h-4 text-yellow-500/40" />
+            <ChevronRight className="w-4 h-4 text-accent-warning" />
           </button>
         </div>
       )}
-
-      {/* ── SNAPSHOT DEL DÍA ── */}
-      <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
-        <ErrorBoundary label="Resumen del día">
-          <DailySnapshot gastos={gastosInstant} dailyBudget={dailyBudget} />
-        </ErrorBoundary>
-      </div>
 
       {/* ── GUÍA (solo usuarios nuevos sin datos) ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-5 mt-5">
@@ -2276,62 +2413,88 @@ const gastosPorCategoria = useMemo(() => {
 
       {/* ── SEPARADOR VISUAL ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-5 mt-8">
-        <div className="h-px bg-white/[0.05]" />
+        <div className="h-px bg-base-border" />
       </div>
 
       {/* ── SECCIONES COLAPSABLES ── */}
 
-      <SectionCollapse title="Análisis de gastos" icon="📊">
-        <SpendingInsights
-          gastosMes={gastosDelMes}
-          gastosAnterior={gastosAnteriorMes}
-          totalIngresos={totalIngresos}
+      {!vistaSimple && (
+        <>
+          <SectionCollapse title="Detalle de hoy" icon="📍">
+            <DailySnapshot gastos={gastosInstant} dailyBudget={dailyBudget} />
+          </SectionCollapse>
+
+          <SectionCollapse id="analisis-gastos" title="Análisis de gastos" icon="📊">
+            <SpendingInsights
+              gastosMes={gastosDelMes}
+              gastosAnterior={gastosAnteriorMes}
+              totalIngresos={totalIngresos}
+            />
+            <div className="mt-4">
+              <SmartTips
+                totalIngresos={totalIngresos}
+                totalGastos={totalGastosReales}
+                tasaAhorro={tasaAhorroReal}
+                gastosMes={gastosDelMes}
+                gastosAnterior={gastosAnteriorMes}
+                gastosFijos={gastosFijosInstant}
+                suscripciones={suscripcionesInstant}
+                deudas={deudasInstant}
+              />
+            </div>
+          </SectionCollapse>
+
+          <SectionCollapse title="Proyección 30 días" icon="🔮">
+            <PremiumGate feature="proyeccionFlujoCaja">
+              <CashFlowForecast
+                saldoActual={saldoReal}
+                totalIngresos={totalIngresos}
+                totalGastosFijos={totalGastosFijosReales}
+                totalSuscripciones={totalSuscripcionesReales}
+                gastosFijos={gastosFijosInstant}
+                suscripciones={suscripcionesInstant}
+              />
+            </PremiumGate>
+          </SectionCollapse>
+
+          <SectionCollapse title="Salud financiera" icon="💚" badge={`${kpis.financialHealth}/100`}>
+            <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
+            <div className="mt-4">
+              <NetWorthTimeline netWorthActual={kpis.netWorth || 0} />
+            </div>
+          </SectionCollapse>
+
+          <SectionCollapse title="Presupuesto y comparativo" icon="🎯">
+            <PresupuestoCategorias gastos={gastosInstant} />
+            <div className="mt-4">
+              <ComparativoMensual
+                ingresos={ingresosInstant}
+                gastos={gastosInstant}
+                gastosFijos={gastosFijosInstant}
+                suscripciones={suscripcionesInstant}
+              />
+            </div>
+          </SectionCollapse>
+        </>
+      )}
+
+      <SectionCollapse
+        key={vistaSimple ? 'gastos-subs-basic' : 'gastos-subs-advanced'}
+        title={`Gastos y suscripciones (${gastosDelMes.length + suscripcionesActivas.length})`}
+        icon="🧾"
+        defaultOpen={false}
+      >
+        <GastosSuscripcionesPanel
+          gastos={gastosDelMes}
+          suscripciones={suscripcionesActivas}
+          onEditarGasto={(item) => handleEditarUniversal(item, ITEM_TYPES.VARIABLE)}
+          onEliminarGasto={(item) => handleEliminarUnificado(item, ITEM_TYPES.VARIABLE)}
+          onEditarSuscripcion={(item) => handleEditarUniversal(item, ITEM_TYPES.SUSCRIPCION)}
+          onEliminarSuscripcion={(item) => handleEliminarUnificado(item, ITEM_TYPES.SUSCRIPCION)}
         />
-        <div className="mt-4">
-          <SmartTips
-            totalIngresos={totalIngresos}
-            totalGastos={totalGastosReales}
-            tasaAhorro={tasaAhorroReal}
-            gastosMes={gastosDelMes}
-            gastosAnterior={gastosAnteriorMes}
-            gastosFijos={gastosFijosInstant}
-            suscripciones={suscripcionesInstant}
-            deudas={deudasInstant}
-          />
-        </div>
       </SectionCollapse>
 
-      <SectionCollapse title="Proyección 30 días" icon="🔮">
-        <CashFlowForecast
-          saldoActual={saldoReal}
-          totalIngresos={totalIngresos}
-          totalGastosFijos={totalGastosFijosReales}
-          totalSuscripciones={totalSuscripcionesReales}
-          gastosFijos={gastosFijosInstant}
-          suscripciones={suscripcionesInstant}
-        />
-      </SectionCollapse>
-
-      <SectionCollapse title="Salud financiera" icon="💚" badge={`${kpis.financialHealth}/100`}>
-        <PanelSaludFinanciera kpis={kpis} cuentas={cuentas} />
-        <div className="mt-4">
-          <NetWorthTimeline netWorthActual={kpis.netWorth || 0} />
-        </div>
-      </SectionCollapse>
-
-      <SectionCollapse title="Presupuesto y comparativo" icon="🎯">
-        <PresupuestoCategorias gastos={gastosInstant} />
-        <div className="mt-4">
-          <ComparativoMensual
-            ingresos={ingresosInstant}
-            gastos={gastosInstant}
-            gastosFijos={gastosFijosInstant}
-            suscripciones={suscripcionesInstant}
-          />
-        </div>
-      </SectionCollapse>
-
-      <SectionCollapse title="Mis Metas de Ahorro" icon="🏆" defaultOpen={true}>
+      <SectionCollapse id="metas-ahorro" title="Mis Metas de Ahorro" icon="🏆">
         <MetasFinancieras />
       </SectionCollapse>
 
@@ -2345,7 +2508,7 @@ const gastosPorCategoria = useMemo(() => {
             gastosFijos={gastosFijosInstant}
             ingresos={ingresosInstant}
             alertas={alertas}
-            onOpenPlan={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+            onOpenPlan={abrirDebtPlanner}
             onRegisterPayment={() => {
               const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0]
               if (targetDebt) {
@@ -2367,7 +2530,7 @@ const gastosPorCategoria = useMemo(() => {
                 deudas: deudasInstant
               }}
               showLocalNotification={showLocalNotification}
-              onOpenPlanDetails={() => { cerrarTodo(); setShowDebtPlanner(true) }}
+              onOpenPlanDetails={abrirDebtPlanner}
               onRegisterPayment={() => {
                 const targetDebt = planDeudaActivo.configuracion?.plan?.orderedDebts?.[0]
                 if (targetDebt) {
@@ -2399,48 +2562,52 @@ const gastosPorCategoria = useMemo(() => {
           </div>
           {!planDeudaActivo && (
             <button
-              onClick={() => { cerrarTodo(); setShowDebtPlanner(true) }}
-              className="mt-3 w-full flex items-center justify-between px-4 py-3 bg-purple-500/8 hover:bg-purple-500/15 border border-purple-500/20 rounded-2xl transition-colors touch-manipulation"
+              onClick={abrirDebtPlanner}
+              className="mt-3 w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-purple-50 border border-purple-200 rounded-2xl transition-colors touch-manipulation shadow-sm"
             >
               <div className="flex items-center gap-2.5">
-                <Target className="w-4 h-4 text-purple-400 shrink-0" />
-                <span className="text-sm font-semibold text-white/70">Crear plan de eliminación de deudas</span>
+                <Target className="w-4 h-4 text-purple-700 shrink-0" />
+                <span className="text-sm font-semibold text-slate-800">Crear plan de eliminación de deudas</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-purple-400/50" />
+              <ChevronRight className="w-4 h-4 text-purple-700" />
             </button>
           )}
         </SectionCollapse>
       )}
 
-      {/* ── ASISTENTE IA ── */}
-      <SectionCollapse title="Asistente financiero IA" icon="🤖">
-        <AsistenteFinancieroV2
-          ingresos={ingresosDelMes}
-          gastos={gastosDelMes}
-          gastosFijos={gastosFijosInstant}
-          suscripciones={suscripcionesInstant}
-          deudas={deudasInstant}
-          showLocalNotification={showLocalNotification}
-          onOpenDebtPlanner={() => { cerrarTodo(); setShowDebtPlanner(true) }}
-          onOpenSavingsPlanner={() => { cerrarTodo(); setShowSavingsPlanner(true) }}
-          onOpenSpendingControl={() => { cerrarTodo(); setShowSpendingControl(true) }}
-          dashboardKpis={kpis}
-          calculosReales={calculosReales}
-          calculosProyectados={calculosProyectados}
-        />
-      </SectionCollapse>
+      {!vistaSimple && (
+        <>
+          {/* ── ASISTENTE IA ── */}
+          <SectionCollapse title="Asistente financiero IA" icon="🤖">
+            <AsistenteFinancieroV2
+              ingresos={ingresosDelMes}
+              gastos={gastosDelMes}
+              gastosFijos={gastosFijosInstant}
+              suscripciones={suscripcionesInstant}
+              deudas={deudasInstant}
+              showLocalNotification={showLocalNotification}
+              onOpenDebtPlanner={abrirDebtPlanner}
+              onOpenSavingsPlanner={() => { cerrarTodo(); setShowSavingsPlanner(true) }}
+              onOpenSpendingControl={() => { cerrarTodo(); setShowSpendingControl(true) }}
+              dashboardKpis={kpis}
+              calculosReales={calculosReales}
+              calculosProyectados={calculosProyectados}
+            />
+          </SectionCollapse>
 
-      {/* ── CALENDARIO DE PAGOS ── */}
-      <SectionCollapse title="Calendario de pagos" icon="📅">
-        <CalendarioPagos
-          key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
-          gastosFijos={gastosFijosInstant}
-          suscripciones={suscripcionesInstant}
-          deudas={deudasInstant}
-          ingresos={ingresosInstant}
-          gastos={gastosInstant}
-        />
-      </SectionCollapse>
+          {/* ── CALENDARIO DE PAGOS ── */}
+          <SectionCollapse title="Calendario de pagos" icon="📅">
+            <CalendarioPagos
+              key={JSON.stringify(suscripcionesInstant.map(s => s.proximo_pago))}
+              gastosFijos={gastosFijosInstant}
+              suscripciones={suscripcionesInstant}
+              deudas={deudasInstant}
+              ingresos={ingresosInstant}
+              gastos={gastosInstant}
+            />
+          </SectionCollapse>
+        </>
+      )}
 
 
       <div className="mb-8" />
@@ -2728,7 +2895,7 @@ const gastosPorCategoria = useMemo(() => {
       {showModal === 'cuentas' && (
         <ModuloCuentasBancarias 
           onClose={() => setShowModal(null)}
-          onAgregar={addCuenta} 
+          onAgregar={handleAgregarCuenta} 
           onEditar={(cuenta) => { updateCuenta(cuenta.id, cuenta) }} 
           onEliminar={deleteCuenta} 
           onTransferenciaExitosa={refreshCuentas}
@@ -3072,7 +3239,9 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       <ModalWrapper show={showDebtPlanner} onClose={() => setShowDebtPlanner(false)}>
-        <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
+        <PremiumGate feature="estrategiaPagoDeuda">
+          <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
+        </PremiumGate>
       </ModalWrapper>
 
       {/* ✅ FIX: REMOVED WRAPPER FOR SAVINGS PLANNER TO PREVENT BOTTOM SHEET BEHAVIOR ON MOBILE */}
@@ -3089,7 +3258,7 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       {/* MIS REPORTES — usa createPortal internamente */}
-      {showExportacion && (
+      {showExportacion && limites.exportarDatos && (
         <VisualizacionDatos
           onClose={() => setShowExportacion(false)}
           ingresos={ingresosInstant}
@@ -3121,7 +3290,7 @@ const gastosPorCategoria = useMemo(() => {
         coberturaBadge={cuentasEnRiesgo.length}
         nombreUsuario={usuario.nombre}
         onLogout={() => { localStorage.clear(); window.location.href = '/auth'; }}
-        onOpenExport={() => { cerrarTodo(); setShowExportacion(true) }}
+        onOpenExport={abrirExportacion}
       />
 
       {/* ESTILOS ADICIONALES */}

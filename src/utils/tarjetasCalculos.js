@@ -1,3 +1,5 @@
+import { roundMoney } from './money'
+
 // ===========================================
 // UTILIDADES PARA CALCULOS DE TARJETAS
 // ===========================================
@@ -20,7 +22,23 @@ export const calcularPagoMinimo = (saldo, apr = 0) => {
   const porcentaje = saldoNum * 0.02
 
   // Regla real: mayor entre (2% saldo + interes del mes) o minimo $25
-  return Math.max(porcentaje + interesMes, 25)
+  return roundMoney(Math.max(porcentaje + interesMes, 25))
+}
+
+const parseFechaLocal = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  const datePart = String(value).split('T')[0].split(' ')[0]
+  const [year, month, day] = datePart.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+const toISODateLocal = (date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /**
@@ -32,13 +50,14 @@ export const calcularProximoCorte = (venceActual) => {
   if (!venceActual) return null
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
-  const corte = new Date(venceActual)
+  const corte = parseFechaLocal(venceActual)
+  if (!corte) return null
   corte.setHours(0, 0, 0, 0)
   // Avanzar mes a mes hasta que sea futuro
   while (corte <= hoy) {
     corte.setMonth(corte.getMonth() + 1)
   }
-  return corte.toISOString().split('T')[0]
+  return toISODateLocal(corte)
 }
 
 /**
@@ -49,9 +68,10 @@ export const calcularProximoCorte = (venceActual) => {
  */
 export const calcularFechaLimitePago = (fechaCorte, diasGracia = 21) => {
   if (!fechaCorte) return null
-  const corte = new Date(fechaCorte)
+  const corte = parseFechaLocal(fechaCorte)
+  if (!corte) return null
   corte.setDate(corte.getDate() + diasGracia)
-  return corte.toISOString().split('T')[0]
+  return toISODateLocal(corte)
 }
 
 /**

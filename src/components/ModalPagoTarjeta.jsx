@@ -2,6 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { CreditCard, X, Loader2, Info, Calculator, Wallet, Building2 } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { toast } from 'sonner'
+import { roundMoney } from '../utils/money'
+
+const createIdempotencyKey = () => {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  return `pay-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null }) => {
   const { cuentas } = useCuentasBancarias()
@@ -9,6 +15,8 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
   const montoInputRef = useRef(null)
   const cuentasSectionRef = useRef(null)
+  const idemKeyRef = useRef(createIdempotencyKey())
+  const inFlightRef = useRef(false)
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -41,8 +49,9 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
   const calcularInteresMensual = useCallback((deuda) => {
     if (!deuda || !deuda.apr || !deuda.saldo) return 0
-    const tasaMensual = deuda.apr / 12
-    return deuda.saldo * tasaMensual
+    const aprDecimal = Number(deuda.apr || 0) > 1 ? Number(deuda.apr) / 100 : Number(deuda.apr || 0)
+    const tasaMensual = aprDecimal / 12
+    return roundMoney(Number(deuda.saldo || 0) * tasaMensual)
   }, [])
 
   const distribuirPago = useCallback((montoPago, deuda) => {
@@ -50,13 +59,13 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
     const saldoActual = Number(deuda.saldo || 0)
     const montoNum = Number(montoPago)
     if (montoNum >= saldoActual) {
-      return { interes: 0, principal: saldoActual }
+      return { interes: 0, principal: roundMoney(saldoActual) }
     }
     const interesMensual = calcularInteresMensual(deuda)
     if (montoNum <= interesMensual) {
-      return { interes: montoNum, principal: 0 }
+      return { interes: roundMoney(montoNum), principal: 0 }
     } else {
-      return { interes: interesMensual, principal: montoNum - interesMensual }
+      return { interes: interesMensual, principal: roundMoney(montoNum - interesMensual) }
     }
   }, [calcularInteresMensual])
 
@@ -92,16 +101,19 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
   }, [formData.metodo])
 
   const handleSubmit = async () => {
+    if (inFlightRef.current) return
+
     try {
+      inFlightRef.current = true
       setIsLoading(true)
       const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta)
       if (!deudaSeleccionada) { toast.error('Debes seleccionar una tarjeta válida'); return }
       if (!formData.monto || Number(formData.monto) <= 0) { toast.error('Debes ingresar un monto válido'); return }
-      if (formData.metodo === 'Débito' && !formData.cuenta_id) {
-        toast.warning('Debes seleccionar una cuenta bancaria para débito automático')
+      if (!formData.cuenta_id) {
+        toast.warning('Debes seleccionar la cuenta desde donde saldrá el pago')
         return
       }
-      if (formData.metodo === 'Débito' && formData.cuenta_id) {
+      if (formData.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === formData.cuenta_id)
         if (cuenta && Number(cuenta.balance) < Number(formData.monto)) {
           toast.error(`Fondos insuficientes. Saldo: $${Number(cuenta.balance).toFixed(2)} | Monto: $${Number(formData.monto).toFixed(2)}`)
@@ -116,13 +128,15 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
         metodo: formData.metodo,
         cuenta_id: formData.cuenta_id || null,
         fecha: formData.fecha,
-        notas: formData.notas
+        notas: formData.notas,
+        idempotency_key: idemKeyRef.current
       })
       onClose()
     } catch (e) {
       console.error('Error registrando pago:', e)
       toast.error('Error al registrar el pago')
     } finally {
+      inFlightRef.current = false
       setIsLoading(false)
     }
   }
@@ -303,7 +317,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
             </label>
             <select
               value={formData.metodo}
-              onChange={(e) => setFormData({ ...formData, metodo: e.target.value, cuenta_id: e.target.value === 'Débito' ? '' : formData.cuenta_id })}
+              onChange={(e) => setFormData({ ...formData, metodo: e.target.value })}
               disabled={isLoading}
               className={inputClass}
             >
@@ -316,8 +330,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
           </div>
 
           {/* 4. CUENTAS */}
-          {formData.metodo === 'Débito' && (
-            <div ref={cuentasSectionRef} className="bg-gray-800/50 rounded-xl p-4 border border-white/5">
+          <div ref={cuentasSectionRef} className="bg-gray-800/50 rounded-xl p-4 border border-white/5">
               <div className="flex items-center gap-2 mb-3 text-cyan-400">
                 <Wallet className="w-4 h-4" />
                 <span className="text-sm font-bold uppercase">Cuenta Origen</span>
@@ -349,7 +362,6 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                 })}
               </div>
             </div>
-          )}
 
           {/* NOTAS */}
           <div>

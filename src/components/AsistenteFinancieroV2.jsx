@@ -3,6 +3,7 @@
 // Visual Impactante | Gráficas | Sin Números Abrumadores | Mobile-First
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { calcularFinancialHealthScore } from "../utils/financialCalculations";
 import {
   Brain, CheckCircle2, Zap, X,
   Calendar, AlertTriangle,
@@ -24,6 +25,11 @@ const PROMEDIOS_NACIONALES = {
   numeroSuscripciones: 4,
   costoPromedioSuscripcion: 120
 };
+
+const normalizarTasaAhorro = (value) => {
+  const n = Number(value) || 0
+  return Math.abs(n) > 1 ? n / 100 : n
+}
 
 // 🎭 ARQUETIPOS FINANCIEROS
 const ARQUETIPOS = {
@@ -188,7 +194,7 @@ export default function AsistenteFinancieroV2({
       totalDeudas = dashboardKpis.totalDeudas || 0;
       gastosTotales = datosCalculo.totalGastos || 0;
       disponible = datosCalculo.saldo || 0;
-      tasaAhorro = (datosCalculo.tasaAhorro || 0) / 100;
+      tasaAhorro = normalizarTasaAhorro(datosCalculo.tasaAhorro);
     } else {
       totalIngresos = ingresos.reduce((sum, i) => sum + Number(i.monto || 0), 0);
       totalGastosFijos = gastosFijos.reduce((sum, g) => sum + Number(g.monto || 0), 0);
@@ -202,32 +208,18 @@ export default function AsistenteFinancieroV2({
       tasaAhorro = totalIngresos > 0 ? (disponible / totalIngresos) : 0;
     }
 
-    // SCORE DE SALUD
-    let scoreHealth = 50;
-    
-    if (tasaAhorro > 0.30) scoreHealth += 35;
-    else if (tasaAhorro > 0.20) scoreHealth += 30;
-    else if (tasaAhorro > 0.15) scoreHealth += 25;
-    else if (tasaAhorro > 0.10) scoreHealth += 20;
-    else if (tasaAhorro > 0.05) scoreHealth += 10;
-    else if (tasaAhorro > 0) scoreHealth += 5;
-    else if (tasaAhorro < 0) scoreHealth -= 30;
-    
-    if (totalDeudas === 0) scoreHealth += 25;
-    else if (totalDeudas < totalIngresos * 0.5) scoreHealth += 15;
-    else if (totalDeudas < totalIngresos * 2) scoreHealth += 5;
-    else if (totalDeudas > totalIngresos * 5) scoreHealth -= 25;
-    
-    // ⚠️ CORRECCIÓN: Eliminamos variable ratioGasto no usada
-    const ratioGastos = totalIngresos > 0 ? (gastosTotales / totalIngresos) : 1;
-    if (ratioGastos < 0.60) scoreHealth += 15;
-    else if (ratioGastos < 0.70) scoreHealth += 10;
-    else if (ratioGastos < 0.80) scoreHealth += 5;
-    else if (ratioGastos > 1.0) scoreHealth -= 20;
-    
-    if (disponible > totalIngresos * 0.20) scoreHealth += 10;
-    else if (disponible > 0) scoreHealth += 5;
-    
+    // SCORE DE SALUD — misma fórmula centralizada que usa el dashboard,
+    // para que ambos muestren siempre el mismo número.
+    let scoreHealth = calcularFinancialHealthScore({
+      totalIngresos,
+      totalGastosReales: gastosTotales,
+      totalGastosFijos,
+      totalSuscripciones,
+      deudas,
+    });
+
+    // Ajuste de inicio de mes: evita mostrar un score castigado cuando aún
+    // no han llegado los ingresos recurrentes del mes (vista "real" temprana).
     if (vistaIA === 'real' && datosCalculo) {
       const hoy = new Date();
       const diaDelMes = hoy.getDate();
@@ -237,8 +229,9 @@ export default function AsistenteFinancieroV2({
         if (ingresosProyectados > totalIngresos * 3) scoreHealth = Math.max(scoreHealth, 45);
       }
     }
-    
+
     scoreHealth = Math.max(0, Math.min(100, scoreHealth));
+    const ratioGastos = totalIngresos > 0 ? (gastosTotales / totalIngresos) : 1;
 
     let arquetipo;
     if (scoreHealth >= ARQUETIPOS.VISIONARIO.min) arquetipo = ARQUETIPOS.VISIONARIO;

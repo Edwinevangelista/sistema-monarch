@@ -25,6 +25,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #0B0E14;
+  color: #F5F6F8;
 }
 
 /* Ensure root respects safe area on all platforms */

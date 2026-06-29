@@ -551,7 +551,7 @@ function ConfirmModal({ onConfirmar, onCancelar }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[80] p-4 animate-in fade-in">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[20000] p-4 animate-in fade-in">
       <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative overflow-hidden border border-white/20">
         <button 
           onClick={onCancelar}

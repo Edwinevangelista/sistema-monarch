@@ -26,3 +26,14 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.vercel
+
+# secrets / signing
+*.keystore
+
+# nested deps
+api/node_modules
+
+# claude code local tooling — not part of the app
+.claude/worktrees/
+.claude/launch.json

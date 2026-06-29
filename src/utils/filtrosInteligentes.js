@@ -11,6 +11,14 @@ export const FILTRO_TIPOS = {
   TODOS: 'todos'
 }
 
+const parseFechaLocal = (value) => {
+  if (!value) return null
+  const datePart = String(value).split('T')[0].split(' ')[0]
+  const [year, month, day] = datePart.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
 /**
  * 📅 Obtiene el rango de fechas según el tipo de filtro
  */
@@ -61,7 +69,8 @@ const filtrarIngresos = (ingresos, tipoFiltro) => {
 
   return ingresos.filter(ingreso => {
     if (!ingreso.fecha) return false
-    const fechaIngreso = new Date(ingreso.fecha + 'T00:00:00')
+    const fechaIngreso = parseFechaLocal(ingreso.fecha)
+    if (!fechaIngreso) return false
     return fechaIngreso >= rango.inicio && fechaIngreso <= rango.fin
   })
 }
@@ -89,7 +98,8 @@ const filtrarGastosVariables = (gastos, tipoFiltro) => {
 
   return gastosLimpios.filter(gasto => {
     if (!gasto.fecha) return false
-    const fechaGasto = new Date(gasto.fecha + 'T00:00:00')
+    const fechaGasto = parseFechaLocal(gasto.fecha)
+    if (!fechaGasto) return false
     return fechaGasto >= rango.inicio && fechaGasto <= rango.fin
   })
 }

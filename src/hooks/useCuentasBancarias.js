@@ -67,11 +67,14 @@ export function useCuentasBancarias() {
   const updateCuenta = async (id, cuentaData) => {
     try {
       console.log('🔄 Actualizando cuenta:', id, cuentaData)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
       
       const { data, error } = await supabase
         .from('cuentas_bancarias')
         .update(cuentaData)
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
 
       if (error) throw error
@@ -100,10 +103,14 @@ export function useCuentasBancarias() {
   // Eliminar cuenta
   const deleteCuenta = async (id) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No autenticado')
+
       const { error } = await supabase
         .from('cuentas_bancarias')
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id)
 
       if (error) throw error
       

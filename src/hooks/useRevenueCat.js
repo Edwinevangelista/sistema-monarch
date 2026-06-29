@@ -3,8 +3,19 @@ import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabaseClient'
 
-const RC_API_KEY_ANDROID = 'test_hWNmOVUUJxyRRtwCVPCgPsfDysg'
+// ⚠️ PRODUCTION KEYS — replace test_ values with production keys from RevenueCat Dashboard
+// iOS key: Apps → [iOS app] → Public API key (starts with appl_)
+// Android key: Apps → [Android app] → Public API key (starts with goog_)
+const RC_API_KEY_IOS = process.env.REACT_APP_RC_API_KEY_IOS || 'appl_PENDING_ADD_IOS_APP_IN_REVENUECAT'
+const RC_API_KEY_ANDROID = process.env.REACT_APP_RC_API_KEY_ANDROID || 'goog_JSiJykOmyhxCumPvMisgwdPqNMH'
 const ENTITLEMENT_ID = 'FinGuide Pro'
+
+// Determine key by platform
+const getRCApiKey = () => {
+  const platform = Capacitor.getPlatform()
+  if (platform === 'ios') return RC_API_KEY_IOS
+  return RC_API_KEY_ANDROID
+}
 
 export function useRevenueCat(userId) {
   const [isConfigured, setIsConfigured] = useState(false)
@@ -22,8 +33,11 @@ export function useRevenueCat(userId) {
 
     async function configure() {
       try {
-        await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
-        await Purchases.configure({ apiKey: RC_API_KEY_ANDROID })
+        // Only enable debug logs in development
+        if (process.env.NODE_ENV !== 'production') {
+          await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
+        }
+        await Purchases.configure({ apiKey: getRCApiKey() })
         await Purchases.logIn({ appUserID: userId })
         setIsConfigured(true)
 

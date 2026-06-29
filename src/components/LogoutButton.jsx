@@ -37,26 +37,26 @@ export default function LogoutButton() {
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm hover:bg-white/10 transition-colors">
+    <div className="flex items-center gap-4 p-3 bg-white/90 border border-emerald-100 rounded-2xl shadow-sm hover:bg-white transition-colors">
       {/* Usuario Info */}
       <div className="hidden md:flex flex-col items-start gap-1 min-w-0">
-        <div className="flex items-center gap-2 text-xs text-gray-400 font-semibold uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold uppercase tracking-wider">
           <User className="w-3 h-3" /> Conectado como
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="text-white text-sm font-medium truncate max-w-[200px]">
+          <span className="text-slate-900 text-sm font-bold truncate max-w-[200px]">
             {user?.nombre ? user.nombre.split(' ')[0] : 'Usuario'}
           </span>
         </div>
       </div>
 
-      <div className="h-8 w-px bg-white/10 hidden md:block mx-2" />
+      <div className="h-8 w-px bg-slate-200 hidden md:block mx-1" />
 
       {/* Botón Logout */}
       <button
         onClick={handleLogout}
-        className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rose-600/20 to-pink-600/20 hover:from-rose-600 hover:to-pink-600 border border-rose-500/30 text-rose-200 hover:text-white rounded-xl font-semibold transition-all duration-300 active:scale-95"
+        className="group flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-600 border border-rose-200 text-rose-700 hover:text-white rounded-xl font-bold transition-all duration-300 active:scale-95"
       >
         <LogOut className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" />
         <span className="hidden sm:inline">Cerrar Sesión</span>

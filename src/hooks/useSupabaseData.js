@@ -1,5 +1,5 @@
 // src/hooks/useSupabaseData.js
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 /**
@@ -14,10 +14,13 @@ export const useSupabaseData = (
     orderBy = 'created_at',
     ascending = false,
     limit = 100,
-    select = '*'
+    select = '*',
+    filters = []
   } = {}
 ) => {
-  const CACHE_KEY = `${tableName}_cache`
+  const filtersKey = JSON.stringify(filters)
+  const CACHE_KEY = `${tableName}_${filtersKey}_cache`
+  const activeFilters = useMemo(() => JSON.parse(filtersKey), [filtersKey])
   
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(!lazyLoad)
@@ -85,6 +88,12 @@ export const useSupabaseData = (
       if (orderBy) {
         query = query.order(orderBy, { ascending })
       }
+
+      activeFilters.forEach(({ column, operator = 'eq', value }) => {
+        if (value !== undefined && value !== null && typeof query[operator] === 'function') {
+          query = query[operator](column, value)
+        }
+      })
       
       if (limit) {
         query = query.limit(limit)
@@ -105,7 +114,7 @@ export const useSupabaseData = (
       setLoading(false)
       setInitialized(true)
     }
-  }, [tableName, select, orderBy, ascending, limit, loadFromCache, saveToCache])
+  }, [tableName, select, orderBy, ascending, limit, activeFilters, loadFromCache, saveToCache])
 
   // Auto-load on mount (unless lazy)
   useEffect(() => {
@@ -119,10 +128,9 @@ export const useSupabaseData = (
     try {
       const user = await getCurrentUser(); // USO CORRECTO
       
-      // Nota: Si newRecord ya viene con user_id, se usa ese. Si no, se inyecta.
       const payload = {
         ...newRecord,
-        user_id: newRecord.user_id || user.id
+        user_id: user.id
       }
 
       const { data: insertedData, error: insertError } = await supabase
@@ -139,6 +147,9 @@ export const useSupabaseData = (
         return { success: true, data: insertedData }
       }
     } catch (err) {
+      if (err?.code === '23505' && newRecord?.idempotency_key) {
+        return { success: true, duplicate: true, data: [] }
+      }
       console.error(`Error adding to ${tableName}:`, err)
       return { success: false, error: err }
     }
@@ -147,10 +158,12 @@ export const useSupabaseData = (
   // Update record
   const updateRecord = useCallback(async (id, updates) => {
     try {
+      const user = await getCurrentUser();
       const { data: updatedData, error } = await supabase
         .from(tableName)
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -174,10 +187,12 @@ export const useSupabaseData = (
   // Delete record
   const deleteRecord = useCallback(async (id) => {
     try {
+      const user = await getCurrentUser();
       const { error: deleteError } = await supabase
         .from(tableName)
         .delete()
         .eq('id', id)
+        .eq('user_id', user.id)
       
       if (deleteError) throw deleteError
       

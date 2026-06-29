@@ -64,24 +64,23 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
 
   const colorCorte =
     !ciclo           ? '' :
-    ciclo.dias === 0 ? 'bg-blue-500/20 text-blue-300 border-blue-500/25' :
-    ciclo.dias <= 3  ? 'bg-orange-500/20 text-orange-300 border-orange-500/25' :
-    ciclo.dias <= 7  ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/25' :
-                       'bg-white/5 text-gray-400 border-white/8'
+    ciclo.dias === 0 ? 'bg-accent-info/10 text-accent-info border-accent-info/25' :
+    ciclo.dias <= 3  ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/25' :
+    ciclo.dias <= 7  ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/25' :
+                       'bg-base-elevated text-ink-muted border-base-border'
 
   // Pay button color
   const colorBotonPagar =
     urgente
-      ? 'bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white'
-      : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white'
+      ? 'bg-accent-warning hover:bg-accent-warning/90 active:bg-accent-warning/80 text-base'
+      : 'bg-accent-positive hover:bg-accent-positive/90 active:bg-accent-positive/80 text-base'
 
   return (
     <div
-      className="rounded-2xl p-4 border transition-all"
+      className="rounded-2xl p-4 border transition-all bg-base-surface"
       style={{
-        background: 'rgba(255,255,255,0.02)',
-        borderColor: urgente ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.07)',
-        boxShadow: '0 1px 8px rgba(0,0,0,0.25)',
+        borderColor: urgente ? 'rgba(251,191,36,0.35)' : '#262B36',
+        boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
       }}
     >
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
@@ -89,24 +88,24 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
 
         {/* Left: name + type */}
         <div className="flex-1 min-w-0 pr-2">
-          <h3 className="text-white font-bold text-base leading-tight truncate">
+          <h3 className="text-ink font-bold text-base leading-tight truncate">
             {deuda.cuenta}
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">{deuda.tipo || 'Tarjeta de Crédito'}</p>
+          <p className="text-xs text-ink-muted mt-0.5">{deuda.tipo || 'Tarjeta de Crédito'}</p>
         </div>
 
         {/* Right: icon + edit/delete buttons */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={onEditar}
-            className="p-1.5 rounded-lg hover:bg-white/8 active:scale-90 transition-all touch-manipulation text-gray-400 hover:text-blue-300"
+            className="p-1.5 rounded-lg hover:bg-accent-info/10 active:scale-90 transition-all touch-manipulation text-ink-faint hover:text-accent-info"
             aria-label="Editar"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onEliminar}
-            className="p-1.5 rounded-lg hover:bg-white/8 active:scale-90 transition-all touch-manipulation text-gray-400 hover:text-red-400"
+            className="p-1.5 rounded-lg hover:bg-accent-negative/10 active:scale-90 transition-all touch-manipulation text-ink-faint hover:text-accent-negative"
             aria-label="Eliminar"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -114,12 +113,12 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
 
           {/* CreditCard icon with urgency badge */}
           <div className="relative ml-1">
-            <div className="p-2 bg-white/5 border border-white/8 rounded-xl">
-              <CreditCard className="w-4 h-4 text-gray-400" />
+            <div className="p-2 bg-base-elevated border border-base-border rounded-xl">
+              <CreditCard className="w-4 h-4 text-ink-muted" />
             </div>
             {urgente && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-orange-500 border border-[#0a0b0f] flex items-center justify-center">
-                <AlertCircle className="w-2 h-2 text-white" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-accent-warning border border-base flex items-center justify-center">
+                <AlertCircle className="w-2 h-2 text-base" />
               </span>
             )}
           </div>
@@ -138,7 +137,7 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
                 cx="35" cy="35"
                 r={RADIUS}
                 fill="none"
-                stroke="rgba(255,255,255,0.06)"
+                stroke="#262B36"
                 strokeWidth={STROKE}
               />
               {/* Arc — starts at top (−90°) */}
@@ -159,7 +158,7 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
               <span className="text-[11px] font-bold leading-none" style={{ color: arcColor }}>
                 {porcentajeUso.toFixed(0)}%
               </span>
-              <span className="text-[8px] text-gray-500 leading-none mt-0.5">uso</span>
+              <span className="text-[8px] text-ink-faint leading-none mt-0.5">uso</span>
             </div>
           </div>
         ) : (
@@ -171,18 +170,18 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
         <div className="flex-1 min-w-0">
           {saldada ? (
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-emerald-400">$0.00</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 whitespace-nowrap">
+                <span className="text-2xl font-bold text-accent-positive">$0.00</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-accent-positive/10 text-accent-positive border border-accent-positive/25 whitespace-nowrap">
                 ✅ SALDADA
               </span>
             </div>
           ) : (
-            <p className="text-2xl font-bold text-red-400 leading-none">
+            <p className="text-2xl font-bold text-accent-negative leading-none">
               ${saldo.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           )}
           {tieneBalance && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-ink-muted mt-1">
               de ${limite.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} límite
             </p>
           )}
@@ -193,17 +192,17 @@ export default function CardDeuda({ deuda, onEditar, onEliminar, onPagar }) {
       {(pagoMinimo > 0 || aprPct > 0 || interesMensual > 0) && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {pagoMinimo > 0 && (
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/8 text-yellow-300 font-medium">
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-accent-warning/10 border border-accent-warning/25 text-accent-warning font-medium">
               Mín. ${pagoMinimo.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </span>
           )}
           {aprPct > 0 && (
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/8 text-orange-300 font-medium">
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-accent-warning/10 border border-accent-warning/25 text-accent-warning font-medium">
               {aprPct.toFixed(1)}% APR
             </span>
           )}
           {interesMensual > 0 && (
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-white/5 border border-white/8 text-red-300 font-medium">
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-accent-negative/10 border border-accent-negative/25 text-accent-negative font-medium">
               ~${interesMensual}/mes
             </span>
           )}

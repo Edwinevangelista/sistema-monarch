@@ -216,6 +216,7 @@ export const useMonthlyTransition = () => {
         .from('suscripciones')
         .update({ proximo_pago: nuevaFecha })
         .eq('id', sub.id)
+        .eq('user_id', userId)
 
       if (error) {
         console.error('❌ Error actualizando suscripción:', error)
@@ -250,7 +251,7 @@ export const useMonthlyTransition = () => {
       .select('id')
       .eq('user_id', userId)
       .eq('mes', mesKey)
-      .single()
+      .maybeSingle()
     if (existing) { console.log(`📸 Snapshot ${mesKey} ya existe, omitiendo`); return }
 
     const ini = mesAnterior.toISOString().split('T')[0]
