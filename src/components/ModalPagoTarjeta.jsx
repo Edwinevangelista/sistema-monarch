@@ -187,13 +187,13 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
             </div>
             <div>
               <h3 className="text-lg font-bold text-white leading-tight">Pago de Tarjeta</h3>
-              <p className="text-xs text-gray-400">Registra tu pago</p>
+              <p className="text-xs text-ink-faint">Registra tu pago</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2 rounded-full text-ink-faint hover:text-white hover:bg-canvas-surface/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -204,7 +204,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
           
           {/* 1. SELECTOR DE TARJETA */}
           <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 block">
+            <label className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-3 block">
               1. Selecciona Tarjeta
             </label>
             <div className="space-y-3">
@@ -220,7 +220,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                     className={`w-full p-4 rounded-2xl border-2 transition-all text-left active:scale-[0.99] disabled:opacity-50 ${
                       isSelected
                         ? 'border-purple-500 bg-purple-500/10 shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)]'
-                        : 'border-white/5 bg-white/5 hover:border-white/10'
+                        : 'border-white/5 bg-canvas-surface/5 hover:border-white/10'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -231,7 +231,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                         ${deuda.saldo?.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-ink-muted">
                       <span>APR {((deuda.apr || 0) * 100).toFixed(1)}% • Mín: ${pagoMinimo.toFixed(2)}</span>
                       {isSelected && <span className="text-purple-400 font-semibold">Seleccionada</span>}
                     </div>
@@ -255,11 +255,11 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
           {/* 2. MONTO + FECHA */}
           <div ref={montoInputRef} className="grid grid-cols-5 gap-3">
             <div className="col-span-3">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
                 2. Monto
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint font-bold text-lg">$</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -273,7 +273,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
               </div>
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
                 Fecha
               </label>
               <input
@@ -295,11 +295,11 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">A Intereses</span>
+                  <span className="text-ink-faint">A Intereses</span>
                   <span className="font-semibold text-red-400">${interesNumber.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">A Principal</span>
+                  <span className="text-ink-faint">A Principal</span>
                   <span className="font-semibold text-emerald-400">${principalNumber.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-white/10 text-base font-bold text-white">
@@ -312,7 +312,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
           {/* 3. MÉTODO */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
               3. Método
             </label>
             <select
@@ -347,12 +347,12 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                       className={`w-full p-3 rounded-lg border text-left transition-all ${
                         isSelected 
                           ? 'border-cyan-500 bg-cyan-500/10' 
-                          : 'border-white/5 hover:border-white/20 bg-white/5'
+                          : 'border-white/5 hover:border-white/20 bg-canvas-surface/5'
                       }`}
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                          <Building2 className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-gray-500'}`} />
+                          <Building2 className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-ink-muted'}`} />
                           <span className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{cuenta.nombre}</span>
                         </div>
                         <span className="text-sm font-bold text-gray-200">${Number(cuenta.balance).toFixed(2)}</span>
@@ -365,7 +365,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
 
           {/* NOTAS */}
           <div>
-             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Notas</label>
+             <label className="block text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">Notas</label>
              <input value={formData.notas} onChange={(e) => setFormData({ ...formData, notas: e.target.value })} className={inputClass} placeholder="Opcional..." disabled={isLoading} />
           </div>
 

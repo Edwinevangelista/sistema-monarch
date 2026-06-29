@@ -788,7 +788,7 @@ export default function DebtPlannerModal({ deudas = [], kpis = {}, onClose, onPl
           <div className="text-center">
             <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">¡Sin deudas!</h3>
-            <p className="text-gray-400 mb-4">No tienes deudas registradas. ¡Excelente!</p>
+            <p className="text-ink-faint mb-4">No tienes deudas registradas. ¡Excelente!</p>
             <button onClick={onClose} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
               Cerrar
             </button>
@@ -917,7 +917,7 @@ function Header({ phase, onClose, isEmergencyMode }) {
   return (
     <div className={`bg-gradient-to-r ${bgColors[phase]} backdrop-blur-md p-4 md:p-6 border-b border-white/10 flex items-center justify-between shrink-0`}>
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg border ${isEmergencyMode ? 'bg-red-500/30 border-red-400' : 'bg-white/10 border-white/20'}`}>
+        <div className={`p-2 rounded-lg border ${isEmergencyMode ? 'bg-red-500/30 border-red-400' : 'bg-canvas-surface/10 border-white/20'}`}>
           {isEmergencyMode ? (
             <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-300" />
           ) : (
@@ -936,7 +936,7 @@ function Header({ phase, onClose, isEmergencyMode }) {
           <p className="text-white/70 text-xs md:text-sm">{subtitle}</p>
         </div>
       </div>
-      <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-colors">
+      <button onClick={onClose} className="p-2 bg-canvas-surface/5 hover:bg-canvas-surface/10 rounded-full text-white/70 hover:text-white transition-colors">
         <X className="w-6 h-6" />
       </button>
     </div>
@@ -960,14 +960,14 @@ function ProgressBar({ phase }) {
           <div className="flex flex-col items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
               phase === p.num 
-                ? 'bg-white text-gray-900 scale-110' 
+                ? 'bg-canvas-surface text-ink scale-110' 
                 : phase > p.num 
                   ? 'bg-green-500 text-white' 
-                  : 'bg-gray-700 text-gray-400'
+                  : 'bg-gray-700 text-ink-faint'
             }`}>
               {phase > p.num ? '✓' : p.num}
             </div>
-            <span className={`text-[10px] mt-1 hidden md:block ${phase === p.num ? 'text-white font-bold' : 'text-gray-500'}`}>
+            <span className={`text-[10px] mt-1 hidden md:block ${phase === p.num ? 'text-white font-bold' : 'text-ink-muted'}`}>
               {p.label}
             </span>
           </div>
@@ -1078,12 +1078,12 @@ function Phase1Confrontation({ analysis, behaviorProfile, onNext }) {
           Lo que tus números revelan:
         </h4>
         
-        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="bg-canvas-surface/5 rounded-xl p-4 border border-white/10">
           <div className="flex items-start gap-3">
             <div className="text-2xl">💳</div>
             <div>
               <div className="text-white font-semibold">Tienes {debtCount} deudas activas</div>
-              <div className="text-gray-400 text-sm">
+              <div className="text-ink-faint text-sm">
                 {debtCount > 3 
                   ? 'Múltiples deudas = múltiples frentes de batalla. Hay que priorizar.' 
                   : 'Pocas deudas = más fácil de manejar con la estrategia correcta.'}
@@ -1123,8 +1123,8 @@ function Phase1Confrontation({ analysis, behaviorProfile, onNext }) {
         </div>
       </div>
 
-      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-        <div className="flex items-center gap-2 text-gray-400 text-xs">
+      <div className="bg-canvas-surface/5 rounded-xl p-4 border border-white/10">
+        <div className="flex items-center gap-2 text-ink-faint text-xs">
           <Shield className="w-4 h-4" />
           <span>Este plan se basa en matemáticas financieras, no motivación.</span>
         </div>
@@ -1132,7 +1132,7 @@ function Phase1Confrontation({ analysis, behaviorProfile, onNext }) {
 
       <button
         onClick={onNext}
-        className="w-full bg-gradient-to-r from-white to-gray-200 text-gray-900 py-4 rounded-xl font-bold text-lg hover:from-gray-100 hover:to-white transition-all flex items-center justify-center gap-3 shadow-lg"
+        className="w-full bg-gradient-to-r from-white to-gray-200 text-ink py-4 rounded-xl font-bold text-lg hover:from-gray-100 hover:to-white transition-all flex items-center justify-center gap-3 shadow-lg"
       >
         Entiendo. Muéstrame cómo salir.
         <ArrowRight className="w-5 h-5" />
@@ -1174,7 +1174,7 @@ function Phase2Education({ onNext, onBack }) {
         <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
           90 segundos que cambiarán tu perspectiva
         </h3>
-        <p className="text-gray-400 text-sm">
+        <p className="text-ink-faint text-sm">
           Toca cada tarjeta para entender la mecánica
         </p>
       </div>
@@ -1183,7 +1183,7 @@ function Phase2Education({ onNext, onBack }) {
         {concepts.map((concept) => (
           <div 
             key={concept.id}
-            className={`bg-white/5 border rounded-xl overflow-hidden transition-all cursor-pointer ${
+            className={`bg-canvas-surface/5 border rounded-xl overflow-hidden transition-all cursor-pointer ${
               activeCard === concept.id ? 'border-purple-500' : 'border-white/10 hover:border-white/30'
             }`}
             onClick={() => setActiveCard(activeCard === concept.id ? null : concept.id)}
@@ -1193,7 +1193,7 @@ function Phase2Education({ onNext, onBack }) {
                 <span className="text-2xl">{concept.emoji}</span>
                 <span className="text-white font-semibold">{concept.title}</span>
               </div>
-              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${activeCard === concept.id ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-5 h-5 text-ink-faint transition-transform ${activeCard === concept.id ? 'rotate-180' : ''}`} />
             </div>
             
             {activeCard === concept.id && (
@@ -1214,7 +1214,7 @@ function Phase2Education({ onNext, onBack }) {
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition"
+          className="flex-1 bg-canvas-surface/5 text-white py-3 rounded-xl font-bold hover:bg-canvas-surface/10 transition"
         >
           Atrás
         </button>
@@ -1248,7 +1248,7 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
       )}
 
       <div className={`bg-gradient-to-br ${optimal.color} rounded-2xl p-6 text-center relative overflow-hidden`}>
-        <div className="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded-full text-xs font-bold text-white">
+        <div className="absolute top-2 right-2 bg-canvas-surface/20 px-2 py-1 rounded-full text-xs font-bold text-white">
           {optimalStrategy.confidence}% confianza
         </div>
         
@@ -1260,7 +1260,7 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
           {optimalStrategy.reason}
         </p>
         
-        <div className="bg-white/20 rounded-xl p-3 text-left">
+        <div className="bg-canvas-surface/20 rounded-xl p-3 text-left">
           <div className="text-white/80 text-xs uppercase font-bold mb-1">Beneficio Principal:</div>
           <div className="text-white font-semibold">{optimal.benefit}</div>
         </div>
@@ -1280,7 +1280,7 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
         <>
           <button
             onClick={() => setShowAlternative(!showAlternative)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-gray-300 text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition"
+            className="w-full bg-canvas-surface/5 border border-white/10 rounded-xl p-3 text-gray-300 text-sm flex items-center justify-center gap-2 hover:bg-canvas-surface/10 transition"
           >
             {showAlternative ? 'Ocultar' : 'Ver'} alternativa (no recomendado)
             <ChevronDown className={`w-4 h-4 transition-transform ${showAlternative ? 'rotate-180' : ''}`} />
@@ -1299,8 +1299,8 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
                     onClick={() => onSelectStrategy(strat)}
                     className={`p-4 rounded-xl text-left transition-all border-2 ${
                       isSelected 
-                        ? 'bg-white/10 border-white/50 ring-2 ring-white/20' 
-                        : 'bg-white/5 border-white/10 hover:border-white/30'
+                        ? 'bg-canvas-surface/10 border-white/50 ring-2 ring-white/20' 
+                        : 'bg-canvas-surface/5 border-white/10 hover:border-white/30'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -1312,7 +1312,7 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
                       )}
                     </div>
                     <div className={`font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>{info.name}</div>
-                    <div className="text-gray-500 text-xs mt-1">{info.description}</div>
+                    <div className="text-ink-muted text-xs mt-1">{info.description}</div>
                   </button>
                 );
               })}
@@ -1324,7 +1324,7 @@ function Phase3Strategy({ optimalStrategy, selectedStrategy, onSelectStrategy, h
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition"
+          className="flex-1 bg-canvas-surface/5 text-white py-3 rounded-xl font-bold hover:bg-canvas-surface/10 transition"
         >
           Atrás
         </button>
@@ -1348,17 +1348,17 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
   return (
     <div className="p-4 md:p-6 space-y-4 animate-in fade-in">
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-white/5 rounded-xl p-3 text-center">
+        <div className="bg-canvas-surface/5 rounded-xl p-3 text-center">
           <div className="text-xl md:text-2xl font-bold text-white">{plan.simulation.months}</div>
-          <div className="text-[10px] text-gray-400">meses</div>
+          <div className="text-[10px] text-ink-faint">meses</div>
         </div>
-        <div className="bg-white/5 rounded-xl p-3 text-center">
+        <div className="bg-canvas-surface/5 rounded-xl p-3 text-center">
           <div className="text-xl md:text-2xl font-bold text-green-400">${plan.monthlyPayment.toLocaleString()}</div>
-          <div className="text-[10px] text-gray-400">pago/mes</div>
+          <div className="text-[10px] text-ink-faint">pago/mes</div>
         </div>
-        <div className="bg-white/5 rounded-xl p-3 text-center">
+        <div className="bg-canvas-surface/5 rounded-xl p-3 text-center">
           <div className="text-xl md:text-2xl font-bold text-orange-400">${plan.simulation.totalInterest.toLocaleString()}</div>
-          <div className="text-[10px] text-gray-400">intereses</div>
+          <div className="text-[10px] text-ink-faint">intereses</div>
         </div>
       </div>
 
@@ -1386,9 +1386,9 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
                     {step.title}
                     {step.isEmergency && <span className="text-red-400 text-xs">(URGENTE)</span>}
                   </div>
-                  <div className="text-gray-400 text-xs">{step.subtitle}</div>
+                  <div className="text-ink-faint text-xs">{step.subtitle}</div>
                 </div>
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-5 h-5 text-ink-faint transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
               </button>
               
               {isExpanded && (
@@ -1403,7 +1403,7 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
                           className={`p-3 rounded-lg border ${
                             action.critical 
                               ? 'bg-red-500/10 border-red-500/30' 
-                              : 'bg-white/5 border-white/10'
+                              : 'bg-canvas-surface/5 border-white/10'
                           }`}
                         >
                           <div className="flex items-start gap-2">
@@ -1412,7 +1412,7 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
                             <div>
                               <div className="text-white text-sm font-medium">{action.text}</div>
                               {action.detail && (
-                                <div className="text-gray-400 text-xs mt-1">{action.detail}</div>
+                                <div className="text-ink-faint text-xs mt-1">{action.detail}</div>
                               )}
                             </div>
                           </div>
@@ -1438,7 +1438,7 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
                   
                   {step.cascade && (
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-500 uppercase font-bold">Orden de eliminación:</div>
+                      <div className="text-xs text-ink-muted uppercase font-bold">Orden de eliminación:</div>
                       {step.cascade.map((debt, idx) => (
                         <div key={idx} className="flex items-center gap-3 text-sm">
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -1447,7 +1447,7 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
                             {debt.order}
                           </div>
                           <span className="text-white flex-1">{debt.name}</span>
-                          <span className="text-gray-500">${debt.balance.toLocaleString()}</span>
+                          <span className="text-ink-muted">${debt.balance.toLocaleString()}</span>
                           <span className="text-orange-400 text-xs">{debt.interes}%</span>
                         </div>
                       ))}
@@ -1461,14 +1461,14 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
       </div>
 
       {plan.timeline && plan.timeline.length > 0 && (
-        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="bg-canvas-surface/5 rounded-xl p-4 border border-white/10">
           <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4" /> Timeline de Libertad
           </h4>
           <div className="space-y-2">
             {plan.timeline.map((milestone, idx) => (
               <div key={idx} className="flex items-center gap-3 text-sm">
-                <div className="w-16 text-gray-500">Mes {milestone.month}</div>
+                <div className="w-16 text-ink-muted">Mes {milestone.month}</div>
                 <div className="w-2 h-2 rounded-full bg-green-500" />
                 <div className="text-green-400">✓ {milestone.debtName} liquidada</div>
               </div>
@@ -1480,7 +1480,7 @@ function Phase4Plan({ plan, analysis, onNext, onBack }) {
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition"
+          className="flex-1 bg-canvas-surface/5 text-white py-3 rounded-xl font-bold hover:bg-canvas-surface/10 transition"
         >
           Atrás
         </button>
@@ -1519,7 +1519,7 @@ function Phase5Adjustment({
         <h3 className="text-xl font-bold text-white mb-2">
           {analysis.isEmergencyMode ? '🔒 Pago Fijado (Modo Emergencia)' : '¿Cuánto puedes pagar al mes?'}
         </h3>
-        <p className="text-gray-400 text-sm">
+        <p className="text-ink-faint text-sm">
           {analysis.isEmergencyMode 
             ? 'En modo emergencia, el pago recomendado es obligatorio.'
             : <>Recomendado: <span className="text-green-400 font-bold">${paymentOptions.recommended.toLocaleString()}</span></>
@@ -1533,7 +1533,7 @@ function Phase5Adjustment({
             <Lock className="w-4 h-4 text-green-400" />
             <span className="text-green-300 text-xs uppercase font-bold">Plan Activo</span>
           </div>
-          <span className="text-gray-400 text-xs">Sellado al guardar</span>
+          <span className="text-ink-faint text-xs">Sellado al guardar</span>
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -1541,7 +1541,7 @@ function Phase5Adjustment({
             <div className="text-green-300 text-sm">por mes</div>
           </div>
           <div className="text-right">
-            <div className="text-gray-400 text-xs">Libre en</div>
+            <div className="text-ink-faint text-xs">Libre en</div>
             <div className="text-white font-bold text-xl">{plan.simulation.months} meses</div>
           </div>
         </div>
@@ -1550,7 +1550,7 @@ function Phase5Adjustment({
       {!isSimulationMode && !analysis.isEmergencyMode && (
         <button
           onClick={() => setIsSimulationMode(true)}
-          className="w-full bg-white/5 border border-white/20 rounded-xl p-3 text-gray-300 text-sm hover:bg-white/10 transition flex items-center justify-center gap-2"
+          className="w-full bg-canvas-surface/5 border border-white/20 rounded-xl p-3 text-gray-300 text-sm hover:bg-canvas-surface/10 transition flex items-center justify-center gap-2"
         >
           <Target className="w-4 h-4" />
           Simular otro monto (sin cambiar el plan)
@@ -1569,7 +1569,7 @@ function Phase5Adjustment({
                 setIsSimulationMode(false);
                 setSimulatedPayment(customPayment);
               }}
-              className="text-gray-400 hover:text-white text-xs"
+              className="text-ink-faint hover:text-white text-xs"
             >
               Cancelar
             </button>
@@ -1589,7 +1589,7 @@ function Phase5Adjustment({
             onChange={(e) => setSimulatedPayment(Number(e.target.value))}
             className="w-full h-3 bg-gray-700 rounded-full appearance-none cursor-pointer accent-amber-500"
           />
-          <div className="flex justify-between text-xs text-gray-500">
+          <div className="flex justify-between text-xs text-ink-muted">
             <span>Mínimo: ${paymentOptions.minRequired.toLocaleString()}</span>
             <span>Agresivo: ${paymentOptions.aggressive.toLocaleString()}</span>
           </div>
@@ -1601,13 +1601,13 @@ function Phase5Adjustment({
               {simulationImpact.warningLevel !== 'safe' && simulationImpact.warningLevel !== 'excellent' && (
                 <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
                   <div className="bg-black/20 rounded-lg p-2">
-                    <div className="text-gray-400 text-xs">vs Recomendado</div>
+                    <div className="text-ink-faint text-xs">vs Recomendado</div>
                     <div className="text-white font-bold">
                       {simulationImpact.monthsDiff > 0 ? '+' : ''}{simulationImpact.monthsDiff} meses
                     </div>
                   </div>
                   <div className="bg-black/20 rounded-lg p-2">
-                    <div className="text-gray-400 text-xs">Intereses extra</div>
+                    <div className="text-ink-faint text-xs">Intereses extra</div>
                     <div className="text-white font-bold">
                       {simulationImpact.interestDiff > 0 ? '+' : ''}${Math.abs(simulationImpact.interestDiff).toLocaleString()}
                     </div>
@@ -1620,7 +1620,7 @@ function Phase5Adjustment({
           <div className="flex gap-3">
             <button
               onClick={() => setSimulatedPayment(paymentOptions.recommended)}
-              className="flex-1 bg-white/10 text-white py-2 rounded-lg text-sm hover:bg-white/20 transition"
+              className="flex-1 bg-canvas-surface/10 text-white py-2 rounded-lg text-sm hover:bg-canvas-surface/20 transition"
             >
               Volver a recomendado
             </button>
@@ -1635,12 +1635,12 @@ function Phase5Adjustment({
         </div>
       )}
 
-      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+      <div className="bg-canvas-surface/5 rounded-xl p-4 border border-white/10">
         <div className="flex items-start gap-3">
           <Calendar className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
           <div>
             <div className="text-white font-semibold text-sm">Plan sellado por 30 días</div>
-            <div className="text-gray-400 text-xs mt-1">
+            <div className="text-ink-faint text-xs mt-1">
               Una vez guardado, el plan no cambiará hasta la fecha de revisión. 
               Esto te protege de la tentación de modificarlo por ansiedad.
             </div>
@@ -1651,7 +1651,7 @@ function Phase5Adjustment({
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition"
+          className="flex-1 bg-canvas-surface/5 text-white py-3 rounded-xl font-bold hover:bg-canvas-surface/10 transition"
         >
           Atrás
         </button>
@@ -1682,13 +1682,13 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+        <div className="bg-canvas-surface/5 border border-white/10 rounded-xl p-4 text-center">
           <div className="text-3xl font-black text-white">{plan.simulation.months}</div>
-          <div className="text-xs text-gray-400">meses hasta ser libre</div>
+          <div className="text-xs text-ink-faint">meses hasta ser libre</div>
         </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+        <div className="bg-canvas-surface/5 border border-white/10 rounded-xl p-4 text-center">
           <div className="text-3xl font-black text-green-400">${plan.monthlyPayment.toLocaleString()}</div>
-          <div className="text-xs text-gray-400">pago mensual</div>
+          <div className="text-xs text-ink-faint">pago mensual</div>
         </div>
       </div>
 
@@ -1699,30 +1699,30 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
         </div>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-xl overflow-hidden">
         <div className="p-4 border-b border-white/10">
           <h4 className="text-white font-bold flex items-center gap-2">
             <Target className="w-5 h-5 text-purple-400" />
             Tus Próximas Acciones
           </h4>
-          <p className="text-gray-400 text-xs mt-1">El plan funciona si ejecutas estas acciones</p>
+          <p className="text-ink-faint text-xs mt-1">El plan funciona si ejecutas estas acciones</p>
         </div>
         
         <div className="border-b border-white/10">
           <button 
             onClick={() => setExpandedSection(expandedSection === 'week' ? null : 'week')}
-            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+            className="w-full p-4 flex items-center justify-between hover:bg-canvas-surface/5 transition"
           >
             <span className="text-white font-semibold flex items-center gap-2">
               <span className="text-red-400">🔥</span> Esta Semana
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'week' ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-ink-faint transition-transform ${expandedSection === 'week' ? 'rotate-180' : ''}`} />
           </button>
           {expandedSection === 'week' && (
             <div className="px-4 pb-4 space-y-2">
               {immediateActions?.thisWeek.map((action, idx) => (
                 <div key={idx} className={`p-3 rounded-lg border ${
-                  action.priority === 'critical' ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'
+                  action.priority === 'critical' ? 'bg-red-500/10 border-red-500/30' : 'bg-canvas-surface/5 border-white/10'
                 }`}>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded border border-gray-500 flex items-center justify-center text-xs">
@@ -1739,17 +1739,17 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
         <div className="border-b border-white/10">
           <button 
             onClick={() => setExpandedSection(expandedSection === 'month' ? null : 'month')}
-            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+            className="w-full p-4 flex items-center justify-between hover:bg-canvas-surface/5 transition"
           >
             <span className="text-white font-semibold flex items-center gap-2">
               <span className="text-yellow-400">📅</span> Este Mes
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'month' ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-ink-faint transition-transform ${expandedSection === 'month' ? 'rotate-180' : ''}`} />
           </button>
           {expandedSection === 'month' && (
             <div className="px-4 pb-4 space-y-2">
               {immediateActions?.thisMonth.map((action, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <div key={idx} className="p-3 rounded-lg bg-canvas-surface/5 border border-white/10">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded border border-gray-500 flex items-center justify-center text-xs">
                       {idx + 1}
@@ -1765,12 +1765,12 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
         <div>
           <button 
             onClick={() => setExpandedSection(expandedSection === 'habits' ? null : 'habits')}
-            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition"
+            className="w-full p-4 flex items-center justify-between hover:bg-canvas-surface/5 transition"
           >
             <span className="text-white font-semibold flex items-center gap-2">
               <span className="text-green-400">🔁</span> Hábitos Clave
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSection === 'habits' ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-ink-faint transition-transform ${expandedSection === 'habits' ? 'rotate-180' : ''}`} />
           </button>
           {expandedSection === 'habits' && (
             <div className="px-4 pb-4 space-y-2">
@@ -1792,7 +1792,7 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
           accepted 
             ? 'bg-green-500/20 border-green-500' 
-            : 'bg-white/5 border-white/20 hover:border-white/40'
+            : 'bg-canvas-surface/5 border-white/20 hover:border-white/40'
         }`}
       >
         <div className="flex items-start gap-3">
@@ -1803,7 +1803,7 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
           </div>
           <div>
             <div className="text-white font-semibold">Me comprometo con este plan</div>
-            <div className="text-gray-400 text-sm mt-1">
+            <div className="text-ink-faint text-sm mt-1">
               Pagaré ${plan.monthlyPayment.toLocaleString()} cada mes, ejecutaré las acciones listadas, 
               y no usaré las tarjetas con deuda. Revisión: {plan.reviewDate?.toLocaleDateString('en-US')}.
             </div>
@@ -1814,7 +1814,7 @@ function Phase6Commitment({ plan, analysis, strategy, immediateActions, onSave, 
       <div className="flex gap-3 pt-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition"
+          className="flex-1 bg-canvas-surface/5 text-white py-3 rounded-xl font-bold hover:bg-canvas-surface/10 transition"
         >
           Atrás
         </button>
@@ -1851,13 +1851,13 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
       <div className={`bg-gradient-to-br ${strategyInfo.color} rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative overflow-hidden border border-white/20`}>
         <button 
           onClick={onCancelar}
-          className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-colors z-20"
+          className="absolute top-4 right-4 p-2 bg-canvas-surface/10 hover:bg-canvas-surface/20 rounded-full text-white/70 hover:text-white transition-colors z-20"
         >
           <X className="w-6 h-6" />
         </button>
         
         <div className="text-center relative z-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full border border-white/30 mb-4">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-canvas-surface/20 rounded-full border border-white/30 mb-4">
             <span className="text-4xl">{strategyInfo.emoji}</span>
           </div>
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">¡Último paso!</h3>
@@ -1869,12 +1869,12 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Ej: Operación Libertad 2025"
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 md:px-5 py-4 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur text-base md:text-lg font-medium"
+              className="w-full bg-canvas-surface/10 border border-white/20 rounded-xl px-4 md:px-5 py-4 text-white placeholder-white/50 focus:outline-none focus:border-white/40 backdrop-blur text-base md:text-lg font-medium"
               autoFocus
             />
           </div>
 
-          <div className="bg-white/10 rounded-xl p-3 mb-6 text-left">
+          <div className="bg-canvas-surface/10 rounded-xl p-3 mb-6 text-left">
             <div className="text-white/70 text-xs">
               🔒 Este plan quedará sellado hasta: <span className="text-white font-bold">{plan.reviewDate?.toLocaleDateString('en-US')}</span>
             </div>
@@ -1884,14 +1884,14 @@ function ConfirmModal({ plan, strategy, onConfirmar, onCancelar }) {
             <button
               onClick={onCancelar}
               disabled={guardando}
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white py-3.5 rounded-xl font-bold transition backdrop-blur disabled:opacity-50"
+              className="flex-1 bg-canvas-surface/10 hover:bg-canvas-surface/20 text-white/70 hover:text-white py-3.5 rounded-xl font-bold transition backdrop-blur disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               onClick={handleGuardar}
               disabled={guardando || !nombre.trim()}
-              className="flex-1 bg-white text-gray-900 py-3.5 rounded-xl font-bold hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-3 shadow-lg"
+              className="flex-1 bg-canvas-surface text-ink py-3.5 rounded-xl font-bold hover:bg-canvas-surface disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-3 shadow-lg"
             >
               {guardando ? <span className="animate-spin text-2xl">⏳</span> : <CheckCircle2 className="w-6 h-6" />}
               {guardando ? 'Guardando...' : 'Sellar Plan'}

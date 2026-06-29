@@ -82,7 +82,7 @@ export default function ModalDetalleUniversal({
     [ITEM_TYPES.SUSCRIPCION]: { color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   gradient: 'from-blue-950/50 via-gray-900 to-gray-900',   accentBar: 'bg-blue-500',   label: 'Suscripción' },
     [ITEM_TYPES.VARIABLE]:    { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', gradient: 'from-orange-950/50 via-gray-900 to-gray-900', accentBar: 'bg-orange-500', label: 'Gasto Variable' },
   }
-  const t = themes[type] || { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/30', gradient: 'from-gray-800 to-gray-900', accentBar: 'bg-gray-500', label: 'Detalle' }
+  const t = themes[type] || { color: 'text-ink-faint', bg: 'bg-gray-500/10', border: 'border-gray-500/30', gradient: 'from-gray-800 to-gray-900', accentBar: 'bg-gray-500', label: 'Detalle' }
 
   // =========================
   // Método pago helpers (solo variables)
@@ -98,7 +98,7 @@ export default function ModalDetalleUniversal({
   }
 
   const getMetodoColor = (metodo) => {
-    if (!metodo) return 'text-gray-400'
+    if (!metodo) return 'text-ink-faint'
     const m = metodo.toLowerCase()
     if (m.includes('débito') || m.includes('debito')) return 'text-blue-400'
     if (m.includes('crédito') || m.includes('credito') || m.includes('tarjeta')) return 'text-purple-400'
@@ -125,8 +125,8 @@ export default function ModalDetalleUniversal({
   const DetailCard = ({ icon: Icon, iconColor, label, value, valueClass = 'text-white', fullWidth = false }) => (
     <div className={`bg-gray-800/60 rounded-xl p-3 border border-white/5 ${fullWidth ? 'col-span-2' : ''}`}>
       <div className="flex items-center gap-2 mb-1.5">
-        <Icon className={`w-3.5 h-3.5 ${iconColor || 'text-gray-500'}`} />
-        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{label}</span>
+        <Icon className={`w-3.5 h-3.5 ${iconColor || 'text-ink-muted'}`} />
+        <span className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">{label}</span>
       </div>
       <p className={`font-semibold text-sm truncate ${valueClass}`}>{value}</p>
     </div>
@@ -138,7 +138,7 @@ export default function ModalDetalleUniversal({
   const MontoHero = ({ monto, badgeContent, badgeBg = 'bg-green-500/15 border-green-500/25', badgeTextClass = 'text-green-400', subtitle }) => (
     <div className="mx-5 mb-0 bg-black/25 rounded-2xl px-5 py-4 flex items-center justify-between border border-white/5">
       <div>
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Monto</p>
+        <p className="text-[10px] text-ink-muted uppercase tracking-widest mb-1">Monto</p>
         <span className="text-3xl font-black text-white tracking-tight">{fmtMonto(monto)}</span>
       </div>
       <div className="flex flex-col items-end gap-1">
@@ -147,7 +147,7 @@ export default function ModalDetalleUniversal({
             {badgeContent}
           </div>
         )}
-        {subtitle && <span className="text-xs text-gray-500">{subtitle}</span>}
+        {subtitle && <span className="text-xs text-ink-muted">{subtitle}</span>}
       </div>
     </div>
   )
@@ -167,10 +167,10 @@ export default function ModalDetalleUniversal({
           <div>
             <span className={`text-[10px] font-bold uppercase tracking-widest ${t.color} opacity-80`}>{t.label}</span>
             <h2 className="text-white font-bold text-lg leading-tight max-w-[220px] truncate">{title}</h2>
-            {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+            {sub && <p className="text-xs text-ink-muted mt-0.5">{sub}</p>}
           </div>
         </div>
-        <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-colors ml-2 shrink-0">
+        <button onClick={onClose} className="p-2 bg-canvas-surface/5 hover:bg-canvas-surface/10 text-ink-faint hover:text-white rounded-xl transition-colors ml-2 shrink-0">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -213,12 +213,12 @@ export default function ModalDetalleUniversal({
             <DetailCard icon={MetodoIcon} iconColor={metodoColor} label="Método" value={item.metodo} valueClass={metodoColor} />
           )}
           {item.cuenta_nombre && (
-            <DetailCard icon={Wallet} iconColor="text-gray-400" label="Cuenta" value={item.cuenta_nombre} />
+            <DetailCard icon={Wallet} iconColor="text-ink-faint" label="Cuenta" value={item.cuenta_nombre} />
           )}
           {item.archivado && (
             <div className="col-span-2 flex items-center gap-2 px-3 py-2 bg-gray-700/25 rounded-xl border border-gray-700/40">
-              <Clock className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-xs text-gray-500">Archivado · mes anterior</span>
+              <Clock className="w-3.5 h-3.5 text-ink-muted" />
+              <span className="text-xs text-ink-muted">Archivado · mes anterior</span>
             </div>
           )}
         </div>
@@ -227,8 +227,8 @@ export default function ModalDetalleUniversal({
         {item.descripcion && item.descripcion.length > 40 && (
           <div className="mx-5 mb-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+              <FileText className="w-3.5 h-3.5 text-ink-muted" />
+              <span className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Notas</span>
             </div>
             <p className="text-gray-300 text-sm leading-relaxed">{item.descripcion}</p>
           </div>
@@ -275,22 +275,22 @@ export default function ModalDetalleUniversal({
           />
           <DetailCard icon={Repeat} iconColor="text-blue-400/70" label="Ciclo" value={item.ciclo || '—'} />
           {item.cuenta_nombre && (
-            <DetailCard icon={Wallet} iconColor="text-gray-400" label="Cuenta" value={item.cuenta_nombre} />
+            <DetailCard icon={Wallet} iconColor="text-ink-faint" label="Cuenta" value={item.cuenta_nombre} />
           )}
           <DetailCard
             icon={CheckCircle}
-            iconColor={item.autopago ? 'text-green-400' : 'text-gray-500'}
+            iconColor={item.autopago ? 'text-green-400' : 'text-ink-muted'}
             label="Autopago"
             value={item.autopago ? 'Activado' : 'Inactivo'}
-            valueClass={item.autopago ? 'text-green-400' : 'text-gray-400'}
+            valueClass={item.autopago ? 'text-green-400' : 'text-ink-faint'}
           />
         </div>
 
         {item.descripcion && (
           <div className="mx-5 mb-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+              <FileText className="w-3.5 h-3.5 text-ink-muted" />
+              <span className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Notas</span>
             </div>
             <p className="text-gray-300 text-sm">{item.descripcion}</p>
           </div>
@@ -374,18 +374,18 @@ export default function ModalDetalleUniversal({
             valueClass={isGastoFijoPagado ? 'text-green-400' : 'text-yellow-400'}
           />
           {item.cuenta_nombre && (
-            <DetailCard icon={Wallet} iconColor="text-gray-400" label="Cuenta" value={item.cuenta_nombre} />
+            <DetailCard icon={Wallet} iconColor="text-ink-faint" label="Cuenta" value={item.cuenta_nombre} />
           )}
           {item.categoria && (
-            <DetailCard icon={Tag} iconColor="text-gray-400" label="Categoría" value={item.categoria} />
+            <DetailCard icon={Tag} iconColor="text-ink-faint" label="Categoría" value={item.categoria} />
           )}
         </div>
 
         {item.descripcion && (
           <div className="mx-5 mb-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+              <FileText className="w-3.5 h-3.5 text-ink-muted" />
+              <span className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Notas</span>
             </div>
             <p className="text-gray-300 text-sm">{item.descripcion}</p>
           </div>
@@ -429,7 +429,7 @@ export default function ModalDetalleUniversal({
     const badgeByEstado = {
       green: { content: <><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /><span className="text-xs font-semibold text-emerald-400">Saldada</span></>, bg: 'bg-emerald-500/15 border-emerald-500/25' },
       red:   { content: <><AlertCircle className="w-3.5 h-3.5 text-red-400" /><span className="text-xs font-semibold text-red-400">Con deuda</span></>, bg: 'bg-red-500/15 border-red-500/25' },
-      gray:  { content: <><Info className="w-3.5 h-3.5 text-gray-400" /><span className="text-xs font-semibold text-gray-400">{estadoTarjeta.badge}</span></>, bg: 'bg-gray-500/15 border-gray-500/25' },
+      gray:  { content: <><Info className="w-3.5 h-3.5 text-ink-faint" /><span className="text-xs font-semibold text-ink-faint">{estadoTarjeta.badge}</span></>, bg: 'bg-gray-500/15 border-gray-500/25' },
     }
     const badge = badgeByEstado[estadoTarjeta.color] || badgeByEstado.gray
 
@@ -507,7 +507,7 @@ export default function ModalDetalleUniversal({
 
     // Estado del vencimiento
     let estadoVenceLabel = null
-    let estadoVenceClass = 'text-gray-400'
+    let estadoVenceClass = 'text-ink-faint'
     if (diasHastaPago !== null) {
       if (diasHastaPago < 0) { estadoVenceLabel = 'VENCIDO'; estadoVenceClass = 'text-red-400 font-black' }
       else if (diasHastaPago === 0) { estadoVenceLabel = 'VENCE HOY'; estadoVenceClass = 'text-red-400 font-black' }
@@ -527,12 +527,12 @@ export default function ModalDetalleUniversal({
           style={{ background: 'linear-gradient(135deg, rgba(88,28,135,0.25) 0%, rgba(17,24,39,0.8) 100%)' }}>
           <div className="px-5 pt-4 pb-3 flex items-start justify-between">
             <div>
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Saldo actual</p>
+              <p className="text-[9px] text-ink-muted uppercase tracking-widest mb-1">Saldo actual</p>
               <p className="text-4xl font-black text-white tracking-tight leading-none">
                 {fmtMonto(saldo)}
               </p>
               {limite > 0 && (
-                <p className="text-[11px] text-gray-500 mt-1">de {fmtMonto(limite)} disponibles</p>
+                <p className="text-[11px] text-ink-muted mt-1">de {fmtMonto(limite)} disponibles</p>
               )}
             </div>
             <div className="flex flex-col items-end gap-1.5 mt-1">
@@ -551,10 +551,10 @@ export default function ModalDetalleUniversal({
           {esTarjeta && usoPorc !== null && usoColor && (
             <div className="px-5 pb-4">
               <div className="flex justify-between text-[10px] mb-1.5">
-                <span className="text-gray-500">Uso de crédito</span>
+                <span className="text-ink-muted">Uso de crédito</span>
                 <span className={`font-bold ${usoColor.text}`}>{usoPorc}% · {usoColor.label}</span>
               </div>
-              <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+              <div className="h-2 rounded-full bg-canvas-surface/8 overflow-hidden">
                 <div className={`h-full rounded-full ${usoColor.bar} transition-all duration-700`}
                   style={{ width: `${usoPorc}%` }} />
               </div>
@@ -576,10 +576,10 @@ export default function ModalDetalleUniversal({
             <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <Percent className="w-3 h-3 text-red-400" />
-                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">APR Anual</span>
+                <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">APR Anual</span>
               </div>
               <p className="text-sm font-bold text-red-400">{(aprPct).toFixed(1)}%</p>
-              <p className="text-[9px] text-gray-600 mt-0.5">Interés mensual: {fmtMonto(interesMensual)}</p>
+              <p className="text-[9px] text-ink-muted mt-0.5">Interés mensual: {fmtMonto(interesMensual)}</p>
             </div>
           )}
 
@@ -588,11 +588,11 @@ export default function ModalDetalleUniversal({
             <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <Shield className="w-3 h-3 text-purple-400" />
-                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Límite</span>
+                <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">Límite</span>
               </div>
               <p className="text-sm font-bold text-white">{fmtMonto(limite)}</p>
               {usoPorc !== null && (
-                <p className="text-[9px] text-gray-600 mt-0.5">Disponible: {fmtMonto(limite - saldo)}</p>
+                <p className="text-[9px] text-ink-muted mt-0.5">Disponible: {fmtMonto(limite - saldo)}</p>
               )}
             </div>
           )}
@@ -602,11 +602,11 @@ export default function ModalDetalleUniversal({
             <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <Calendar className="w-3 h-3 text-blue-400" />
-                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Próx. Corte</span>
+                <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">Próx. Corte</span>
               </div>
               <p className="text-sm font-bold text-white">{fmtFecha(proximoCorte)}</p>
               {diasHastaCorte !== null && (
-                <p className={`text-[9px] mt-0.5 ${diasHastaCorte <= 3 ? 'text-orange-400 font-bold' : 'text-gray-600'}`}>
+                <p className={`text-[9px] mt-0.5 ${diasHastaCorte <= 3 ? 'text-orange-400 font-bold' : 'text-ink-muted'}`}>
                   {diasHastaCorte === 0 ? 'Hoy' : diasHastaCorte === 1 ? 'Mañana' : `en ${diasHastaCorte}d`}
                 </p>
               )}
@@ -623,8 +623,8 @@ export default function ModalDetalleUniversal({
                 : 'bg-gray-800/60 border-white/5'
             }`}>
               <div className="flex items-center gap-1.5 mb-1">
-                <AlertCircle className={`w-3 h-3 ${diasHastaPago !== null && diasHastaPago <= 7 ? 'text-orange-400' : 'text-gray-500'}`} />
-                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Pagar antes de</span>
+                <AlertCircle className={`w-3 h-3 ${diasHastaPago !== null && diasHastaPago <= 7 ? 'text-orange-400' : 'text-ink-muted'}`} />
+                <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">Pagar antes de</span>
               </div>
               <p className="text-sm font-bold text-white">{fmtFecha(fechaLimitePago)}</p>
               {estadoVenceLabel && (
@@ -638,7 +638,7 @@ export default function ModalDetalleUniversal({
             <div className="bg-gray-800/60 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 mb-1">
                 <CheckCircle className="w-3 h-3 text-emerald-400" />
-                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Último Pago</span>
+                <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">Último Pago</span>
               </div>
               <p className="text-sm font-bold text-white">{fmtFecha(item.ultimo_pago)}</p>
             </div>
@@ -650,27 +650,27 @@ export default function ModalDetalleUniversal({
           <div className="mx-4 mt-3 rounded-2xl overflow-hidden border border-white/6"
             style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(17,24,39,0.6) 100%)' }}>
             <div className="px-4 pt-3 pb-1">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold mb-2.5 flex items-center gap-1.5">
+              <p className="text-[9px] text-ink-muted uppercase tracking-widest font-semibold mb-2.5 flex items-center gap-1.5">
                 <Zap className="w-3 h-3 text-emerald-400" /> Pagos recomendados
               </p>
               <div className="grid grid-cols-3 gap-2 pb-3">
                 {/* Pago mínimo */}
                 <div className="text-center">
-                  <p className="text-[9px] text-gray-500 mb-1">Mínimo</p>
+                  <p className="text-[9px] text-ink-muted mb-1">Mínimo</p>
                   <p className="text-[13px] font-black text-yellow-400">{fmtMonto(pagoMinDinamico)}</p>
-                  <p className="text-[8px] text-gray-600 mt-0.5">Solo intereses</p>
+                  <p className="text-[8px] text-ink-muted mt-0.5">Solo intereses</p>
                 </div>
                 {/* Pago sugerido */}
                 <div className="text-center border-x border-white/6">
-                  <p className="text-[9px] text-gray-500 mb-1">Sugerido</p>
+                  <p className="text-[9px] text-ink-muted mb-1">Sugerido</p>
                   <p className="text-[13px] font-black text-emerald-400">{fmtMonto(pagoSugerido)}</p>
-                  <p className="text-[8px] text-gray-600 mt-0.5">Reduce capital</p>
+                  <p className="text-[8px] text-ink-muted mt-0.5">Reduce capital</p>
                 </div>
                 {/* Pago total */}
                 <div className="text-center">
-                  <p className="text-[9px] text-gray-500 mb-1">Total</p>
+                  <p className="text-[9px] text-ink-muted mb-1">Total</p>
                   <p className="text-[13px] font-black text-blue-400">{fmtMonto(saldo)}</p>
-                  <p className="text-[8px] text-gray-600 mt-0.5">Saldo 0</p>
+                  <p className="text-[8px] text-ink-muted mt-0.5">Saldo 0</p>
                 </div>
               </div>
             </div>
@@ -690,11 +690,11 @@ export default function ModalDetalleUniversal({
                 <button key={tab.key}
                   onClick={() => setHistTab(tab.key)}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all touch-manipulation ${
-                    histTab === tab.key ? 'bg-gray-700 text-white' : 'text-gray-500'
+                    histTab === tab.key ? 'bg-gray-700 text-white' : 'text-ink-muted'
                   }`}
                 >
                   {tab.label}
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 ${histTab === tab.key ? tab.color : 'text-gray-600'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-canvas-surface/5 ${histTab === tab.key ? tab.color : 'text-ink-muted'}`}>
                     {tab.count}
                   </span>
                 </button>
@@ -711,7 +711,7 @@ export default function ModalDetalleUniversal({
                     <button key={mes}
                       onClick={() => setMesFiltro(mes)}
                       className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all touch-manipulation ${
-                        mesFiltro === mes ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'
+                        mesFiltro === mes ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-ink-faint'
                       }`}
                     >
                       {label}
@@ -724,13 +724,13 @@ export default function ModalDetalleUniversal({
             {/* RESUMEN DEL MES */}
             {histTab === 'pagos' && pagosDelMes.length > 0 && (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-purple-500/8 border border-purple-500/15 mb-2">
-                <span className="text-[10px] text-gray-400">{pagosDelMes.length} {pagosDelMes.length === 1 ? 'pago' : 'pagos'}</span>
+                <span className="text-[10px] text-ink-faint">{pagosDelMes.length} {pagosDelMes.length === 1 ? 'pago' : 'pagos'}</span>
                 <span className="text-[12px] font-black text-emerald-400">{fmtMonto(totalPagadoMes)}</span>
               </div>
             )}
             {histTab === 'compras' && comprasDelMes.length > 0 && (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-orange-500/8 border border-orange-500/15 mb-2">
-                <span className="text-[10px] text-gray-400">{comprasDelMes.length} {comprasDelMes.length === 1 ? 'compra' : 'compras'}</span>
+                <span className="text-[10px] text-ink-faint">{comprasDelMes.length} {comprasDelMes.length === 1 ? 'compra' : 'compras'}</span>
                 <span className="text-[12px] font-black text-orange-400">{fmtMonto(totalGastadoMes)}</span>
               </div>
             )}
@@ -739,7 +739,7 @@ export default function ModalDetalleUniversal({
             {histTab === 'pagos' && (
               <div className="space-y-1.5">
                 {pagosDelMes.length === 0 ? (
-                  <div className="text-center py-6 text-gray-600 text-[11px]">Sin pagos registrados este mes</div>
+                  <div className="text-center py-6 text-ink-muted text-[11px]">Sin pagos registrados este mes</div>
                 ) : pagosDelMes.map((p, i) => (
                   <div key={i} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-800/50 border border-white/5">
                     <div className="flex items-center gap-2.5">
@@ -748,13 +748,13 @@ export default function ModalDetalleUniversal({
                       </div>
                       <div>
                         <p className="text-[11px] font-semibold text-white">{fmtMonto(p.monto_total || p.monto || 0)}</p>
-                        <p className="text-[9px] text-gray-500">{fmtFecha(p.fecha)}{p.metodo ? ` · ${p.metodo}` : ''}</p>
+                        <p className="text-[9px] text-ink-muted">{fmtFecha(p.fecha)}{p.metodo ? ` · ${p.metodo}` : ''}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       {p.a_principal > 0 && <p className="text-[9px] text-emerald-600">Capital: {fmtMonto(p.a_principal)}</p>}
                       {p.intereses > 0 && <p className="text-[9px] text-red-400/70">Interés: {fmtMonto(p.intereses)}</p>}
-                      {p.metodo && !p.a_principal && !p.intereses && <p className="text-[9px] text-gray-600">{p.metodo}</p>}
+                      {p.metodo && !p.a_principal && !p.intereses && <p className="text-[9px] text-ink-muted">{p.metodo}</p>}
                     </div>
                   </div>
                 ))}
@@ -765,7 +765,7 @@ export default function ModalDetalleUniversal({
             {histTab === 'compras' && (
               <div className="space-y-1.5">
                 {comprasDelMes.length === 0 ? (
-                  <div className="text-center py-6 text-gray-600 text-[11px]">Sin compras registradas este mes</div>
+                  <div className="text-center py-6 text-ink-muted text-[11px]">Sin compras registradas este mes</div>
                 ) : comprasDelMes.map((g, i) => {
                   const cat = (g.categoria || 'Otro').replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
                   return (
@@ -778,7 +778,7 @@ export default function ModalDetalleUniversal({
                           <p className="text-[11px] font-semibold text-white leading-tight max-w-[150px] truncate">
                             {g.descripcion || cat}
                           </p>
-                          <p className="text-[9px] text-gray-500">{cat} · {fmtFecha(g.fecha)}</p>
+                          <p className="text-[9px] text-ink-muted">{cat} · {fmtFecha(g.fecha)}</p>
                         </div>
                       </div>
                       <p className="text-[12px] font-bold text-orange-300">{fmtMonto(g.monto)}</p>
@@ -794,8 +794,8 @@ export default function ModalDetalleUniversal({
         {item.descripcion && (
           <div className="mx-4 mt-3 bg-gray-800/40 rounded-xl p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-gray-500" />
-              <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">Notas</span>
+              <FileText className="w-3.5 h-3.5 text-ink-muted" />
+              <span className="text-[9px] text-ink-muted uppercase tracking-wider font-semibold">Notas</span>
             </div>
             <p className="text-gray-300 text-xs leading-relaxed">{item.descripcion}</p>
           </div>
@@ -843,7 +843,7 @@ export default function ModalDetalleUniversal({
     <div className="bg-gray-900 rounded-2xl w-full overflow-hidden flex flex-col relative">
       <div className="p-5 flex items-center justify-between border-b border-white/10">
         <h2 className="text-white font-bold">{getTitle()}</h2>
-        <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl"><X className="w-5 h-5" /></button>
+        <button onClick={onClose} className="p-2 bg-canvas-surface/5 hover:bg-canvas-surface/10 text-ink-faint rounded-xl"><X className="w-5 h-5" /></button>
       </div>
       <div className="p-5">
         <p className="text-3xl font-black text-white">{fmtMonto(getMonto())}</p>

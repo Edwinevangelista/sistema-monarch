@@ -2563,13 +2563,13 @@ const gastosPorCategoria = useMemo(() => {
           {!planDeudaActivo && (
             <button
               onClick={abrirDebtPlanner}
-              className="mt-3 w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-purple-50 border border-purple-200 rounded-2xl transition-colors touch-manipulation shadow-sm"
+              className="mt-3 w-full flex items-center justify-between px-4 py-3 bg-canvas-surface hover:bg-accent-brand/10 border border-accent-brand/25 rounded-2xl transition-colors touch-manipulation shadow-sm"
             >
               <div className="flex items-center gap-2.5">
-                <Target className="w-4 h-4 text-purple-700 shrink-0" />
-                <span className="text-sm font-semibold text-slate-800">Crear plan de eliminación de deudas</span>
+                <Target className="w-4 h-4 text-accent-brand shrink-0" />
+                <span className="text-sm font-semibold text-ink">Crear plan de eliminación de deudas</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-purple-700" />
+              <ChevronRight className="w-4 h-4 text-accent-brand" />
             </button>
           )}
         </SectionCollapse>

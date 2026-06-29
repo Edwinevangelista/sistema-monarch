@@ -92,7 +92,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
     }
   }
 
-  const inputCls = 'w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/30 placeholder-gray-600 transition-colors'
+  const inputCls = 'w-full bg-canvas-surface/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/30 placeholder-gray-600 transition-colors'
 
   // Costo mensual equivalente preview
   const costo = parseFloat(formData.costo) || 0
@@ -110,24 +110,24 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
             {suscripcionInicial ? 'Editar suscripción' : 'Nueva suscripción'}
           </h2>
           {suscripcionInicial && (
-            <p className="text-xs text-gray-500 mt-0.5">{suscripcionInicial.servicio}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{suscripcionInicial.servicio}</p>
           )}
         </div>
         <button
           onClick={onClose}
-          className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+          className="md:hidden p-2 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] rounded-xl text-ink-faint hover:text-white transition-colors touch-manipulation"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* ── MONTO (prominente) ── */}
-      <div className="px-5 py-5 border-y border-white/[0.06] bg-white/[0.015]">
-        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+      <div className="px-5 py-5 border-y border-white/[0.06] bg-canvas-surface/[0.015]">
+        <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
           Monto *
         </p>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-light text-gray-500">$</span>
+          <span className="text-3xl font-light text-ink-muted">$</span>
           <input
             type="number"
             inputMode="decimal"
@@ -160,7 +160,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
         {/* SERVICIO */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Servicio *
           </p>
           <input
@@ -176,7 +176,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
         {/* CICLO — pills */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Ciclo de pago *
           </p>
           <div className="flex gap-2">
@@ -188,7 +188,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
                 className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
                   formData.ciclo === c.value
                     ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
-                    : 'bg-white/[0.04] border-white/[0.07] text-gray-500 hover:text-gray-300'
+                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-muted hover:text-gray-300'
                 }`}
               >
                 <span className="text-base leading-none">{c.icon}</span>
@@ -200,7 +200,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
         {/* CATEGORÍA — chips */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Categoría
           </p>
           <div className="flex flex-wrap gap-2">
@@ -212,7 +212,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation active:scale-95 ${
                   formData.categoria === c.v
                     ? 'bg-indigo-500/20 border-indigo-500/35 text-indigo-200'
-                    : 'bg-white/[0.04] border-white/[0.07] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08]'
+                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-faint hover:text-gray-200 hover:bg-canvas-surface/[0.08]'
                 }`}
               >
                 <span>{c.e}</span>
@@ -224,7 +224,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
         {/* PRÓXIMO PAGO */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Próximo pago
           </p>
           <input
@@ -240,7 +240,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
         {/* CUENTA + AUTOPAGO */}
         <div className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               Cuenta de cobro
             </p>
             <select
@@ -260,12 +260,12 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
           </div>
 
           {/* Autopago toggle */}
-          <div className="flex items-center justify-between px-4 py-3 bg-white/[0.03] rounded-2xl border border-white/[0.07]">
+          <div className="flex items-center justify-between px-4 py-3 bg-canvas-surface/[0.03] rounded-2xl border border-white/[0.07]">
             <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4 text-gray-400" />
+              <CreditCard className="w-4 h-4 text-ink-faint" />
               <div>
                 <p className="text-sm font-medium text-white">Autopago</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-ink-muted">
                   {formData.autopago ? 'Se cobra automáticamente' : 'Pago manual'}
                 </p>
               </div>
@@ -279,7 +279,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-canvas-surface transition-transform shadow ${
                   formData.autopago ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
@@ -295,7 +295,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
         {/* NOTAS */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Notas (opcional)
           </p>
           <textarea
@@ -320,7 +320,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
           </button>

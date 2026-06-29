@@ -131,7 +131,7 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button onClick={onClose} className="p-2 -ml-2 text-gray-400 hover:text-white rounded-xl transition-colors md:hidden">
+                <button onClick={onClose} className="p-2 -ml-2 text-ink-faint hover:text-white rounded-xl transition-colors md:hidden">
                   <ChevronLeft className="w-6 h-6" />
                 </button>
 
@@ -146,11 +146,11 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                   <h2 className="text-base font-bold text-white">
                     {hayProblemas ? '⚠️ Proyección próximos 3 días' : '✅ Proyección próximos 3 días'}
                   </h2>
-                  <p className="text-xs text-gray-400 capitalize">{fechaStr}</p>
+                  <p className="text-xs text-ink-faint capitalize">{fechaStr}</p>
                 </div>
               </div>
 
-              <button onClick={onClose} className="hidden md:flex p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors">
+              <button onClick={onClose} className="hidden md:flex p-2 text-ink-faint hover:text-white hover:bg-gray-800 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -158,12 +158,12 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
             {/* Resumen top */}
             {proyeccion.length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="bg-white/5 rounded-xl px-3 py-2 text-center">
-                  <div className="text-[10px] text-gray-400 mb-0.5">Cargos automáticos</div>
+                <div className="bg-canvas-surface/5 rounded-xl px-3 py-2 text-center">
+                  <div className="text-[10px] text-ink-faint mb-0.5">Cargos automáticos</div>
                   <div className="text-base font-bold text-orange-400">{fmt(totalCargos3d)}</div>
                 </div>
-                <div className="bg-white/5 rounded-xl px-3 py-2 text-center">
-                  <div className="text-[10px] text-gray-400 mb-0.5">Cuentas en riesgo</div>
+                <div className="bg-canvas-surface/5 rounded-xl px-3 py-2 text-center">
+                  <div className="text-[10px] text-ink-faint mb-0.5">Cuentas en riesgo</div>
                   <div className={`text-base font-bold ${cuentasEnRiesgo.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                     {cuentasEnRiesgo.length} / {proyeccion.length}
                   </div>
@@ -183,7 +183,7 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                   <CheckCircle2 className="w-14 h-14 text-emerald-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">¡Sin cargos en 3 días!</h3>
-                <p className="text-gray-400 text-sm max-w-xs">
+                <p className="text-ink-faint text-sm max-w-xs">
                   No hay cargos automáticos vinculados a cuentas en los próximos 3 días.
                 </p>
               </div>
@@ -211,7 +211,7 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                     className={`rounded-2xl border p-4 space-y-3 ${
                       r.enRiesgo
                         ? 'bg-red-900/20 border-red-500/30'
-                        : 'bg-white/5 border-white/10'
+                        : 'bg-canvas-surface/5 border-white/10'
                     }`}
                   >
                     {/* Header cuenta */}
@@ -222,11 +222,11 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                         </div>
                         <div>
                           <div className="text-sm font-bold text-white">{r.cuenta.nombre}</div>
-                          {r.cuenta.banco && <div className="text-[10px] text-gray-500">{r.cuenta.banco}</div>}
+                          {r.cuenta.banco && <div className="text-[10px] text-ink-muted">{r.cuenta.banco}</div>}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-gray-400">Balance</div>
+                        <div className="text-xs text-ink-faint">Balance</div>
                         <div className="text-sm font-bold text-white">{fmt(r.balance)}</div>
                       </div>
                     </div>
@@ -254,11 +254,11 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                     {/* Saldo proyectado */}
                     <div className="border-t border-white/10 pt-2 space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-400">Total cargos:</span>
+                        <span className="text-ink-faint">Total cargos:</span>
                         <span className="text-white font-semibold">{fmt(r.totalCargos)}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-400">Saldo proyectado:</span>
+                        <span className="text-ink-faint">Saldo proyectado:</span>
                         <span className={`font-bold ${r.enRiesgo ? 'text-red-400' : 'text-emerald-400'}`}>
                           {fmt(r.saldoFinal)}
                         </span>
@@ -276,8 +276,8 @@ export default function ModalProyeccion3Dias({ cuentas = [], gastosFijos = [], s
                 ))}
 
                 {/* Disclaimer */}
-                <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
-                  <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+                <div className="p-3 bg-canvas-surface/5 border border-white/10 rounded-xl">
+                  <p className="text-[10px] text-ink-muted text-center leading-relaxed">
                     ℹ️ Solo incluye cargos automáticos vinculados a cuentas. Este análisis es informativo.
                   </p>
                 </div>

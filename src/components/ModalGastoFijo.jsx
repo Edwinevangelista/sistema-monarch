@@ -81,7 +81,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
         <div className="bg-gradient-to-r from-yellow-600 to-yellow-800/80 p-4 md:p-6 rounded-t-3xl md:rounded-t-2xl border-b border-yellow-500/30 sticky top-0 z-10">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 md:gap-4">
-              <div className="bg-white/20 p-2 rounded-xl border border-white/30">
+              <div className="bg-canvas-surface/20 p-2 rounded-xl border border-white/30">
                 <FileText className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
               <div>
@@ -116,7 +116,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
         <div className="p-4 md:p-6 space-y-4 md:space-y-6">
           
           {/* Nombre */}
-          <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+          <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
             <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
               <FileText className="w-4 h-4 text-yellow-400" /> Nombre del Servicio *
             </label>
@@ -133,7 +133,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
 
           {/* Categoría y Día */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
               <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
                 <Tag className="w-4 h-4 text-purple-400" /> Categoría
               </label>
@@ -150,7 +150,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
               </select>
             </div>
 
-            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
               <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
                 <Calendar className="w-4 h-4 text-blue-400" /> Día
               </label>
@@ -170,7 +170,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
 
           {/* Monto y Auto-pago */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
               <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
                 <DollarSign className="w-4 h-4 text-emerald-400" /> Monto *
               </label>
@@ -186,7 +186,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
               />
             </div>
 
-            <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+            <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
               <label className="block text-gray-300 mb-2 text-sm md:text-base">Auto-pago</label>
               <select
                 value={formData.auto_pago}
@@ -202,7 +202,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
           </div>
 
           {/* Cuenta Bancaria */}
-          <div className="bg-white/5 p-3 md:p-4 rounded-xl border border-white/10">
+          <div className="bg-canvas-surface/5 p-3 md:p-4 rounded-xl border border-white/10">
             <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base font-semibold">
               <CreditCard className="w-4 h-4 text-blue-400" /> Cuenta de cobro
             </label>
@@ -220,7 +220,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
                 </option>
               ))}
             </select>
-            <p className="text-gray-500 text-xs mt-2 flex items-start gap-1">
+            <p className="text-ink-muted text-xs mt-2 flex items-start gap-1">
               <span className="flex-shrink-0">💡</span>
               <span>Si seleccionas una cuenta, el saldo se descontará automáticamente</span>
             </p>
@@ -260,7 +260,7 @@ export default function ModalGastoFijo({ onClose, onSave, gastoInicial = null })
           {/* Notas */}
           <div>
             <label className="block text-gray-300 mb-2 flex items-center gap-2 text-sm md:text-base">
-              <FileText className="w-4 h-4 text-gray-400" /> Notas
+              <FileText className="w-4 h-4 text-ink-faint" /> Notas
             </label>
             <textarea
               placeholder="Detalles adicionales..."

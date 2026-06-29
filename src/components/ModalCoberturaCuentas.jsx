@@ -79,7 +79,7 @@ export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }
                 {/* Botón atrás mobile */}
                 <button
                   onClick={onClose}
-                  className="p-2 -ml-2 text-gray-400 hover:text-white active:bg-gray-800 rounded-xl transition-colors md:hidden"
+                  className="p-2 -ml-2 text-ink-faint hover:text-white active:bg-gray-800 rounded-xl transition-colors md:hidden"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -97,7 +97,7 @@ export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }
 
                 <div>
                   <h2 className="text-lg font-bold text-white">Cobertura de Cuentas</h2>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-ink-faint">
                     {cuentasEnRiesgo.length > 0
                       ? <span className="text-orange-400">{cuentasEnRiesgo.length} cuenta{cuentasEnRiesgo.length > 1 ? 's' : ''} con fondos insuficientes</span>
                       : <span className="text-emerald-400">Todas las cuentas cubiertas</span>
@@ -110,7 +110,7 @@ export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }
               {/* Cerrar desktop */}
               <button
                 onClick={onClose}
-                className="hidden md:flex p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
+                className="hidden md:flex p-2 text-ink-faint hover:text-white hover:bg-gray-800 rounded-xl transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -130,7 +130,7 @@ export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }
                   <CheckCircle2 className="w-16 h-16 text-emerald-400" />
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-2">¡Todo cubierto!</h3>
-                <p className="text-gray-400 max-w-xs">
+                <p className="text-ink-faint max-w-xs">
                   No hay cargos automáticos vinculados a cuentas en los próximos 30 días.
                 </p>
               </div>
@@ -165,8 +165,8 @@ export default function ModalCoberturaCuentas({ coberturaCuentas = [], onClose }
                 )}
 
                 {/* Disclaimer */}
-                <div className="mt-4 p-3 bg-white/5 border border-white/10 rounded-xl">
-                  <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+                <div className="mt-4 p-3 bg-canvas-surface/5 border border-white/10 rounded-xl">
+                  <p className="text-[11px] text-ink-muted text-center leading-relaxed">
                     ℹ️ Análisis informativo. Solo incluye cargos automáticos vinculados a cuentas.
                     Revisa manualmente si tienes débitos adicionales no registrados.
                   </p>
@@ -210,24 +210,24 @@ function CuentaCard({ r, getBarColor, getBarWidth, getDiasLabel }) {
           </div>
           <div>
             <div className="text-sm font-bold text-white">{cuenta.nombre}</div>
-            {cuenta.banco && <div className="text-[11px] text-gray-400">{cuenta.banco}</div>}
+            {cuenta.banco && <div className="text-[11px] text-ink-faint">{cuenta.banco}</div>}
           </div>
         </div>
         <div className="text-right">
           <div className={`text-base font-bold ${tieneProblem ? 'text-red-400' : 'text-emerald-400'}`}>
             ${fmt(balance)}
           </div>
-          <div className="text-[10px] text-gray-500">balance actual</div>
+          <div className="text-[10px] text-ink-muted">balance actual</div>
         </div>
       </div>
 
       {/* Barra de cobertura */}
       <div>
-        <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+        <div className="flex justify-between text-[10px] text-ink-faint mb-1">
           <span>Cargos próximos</span>
           <span>{Math.round(pct)}% del balance</span>
         </div>
-        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div className="h-2 bg-canvas-surface/10 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-700 ${getBarColor(totalCargos, balance)}`}
             style={{ width: getBarWidth(totalCargos, balance) }}
@@ -258,11 +258,11 @@ function CuentaCard({ r, getBarColor, getBarWidth, getDiasLabel }) {
       {/* Resumen */}
       <div className="pt-2 border-t border-white/10 space-y-1">
         <div className="flex justify-between text-xs">
-          <span className="text-gray-400">Total cargos (30 días):</span>
+          <span className="text-ink-faint">Total cargos (30 días):</span>
           <span className="font-semibold text-white">${fmt(totalCargos)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-400">Balance disponible:</span>
+          <span className="text-ink-faint">Balance disponible:</span>
           <span className={`font-semibold ${tieneProblem ? 'text-red-400' : 'text-emerald-400'}`}>${fmt(balance)}</span>
         </div>
         {tieneProblem && (

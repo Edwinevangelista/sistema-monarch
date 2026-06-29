@@ -52,7 +52,7 @@ const getColorClasses = (color) => {
     violet: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30', bar: 'bg-violet-500' },
     emerald: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', bar: 'bg-emerald-500' },
     amber: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', bar: 'bg-amber-500' },
-    gray: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', bar: 'bg-gray-500' },
+    gray: { bg: 'bg-gray-500/20', text: 'text-ink-faint', border: 'border-gray-500/30', bar: 'bg-gray-500' },
     yellow: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', bar: 'bg-yellow-500' },
     rose: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30', bar: 'bg-rose-500' },
   };
@@ -504,7 +504,7 @@ export default function SpendingControlModal({
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition">
+            <button onClick={onClose} className="p-2 hover:bg-canvas-surface/10 rounded-full transition">
               <X className="w-5 h-5 text-white/70" />
             </button>
           </div>
@@ -516,7 +516,7 @@ export default function SpendingControlModal({
                 className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
                   idx <= pasoActual 
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
-                    : 'bg-white/10'
+                    : 'bg-canvas-surface/10'
                 }`}
               />
             ))}
@@ -545,7 +545,7 @@ export default function SpendingControlModal({
         <div className="flex-shrink-0 border-t border-white/10 p-4 bg-slate-900/80 backdrop-blur-sm">
           <div className="flex gap-3">
             {pasoActual > 0 && (
-              <button onClick={() => irAPaso(pasoActual - 1)} className="px-5 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl font-semibold text-sm transition-all active:scale-95">
+              <button onClick={() => irAPaso(pasoActual - 1)} className="px-5 py-3 bg-canvas-surface/10 hover:bg-canvas-surface/15 text-white rounded-xl font-semibold text-sm transition-all active:scale-95">
                 Atrás
               </button>
             )}
@@ -624,25 +624,25 @@ function PasoDiagnostico({ motor }) {
       </div>
 
       {/* Velocímetro Realista */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${sem.bg} flex items-center justify-center`}>
             <Zap className={`w-4 h-4 ${sem.text}`} />
           </div>
           <div>
             <h4 className="text-white font-bold text-sm">Límite Diario Seguro</h4>
-            <p className="text-gray-400 text-[11px]">Día {diaDelMes} de {diasEnMes} · {diasRestantes} días restantes</p>
+            <p className="text-ink-faint text-[11px]">Día {diaDelMes} de {diasEnMes} · {diasRestantes} días restantes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-white/5 rounded-xl p-3">
-            <div className="text-[10px] text-gray-400 uppercase mb-1">Gastas ahora</div>
-            <div className={`text-xl font-bold ${semaforoVelocidad === 'verde' ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(velocidadDiaria)}<span className="text-xs text-gray-400">/día</span></div>
+          <div className="bg-canvas-surface/5 rounded-xl p-3">
+            <div className="text-[10px] text-ink-faint uppercase mb-1">Gastas ahora</div>
+            <div className={`text-xl font-bold ${semaforoVelocidad === 'verde' ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(velocidadDiaria)}<span className="text-xs text-ink-faint">/día</span></div>
           </div>
-          <div className="bg-white/5 rounded-xl p-3">
-            <div className="text-[10px] text-gray-400 uppercase mb-1">Máximo permitido</div>
-            <div className="text-xl font-bold text-blue-400">{fmt(limiteSeguroDiario)}<span className="text-xs text-gray-400">/día</span></div>
+          <div className="bg-canvas-surface/5 rounded-xl p-3">
+            <div className="text-[10px] text-ink-faint uppercase mb-1">Máximo permitido</div>
+            <div className="text-xl font-bold text-blue-400">{fmt(limiteSeguroDiario)}<span className="text-xs text-ink-faint">/día</span></div>
           </div>
         </div>
 
@@ -672,13 +672,13 @@ function PasoDiagnostico({ motor }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="text-[10px] text-gray-400 uppercase">Gasto Total</div>
+            <div className="text-[10px] text-ink-faint uppercase">Gasto Total</div>
             <div className={`text-lg font-bold ${proyeccionFinMes.enRiesgo ? 'text-red-400' : 'text-white'}`}>
               {fmt(proyeccionFinMes.gastosEstimados)}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-400 uppercase">Resultado</div>
+            <div className="text-[10px] text-ink-faint uppercase">Resultado</div>
             <div className={`text-lg font-bold ${proyeccionFinMes.saldoEstimado >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmt(proyeccionFinMes.saldoEstimado)}
             </div>
@@ -695,7 +695,7 @@ function PasoDiagnostico({ motor }) {
       </div>
 
       {/* Patrón Semanal */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-purple-400" />
           Tu Patrón Semanal
@@ -721,20 +721,20 @@ function PasoDiagnostico({ motor }) {
         <div className="flex gap-1.5">
           {DIAS_SEMANA.map((dia, idx) => (
             <div key={idx} className={`flex-1 text-center text-[9px] font-medium ${
-              idx === diaPico ? 'text-red-400' : 'text-gray-500'
+              idx === diaPico ? 'text-red-400' : 'text-ink-muted'
             }`}>
               {dia}
             </div>
           ))}
         </div>
-        <p className="text-gray-400 text-xs mt-3">
+        <p className="text-ink-faint text-xs mt-3">
           📍 Los <span className="text-red-400 font-semibold">{DIAS_SEMANA[diaPico]}</span> gastas más. 
           Planifica esos días.
         </p>
       </div>
 
       {/* Distribución Rápida */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-blue-400" />
           Distribución de Flujo
@@ -754,22 +754,22 @@ function PasoDiagnostico({ motor }) {
       </div>
 
       {/* Top Categorías */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3">Top Categorías</h4>
         <div className="space-y-2">
           {categorias.slice(0, 5).map((cat, idx) => (
-            <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg ${cat.esencial ? 'bg-blue-500/5' : 'bg-white/5'}`}>
+            <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg ${cat.esencial ? 'bg-blue-500/5' : 'bg-canvas-surface/5'}`}>
               <span className="text-lg">{cat.nombre.split(' ')[0]}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between mb-1">
                   <span className="text-white text-xs font-semibold truncate">{cat.nombre.split(' ').slice(1).join(' ')}</span>
                   <span className="text-white text-xs font-bold">{fmt(cat.total)}</span>
                 </div>
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-canvas-surface/10 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full ${cat.colorClasses.bar}`} style={{ width: `${cat.porcentaje}%` }} />
                 </div>
               </div>
-              <span className="text-gray-400 text-[10px] w-8 text-right">{pct(cat.porcentaje)}</span>
+              <span className="text-ink-faint text-[10px] w-8 text-right">{pct(cat.porcentaje)}</span>
             </div>
           ))}
         </div>
@@ -806,7 +806,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
         </p>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
         <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
           <Target className="w-4 h-4 text-purple-400" />
           Regla 50/30/20 (Tu Realidad)
@@ -819,12 +819,12 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white/5 rounded-xl p-3 text-center">
-          <div className="text-[10px] text-gray-400 uppercase">Gasto Actual</div>
+        <div className="bg-canvas-surface/5 rounded-xl p-3 text-center">
+          <div className="text-[10px] text-ink-faint uppercase">Gasto Actual</div>
           <div className="text-base font-bold text-red-400">{fmt(totalGastos)}</div>
         </div>
-        <div className="bg-white/5 rounded-xl p-3 text-center">
-          <div className="text-[10px] text-gray-400 uppercase">Con Plan</div>
+        <div className="bg-canvas-surface/5 rounded-xl p-3 text-center">
+          <div className="text-[10px] text-ink-faint uppercase">Con Plan</div>
           <div className="text-base font-bold text-blue-400">{fmt(totalPresupuestado)}</div>
         </div>
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center">
@@ -837,7 +837,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
         <h4 className="text-white font-bold text-sm flex items-center gap-2">
           <Wallet className="w-4 h-4 text-orange-400" />
           Presupuesto por Categoría
-          <span className="text-[10px] text-gray-400 font-normal">(toca para ajustar)</span>
+          <span className="text-[10px] text-ink-faint font-normal">(toca para ajustar)</span>
         </h4>
 
         {categorias.map((cat) => {
@@ -847,7 +847,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
           
           return (
             <div key={cat.nombre} className={`rounded-xl border overflow-hidden transition-all ${
-              isExpanded ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/10'
+              isExpanded ? 'bg-canvas-surface/10 border-white/20' : 'bg-canvas-surface/5 border-white/10'
             }`}>
               <button
                 onClick={() => onToggleCat(isExpanded ? null : cat.nombre)}
@@ -861,17 +861,17 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold ${excede ? 'text-red-400' : 'text-white'}`}>{fmt(cat.total)}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-500" />
+                    <ArrowRight className="w-3 h-3 text-ink-muted" />
                     <span className="text-xs font-bold text-emerald-400">{fmt(presupuesto)}</span>
                   </div>
                 </div>
-                {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                {isExpanded ? <ChevronUp className="w-4 h-4 text-ink-faint" /> : <ChevronDown className="w-4 h-4 text-ink-faint" />}
               </button>
 
               {isExpanded && (
                 <div className="px-3 pb-3 space-y-3">
                   <div>
-                    <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                    <div className="flex justify-between text-[10px] text-ink-faint mb-1">
                       <span>Nuevo Presupuesto</span>
                       <span>{fmt(presupuesto)}</span>
                     </div>
@@ -886,7 +886,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                       className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500"
                       style={{ background: `linear-gradient(to right, #3b82f6 ${((presupuesto - cat.presupuestoMinimo) / (cat.total * 1.5 - cat.presupuestoMinimo)) * 100}%, rgba(255,255,255,0.1) 0%)` }}
                     />
-                    <div className="flex justify-between text-[9px] text-gray-500 mt-1">
+                    <div className="flex justify-between text-[9px] text-ink-muted mt-1">
                       <span className={presupuesto <= cat.presupuestoMinimo ? 'text-red-400' : ''}>{fmt(cat.presupuestoMinimo)} (Mín)</span>
                       <span className="text-blue-400">Ideal: {fmt(cat.presupuestoSugerido)}</span>
                       <span>{fmt(cat.total * 1.5)}</span>
@@ -901,11 +901,11 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                   )}
 
                   <div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden relative">
+                    <div className="h-2 bg-canvas-surface/10 rounded-full overflow-hidden relative">
                       <div className={`h-full rounded-full transition-all ${excede ? 'bg-red-500' : cat.colorClasses.bar}`} style={{ width: `${Math.min(100, (cat.total / (presupuesto || 1)) * 100)}%` }} />
-                      <div className="absolute top-0 h-full w-0.5 bg-white/50" style={{ left: '100%' }} />
+                      <div className="absolute top-0 h-full w-0.5 bg-canvas-surface/50" style={{ left: '100%' }} />
                     </div>
-                    <p className="text-gray-400 text-[10px] mt-1">
+                    <p className="text-ink-faint text-[10px] mt-1">
                       {excede 
                         ? `⚠️ Excedes el presupuesto por ${fmt(cat.total - presupuesto)}`
                         : `✅ Dentro del presupuesto (${pct((cat.total / presupuesto) * 100)} usado)`
@@ -919,7 +919,7 @@ function PasoPresupuesto({ motor, presupuestosEditados, onEditarPresupuesto, exp
                         <span className="text-white font-semibold ml-2">{fmt(item.monto)}</span>
                       </div>
                     ))}
-                    {cat.items.length > 5 && <p className="text-gray-500 text-[10px]">+{cat.items.length - 5} más</p>}
+                    {cat.items.length > 5 && <p className="text-ink-muted text-[10px]">+{cat.items.length - 5} más</p>}
                   </div>
                 </div>
               )}
@@ -943,7 +943,7 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
       <div className="p-4 flex flex-col items-center justify-center py-16">
         <Trophy className="w-16 h-16 text-yellow-400 mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">¡Excelente Control!</h3>
-        <p className="text-gray-400 text-sm text-center max-w-xs">
+        <p className="text-ink-faint text-sm text-center max-w-xs">
           No detecté áreas urgentes que mejorar. Tu flujo es saludable.
         </p>
       </div>
@@ -962,14 +962,14 @@ function PasoRetos({ motor, retosAceptados, onToggleReto }) {
         </p>
       </div>
 
-      <div className="flex items-center justify-between bg-white/5 rounded-xl p-3">
+      <div className="flex items-center justify-between bg-canvas-surface/5 rounded-xl p-3">
         <div className="flex items-center gap-2">
           <Star className="w-4 h-4 text-yellow-400" />
           <span className="text-white text-sm font-semibold">Retos aceptados</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-2xl font-bold text-white">{retosAceptados.length}</span>
-          <span className="text-gray-400 text-sm">/ {retos.length}</span>
+          <span className="text-ink-faint text-sm">/ {retos.length}</span>
         </div>
       </div>
 
@@ -1021,16 +1021,16 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
       </div>
 
       {/* Resumen Visual */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-white/10">
           <h4 className="text-white font-bold text-sm mb-3">Tu Plan en un Vistazo</h4>
           
           <div className="grid grid-cols-2 gap-3">
             <div className="text-center">
-              <div className="text-[10px] text-gray-400 uppercase mb-1">Gastas Hoy</div>
+              <div className="text-[10px] text-ink-faint uppercase mb-1">Gastas Hoy</div>
               <div className="text-xl font-bold text-red-400">{fmt(totalGastos)}</div>
               {totalIngresos > 0 && (
-                <div className="text-[10px] text-gray-500">{pct((totalGastos / totalIngresos) * 100)} de ingresos</div>
+                <div className="text-[10px] text-ink-muted">{pct((totalGastos / totalIngresos) * 100)} de ingresos</div>
               )}
             </div>
             <div className="text-center">
@@ -1061,7 +1061,7 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
             <div className={`mt-2 rounded-xl p-3 text-center ${
               saldoConPlan >= 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-red-500/10 border border-red-500/20'
             }`}>
-              <div className="text-[10px] text-gray-400 uppercase">Saldo disponible con plan</div>
+              <div className="text-[10px] text-ink-faint uppercase">Saldo disponible con plan</div>
               <div className={`text-lg font-bold ${saldoConPlan >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                 {fmt(saldoConPlan)}
               </div>
@@ -1105,8 +1105,8 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
                   return (
                     <div key={cat.nombre} className="flex items-center gap-2 text-xs">
                       <span>{cat.nombre.split(' ')[0]}</span>
-                      <span className="text-gray-400 line-through">{fmt(cat.total)}</span>
-                      <ArrowRight className="w-3 h-3 text-gray-500" />
+                      <span className="text-ink-faint line-through">{fmt(cat.total)}</span>
+                      <ArrowRight className="w-3 h-3 text-ink-muted" />
                       <span className="text-emerald-400 font-semibold">{fmt(pres)}</span>
                     </div>
                   );
@@ -1120,18 +1120,18 @@ function PasoGuardar({ motor, presupuestosEditados, retosAceptados }) {
 
       {/* Proyección */}
       {reduccionGasto > 0 && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+        <div className="bg-canvas-surface/5 border border-white/10 rounded-2xl p-4">
           <h4 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-purple-400" />
             Impacto a Futuro
           </h4>
           <div className="grid grid-cols-3 gap-2">
-            <div className="bg-white/5 rounded-lg p-2 text-center">
-              <div className="text-[9px] text-gray-400 uppercase">1 Mes</div>
+            <div className="bg-canvas-surface/5 rounded-lg p-2 text-center">
+              <div className="text-[9px] text-ink-faint uppercase">1 Mes</div>
               <div className="text-sm font-bold text-emerald-400">{fmt(reduccionGasto)}</div>
             </div>
-            <div className="bg-white/5 rounded-lg p-2 text-center">
-              <div className="text-[9px] text-gray-400 uppercase">6 Meses</div>
+            <div className="bg-canvas-surface/5 rounded-lg p-2 text-center">
+              <div className="text-[9px] text-ink-faint uppercase">6 Meses</div>
               <div className="text-sm font-bold text-blue-400">{fmt(reduccionGasto * 6)}</div>
             </div>
             <div className="bg-emerald-500/10 rounded-lg p-2 text-center">
@@ -1160,7 +1160,7 @@ function RetoCard({ reto, aceptado, onToggle }) {
 
   return (
     <div className={`rounded-2xl border-2 overflow-hidden transition-all ${
-      aceptado ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/5 border-white/10'
+      aceptado ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-canvas-surface/5 border-white/10'
     }`}>
       <div className="p-4">
         <div className="flex items-start gap-3">
@@ -1171,7 +1171,7 @@ function RetoCard({ reto, aceptado, onToggle }) {
               <span className={`text-[9px] px-2 py-0.5 rounded-full border ${dificultadColors[reto.dificultad]}`}>{reto.dificultad}</span>
             </div>
             <p className="text-gray-300 text-xs mb-2">{reto.descripcion}</p>
-            <div className="bg-white/10 rounded-lg p-2 mb-2">
+            <div className="bg-canvas-surface/10 rounded-lg p-2 mb-2">
               <p className="text-white text-xs font-semibold flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-orange-400" />
                 {reto.meta}
@@ -1200,7 +1200,7 @@ function RetoCard({ reto, aceptado, onToggle }) {
         </div>
       </div>
       <button onClick={onToggle} className={`w-full py-2.5 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-        aceptado ? 'bg-emerald-600/50 text-white hover:bg-emerald-600/40' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+        aceptado ? 'bg-emerald-600/50 text-white hover:bg-emerald-600/40' : 'bg-canvas-surface/5 text-gray-300 hover:bg-canvas-surface/10'
       }`}>
         {aceptado ? (<><CheckCircle2 className="w-4 h-4" /> Reto Aceptado ✓</>) : (<><Play className="w-4 h-4" /> Aceptar Reto</>)}
       </button>
@@ -1217,10 +1217,10 @@ function DistBar({ label, monto, total, color, esCritico }) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-400">{label}</span>
+        <span className="text-ink-faint">{label}</span>
         <span className={`${esCritico ? 'text-red-400' : 'text-white'} font-semibold`}>{fmt(monto)} ({pct(pctVal)})</span>
       </div>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-2 bg-canvas-surface/10 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${esCritico ? 'bg-red-500' : color}`} style={{ width: `${Math.min(100, pctVal)}%` }} />
       </div>
     </div>
@@ -1238,16 +1238,16 @@ function ReglaBar({ label, emoji, ideal, real, total, color, idealPct }) {
         <div className="flex items-center gap-1.5">
           <span className="text-sm">{emoji}</span>
           <span className="text-white text-xs font-semibold">{label}</span>
-          <span className="text-[10px] text-gray-500">({idealPct})</span>
+          <span className="text-[10px] text-ink-muted">({idealPct})</span>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-bold ${excede ? 'text-red-400' : 'text-white'}`}>{fmt(real)}</span>
-          <span className="text-gray-500 text-[10px]">/ {fmt(ideal)}</span>
+          <span className="text-ink-muted text-[10px]">/ {fmt(ideal)}</span>
         </div>
       </div>
-      <div className="h-2.5 bg-white/10 rounded-full overflow-hidden relative">
+      <div className="h-2.5 bg-canvas-surface/10 rounded-full overflow-hidden relative">
         <div className={`h-full rounded-full transition-all ${excede ? 'bg-red-500' : color}`} style={{ width: `${Math.min(100, realPct)}%` }} />
-        <div className="absolute top-0 h-full w-0.5 bg-white/50" style={{ left: `${idealPctNum}%` }} />
+        <div className="absolute top-0 h-full w-0.5 bg-canvas-surface/50" style={{ left: `${idealPctNum}%` }} />
       </div>
     </div>
   );
@@ -1283,11 +1283,11 @@ function ConfirmacionGuardado({ motor, retosAceptados, onConfirmar, onCancelar }
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder={`Plan ${mesActual} ${new Date().getFullYear()}`}
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-emerald-400 text-sm"
+            className="w-full bg-canvas-surface/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-emerald-400 text-sm"
             autoFocus
           />
         </div>
-        <div className="bg-white/10 rounded-xl p-3 mb-5">
+        <div className="bg-canvas-surface/10 rounded-xl p-3 mb-5">
           <div className="flex items-center gap-2 text-xs text-emerald-200">
             <CheckCircle2 className="w-4 h-4" />
             <span>{motor.categorias.length} categorías presupuestadas</span>
@@ -1300,10 +1300,10 @@ function ConfirmacionGuardado({ motor, retosAceptados, onConfirmar, onCancelar }
           )}
         </div>
         <div className="flex gap-3">
-          <button onClick={onCancelar} className="flex-1 bg-white/10 text-white py-3 rounded-xl font-semibold text-sm hover:bg-white/20 transition">
+          <button onClick={onCancelar} className="flex-1 bg-canvas-surface/10 text-white py-3 rounded-xl font-semibold text-sm hover:bg-canvas-surface/20 transition">
             Cancelar
           </button>
-          <button onClick={handleGuardar} disabled={guardando} className="flex-1 bg-white text-emerald-900 py-3 rounded-xl font-bold text-sm hover:bg-white/90 disabled:opacity-50 transition flex items-center justify-center gap-2">
+          <button onClick={handleGuardar} disabled={guardando} className="flex-1 bg-canvas-surface text-emerald-900 py-3 rounded-xl font-bold text-sm hover:bg-canvas-surface disabled:opacity-50 transition flex items-center justify-center gap-2">
             {guardando ? (
               <><div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" /> Guardando</>
             ) : (

@@ -85,7 +85,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
     formData.frecuencia === 'Quincenal' ? monto * 2 :
     formData.frecuencia === 'Mensual'   ? monto      : null
 
-  const inputCls = 'w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/30 placeholder-gray-600 transition-colors'
+  const inputCls = 'w-full bg-canvas-surface/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/30 placeholder-gray-600 transition-colors'
 
   return (
     <div className="flex flex-col">
@@ -97,24 +97,24 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
             {ingresoInicial ? 'Editar ingreso' : 'Nuevo ingreso'}
           </h2>
           {ingresoInicial && (
-            <p className="text-xs text-gray-500 mt-0.5">{ingresoInicial.fuente}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{ingresoInicial.fuente}</p>
           )}
         </div>
         <button
           onClick={onClose}
-          className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+          className="md:hidden p-2 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] rounded-xl text-ink-faint hover:text-white transition-colors touch-manipulation"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* ── MONTO (prominente) ── */}
-      <div className="px-5 py-5 border-y border-white/[0.06] bg-white/[0.015]">
-        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+      <div className="px-5 py-5 border-y border-white/[0.06] bg-canvas-surface/[0.015]">
+        <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
           Monto *
         </p>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-light text-gray-500">$</span>
+          <span className="text-3xl font-light text-ink-muted">$</span>
           <input
             type="number"
             inputMode="decimal"
@@ -148,7 +148,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
 
         {/* FUENTE */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Fuente *
           </p>
           <input
@@ -165,13 +165,13 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
         {/* FRECUENCIA — pill row */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest">
               Frecuencia
             </p>
             <button
               type="button"
               onClick={() => setShowFreqInfo(v => !v)}
-              className="text-gray-600 hover:text-gray-400 transition-colors"
+              className="text-ink-muted hover:text-ink-faint transition-colors"
             >
               <Info className="w-3.5 h-3.5" />
             </button>
@@ -193,7 +193,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
                 className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
                   formData.frecuencia === f.value
                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                    : 'bg-white/[0.04] border-white/[0.07] text-gray-500 hover:text-gray-300'
+                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-muted hover:text-gray-300'
                 }`}
               >
                 <span className="text-base leading-none">{f.icon}</span>
@@ -205,7 +205,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
 
         {/* CUENTA BANCARIA */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Cuenta destino
           </p>
           <select
@@ -226,7 +226,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
 
         {/* FECHA */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Fecha
           </p>
           <input
@@ -241,7 +241,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
 
         {/* DESCRIPCIÓN */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Notas (opcional)
           </p>
           <textarea
@@ -266,7 +266,7 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
           </button>

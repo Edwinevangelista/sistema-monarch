@@ -35,9 +35,9 @@ export default function ModalDetallesCategorias({
           exit={{ opacity: 0, scale: 0.9 }}
           className="bg-gray-900 rounded-3xl max-w-sm w-full p-8 text-center border border-white/10 shadow-2xl"
         >
-          <PieChart className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+          <PieChart className="w-12 h-12 text-ink-muted mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Sin Datos</h2>
-          <p className="text-gray-400">No hay gastos registrados para mostrar detalles.</p>
+          <p className="text-ink-faint">No hay gastos registrados para mostrar detalles.</p>
           <button
             onClick={onClose}
             className="mt-6 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors"
@@ -80,7 +80,7 @@ export default function ModalDetallesCategorias({
               </div>
               <button 
                 onClick={onClose}
-                className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-indigo-300 hover:text-white transition-colors"
+                className="p-2 bg-canvas-surface/10 hover:bg-canvas-surface/20 rounded-full text-indigo-300 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5 md:w-6 md:h-6" />
               </button>
@@ -90,7 +90,7 @@ export default function ModalDetallesCategorias({
           {/* Resumen Total (Sticky Top) */}
           <div className="p-4 md:p-6 bg-gray-800/30 border-b border-white/5 shrink-0 z-10">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400 text-sm md:text-base">Total del periodo:</span>
+              <span className="text-ink-faint text-sm md:text-base">Total del periodo:</span>
               <span className="text-2xl md:text-3xl font-bold text-emerald-400">
                 ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
@@ -118,7 +118,7 @@ export default function ModalDetallesCategorias({
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="bg-white/5 border border-white/5 rounded-2xl p-3 md:p-5 hover:bg-white/10 transition-colors"
+                    className="bg-canvas-surface/5 border border-white/5 rounded-2xl p-3 md:p-5 hover:bg-canvas-surface/10 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3 min-w-0">
@@ -133,7 +133,7 @@ export default function ModalDetallesCategorias({
                         <span className={`font-bold ${textColor}`}>
                           ${item.monto.toLocaleString()}
                         </span>
-                        <span className="text-gray-500 text-xs">
+                        <span className="text-ink-muted text-xs">
                           ({percentage.toFixed(1)}%)
                         </span>
                       </div>
@@ -158,7 +158,7 @@ export default function ModalDetallesCategorias({
           <div className="md:hidden p-4 border-t border-white/5 bg-gray-900/50 shrink-0">
              <button
                onClick={onClose}
-               className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-semibold transition-colors border border-white/10"
+               className="w-full py-3.5 bg-canvas-surface/5 hover:bg-canvas-surface/10 text-white rounded-xl font-semibold transition-colors border border-white/10"
              >
                Cerrar
              </button>

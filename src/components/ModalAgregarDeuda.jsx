@@ -94,7 +94,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
     }
   }
 
-  const inputCls = 'w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500/30 placeholder-gray-600 transition-colors'
+  const inputCls = 'w-full bg-canvas-surface/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500/30 placeholder-gray-600 transition-colors'
   const selectCls = inputCls
 
   const saldoNum = parseFloat(formData.saldo) || 0
@@ -114,12 +114,12 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
             {esEdicion ? 'Editar tarjeta / deuda' : 'Nueva tarjeta / deuda'}
           </h2>
           {esEdicion && (
-            <p className="text-xs text-gray-500 mt-0.5">{deudaInicial.cuenta}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{deudaInicial.cuenta}</p>
           )}
         </div>
         <button
           onClick={onClose}
-          className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+          className="md:hidden p-2 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] rounded-xl text-ink-faint hover:text-white transition-colors touch-manipulation"
         >
           <X className="w-4 h-4" />
         </button>
@@ -130,7 +130,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
 
         {/* NOMBRE */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Nombre de la tarjeta / cuenta *
           </p>
           <input
@@ -146,7 +146,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
 
         {/* TIPO — pills */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Tipo de deuda
           </p>
           <div className="flex flex-wrap gap-2">
@@ -158,7 +158,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation active:scale-95 ${
                   formData.tipo === t.value
                     ? 'bg-rose-500/20 border-rose-500/35 text-rose-200'
-                    : 'bg-white/[0.04] border-white/[0.07] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08]'
+                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-faint hover:text-gray-200 hover:bg-canvas-surface/[0.08]'
                 }`}
               >
                 <span>{t.icon}</span>
@@ -171,7 +171,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
         {/* SALDO y APR */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               <DollarSign className="w-3 h-3 inline mr-0.5" />Saldo actual *
             </p>
             <input
@@ -186,7 +186,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
             />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               <Percent className="w-3 h-3 inline mr-0.5" />APR anual
             </p>
             <input
@@ -206,7 +206,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
         {formData.tipo === 'Tarjeta' && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 <Shield className="w-3 h-3 inline mr-0.5" />Límite de crédito
               </p>
               <input
@@ -221,7 +221,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
               />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 Días de gracia
               </p>
               <input
@@ -241,7 +241,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
         {/* PAGO MÍNIMO y FECHA DE CORTE */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               Pago mínimo
               {saldoNum && aprNum && !formData.pago_minimo
                 ? <span className="ml-1 text-sky-400 normal-case font-normal">(auto)</span>
@@ -260,7 +260,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
             />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               <Calendar className="w-3 h-3 inline mr-0.5" />Fecha de corte
             </p>
             <input
@@ -276,7 +276,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
 
         {/* ESTADO */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Estado
           </p>
           <select
@@ -294,23 +294,23 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
 
         {/* PREVIEW CALCULADO */}
         {saldoNum > 0 && (
-          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 space-y-2.5">
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">
+          <div className="bg-canvas-surface/[0.03] border border-white/[0.07] rounded-2xl p-4 space-y-2.5">
+            <p className="text-[10px] font-semibold text-ink-muted uppercase tracking-widest mb-1">
               Cálculo automático
             </p>
             {interesMsg && (
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Interés mensual</span>
+                <span className="text-xs text-ink-faint">Interés mensual</span>
                 <span className="text-sm font-bold text-rose-400">${interesMsg} / mes</span>
               </div>
             )}
             <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-400">Pago mínimo calculado</span>
+              <span className="text-xs text-ink-faint">Pago mínimo calculado</span>
               <span className="text-sm font-bold text-sky-400">${pagoMinCalc.toFixed(2)}</span>
             </div>
             {usoCred !== null && (
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-400">Uso de crédito</span>
+                <span className="text-xs text-ink-faint">Uso de crédito</span>
                 <span className={`text-sm font-bold ${
                   usoCred < 30 ? 'text-emerald-400' : usoCred < 70 ? 'text-amber-400' : 'text-rose-400'
                 }`}>
@@ -332,7 +332,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
           </button>

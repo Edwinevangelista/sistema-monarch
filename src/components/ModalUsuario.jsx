@@ -615,10 +615,10 @@ export default function ModalUsuario({
               </div>
               <div>
                 <h2 className="text-xl md:text-2xl font-bold text-white">Mi Cuenta</h2>
-                <p className="text-xs text-gray-500 hidden md:block">{usuario.email}</p>
+                <p className="text-xs text-ink-muted hidden md:block">{usuario.email}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
+            <button onClick={onClose} className="p-2 bg-canvas-surface/5 hover:bg-canvas-surface/10 rounded-full text-ink-faint hover:text-white transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -632,7 +632,7 @@ export default function ModalUsuario({
                 className={`flex items-center gap-2 px-3 md:px-4 py-3 text-xs md:text-sm font-medium whitespace-nowrap border-b-2 transition-all ${
                   activeTab === tab.id 
                     ? 'border-blue-500 text-blue-400' 
-                    : 'border-transparent text-gray-400 hover:text-white'
+                    : 'border-transparent text-ink-faint hover:text-white'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -669,13 +669,13 @@ export default function ModalUsuario({
                         {usuario.nombre} {usuario.apellido}
                       </h3>
                       <div className="flex items-center gap-2 justify-center md:justify-start mt-2">
-                        <Mail className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                        <Mail className="w-4 h-4 md:w-5 md:h-5 text-ink-faint" />
                         <span className="text-gray-300 text-sm md:text-lg">{usuario.email}</span>
                         {usuario.email_confirmed && (
                           <CheckCircle2 className="w-4 h-4 text-green-400" title="Email verificado" />
                         )}
                       </div>
-                      <div className="text-gray-500 text-xs md:text-sm mt-1">
+                      <div className="text-ink-muted text-xs md:text-sm mt-1">
                         Miembro desde {new Date(usuario.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                       </div>
                     </div>
@@ -683,7 +683,7 @@ export default function ModalUsuario({
                     {!modoEdicion && (
                       <button
                         onClick={() => setModoEdicion(true)}
-                        className="mt-2 md:mt-0 px-4 md:px-6 py-2 md:py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-sm"
+                        className="mt-2 md:mt-0 px-4 md:px-6 py-2 md:py-3 bg-canvas-surface/10 hover:bg-canvas-surface/20 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-sm"
                       >
                         <Edit2 className="w-4 h-4 md:w-5 md:h-5" /> Editar
                       </button>
@@ -692,7 +692,7 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Información personal */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <div className="flex items-center justify-between mb-4 md:mb-6">
                     <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2">
                       <User className="w-4 h-4 md:w-5 md:h-5 text-blue-400" /> Información Personal
@@ -723,7 +723,7 @@ export default function ModalUsuario({
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-gray-400 mb-1 text-xs md:text-sm">Nombre</label>
+                          <label className="block text-ink-faint mb-1 text-xs md:text-sm">Nombre</label>
                           <input
                             type="text"
                             value={datosEdicion.nombre}
@@ -733,7 +733,7 @@ export default function ModalUsuario({
                           />
                         </div>
                         <div>
-                          <label className="block text-gray-400 mb-1 text-xs md:text-sm">Apellido</label>
+                          <label className="block text-ink-faint mb-1 text-xs md:text-sm">Apellido</label>
                           <input
                             type="text"
                             value={datosEdicion.apellido}
@@ -744,9 +744,9 @@ export default function ModalUsuario({
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 mb-1 text-xs md:text-sm">Teléfono</label>
+                        <label className="block text-ink-faint mb-1 text-xs md:text-sm">Teléfono</label>
                         <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-500 pointer-events-none" />
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-ink-muted pointer-events-none" />
                           <input
                             type="tel"
                             value={datosEdicion.telefono}
@@ -758,9 +758,9 @@ export default function ModalUsuario({
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 mb-1 text-xs md:text-sm">País</label>
+                        <label className="block text-ink-faint mb-1 text-xs md:text-sm">País</label>
                         <div className="relative">
-                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-500 pointer-events-none" />
+                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-ink-muted pointer-events-none" />
                           <select
                             value={datosEdicion.pais}
                             onChange={(e) => setDatosEdicion(prev => ({ ...prev, pais: e.target.value }))}
@@ -781,23 +781,23 @@ export default function ModalUsuario({
                   ) : (
                     <div className="space-y-3 md:space-y-4">
                       <div className="flex items-center justify-between text-xs md:text-sm">
-                        <span className="text-gray-500">Nombre completo</span>
+                        <span className="text-ink-muted">Nombre completo</span>
                         <span className="text-white font-medium">{usuario.nombre} {usuario.apellido}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs md:text-sm">
-                        <div className="flex items-center gap-2 text-gray-500">
+                        <div className="flex items-center gap-2 text-ink-muted">
                           <Phone className="w-4 h-4" /> Teléfono
                         </div>
                         <span className="text-white font-medium">{usuario.telefono || 'No especificado'}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs md:text-sm">
-                        <div className="flex items-center gap-2 text-gray-500">
+                        <div className="flex items-center gap-2 text-ink-muted">
                           <Globe className="w-4 h-4" /> País
                         </div>
                         <span className="text-white font-medium">{usuario.pais}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs md:text-sm">
-                        <div className="flex items-center gap-2 text-gray-500">
+                        <div className="flex items-center gap-2 text-ink-muted">
                           <History className="w-4 h-4" /> Último acceso
                         </div>
                         <span className="text-white font-medium">
@@ -821,21 +821,21 @@ export default function ModalUsuario({
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white">Tu cuenta está protegida</h3>
-                      <p className="text-sm text-gray-400">Mantén tus datos seguros con estas opciones</p>
+                      <p className="text-sm text-ink-faint">Mantén tus datos seguros con estas opciones</p>
                     </div>
                   </div>
                 </section>
 
                 {/* Cambiar contraseña */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Key className="w-5 h-5 text-yellow-400" /> Contraseña
                   </h3>
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-400 text-sm">Última actualización: Desconocida</p>
-                      <p className="text-gray-500 text-xs mt-1">Se recomienda cambiarla cada 90 días</p>
+                      <p className="text-ink-faint text-sm">Última actualización: Desconocida</p>
+                      <p className="text-ink-muted text-xs mt-1">Se recomienda cambiarla cada 90 días</p>
                     </div>
                     <button
                       onClick={() => setShowPasswordModal(true)}
@@ -847,15 +847,15 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Autenticación de dos factores */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Fingerprint className="w-5 h-5 text-purple-400" /> Autenticación de Dos Factores
                   </h3>
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-400 text-sm">Añade una capa extra de seguridad</p>
-                      <p className="text-gray-500 text-xs mt-1">Usa tu teléfono para verificar tu identidad</p>
+                      <p className="text-ink-faint text-sm">Añade una capa extra de seguridad</p>
+                      <p className="text-ink-muted text-xs mt-1">Usa tu teléfono para verificar tu identidad</p>
                     </div>
                     <button
                       className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 border border-purple-500/30 opacity-50 cursor-not-allowed"
@@ -867,7 +867,7 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Sesiones activas */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Smartphone className="w-5 h-5 text-blue-400" /> Sesiones Activas
                   </h3>
@@ -880,7 +880,7 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Sesión actual</p>
-                          <p className="text-gray-500 text-xs">{navigator.userAgent.includes('Mobile') ? 'Dispositivo móvil' : 'Navegador web'}</p>
+                          <p className="text-ink-muted text-xs">{navigator.userAgent.includes('Mobile') ? 'Dispositivo móvil' : 'Navegador web'}</p>
                         </div>
                       </div>
                       <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full">Activa</span>
@@ -901,13 +901,13 @@ export default function ModalUsuario({
             {activeTab === 'preferencias' && (
               <>
                 {/* Preferencias financieras */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <DollarSign className="w-5 h-5 text-emerald-400" /> Preferencias Financieras
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-500 mb-2 text-xs">Moneda</label>
+                      <label className="block text-ink-muted mb-2 text-xs">Moneda</label>
                       <select
                         value={preferencias.moneda}
                         onChange={(e) => setPreferencias(prev => ({ ...prev, moneda: e.target.value }))}
@@ -922,7 +922,7 @@ export default function ModalUsuario({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-gray-500 mb-2 text-xs">Objetivo principal</label>
+                      <label className="block text-ink-muted mb-2 text-xs">Objetivo principal</label>
                       <select
                         value={preferencias.objetivo}
                         onChange={(e) => setPreferencias(prev => ({ ...prev, objetivo: e.target.value }))}
@@ -938,7 +938,7 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Notificaciones */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-blue-500/20">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-blue-500/20">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Bell className="w-5 h-5 text-blue-400" /> Notificaciones
                   </h3>
@@ -951,7 +951,7 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Notificaciones Push</p>
-                          <p className="text-gray-500 text-xs">{pushEnabled ? 'Activadas - Se reactivarán automáticamente' : 'Desactivadas'}</p>
+                          <p className="text-ink-muted text-xs">{pushEnabled ? 'Activadas - Se reactivarán automáticamente' : 'Desactivadas'}</p>
                         </div>
                       </div>
                       
@@ -1004,7 +1004,7 @@ export default function ModalUsuario({
                             <p className="text-[10px] opacity-80">{item.desc}</p>
                           </div>
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${prefsNotificaciones[item.key] ? 'bg-green-500/20 text-green-400' : 'bg-gray-600 text-gray-400'}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${prefsNotificaciones[item.key] ? 'bg-green-500/20 text-green-400' : 'bg-gray-600 text-ink-faint'}`}>
                           {prefsNotificaciones[item.key] ? 'ON' : 'OFF'}
                         </span>
                       </button>
@@ -1013,14 +1013,14 @@ export default function ModalUsuario({
                 </section>
 
                 {/* IA */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Brain className="w-5 h-5 text-purple-400" /> Inteligencia Artificial
                   </h3>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-400 text-sm">IA financiera activa</p>
-                      <p className="text-gray-500 text-xs mt-1">Análisis y recomendaciones personalizadas</p>
+                      <p className="text-ink-faint text-sm">IA financiera activa</p>
+                      <p className="text-ink-muted text-xs mt-1">Análisis y recomendaciones personalizadas</p>
                     </div>
                     <button
                       onClick={() => setPreferencias(prev => ({ ...prev, iaActiva: !prev.iaActiva }))}
@@ -1029,7 +1029,7 @@ export default function ModalUsuario({
                       }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        className={`inline-block h-4 w-4 transform rounded-full bg-canvas-surface transition-transform ${
                           preferencias.iaActiva ? 'translate-x-6' : 'translate-x-1'
                         }`}
                       />
@@ -1052,11 +1052,11 @@ export default function ModalUsuario({
             {activeTab === 'privacidad' && (
               <>
                 {/* Exportar datos */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Download className="w-5 h-5 text-blue-400" /> Exportar mis datos
                   </h3>
-                  <p className="text-gray-400 text-sm mb-4">
+                  <p className="text-ink-faint text-sm mb-4">
                     Descarga una copia de todos tus datos almacenados en la aplicación en formato JSON.
                   </p>
                   <button
@@ -1074,7 +1074,7 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Privacidad de datos */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Lock className="w-5 h-5 text-green-400" /> Privacidad de datos
                   </h3>
@@ -1083,7 +1083,7 @@ export default function ModalUsuario({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-300 text-sm">Compartir estadísticas anónimas</p>
-                        <p className="text-gray-500 text-xs">Ayuda a mejorar la app</p>
+                        <p className="text-ink-muted text-xs">Ayuda a mejorar la app</p>
                       </div>
                       <button
                         onClick={() => setPreferencias(prev => ({ 
@@ -1094,7 +1094,7 @@ export default function ModalUsuario({
                           preferencias.privacidad?.compartirEstadisticas ? 'bg-green-500' : 'bg-gray-600'
                         }`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-canvas-surface transition-transform ${
                           preferencias.privacidad?.compartirEstadisticas ? 'translate-x-6' : 'translate-x-1'
                         }`} />
                       </button>
@@ -1103,9 +1103,9 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Términos y políticas */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
-                    <FileText className="w-5 h-5 text-gray-400" /> Legal
+                    <FileText className="w-5 h-5 text-ink-faint" /> Legal
                   </h3>
                   
                   <div className="space-y-2">
@@ -1114,14 +1114,14 @@ export default function ModalUsuario({
                       className="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors"
                     >
                       <span className="text-gray-300 text-sm">Términos de servicio</span>
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                      <ChevronRight className="w-4 h-4 text-ink-muted" />
                     </button>
                     <button
                       onClick={() => setShowPrivacyModal(true)}
                       className="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors"
                     >
                       <span className="text-gray-300 text-sm">Política de privacidad</span>
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                      <ChevronRight className="w-4 h-4 text-ink-muted" />
                     </button>
                   </div>
                 </section>
@@ -1131,7 +1131,7 @@ export default function ModalUsuario({
                   <h3 className="text-red-400 text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <Trash2 className="w-5 h-5" /> Zona de peligro
                   </h3>
-                  <p className="text-gray-400 text-sm mb-4">
+                  <p className="text-ink-faint text-sm mb-4">
                     Una vez que elimines tu cuenta, no hay vuelta atrás. Se borrarán todos tus datos permanentemente.
                   </p>
                   <button
@@ -1148,7 +1148,7 @@ export default function ModalUsuario({
             {activeTab === 'ayuda' && (
               <>
                 {/* Centro de ayuda */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
                     <HelpCircle className="w-5 h-5 text-blue-400" /> Centro de Ayuda
                   </h3>
@@ -1164,10 +1164,10 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Preguntas frecuentes</p>
-                          <p className="text-gray-500 text-xs">Respuestas a dudas comunes</p>
+                          <p className="text-ink-muted text-xs">Respuestas a dudas comunes</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                      <ChevronRight className="w-5 h-5 text-ink-muted" />
                     </button>
 
                     <button
@@ -1180,10 +1180,10 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Contactar soporte</p>
-                          <p className="text-gray-500 text-xs">Envía un mensaje a soporte</p>
+                          <p className="text-ink-muted text-xs">Envía un mensaje a soporte</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                      <ChevronRight className="w-5 h-5 text-ink-muted" />
                     </button>
 
                     {/* Volver a ver la guía de inicio */}
@@ -1201,10 +1201,10 @@ export default function ModalUsuario({
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">Ver guía de inicio</p>
-                          <p className="text-gray-500 text-xs">Vuelve a ver los primeros pasos</p>
+                          <p className="text-ink-muted text-xs">Vuelve a ver los primeros pasos</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                      <ChevronRight className="w-5 h-5 text-ink-muted" />
                     </button>
                   </div>
                 </section>
@@ -1217,7 +1217,7 @@ export default function ModalUsuario({
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-white">¿Te gusta FinGuide?</h3>
-                      <p className="text-sm text-gray-400">Déjanos una reseña en la tienda</p>
+                      <p className="text-sm text-ink-faint">Déjanos una reseña en la tienda</p>
                     </div>
                     <button 
                       onClick={() => toast.success('🌟 ¡Gracias por tu apoyo!')}
@@ -1229,22 +1229,22 @@ export default function ModalUsuario({
                 </section>
 
                 {/* Información de la app */}
-                <section className="bg-white/5 rounded-2xl p-4 md:p-6 border border-white/10">
+                <section className="bg-canvas-surface/5 rounded-2xl p-4 md:p-6 border border-white/10">
                   <h3 className="text-white text-base md:text-lg font-bold flex items-center gap-2 mb-4">
-                    <Info className="w-5 h-5 text-gray-400" /> Información de la App
+                    <Info className="w-5 h-5 text-ink-faint" /> Información de la App
                   </h3>
                   
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Versión</span>
+                      <span className="text-ink-muted">Versión</span>
                       <span className="text-white font-medium">2.0.0</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Última actualización</span>
+                      <span className="text-ink-muted">Última actualización</span>
                       <span className="text-white font-medium">Enero 2026</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Desarrollado por</span>
+                      <span className="text-ink-muted">Desarrollado por</span>
                       <span className="text-white font-medium">FinGuide Team</span>
                     </div>
                   </div>
@@ -1280,16 +1280,16 @@ export default function ModalUsuario({
                     setShowPasswordModal(false); 
                     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 }} 
-                className="p-2 hover:bg-white/10 rounded-full"
+                className="p-2 hover:bg-canvas-surface/10 rounded-full"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-ink-faint" />
               </button>
             </div>
 
             <div className="space-y-4">
               {/* Nueva contraseña */}
               <div>
-                <label className="block text-gray-400 mb-2 text-sm">Nueva contraseña</label>
+                <label className="block text-ink-faint mb-2 text-sm">Nueva contraseña</label>
                 <div className="relative">
                   <input
                     type={showPasswords.new ? 'text' : 'password'}
@@ -1301,7 +1301,7 @@ export default function ModalUsuario({
                   <button
                     type="button"
                     onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-faint hover:text-white"
                   >
                     {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -1329,7 +1329,7 @@ export default function ModalUsuario({
 
               {/* Confirmar contraseña */}
               <div>
-                <label className="block text-gray-400 mb-2 text-sm">Confirmar contraseña</label>
+                <label className="block text-ink-faint mb-2 text-sm">Confirmar contraseña</label>
                 <div className="relative">
                   <input
                     type={showPasswords.confirm ? 'text' : 'password'}
@@ -1345,7 +1345,7 @@ export default function ModalUsuario({
                   <button
                     type="button"
                     onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-faint hover:text-white"
                   >
                     {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -1365,7 +1365,7 @@ export default function ModalUsuario({
               {/* Tips */}
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
                 <p className="text-blue-400 text-xs font-medium mb-2">💡 Tips para una contraseña segura:</p>
-                <ul className="text-gray-400 text-xs space-y-1">
+                <ul className="text-ink-faint text-xs space-y-1">
                   <li className={passwordData.newPassword.length >= 8 ? 'text-green-400' : ''}>• Mínimo 8 caracteres</li>
                   <li className={/[a-z]/.test(passwordData.newPassword) && /[A-Z]/.test(passwordData.newPassword) ? 'text-green-400' : ''}>• Combina mayúsculas y minúsculas</li>
                   <li className={/\d/.test(passwordData.newPassword) ? 'text-green-400' : ''}>• Incluye números</li>
@@ -1376,7 +1376,7 @@ export default function ModalUsuario({
               <button
                 onClick={handleCambiarPassword}
                 disabled={changingPassword || passwordStrength < 50 || passwordData.newPassword !== passwordData.confirmPassword}
-                className="w-full py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:text-ink-muted text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
               >
                 {changingPassword ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -1399,7 +1399,7 @@ export default function ModalUsuario({
                 <AlertTriangle className="w-8 h-8 text-red-400" />
               </div>
               <h3 className="text-xl font-bold text-white">¿Eliminar tu cuenta?</h3>
-              <p className="text-gray-400 text-sm mt-2">
+              <p className="text-ink-faint text-sm mt-2">
                 Esta acción es permanente y no se puede deshacer. Se eliminarán todos tus datos, incluyendo:
               </p>
             </div>
@@ -1420,7 +1420,7 @@ export default function ModalUsuario({
             </ul>
 
             <div className="mb-6">
-              <label className="block text-gray-400 mb-2 text-sm">
+              <label className="block text-ink-faint mb-2 text-sm">
                 Escribe <span className="text-red-400 font-bold">ELIMINAR</span> para confirmar:
               </label>
               <input
@@ -1445,7 +1445,7 @@ export default function ModalUsuario({
               <button
                 onClick={handleEliminarCuenta}
                 disabled={deletingAccount || deleteConfirmText !== 'ELIMINAR'}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-ink-muted text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
               >
                 {deletingAccount ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

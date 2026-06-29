@@ -166,7 +166,7 @@ export default function ModalGastos({
   const accountVal = formData.deuda_id || formData.cuenta_id || ''
   const isVar = tipoGasto === 'variable'
 
-  const inputCls = `w-full bg-white/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 placeholder-gray-600 transition-colors ${
+  const inputCls = `w-full bg-canvas-surface/[0.05] text-white px-4 py-3 rounded-2xl border border-white/[0.08] focus:outline-none focus:ring-2 placeholder-gray-600 transition-colors ${
     isVar
       ? 'focus:ring-rose-500/40 focus:border-rose-500/30'
       : 'focus:ring-amber-500/40 focus:border-amber-500/30'
@@ -183,21 +183,21 @@ export default function ModalGastos({
               {gastoInicial ? 'Editar gasto' : 'Nuevo gasto'}
             </h2>
             {gastoInicial && (
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-ink-muted mt-0.5">
                 {gastoInicial.nombre || gastoInicial.descripcion}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="md:hidden p-2 bg-white/[0.06] hover:bg-white/[0.10] rounded-xl text-gray-400 hover:text-white transition-colors touch-manipulation"
+            className="md:hidden p-2 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] rounded-xl text-ink-faint hover:text-white transition-colors touch-manipulation"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Type toggle */}
-        <div className="flex gap-1.5 p-1 bg-white/[0.03] rounded-2xl border border-white/[0.06]">
+        <div className="flex gap-1.5 p-1 bg-canvas-surface/[0.03] rounded-2xl border border-white/[0.06]">
           {[
             { id: 'variable', emoji: '🛒', label: 'Variable' },
             { id: 'fijo',     emoji: '📅', label: 'Fijo mensual' },
@@ -211,7 +211,7 @@ export default function ModalGastos({
                   ? t.id === 'variable'
                     ? 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
                     : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
-                  : 'text-gray-500 border border-transparent hover:text-gray-300'
+                  : 'text-ink-muted border border-transparent hover:text-gray-300'
               }`}
             >
               <span>{t.emoji}</span>
@@ -222,12 +222,12 @@ export default function ModalGastos({
       </div>
 
       {/* ── MONTO (prominente) ── */}
-      <div className="px-5 py-5 border-y border-white/[0.06] bg-white/[0.015]">
-        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+      <div className="px-5 py-5 border-y border-white/[0.06] bg-canvas-surface/[0.015]">
+        <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
           Monto *
         </p>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-light text-gray-500">$</span>
+          <span className="text-3xl font-light text-ink-muted">$</span>
           <input
             type="number"
             inputMode="decimal"
@@ -256,7 +256,7 @@ export default function ModalGastos({
         {/* FIJO — Nombre */}
         {tipoGasto === 'fijo' && (
           <div>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
               Nombre *
             </p>
             <input
@@ -273,7 +273,7 @@ export default function ModalGastos({
 
         {/* CATEGORÍA — chips */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Categoría *
           </p>
           <div className="flex flex-wrap gap-2">
@@ -290,7 +290,7 @@ export default function ModalGastos({
                       ? isVar
                         ? 'bg-rose-500/20 border-rose-500/35 text-rose-200'
                         : 'bg-amber-500/20 border-amber-500/35 text-amber-200'
-                      : 'bg-white/[0.04] border-white/[0.07] text-gray-400 hover:text-gray-200 hover:bg-white/[0.08]'
+                      : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-faint hover:text-gray-200 hover:bg-canvas-surface/[0.08]'
                   }`}
                 >
                   <span>{c.e}</span>
@@ -305,7 +305,7 @@ export default function ModalGastos({
         {tipoGasto === 'variable' && (
           <>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 Descripción
               </p>
               <input
@@ -319,7 +319,7 @@ export default function ModalGastos({
               />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 Fecha
               </p>
               <input
@@ -338,7 +338,7 @@ export default function ModalGastos({
         {tipoGasto === 'fijo' && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 Día de venc. *
               </p>
               <input
@@ -355,7 +355,7 @@ export default function ModalGastos({
               />
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
                 Estado
               </p>
               <div className="flex gap-2 h-[50px]">
@@ -372,7 +372,7 @@ export default function ModalGastos({
                         ? s.color === 'amber'
                           ? 'bg-amber-500/15 border-amber-500/25 text-amber-300'
                           : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'
-                        : 'bg-white/[0.04] border-white/[0.07] text-gray-500'
+                        : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-muted'
                     }`}
                   >
                     <span>{s.label}</span>
@@ -386,7 +386,7 @@ export default function ModalGastos({
 
         {/* CUENTA / TARJETA */}
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
             Cuenta de pago
           </p>
           <select
@@ -429,7 +429,7 @@ export default function ModalGastos({
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-3.5 bg-white/[0.06] hover:bg-white/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
           </button>

@@ -128,7 +128,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
         <div className="relative bg-gradient-to-br from-amber-600/30 to-orange-600/20 p-6 border-b border-white/5">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+            className="absolute top-4 right-4 p-2 text-ink-faint hover:text-white hover:bg-canvas-surface/10 rounded-xl transition-all"
           >
             <X className="w-5 h-5" />
           </button>
@@ -162,14 +162,14 @@ export default function ModalUpgrade({ isOpen, onClose }) {
 
         {/* Pricing + CTA */}
         <div className="px-6 pb-6 space-y-3">
-          <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+          <div className="bg-canvas-surface/5 rounded-2xl p-4 border border-white/10 flex items-center justify-between">
             <div>
               <p className="text-white font-bold text-lg">Premium Mensual</p>
-              <p className="text-gray-400 text-xs">Cancela cuando quieras · Sin cargos ocultos</p>
+              <p className="text-ink-faint text-xs">Cancela cuando quieras · Sin cargos ocultos</p>
             </div>
             <div className="text-right">
               <p className="text-white font-black text-2xl">$6.99</p>
-              <p className="text-gray-500 text-xs">/month</p>
+              <p className="text-ink-muted text-xs">/month</p>
             </div>
           </div>
 
@@ -191,7 +191,7 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             <button
               onClick={handleStartTrial}
               disabled={trialLoading}
-              className="w-full bg-white/5 hover:bg-white/10 disabled:opacity-60 text-gray-300 hover:text-white font-semibold py-3 rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
+              className="w-full bg-canvas-surface/5 hover:bg-canvas-surface/10 disabled:opacity-60 text-gray-300 hover:text-white font-semibold py-3 rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
             >
               {trialLoading ? (
                 <div className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
@@ -207,13 +207,13 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             <button
               onClick={handleRestore}
               disabled={checkoutLoading}
-              className="w-full text-gray-500 hover:text-gray-400 text-xs py-2 transition-all"
+              className="w-full text-ink-muted hover:text-ink-faint text-xs py-2 transition-all"
             >
               Restaurar compras
             </button>
           )}
 
-          <p className="text-center text-gray-600 text-xs">
+          <p className="text-center text-ink-muted text-xs">
             {isNative ? 'Pago procesado por Google Play' : 'Pago seguro a través de Stripe'}
           </p>
         </div>

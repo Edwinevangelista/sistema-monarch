@@ -199,7 +199,7 @@ export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado
                 <p className="text-green-200 text-xs md:text-sm">Alcanza tus metas financieras</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-colors">
+            <button onClick={onClose} className="p-2 bg-canvas-surface/5 hover:bg-canvas-surface/10 rounded-full text-white/70 hover:text-white transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -222,7 +222,7 @@ export default function SavingsPlannerModal({ kpis = {}, onClose, onPlanGuardado
           {/* ✅ FIX: Footer SIEMPRE visible con padding extra para safe area iOS */}
           <div className="p-4 pb-6 border-t border-white/10 bg-gray-900/90 backdrop-blur shrink-0 flex gap-3">
             {step > 1 && step < 4 && (
-              <button onClick={handleBack} className="flex-1 bg-white/5 hover:bg-white/10 active:bg-white/15 text-white py-3.5 rounded-xl font-bold transition">
+              <button onClick={handleBack} className="flex-1 bg-canvas-surface/5 hover:bg-canvas-surface/10 active:bg-canvas-surface/15 text-white py-3.5 rounded-xl font-bold transition">
                 Atrás
               </button>
             )}
@@ -305,7 +305,7 @@ function Step1TipoMeta({ config, setConfig }) {
     <div className="space-y-5 max-w-2xl mx-auto animate-in fade-in">
       <div className="text-center mb-4 md:mb-8">
         <h3 className="text-xl md:text-2xl font-bold text-white mb-2">¿Qué tipo de plan quieres crear?</h3>
-        <p className="text-gray-400 text-sm">Elige según tu objetivo de ahorro</p>
+        <p className="text-ink-faint text-sm">Elige según tu objetivo de ahorro</p>
       </div>
 
       {/* ✅ FIX: En móvil es columna, los cards son más compactos */}
@@ -319,15 +319,15 @@ function Step1TipoMeta({ config, setConfig }) {
               className={`p-4 md:p-6 rounded-2xl text-left transition-all border-2 ${
                 isSelected
                   ? 'bg-green-600/20 border-green-500 ring-2 ring-green-500/30'
-                  : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/30'
+                  : 'bg-canvas-surface/5 border-white/10 hover:bg-canvas-surface/10 hover:border-white/30'
               }`}
             >
-              <div className={`p-2.5 md:p-3 rounded-xl mb-3 md:mb-4 inline-block ${isSelected ? 'bg-white text-green-600' : 'bg-green-500/20 text-green-300'}`}>
+              <div className={`p-2.5 md:p-3 rounded-xl mb-3 md:mb-4 inline-block ${isSelected ? 'bg-canvas-surface text-green-600' : 'bg-green-500/20 text-green-300'}`}>
                 {tipo.icon}
               </div>
               <h4 className="text-white font-bold text-base md:text-lg mb-1 md:mb-2">{tipo.title}</h4>
               <p className="text-gray-300 text-sm mb-2 md:mb-3">{tipo.desc}</p>
-              <p className="text-gray-500 text-xs italic">{tipo.examples}</p>
+              <p className="text-ink-muted text-xs italic">{tipo.examples}</p>
             </button>
           );
         })}
@@ -343,7 +343,7 @@ function Step2Detalles({ config, setConfig, kpis }) {
     <div className="space-y-5 max-w-xl mx-auto animate-in fade-in">
       <div className="text-center mb-4 md:mb-6">
         <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Detalles de tu plan</h3>
-        <p className="text-gray-400 text-sm">Define los números principales</p>
+        <p className="text-ink-faint text-sm">Define los números principales</p>
       </div>
 
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 md:p-4">
@@ -351,8 +351,8 @@ function Step2Detalles({ config, setConfig, kpis }) {
           <TrendingUp className="w-4 h-4" />
           <span className="text-sm font-bold">Tu capacidad estimada de ahorro</span>
         </div>
-        <div className="text-white text-xl md:text-2xl font-bold">${capacidadEstimada.toLocaleString()}<span className="text-sm text-gray-400">/mes</span></div>
-        <p className="text-gray-400 text-xs mt-1">Basado en tu saldo disponible actual</p>
+        <div className="text-white text-xl md:text-2xl font-bold">${capacidadEstimada.toLocaleString()}<span className="text-sm text-ink-faint">/mes</span></div>
+        <p className="text-ink-faint text-xs mt-1">Basado en tu saldo disponible actual</p>
       </div>
 
       <div>
@@ -430,7 +430,7 @@ function Step3Opcionales({ config, setConfig }) {
     <div className="space-y-5 max-w-xl mx-auto animate-in fade-in">
       <div className="text-center mb-4 md:mb-6">
         <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Opciones avanzadas</h3>
-        <p className="text-gray-400 text-sm">Estas son opcionales pero ayudan a mejorar tu plan</p>
+        <p className="text-ink-faint text-sm">Estas son opcionales pero ayudan a mejorar tu plan</p>
       </div>
 
       <div>
@@ -443,7 +443,7 @@ function Step3Opcionales({ config, setConfig }) {
           placeholder="¿Ya tienes algo ahorrado?"
           className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 text-base"
         />
-        <p className="text-gray-500 text-xs mt-1">Ingresa $0 si empiezas desde cero</p>
+        <p className="text-ink-muted text-xs mt-1">Ingresa $0 si empiezas desde cero</p>
       </div>
 
       <div>
@@ -457,7 +457,7 @@ function Step3Opcionales({ config, setConfig }) {
           step="0.1"
           className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 text-base"
         />
-        <p className="text-gray-500 text-xs mt-1">Si vas a invertir tu ahorro, ingresa el rendimiento esperado</p>
+        <p className="text-ink-muted text-xs mt-1">Si vas a invertir tu ahorro, ingresa el rendimiento esperado</p>
       </div>
     </div>
   );
@@ -479,20 +479,20 @@ function Step4Resultado({ plan, onGuardar }) {
       {/* Métricas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <div className="bg-black/30 border border-white/10 rounded-xl p-3 md:p-4 text-center">
-          <div className="text-gray-400 text-[10px] md:text-xs uppercase font-bold mb-1">Meta</div>
+          <div className="text-ink-faint text-[10px] md:text-xs uppercase font-bold mb-1">Meta</div>
           <div className="text-white font-bold text-base md:text-xl">${montoObjetivo.toLocaleString()}</div>
         </div>
         <div className="bg-black/30 border border-white/10 rounded-xl p-3 md:p-4 text-center">
-          <div className="text-gray-400 text-[10px] md:text-xs uppercase font-bold mb-1">Plazo</div>
+          <div className="text-ink-faint text-[10px] md:text-xs uppercase font-bold mb-1">Plazo</div>
           <div className="text-white font-bold text-base md:text-xl">{plazoMeses}</div>
-          <div className="text-gray-500 text-[10px] md:text-xs">meses</div>
+          <div className="text-ink-muted text-[10px] md:text-xs">meses</div>
         </div>
         <div className="bg-black/30 border border-white/10 rounded-xl p-3 md:p-4 text-center">
-          <div className="text-gray-400 text-[10px] md:text-xs uppercase font-bold mb-1">Mensual</div>
+          <div className="text-ink-faint text-[10px] md:text-xs uppercase font-bold mb-1">Mensual</div>
           <div className="text-green-400 font-bold text-base md:text-xl">${ahorroMensual.toLocaleString()}</div>
         </div>
         <div className="bg-black/30 border border-white/10 rounded-xl p-3 md:p-4 text-center">
-          <div className="text-gray-400 text-[10px] md:text-xs uppercase font-bold mb-1">Intereses</div>
+          <div className="text-ink-faint text-[10px] md:text-xs uppercase font-bold mb-1">Intereses</div>
           <div className="text-white font-bold text-base md:text-xl">${Math.round(interesesGanados).toLocaleString()}</div>
         </div>
       </div>
@@ -510,7 +510,7 @@ function Step4Resultado({ plan, onGuardar }) {
                 rec.priority === 'critical' ? 'bg-red-500/10 border-red-500/20' :
                 rec.priority === 'high' ? 'bg-orange-500/10 border-orange-500/20' :
                 rec.priority === 'success' ? 'bg-green-500/10 border-green-500/20' :
-                'bg-white/5 border-white/10'
+                'bg-canvas-surface/5 border-white/10'
               }`}
             >
               <span className="text-xl md:text-2xl shrink-0">{rec.icon}</span>
@@ -555,18 +555,18 @@ function ConfirmModal({ onConfirmar, onCancelar }) {
       <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative overflow-hidden border border-white/20">
         <button 
           onClick={onCancelar}
-          className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
+          className="absolute top-4 right-4 p-2 bg-canvas-surface/10 hover:bg-canvas-surface/20 rounded-full text-white transition"
         >
           <X className="w-6 h-6" />
         </button>
         
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full border border-white/30 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-canvas-surface/20 rounded-full border border-white/30 mb-4">
             <span className="text-3xl md:text-4xl">💰</span>
           </div>
           <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Guardar Plan de Ahorro</h3>
           
-          <div className="bg-white/10 backdrop-blur rounded-xl p-3 md:p-4 mb-5 md:mb-6 border border-white/20">
+          <div className="bg-canvas-surface/10 backdrop-blur rounded-xl p-3 md:p-4 mb-5 md:mb-6 border border-white/20">
             <p className="text-white/90 text-sm leading-relaxed">
               Este plan se guardará en tu lista de planes activos. Podrás verlo y seguir tu progreso.
             </p>
@@ -579,7 +579,7 @@ function ConfirmModal({ onConfirmar, onCancelar }) {
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder={`Ej: Plan de Ahorro ${new Date().getFullYear()}`}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-base"
+              className="w-full bg-canvas-surface/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-base"
               autoFocus
             />
           </div>
@@ -588,14 +588,14 @@ function ConfirmModal({ onConfirmar, onCancelar }) {
             <button
               onClick={onCancelar}
               disabled={guardando}
-              className="flex-1 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white py-3 rounded-xl font-bold transition disabled:opacity-50"
+              className="flex-1 bg-canvas-surface/10 hover:bg-canvas-surface/20 active:bg-canvas-surface/25 text-white py-3 rounded-xl font-bold transition disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               onClick={handleGuardar}
               disabled={guardando}
-              className="flex-1 bg-white text-green-900 py-3 rounded-xl font-bold hover:bg-white/90 active:bg-white/80 transition flex items-center justify-center gap-2"
+              className="flex-1 bg-canvas-surface text-green-900 py-3 rounded-xl font-bold hover:bg-canvas-surface active:bg-canvas-surface/80 transition flex items-center justify-center gap-2"
             >
               {guardando ? <span className="animate-spin">⏳</span> : <CheckCircle2 className="w-5 h-5" />}
               {guardando ? 'Guardando...' : 'Guardar'}
