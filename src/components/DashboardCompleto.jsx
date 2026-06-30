@@ -663,7 +663,11 @@ useEffect(() => {
       return
     }
     if (type === ITEM_TYPES.FIJO) {
-      await handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
+      try {
+        await handleGuardarGastoFijo({ ...item, estado: 'Pagado' })
+      } catch (e) {
+        return
+      }
       setItemSeleccionado(null)
       return
     }
@@ -758,6 +762,7 @@ useEffect(() => {
     } catch (e) {
       console.error('❌ Error al guardar ingreso:', e)
       toast.error('Error al guardar el ingreso: ' + e.message)
+      throw e
     }
   }
 
@@ -932,22 +937,32 @@ useEffect(() => {
       console.error('❌ Error al guardar gasto completo:', e)
       const msg = e?.message || e?.error?.message || JSON.stringify(e) || 'Error desconocido'
       toast.info('Error al guardar: ' + msg)
+      throw e
     }
   }
 
   const handleGuardarGastoFijo = async (data) => {
     try {
       let mostrarEnHistorial = false
-      
+
       if (data.id) {
         const { id, ...payload } = data
-        const resultado = await updateGastoFijo(id, payload)
+        let resultado = await updateGastoFijo(id, payload)
+        if (resultado?.success === false && payload.deuda_id !== undefined && resultado.error?.message?.includes('deuda_id')) {
+          const { deuda_id: _ignored, ...payloadFallback } = payload
+          resultado = await updateGastoFijo(id, payloadFallback)
+        }
         if (resultado && resultado.success === false) {
           throw new Error(resultado.error?.message || 'Error al actualizar el gasto fijo')
         }
         if (payload.estado === 'Pagado') mostrarEnHistorial = true
       } else {
-        const resultado = await addGastoFijo(data)
+        let resultado = await addGastoFijo(data)
+        // Si falló por columna deuda_id inexistente en la tabla, reintentar sin ella
+        if (resultado?.success === false && data.deuda_id && resultado.error?.message?.includes('deuda_id')) {
+          const { deuda_id: _ignored, ...dataFallback } = data
+          resultado = await addGastoFijo(dataFallback)
+        }
         if (resultado && resultado.success === false) {
           throw new Error(resultado.error?.message || 'Error al guardar el gasto fijo')
         }
@@ -990,6 +1005,7 @@ useEffect(() => {
     } catch (e) {
       console.error('Error al guardar gasto fijo:', e)
       toast.info('Error al guardar: ' + e.message)
+      throw e
     }
   }
 
@@ -1008,6 +1024,8 @@ useEffect(() => {
       setSuscripcionEditando(null)
     } catch (e) {
       console.error('Error al guardar suscripción:', e)
+      toast.error('Error al guardar la suscripción: ' + e.message)
+      throw e
     }
   }
 
