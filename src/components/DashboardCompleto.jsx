@@ -699,7 +699,10 @@ useEffect(() => {
       console.log('💾 Guardando ingreso:', data)
 
       if (data.id) {
-        await updateIngreso(data.id, data)
+        const resultadoUpdate = await updateIngreso(data.id, data)
+        if (resultadoUpdate && resultadoUpdate.success === false) {
+          throw new Error(resultadoUpdate.error?.message || 'Error al actualizar el ingreso')
+        }
         console.log('✅ Ingreso actualizado')
       } else {
         const resultado = await addIngreso(data)
@@ -835,7 +838,10 @@ useEffect(() => {
       }
 
       if (data.id) {
-        await updateGasto(data.id, data)
+        const resultadoUpdate = await updateGasto(data.id, data)
+        if (resultadoUpdate && resultadoUpdate.success === false) {
+          throw new Error(resultadoUpdate.error?.message || 'Error al actualizar el gasto')
+        }
         // ✅ Actualización optimista del estado instantáneo al editar
         setGastosInstant(prev => {
           const updated = prev.map(g => g.id === data.id ? { ...g, ...data } : g)
@@ -935,10 +941,16 @@ useEffect(() => {
       
       if (data.id) {
         const { id, ...payload } = data
-        await updateGastoFijo(id, payload)
+        const resultado = await updateGastoFijo(id, payload)
+        if (resultado && resultado.success === false) {
+          throw new Error(resultado.error?.message || 'Error al actualizar el gasto fijo')
+        }
         if (payload.estado === 'Pagado') mostrarEnHistorial = true
       } else {
-        await addGastoFijo(data)
+        const resultado = await addGastoFijo(data)
+        if (resultado && resultado.success === false) {
+          throw new Error(resultado.error?.message || 'Error al guardar el gasto fijo')
+        }
         if (data.estado === 'Pagado') mostrarEnHistorial = true
       }
       
@@ -983,10 +995,14 @@ useEffect(() => {
 
   const handleGuardarSuscripcion = async (data) => {
     try {
+      let resultado
       if (data.id) {
-        await updateSuscripcion(data.id, data)
+        resultado = await updateSuscripcion(data.id, data)
       } else {
-        await addSuscripcion(data)
+        resultado = await addSuscripcion(data)
+      }
+      if (resultado && resultado.success === false) {
+        throw new Error(resultado.error?.message || 'Error al guardar la suscripción')
       }
       setShowModal(null)
       setSuscripcionEditando(null)
