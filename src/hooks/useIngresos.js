@@ -20,21 +20,11 @@ export const useIngresos = (lazyLoad = false) => {
     ingresos: data,
     loading,
 
-    addIngreso: async (data) => {
-      const res = await addRecord(data);
-      return res ?? { success: true };
-    },
+    addIngreso: addRecord,
 
-    updateIngreso: async (id, data) => {
-      const res = await updateRecord(id, data);
-      return res ?? { success: true };
-    },
+    updateIngreso: updateRecord,
 
-    // ✅ NUEVA FUNCIÓN
-    deleteIngreso: async (id) => {
-      const res = await deleteRecord(id);
-      return res ?? { success: true };
-    },
+    deleteIngreso: deleteRecord,
 
     refresh,
     initialize,

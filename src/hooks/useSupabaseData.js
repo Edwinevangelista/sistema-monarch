@@ -139,13 +139,18 @@ export const useSupabaseData = (
         .select()
       
       if (insertError) throw insertError
-      
-      if (insertedData) {
-        const updatedData = [insertedData[0], ...data]
-        setData(updatedData)
-        saveToCache(updatedData)
-        return { success: true, data: insertedData }
+
+      // Si insertedData viene vacío (ej. una política de seguridad bloquea el
+      // select posterior al insert), no podemos confirmar que el registro
+      // realmente se guardó — no lo tratamos como éxito.
+      if (!insertedData || insertedData.length === 0) {
+        throw new Error('El registro no se confirmó al guardarse. Intenta de nuevo.')
       }
+
+      const updatedData = [insertedData[0], ...data]
+      setData(updatedData)
+      saveToCache(updatedData)
+      return { success: true, data: insertedData }
     } catch (err) {
       if (err?.code === '23505' && newRecord?.idempotency_key) {
         return { success: true, duplicate: true, data: [] }
