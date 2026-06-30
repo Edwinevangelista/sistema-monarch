@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
+// Caché en memoria compartido entre instancias del hook: cada modal que
+// abre useCuentasBancarias() reusa el mismo fetch reciente en vez de
+// volver a pedir la tabla completa a Supabase cada vez que se monta.
+const CACHE_TTL = 60 * 1000
+let cuentasCache = null
+let cuentasCacheTime = 0
+
 // ✅ FUNCIÓN PRINCIPAL (Exportación con Nombre para coincidir con import { })
 export function useCuentasBancarias() {
-  const [cuentas, setCuentas] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cacheIsFresh = Date.now() - cuentasCacheTime < CACHE_TTL
+  const [cuentas, setCuentas] = useState(cacheIsFresh ? cuentasCache : [])
+  const [loading, setLoading] = useState(!cacheIsFresh)
   const [error, setError] = useState(null)
 
   // Cargar cuentas
-  const fetchCuentas = async () => {
+  const fetchCuentas = async (forceRefresh = false) => {
+    if (!forceRefresh && Date.now() - cuentasCacheTime < CACHE_TTL && cuentasCache) {
+      setCuentas(cuentasCache)
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+
       if (!user) {
         setCuentas([])
         setLoading(false)
@@ -26,9 +41,10 @@ export function useCuentasBancarias() {
         .order('nombre', { ascending: true })
 
       if (error) throw error
-      
-      console.log('✅ Cuentas cargadas:', data)
-      setCuentas(data || [])
+
+      cuentasCache = data || []
+      cuentasCacheTime = Date.now()
+      setCuentas(cuentasCache)
     } catch (err) {
       console.error('❌ Error cargando cuentas:', err)
       setError(err)
@@ -40,7 +56,8 @@ export function useCuentasBancarias() {
   // Agregar cuenta
   const addCuenta = async (cuentaData) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) throw new Error('No autenticado')
 
       const { data, error } = await supabase
@@ -55,7 +72,7 @@ export function useCuentasBancarias() {
       if (error) throw error
       
       console.log('✅ Cuenta agregada:', data[0])
-      await fetchCuentas()
+      await fetchCuentas(true)
       return data[0]
     } catch (err) {
       console.error('❌ Error agregando cuenta:', err)
@@ -67,7 +84,8 @@ export function useCuentasBancarias() {
   const updateCuenta = async (id, cuentaData) => {
     try {
       console.log('🔄 Actualizando cuenta:', id, cuentaData)
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) throw new Error('No autenticado')
       
       const { data, error } = await supabase
@@ -91,7 +109,7 @@ export function useCuentasBancarias() {
       )
       
       // ✅ También refrescar desde BD para estar seguros
-      await fetchCuentas()
+      await fetchCuentas(true)
       
       return data[0]
     } catch (err) {
@@ -103,7 +121,8 @@ export function useCuentasBancarias() {
   // Eliminar cuenta
   const deleteCuenta = async (id) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
       if (!user) throw new Error('No autenticado')
 
       const { error } = await supabase
@@ -115,7 +134,7 @@ export function useCuentasBancarias() {
       if (error) throw error
       
       console.log('✅ Cuenta eliminada:', id)
-      await fetchCuentas()
+      await fetchCuentas(true)
     } catch (err) {
       console.error('❌ Error eliminando cuenta:', err)
       throw err

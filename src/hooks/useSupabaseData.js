@@ -27,11 +27,11 @@ export const useSupabaseData = (
   const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState(null)
 
-  // Función auxiliar REAL para obtener el usuario
+  // Lee la sesión ya guardada localmente (sin red) en vez de validar el token contra el servidor en cada llamada.
   const getCurrentUser = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) throw new Error("Usuario no autenticado");
-    return user;
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session?.user) throw new Error("Usuario no autenticado");
+    return session.user;
   };
 
   // Cargar desde caché
