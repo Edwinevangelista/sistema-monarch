@@ -16,6 +16,7 @@ import {
 
 export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount = 0, coberturaBadge = 0, nombreUsuario = 'Usuario', onLogout }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showAgregarMenu, setShowAgregarMenu] = useState(false);
 
   const handleOpenModal = (modalName) => {
     setShowMenu(false);
@@ -72,11 +73,13 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
 
           {/* FAB central — Agregar */}
           <button
-            onClick={() => handleOpenModal('gastos')}
+            onClick={() => { setShowMenu(false); setShowAgregarMenu(v => !v); }}
             className="flex flex-col items-center justify-center touch-manipulation -mt-5"
           >
-            <div className="w-13 h-13 w-[52px] h-[52px] bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
-              <Plus className="w-6 h-6 text-white/80" />
+            <div className={`w-13 h-13 w-[52px] h-[52px] border rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all ${
+              showAgregarMenu ? 'bg-white/20 border-white/30' : 'bg-white/10 hover:bg-white/15 border-white/20'
+            }`}>
+              <Plus className={`w-6 h-6 text-white/80 transition-transform ${showAgregarMenu ? 'rotate-45' : ''}`} />
             </div>
             <span className="text-[10px] font-medium text-white/30 mt-1">Agregar</span>
           </button>
@@ -92,7 +95,7 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
 
           {/* Más */}
           <button
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={() => { setShowAgregarMenu(false); setShowMenu(!showMenu); }}
             className={`flex flex-col items-center justify-center gap-0.5 transition-colors flex-1 py-2 touch-manipulation ${
               showMenu ? 'text-white/80' : 'text-white/30 hover:text-white/70'
             }`}
@@ -106,6 +109,37 @@ export default function MenuInferior({ onOpenModal, onOpenExport, alertasCount =
 
         </div>
       </div>
+
+      {/* ── MENÚ "AGREGAR" (Gasto / Ingreso) ── */}
+      {showAgregarMenu && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in duration-150"
+            onClick={() => setShowAgregarMenu(false)}
+          />
+          <div
+            className="md:hidden fixed left-3 right-3 z-50 bg-gray-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
+            style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+          >
+            <div className="p-3 flex gap-2">
+              <button
+                onClick={() => { setShowAgregarMenu(false); handleOpenModal('gastos'); }}
+                className="flex-1 flex flex-col items-center gap-2 p-4 bg-rose-500/10 hover:bg-rose-500/15 active:scale-95 rounded-2xl border border-rose-500/20 transition-all touch-manipulation"
+              >
+                <span className="text-2xl">💸</span>
+                <span className="text-sm font-bold text-rose-300">Gasto</span>
+              </button>
+              <button
+                onClick={() => { setShowAgregarMenu(false); handleOpenModal('ingreso'); }}
+                className="flex-1 flex flex-col items-center gap-2 p-4 bg-emerald-500/10 hover:bg-emerald-500/15 active:scale-95 rounded-2xl border border-emerald-500/20 transition-all touch-manipulation"
+              >
+                <span className="text-2xl">💰</span>
+                <span className="text-sm font-bold text-emerald-300">Ingreso</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── MENÚ EXPANDIDO ── */}
       {showMenu && (
