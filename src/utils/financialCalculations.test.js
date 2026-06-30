@@ -61,7 +61,7 @@ describe('calcularBalanceInteligente', () => {
     const resultado = calcularBalanceInteligente(
       [{ monto: 2000, fecha: '2026-02-01' }],
       [],
-      [{ monto: 300, dia_venc: 31, estado: 'Pendiente' }],
+      [{ monto: 300, dia_venc: 31, estado: 'Pendiente', auto_pago: 'Si' }],
       [],
       new Date(2026, 1, 28)
     )

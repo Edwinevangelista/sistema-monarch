@@ -88,66 +88,46 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
     })
     .reduce((sum, g) => sum + safeNumber(g.monto), 0)
   
-  // Gastos fijos que ya vencieron o fueron pagados este mes.
-  // No cuenta vencimientos futuros, para que el saldo real no se adelante.
+  // Gastos fijos: cuentan como gasto real solo si ya están marcados "Pagado",
+  // o si son de autopago y su día de vencimiento ya llegó/pasó este mes.
+  // No se adelantan gastos fijos manuales que aún no se han pagado.
+  const esGastoFijoAutomatico = (gf) => gf.auto_pago === 'Si' || gf.auto_pago === true
+  const gastoFijoYaCorresponde = (gf, hastaFecha) => {
+    if (gf.estado === 'Pagado') return true
+    if (!esGastoFijoAutomatico(gf) || !gf.dia_venc) return false
+    const vencimiento = dueDateForMonth(hastaFecha.getFullYear(), hastaFecha.getMonth(), gf.dia_venc)
+    return vencimiento <= hastaFecha
+  }
   const gastosFijosReales = gastosFijos
-    .filter(gf => {
-      if (!gf.dia_venc) return false
-      const vencimiento = dueDateForMonth(fin.getFullYear(), fin.getMonth(), gf.dia_venc)
-      return vencimiento <= fin
-    })
+    .filter(gf => gastoFijoYaCorresponde(gf, fin))
     .reduce((sum, gf) => sum + safeNumber(gf.monto), 0)
-  
-  const suscripcionesVencidas = suscripciones.filter(s => {
-    if (s.estado !== 'Activo' || !s.proximo_pago) return false
-    const proxPago = parseLocalDate(s.proximo_pago)
-    return proxPago && proxPago >= inicio && proxPago <= fin
-  })
 
-  const suscripcionesPagadasEsteMes = suscripciones.filter(s => {
+  // Suscripciones: cuentan como gasto real solo cuando su día de cobro de este
+  // mes (derivado del día del próximo_pago) ya llegó/pasó. No se asume que una
+  // suscripción con próximo_pago en el mes siguiente ya se cobró este mes.
+  const suscripcionYaCorresponde = (s, hastaFecha) => {
     if (s.estado !== 'Activo' || !s.proximo_pago) return false
     const proxPago = parseLocalDate(s.proximo_pago)
     if (!proxPago) return false
-
-    // Si el próximo pago quedó después del mes actual, asumimos que este mes ya fue cubierto.
-    return (
-      proxPago.getFullYear() > fin.getFullYear() ||
-      (proxPago.getFullYear() === fin.getFullYear() && proxPago.getMonth() > fin.getMonth())
-    )
-  })
-
-  const suscripcionesReales = [...new Set([...suscripcionesVencidas, ...suscripcionesPagadasEsteMes])]
+    const cobroEsteMes = dueDateForMonth(hastaFecha.getFullYear(), hastaFecha.getMonth(), proxPago.getDate())
+    return cobroEsteMes <= hastaFecha
+  }
+  const suscripcionesReales = suscripciones
+    .filter(s => suscripcionYaCorresponde(s, fin))
     .reduce((sum, s) => sum + monthlySubscriptionCost(s), 0)
-  
+
 // ✨ NUEVO: CALCULAR GASTOS PAGADOS (para visualización)
-const gastosPagados = 
+const gastosPagados =
   // Gastos variables ya están pagados (todos los registrados)
   gastosVariablesReales +
   // Gastos fijos marcados como "Pagado"
   gastosFijos
-    .filter(gf => {
-      if (!gf.dia_venc) return false
-      const vencimiento = dueDateForMonth(fin.getFullYear(), fin.getMonth(), gf.dia_venc)
-      return vencimiento <= fin && gf.estado === 'Pagado'
-    })
+    .filter(gf => gf.estado === 'Pagado')
     .reduce((sum, gf) => sum + safeNumber(gf.monto), 0) +
-  // ✅ CORRECCIÓN: Suscripciones cuyo próximo pago está en el MES SIGUIENTE
+  // Suscripciones cuyo día de cobro de este mes ya pasó
   suscripciones
-    .filter(s => {
-      if (s.estado !== 'Activo' || !s.proximo_pago) return false
-      const proxPago = parseLocalDate(s.proximo_pago)
-      
-      // Si próximo pago es en el mes SIGUIENTE, significa que ya se pagó ESTE mes
-      const esMesSiguiente = (
-        proxPago.getFullYear() > fin.getFullYear() ||
-        (proxPago.getFullYear() === fin.getFullYear() && proxPago.getMonth() > fin.getMonth())
-      )
-      
-      return esMesSiguiente
-    })
-    .reduce((sum, s) => {
-      return sum + monthlySubscriptionCost(s)
-    }, 0)
+    .filter(s => suscripcionYaCorresponde(s, fin))
+    .reduce((sum, s) => sum + monthlySubscriptionCost(s), 0)
   
   const totalGastos = gastosVariablesReales + gastosFijosReales + suscripcionesReales
   const saldo = ingresosReales - totalGastos
