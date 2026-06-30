@@ -948,7 +948,7 @@ useEffect(() => {
       if (data.id) {
         const { id, ...payload } = data
         let resultado = await updateGastoFijo(id, payload)
-        if (resultado?.success === false && payload.deuda_id !== undefined && resultado.error?.message?.includes('deuda_id')) {
+        if (resultado?.success === false && 'deuda_id' in payload && resultado.error?.message?.includes('deuda_id')) {
           const { deuda_id: _ignored, ...payloadFallback } = payload
           resultado = await updateGastoFijo(id, payloadFallback)
         }
@@ -959,7 +959,7 @@ useEffect(() => {
       } else {
         let resultado = await addGastoFijo(data)
         // Si falló por columna deuda_id inexistente en la tabla, reintentar sin ella
-        if (resultado?.success === false && data.deuda_id && resultado.error?.message?.includes('deuda_id')) {
+        if (resultado?.success === false && 'deuda_id' in data && resultado.error?.message?.includes('deuda_id')) {
           const { deuda_id: _ignored, ...dataFallback } = data
           resultado = await addGastoFijo(dataFallback)
         }
