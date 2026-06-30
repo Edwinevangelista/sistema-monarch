@@ -142,8 +142,7 @@ export default function ModalGastos({
         await onSaveVariable(payload)
         toast.success('Gasto registrado ✓')
       } else {
-        await onSaveFijo({
-          id: gastoInicial?.id,
+        const payloadFijo = {
           nombre: formData.nombre,
           categoria: formData.categoria,
           monto: parseFloat(formData.monto),
@@ -151,7 +150,9 @@ export default function ModalGastos({
           estado: formData.estado,
           cuenta_id: formData.cuenta_id || null,
           deuda_id: formData.deuda_id || null,
-        })
+        }
+        if (gastoInicial?.id) payloadFijo.id = gastoInicial.id
+        await onSaveFijo(payloadFijo)
         toast.success('Gasto fijo registrado ✓')
       }
       onClose()
