@@ -89,7 +89,10 @@ export default function GastosSuscripcionesPanel({
 }) {
   const [tab, setTab] = useState('gastos')
   const gastosOrdenados = useMemo(() => [...gastos].sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || ''))), [gastos])
-  const subsActivas = useMemo(() => suscripciones.filter((s) => s.estado !== 'Cancelado'), [suscripciones])
+  const subsActivas = useMemo(
+    () => suscripciones.filter((s) => s.estado !== 'Cancelado').sort((a, b) => String(a.proximo_pago || '').localeCompare(String(b.proximo_pago || ''))),
+    [suscripciones]
+  )
   const fijosOrdenados = useMemo(() => [...gastosFijos].sort((a, b) => (a.dia_venc ?? 99) - (b.dia_venc ?? 99)), [gastosFijos])
   const items = tab === 'gastos' ? gastosOrdenados : tab === 'suscripciones' ? subsActivas : fijosOrdenados
   const total = items.reduce((sum, item) => sum + Number(tab === 'suscripciones' ? item.costo || 0 : item.monto || 0), 0)
