@@ -175,7 +175,16 @@ export default function PresupuestoCategorias({ gastos = [] }) {
   // Número de alerts para el header badge
   const alertCount = catExcedidas.length
 
-  if (categorias.length === 0) return null
+  if (categorias.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
+        <div className="rounded-2xl border border-dashed border-canvas-border bg-canvas-elevated px-4 py-8 text-center">
+          <p className="text-sm font-bold text-ink-muted">Sin presupuesto que mostrar todavía</p>
+          <p className="mt-1 text-xs text-ink-faint">Registra gastos por categoría para ver cómo vas contra tu presupuesto.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">

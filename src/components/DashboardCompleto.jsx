@@ -2484,17 +2484,20 @@ const gastosPorCategoria = useMemo(() => {
 
       <SectionCollapse
         key={vistaSimple ? 'gastos-subs-basic' : 'gastos-subs-advanced'}
-        title={`Gastos y suscripciones (${gastosDelMes.length + suscripcionesActivas.length})`}
+        title={`Gastos y suscripciones (${gastosDelMes.length + suscripcionesActivas.length + gastosFijosInstant.length})`}
         icon="🧾"
         defaultOpen={false}
       >
         <GastosSuscripcionesPanel
           gastos={gastosDelMes}
           suscripciones={suscripcionesActivas}
+          gastosFijos={gastosFijosInstant}
           onEditarGasto={(item) => handleEditarUniversal(item, ITEM_TYPES.VARIABLE)}
           onEliminarGasto={(item) => handleEliminarUnificado(item, ITEM_TYPES.VARIABLE)}
           onEditarSuscripcion={(item) => handleEditarUniversal(item, ITEM_TYPES.SUSCRIPCION)}
           onEliminarSuscripcion={(item) => handleEliminarUnificado(item, ITEM_TYPES.SUSCRIPCION)}
+          onEditarFijo={(item) => handleEditarUniversal(item, ITEM_TYPES.FIJO)}
+          onEliminarFijo={(item) => handleEliminarUnificado(item, ITEM_TYPES.FIJO)}
         />
       </SectionCollapse>
 

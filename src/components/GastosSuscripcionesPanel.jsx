@@ -15,23 +15,27 @@ const dateLabel = (value) => {
 }
 
 function EmptyState({ type }) {
+  const copy = {
+    gastos: ['Sin gastos variables este mes', 'Cuando registres gastos aparecerán aquí.'],
+    suscripciones: ['Sin suscripciones activas', 'Agrega servicios recurrentes para verlos en esta lista.'],
+    fijos: ['Sin gastos fijos registrados', 'Agrega renta, servicios u otros pagos fijos para verlos aquí.'],
+  }[type]
   return (
     <div className="rounded-xl border border-dashed border-canvas-border bg-canvas-elevated px-4 py-8 text-center">
-      <p className="text-sm font-bold text-ink-muted">
-        {type === 'gastos' ? 'Sin gastos variables este mes' : 'Sin suscripciones activas'}
-      </p>
-      <p className="mt-1 text-xs text-ink-faint">
-        {type === 'gastos' ? 'Cuando registres gastos aparecerán aquí.' : 'Agrega servicios recurrentes para verlos en esta lista.'}
-      </p>
+      <p className="text-sm font-bold text-ink-muted">{copy[0]}</p>
+      <p className="mt-1 text-xs text-ink-faint">{copy[1]}</p>
     </div>
   )
 }
 
 function Row({ item, type, onEditar, onEliminar }) {
   const isSub = type === 'suscripciones'
-  const title = isSub ? item.servicio : item.descripcion || item.categoria || 'Gasto'
+  const isFijo = type === 'fijos'
+  const title = isSub ? item.servicio : isFijo ? (item.nombre || item.descripcion || 'Gasto fijo') : item.descripcion || item.categoria || 'Gasto'
   const subtitle = isSub
     ? `${item.categoria || 'Servicio'} · ${item.ciclo || 'Mensual'} · ${dateLabel(item.proximo_pago)}`
+    : isFijo
+    ? `${item.estado || 'Pendiente'} · Vence día ${item.dia_venc ?? '—'}`
     : `${item.categoria || 'Variable'} · ${dateLabel(item.fecha)}`
   const amount = isSub ? item.costo : item.monto
   const Icon = isSub ? Repeat : ReceiptText
@@ -39,7 +43,7 @@ function Row({ item, type, onEditar, onEliminar }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-canvas-border bg-canvas-elevated px-3 py-3 shadow-sm">
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
-        isSub ? 'border-accent-info/25 bg-accent-info/10 text-accent-info' : 'border-accent-negative/25 bg-accent-negative/10 text-accent-negative'
+        isSub ? 'border-accent-info/25 bg-accent-info/10 text-accent-info' : isFijo ? 'border-accent-warning/25 bg-accent-warning/10 text-accent-warning' : 'border-accent-negative/25 bg-accent-negative/10 text-accent-negative'
       }`}>
         <Icon className="h-4 w-4" />
       </span>
@@ -48,7 +52,7 @@ function Row({ item, type, onEditar, onEliminar }) {
         <p className="truncate text-xs text-ink-muted">{subtitle}</p>
       </div>
       <div className="text-right">
-        <p className={`text-sm font-black ${isSub ? 'text-accent-info' : 'text-accent-negative'}`}>{money(amount)}</p>
+        <p className={`text-sm font-black ${isSub ? 'text-accent-info' : isFijo ? 'text-accent-warning' : 'text-accent-negative'}`}>{money(amount)}</p>
         <div className="mt-1 flex justify-end gap-1">
           <button
             type="button"
@@ -75,16 +79,25 @@ function Row({ item, type, onEditar, onEliminar }) {
 export default function GastosSuscripcionesPanel({
   gastos = [],
   suscripciones = [],
+  gastosFijos = [],
   onEditarGasto,
   onEliminarGasto,
   onEditarSuscripcion,
   onEliminarSuscripcion,
+  onEditarFijo,
+  onEliminarFijo,
 }) {
   const [tab, setTab] = useState('gastos')
   const gastosOrdenados = useMemo(() => [...gastos].sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || ''))), [gastos])
   const subsActivas = useMemo(() => suscripciones.filter((s) => s.estado !== 'Cancelado'), [suscripciones])
-  const items = tab === 'gastos' ? gastosOrdenados : subsActivas
-  const total = items.reduce((sum, item) => sum + Number(tab === 'gastos' ? item.monto || 0 : item.costo || 0), 0)
+  const fijosOrdenados = useMemo(() => [...gastosFijos].sort((a, b) => (a.dia_venc ?? 99) - (b.dia_venc ?? 99)), [gastosFijos])
+  const items = tab === 'gastos' ? gastosOrdenados : tab === 'suscripciones' ? subsActivas : fijosOrdenados
+  const total = items.reduce((sum, item) => sum + Number(tab === 'suscripciones' ? item.costo || 0 : item.monto || 0), 0)
+  const handlers = {
+    gastos: { onEditar: onEditarGasto, onEliminar: onEliminarGasto },
+    suscripciones: { onEditar: onEditarSuscripcion, onEliminar: onEliminarSuscripcion },
+    fijos: { onEditar: onEditarFijo, onEliminar: onEliminarFijo },
+  }[tab]
 
   return (
     <div className="rounded-2xl border border-canvas-border bg-canvas-surface p-4 shadow-card">
@@ -100,6 +113,13 @@ export default function GastosSuscripcionesPanel({
             className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'gastos' ? 'bg-canvas-surface text-accent-negative shadow-sm' : 'text-ink-muted'}`}
           >
             Gastos
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('fijos')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold ${tab === 'fijos' ? 'bg-canvas-surface text-accent-warning shadow-sm' : 'text-ink-muted'}`}
+          >
+            Fijos
           </button>
           <button
             type="button"
@@ -120,8 +140,8 @@ export default function GastosSuscripcionesPanel({
               key={`${tab}-${item.id}`}
               item={item}
               type={tab}
-              onEditar={tab === 'gastos' ? onEditarGasto : onEditarSuscripcion}
-              onEliminar={tab === 'gastos' ? onEliminarGasto : onEliminarSuscripcion}
+              onEditar={handlers.onEditar}
+              onEliminar={handlers.onEliminar}
             />
           ))
         )}

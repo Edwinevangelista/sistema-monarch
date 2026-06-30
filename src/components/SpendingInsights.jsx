@@ -92,7 +92,16 @@ export default function SpendingInsights({ gastosMes = [], gastosAnterior = [], 
   const deltaMes = totalAnt > 0 ? Math.round(((totalMes - totalAnt) / totalAnt) * 100) : null
   const mesOk = deltaMes === null || deltaMes <= 0
 
-  if (gastosMes.length === 0) return null
+  if (gastosMes.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4">
+        <div className="rounded-2xl border border-dashed border-canvas-border bg-canvas-elevated px-4 py-8 text-center">
+          <p className="text-sm font-bold text-ink-muted">Sin gastos este mes todavía</p>
+          <p className="mt-1 text-xs text-ink-faint">Registra tu primer gasto para ver tu análisis de patrones y categorías.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-4 mt-4 space-y-3">

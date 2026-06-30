@@ -100,7 +100,14 @@ export default function ComparativoMensual({
     }
   }, [ingresos, gastos, gastosFijos, suscripciones])
 
-  if (!datos.hayDatos) return null
+  if (!datos.hayDatos) {
+    return (
+      <div className="rounded-2xl border border-dashed border-canvas-border bg-canvas-elevated px-4 py-8 text-center">
+        <p className="text-sm font-bold text-ink-muted">Sin datos suficientes para comparar</p>
+        <p className="mt-1 text-xs text-ink-faint">Cuando tengas movimientos de al menos un mes, verás aquí el comparativo.</p>
+      </div>
+    )
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────
   const pct = (curr, prev) => prev !== 0 ? Math.round(((curr - prev) / Math.abs(prev)) * 100) : null
