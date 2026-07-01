@@ -3,6 +3,7 @@
 // Category chips, ciclo pills, modern dark theme
 
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { X, CreditCard, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { toast } from 'sonner'
@@ -181,19 +182,20 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
           </p>
           <div className="flex gap-2">
             {CICLOS.map(c => (
-              <button
+              <motion.button
                 key={c.value}
+                whileTap={{ scale: 0.93 }}
                 onClick={() => set('ciclo', c.value)}
                 disabled={loading}
                 className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
                   formData.ciclo === c.value
-                    ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
-                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-muted hover:text-gray-300'
+                    ? 'bg-accent-info/15 border-accent-info/30 text-accent-info'
+                    : 'bg-canvas-elevated border-canvas-border text-ink-faint hover:text-ink-muted'
                 }`}
               >
                 <span className="text-base leading-none">{c.icon}</span>
                 <span>{c.value}</span>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -205,19 +207,20 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
           </p>
           <div className="flex flex-wrap gap-2">
             {CATEGORIAS.map(c => (
-              <button
+              <motion.button
                 key={c.v}
+                whileTap={{ scale: 0.92 }}
                 onClick={() => set('categoria', c.v)}
                 disabled={loading}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation active:scale-95 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation ${
                   formData.categoria === c.v
-                    ? 'bg-indigo-500/20 border-indigo-500/35 text-indigo-200'
-                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-faint hover:text-gray-200 hover:bg-canvas-surface/[0.08]'
+                    ? 'bg-accent-info/20 border-accent-info/35 text-accent-info'
+                    : 'bg-canvas-elevated border-canvas-border text-ink-faint hover:text-ink-muted'
                 }`}
               >
                 <span>{c.e}</span>
                 <span>{c.l}</span>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -270,12 +273,13 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
                 </p>
               </div>
             </div>
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.95 }}
               onClick={() => set('autopago', !formData.autopago)}
               disabled={loading}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                formData.autopago ? 'bg-emerald-600' : 'bg-gray-700'
+                formData.autopago ? 'bg-accent-positive' : 'bg-canvas-border'
               }`}
             >
               <span
@@ -283,7 +287,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
                   formData.autopago ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
-            </button>
+            </motion.button>
           </div>
           {formData.autopago && !formData.cuenta_id && (
             <p className="text-[11px] text-amber-400 flex items-center gap-1 px-1">
@@ -313,27 +317,29 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
 
       {/* ── FOOTER ── */}
       <div
-        className="sticky bottom-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/95 backdrop-blur-sm"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        className="sticky bottom-0 px-5 py-4 border-t border-canvas-border backdrop-blur-xl"
+        style={{ background: 'rgba(8,11,17,0.95)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
       >
         <div className="flex gap-3">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-elevated border border-canvas-border text-ink-muted rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={handleSubmit}
             disabled={loading}
-            className="flex-[2] py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-indigo-900/30"
+            className="flex-[2] py-3.5 bg-accent-info hover:bg-accent-info/90 text-canvas rounded-2xl font-black transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-900/30"
           >
             {loading
               ? <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</>
               : <><CheckCircle className="w-4 h-4" />{suscripcionInicial ? 'Actualizar' : 'Crear suscripción'}</>
             }
-          </button>
+          </motion.button>
         </div>
       </div>
 

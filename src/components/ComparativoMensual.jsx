@@ -129,7 +129,7 @@ export default function ComparativoMensual({
   // ── Delta badge ──────────────────────────────────────────────────
   const DeltaBadge = ({ curr, prev, menorEsMejor = false }) => {
     const p = pct(curr, prev)
-    if (p === null || p === 0) return <Minus className="w-3 h-3 text-gray-600" />
+    if (p === null || p === 0) return <Minus className="w-3 h-3 text-ink-faint" />
     const isUp   = p > 0
     const isGood = menorEsMejor ? !isUp : isUp
     return (
@@ -145,14 +145,14 @@ export default function ComparativoMensual({
     const isNeg   = curr < 0
     const color   = isAhorro ? (curr >= 0 ? '#34d399' : '#f87171') : undefined
     return (
-      <div className="flex flex-col gap-1 px-3 py-2.5 rounded-2xl bg-white/4 border border-white/7">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{label}</span>
+      <div className="flex flex-col gap-1 px-3 py-2.5 rounded-2xl bg-canvas-elevated border border-canvas-border">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-ink-faint">{label}</span>
         <span className="text-base font-black tabular-nums leading-none"
-          style={{ color: color || (isNeg ? '#f87171' : '#e5e7eb') }}>
+          style={{ color: color || (isNeg ? '#f87171' : '#F0F2F5') }}>
           {isAhorro && curr >= 0 ? '+' : ''}{isAhorro && curr < 0 ? '-' : ''}${fmt(curr)}
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-600 tabular-nums">${fmt(prev)}</span>
+          <span className="text-[10px] text-ink-faint tabular-nums">${fmt(prev)}</span>
           <DeltaBadge curr={curr} prev={prev} menorEsMejor={menorEsMejor} />
         </div>
       </div>
@@ -162,10 +162,10 @@ export default function ComparativoMensual({
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-4 mt-3">
       <div
-        className="relative overflow-hidden rounded-3xl border border-white/10"
+        className="relative overflow-hidden rounded-3xl border border-canvas-border"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06)',
+          background: 'linear-gradient(135deg, rgba(15,18,25,1) 0%, rgba(8,11,17,1) 100%)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
         }}
       >
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -175,13 +175,13 @@ export default function ComparativoMensual({
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-gray-500 shrink-0" />
+              <BarChart2 className="w-4 h-4 text-ink-faint shrink-0" />
               <div>
-                <p className="text-xs font-bold text-gray-300 capitalize">{datos.mesNombre}</p>
-                <p className="text-[10px] text-gray-600">vs {datos.prevNombre}</p>
+                <p className="text-xs font-bold text-ink capitalize">{datos.mesNombre}</p>
+                <p className="text-[10px] text-ink-faint">vs {datos.prevNombre}</p>
               </div>
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 bg-white/5 px-2 py-0.5 rounded-full border border-white/8">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-ink-faint bg-canvas-elevated px-2 py-0.5 rounded-full border border-canvas-border">
               Comparativo
             </span>
           </div>
@@ -207,12 +207,12 @@ export default function ComparativoMensual({
 
           {/* ── Desglose fijos + subs (siempre visible) ── */}
           <div className="grid grid-cols-2 gap-2 mb-1">
-            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/3 border border-white/6">
-              <span className="text-[10px] text-gray-500">🏠 Gastos fijos</span>
-              <span className="text-[11px] font-bold text-amber-400 tabular-nums">${fmt(datos.fijos.curr)}</span>
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-canvas-elevated border border-canvas-border">
+              <span className="text-[10px] text-ink-faint">🏠 Gastos fijos</span>
+              <span className="text-[11px] font-bold text-accent-warning tabular-nums">${fmt(datos.fijos.curr)}</span>
             </div>
-            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/3 border border-white/6">
-              <span className="text-[10px] text-gray-500">🔄 Suscripciones</span>
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-canvas-elevated border border-canvas-border">
+              <span className="text-[10px] text-ink-faint">🔄 Suscripciones</span>
               <span className="text-[11px] font-bold text-indigo-400 tabular-nums">${fmt(datos.subs.curr)}</span>
             </div>
           </div>
@@ -222,14 +222,14 @@ export default function ComparativoMensual({
             <>
               <button
                 onClick={() => setExpandido(v => !v)}
-                className="w-full flex items-center justify-center gap-1.5 mt-3 py-1.5 text-[11px] font-medium text-gray-600 hover:text-gray-400 transition-colors touch-manipulation"
+                className="w-full flex items-center justify-center gap-1.5 mt-3 py-1.5 text-[11px] font-medium text-ink-faint hover:text-ink-muted transition-colors touch-manipulation"
               >
                 {expandido ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 {expandido ? 'Ocultar detalle' : 'Ver gastos día a día por categoría'}
               </button>
 
               {expandido && (
-                <div className="mt-3 pt-3 border-t border-white/6 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mt-3 pt-3 border-t border-canvas-border space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
                   {datos.categorias.map(({ cat, curr, prev, delta }) => {
                     const emoji  = cat.split(' ')[0]
                     const label  = cat.split(' ').slice(1).join(' ') || cat
@@ -239,9 +239,9 @@ export default function ComparativoMensual({
                       <div key={cat} className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm shrink-0 w-5">{emoji}</span>
-                          <span className="text-[11px] text-gray-400 flex-1 truncate">{label}</span>
-                          <span className="text-[10px] text-gray-600 tabular-nums">${fmt(prev)}</span>
-                          <span className="text-gray-700 text-xs">→</span>
+                          <span className="text-[11px] text-ink-muted flex-1 truncate">{label}</span>
+                          <span className="text-[10px] text-ink-faint tabular-nums">${fmt(prev)}</span>
+                          <span className="text-ink-faint text-xs">→</span>
                           <span className={`text-[11px] font-bold tabular-nums ${isUp ? 'text-red-400' : 'text-emerald-400'}`}>
                             ${fmt(curr)}
                           </span>
@@ -250,7 +250,7 @@ export default function ComparativoMensual({
                           </span>
                         </div>
                         <div className="flex gap-1 items-center ml-7">
-                          <div className="flex-1 h-1 bg-white/6 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1 bg-canvas-elevated rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500"
                               style={{

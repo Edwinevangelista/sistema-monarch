@@ -3,6 +3,7 @@
 // Compact frequency pills, prominent amount, clean dark theme
 
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { X, Loader2, CheckCircle, AlertCircle, Repeat, Info } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { toast } from 'sonner'
@@ -186,19 +187,20 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
           )}
           <div className="flex gap-2">
             {FRECUENCIAS.map(f => (
-              <button
+              <motion.button
                 key={f.value}
+                whileTap={{ scale: 0.93 }}
                 onClick={() => set('frecuencia', f.value)}
                 disabled={isLoading}
                 className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-semibold transition-all touch-manipulation ${
                   formData.frecuencia === f.value
-                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                    : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-muted hover:text-gray-300'
+                    ? 'bg-accent-positive/15 border-accent-positive/30 text-accent-positive'
+                    : 'bg-canvas-elevated border-canvas-border text-ink-faint hover:text-ink-muted'
                 }`}
               >
                 <span className="text-base leading-none">{f.icon}</span>
                 <span>{f.value}</span>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -259,27 +261,29 @@ export default function ModalIngreso({ onClose, onSave, ingresoInicial = null })
 
       {/* ── FOOTER ── */}
       <div
-        className="sticky bottom-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/95 backdrop-blur-sm"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        className="sticky bottom-0 px-5 py-4 border-t border-canvas-border backdrop-blur-xl"
+        style={{ background: 'rgba(8,11,17,0.95)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
       >
         <div className="flex gap-3">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-elevated border border-canvas-border text-ink-muted rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={handleSubmit}
             disabled={isLoading}
-            className="flex-[2] py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-900/30"
+            className="flex-[2] py-3.5 bg-accent-positive hover:bg-accent-positive/90 text-canvas rounded-2xl font-black transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-900/30"
           >
             {isLoading
               ? <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</>
               : <><CheckCircle className="w-4 h-4" />{ingresoInicial ? 'Actualizar' : 'Guardar ingreso'}</>
             }
-          </button>
+          </motion.button>
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 // Chip-based category selection, prominent amount input, clean dark theme
 
 import React, { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useCuentasBancarias } from '../hooks/useCuentasBancarias'
 import { useDeudas } from '../hooks/useDeudas'
@@ -203,8 +204,9 @@ export default function ModalGastos({
             { id: 'variable', emoji: '🛒', label: 'Variable' },
             { id: 'fijo',     emoji: '📅', label: 'Fijo mensual' },
           ].map(t => (
-            <button
+            <motion.button
               key={t.id}
+              whileTap={{ scale: 0.96 }}
               onClick={() => { setTipoGasto(t.id); set('categoria', '') }}
               disabled={loading}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all touch-manipulation ${
@@ -212,12 +214,12 @@ export default function ModalGastos({
                   ? t.id === 'variable'
                     ? 'bg-rose-500/15 text-rose-300 border border-rose-500/20'
                     : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
-                  : 'text-ink-muted border border-transparent hover:text-gray-300'
+                  : 'text-ink-muted border border-transparent hover:text-ink-faint'
               }`}
             >
               <span>{t.emoji}</span>
               <span>{t.label}</span>
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -282,21 +284,22 @@ export default function ModalGastos({
               const val = catVal(c)
               const active = formData.categoria === val
               return (
-                <button
+                <motion.button
                   key={val}
+                  whileTap={{ scale: 0.92 }}
                   onClick={() => set('categoria', val)}
                   disabled={loading}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation active:scale-95 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all touch-manipulation ${
                     active
                       ? isVar
                         ? 'bg-rose-500/20 border-rose-500/35 text-rose-200'
                         : 'bg-amber-500/20 border-amber-500/35 text-amber-200'
-                      : 'bg-canvas-surface/[0.04] border-white/[0.07] text-ink-faint hover:text-gray-200 hover:bg-canvas-surface/[0.08]'
+                      : 'bg-canvas-surface/[0.04] border-canvas-border text-ink-faint hover:text-ink-muted hover:bg-canvas-elevated'
                   }`}
                 >
                   <span>{c.e}</span>
                   <span>{c.l}</span>
-                </button>
+                </motion.button>
               )
             })}
           </div>
@@ -423,24 +426,26 @@ export default function ModalGastos({
 
       {/* ── FOOTER ── */}
       <div
-        className="sticky bottom-0 px-5 py-4 border-t border-white/[0.06] bg-gray-950/95 backdrop-blur-sm"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        className="sticky bottom-0 px-5 py-4 border-t border-canvas-border backdrop-blur-xl"
+        style={{ background: 'rgba(8,11,17,0.95)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
       >
         <div className="flex gap-3">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-3.5 bg-canvas-surface/[0.06] hover:bg-canvas-surface/[0.10] text-gray-300 rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
+            className="flex-1 py-3.5 bg-canvas-elevated border border-canvas-border text-ink-muted rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 text-sm"
           >
             Cancelar
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={handleSubmit}
             disabled={loading}
-            className={`flex-[2] py-3.5 text-white rounded-2xl font-semibold transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg ${
+            className={`flex-[2] py-3.5 text-white rounded-2xl font-black transition-all touch-manipulation disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg ${
               isVar
-                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/30'
-                : 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/30'
+                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/40'
+                : 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/40'
             }`}
           >
             {loading ? (
@@ -448,7 +453,7 @@ export default function ModalGastos({
             ) : (
               <><CheckCircle className="w-4 h-4" />{gastoInicial ? 'Actualizar' : 'Guardar gasto'}</>
             )}
-          </button>
+          </motion.button>
         </div>
       </div>
 
