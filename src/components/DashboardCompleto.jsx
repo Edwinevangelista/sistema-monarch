@@ -2537,6 +2537,17 @@ const gastosPorCategoria = useMemo(() => {
           onEliminarSuscripcion={(item) => handleEliminarUnificado(item, ITEM_TYPES.SUSCRIPCION)}
           onEditarFijo={(item) => handleEditarUniversal(item, ITEM_TYPES.FIJO)}
           onEliminarFijo={(item) => handleEliminarUnificado(item, ITEM_TYPES.FIJO)}
+          onMarcarPagadoFijo={async (item, nuevoEstado = 'Pagado') => {
+            try {
+              await updateGastoFijo(item.id, { estado: nuevoEstado })
+              setGastosFijosInstant(prev =>
+                prev.map(gf => gf.id === item.id ? { ...gf, estado: nuevoEstado } : gf)
+              )
+              toast.success(nuevoEstado === 'Pagado' ? `✓ ${item.nombre} marcado como Pagado` : `${item.nombre} vuelto a Pendiente`)
+            } catch (e) {
+              toast.error('No se pudo actualizar el estado: ' + e.message)
+            }
+          }}
         />
       </SectionCollapse>
 
