@@ -1315,19 +1315,16 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     const intereses = roundMoney(pago.intereses)
     const total = roundMoney(pago.monto_total)
     const cuentaPago = pago.cuenta_id ? cuentas.find(c => c.id === pago.cuenta_id) : null
+    const usaRPC = !!cuentaPago  // solo usa RPC cuando hay cuenta bancaria seleccionada
 
     // Validaciones
     if (principal < 0 || intereses < 0 || total <= 0) {
       throw new Error('Montos inválidos')
     }
-    // Tolerancia de $0.02 para evitar fallos por redondeo de decimales
     if (Math.abs(roundMoney(principal + intereses) - total) > 0.02) {
       throw new Error('El total del pago debe cuadrar con principal + intereses')
     }
-    if (!cuentaPago) {
-      throw new Error('Selecciona la cuenta bancaria desde donde saldrá el pago')
-    }
-    if (Number(cuentaPago.balance || 0) < total) {
+    if (cuentaPago && Number(cuentaPago.balance || 0) < total) {
       throw new Error(`Fondos insuficientes en ${cuentaPago.nombre}`)
     }
 
@@ -1356,60 +1353,95 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     const user = session?.user
     if (!user) throw new Error('Usuario no autenticado')
 
-    const { data: rpcResult, error: rpcError } = await supabase.rpc('pagar_tarjeta', {
-      p_user_id: user.id,
-      p_tarjeta_id: deuda.id,
-      p_cuenta_id: cuentaPago.id,
-      p_monto: total,
-      p_idem_key: pago.idempotency_key,
-      p_fecha: pago.fecha,
-      p_metodo: pago.metodo || 'Débito',
-      p_notas: pago.notas || null,
-      p_pago_minimo: nuevoPagoMinimo,
-      p_vence: nuevoVence || null,
-    })
+    let saldoFinal = nuevoSaldo
+    let pagoId = 'temp-' + Date.now()
 
-    if (rpcError) throw rpcError
+    if (usaRPC) {
+      // Flujo con cuenta bancaria: RPC atómico (descuenta cuenta + registra pago)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('pagar_tarjeta', {
+        p_user_id: user.id,
+        p_tarjeta_id: deuda.id,
+        p_cuenta_id: cuentaPago.id,
+        p_monto: total,
+        p_idem_key: pago.idempotency_key,
+        p_fecha: pago.fecha,
+        p_metodo: 'Débito',
+        p_notas: pago.notas || null,
+        p_pago_minimo: nuevoPagoMinimo,
+        p_vence: nuevoVence || null,
+      })
+      if (rpcError) throw rpcError
+      if (rpcResult?.status === 'duplicate') {
+        toast.info('Pago ya procesado')
+        await refreshPagos()
+        await refreshDeudas()
+        await refreshCuentas()
+        return
+      }
+      saldoFinal = roundMoney(rpcResult?.nueva_deuda ?? nuevoSaldo)
+      pagoId = rpcResult?.pago_id || pagoId
+    } else {
+      // Flujo sin cuenta bancaria (Efectivo, Transferencia, etc.)
+      // Actualizar saldo de la deuda directamente
+      const { error: deudaError } = await supabase
+        .from('deudas')
+        .update({
+          saldo: nuevoSaldo,
+          pago_minimo: nuevoPagoMinimo,
+          ultimo_pago: pago.fecha,
+          vence: nuevoVence || deuda.vence,
+        })
+        .eq('id', deuda.id)
+        .eq('user_id', user.id)
+      if (deudaError) throw deudaError
 
-    if (rpcResult?.status === 'duplicate') {
-      toast.info('Pago ya procesado')
-      await refreshPagos()
-      await refreshDeudas()
-      await refreshCuentas()
-      return
+      // Registrar el pago en pagos_tarjetas sin cuenta_id
+      const { data: pagoData, error: pagoError } = await supabase
+        .from('pagos_tarjetas')
+        .insert({
+          user_id: user.id,
+          deuda_id: deuda.id,
+          tarjeta: deuda.cuenta,
+          monto: total,
+          monto_total: total,
+          a_principal: principal,
+          intereses: intereses,
+          metodo: pago.metodo || 'Efectivo',
+          fecha: pago.fecha,
+          notas: pago.notas || null,
+        })
+        .select('id')
+        .single()
+      if (pagoError) throw pagoError
+      pagoId = pagoData?.id || pagoId
     }
 
-    const saldoRpc = roundMoney(rpcResult?.nueva_deuda ?? nuevoSaldo)
-
-    // Actualización optimista: actualiza UI al instante
+    // Actualización optimista en UI
     const deudasActualizadas = deudasInstant.map(d =>
       d.id === deuda.id
-        ? { ...d, saldo: saldoRpc, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha, vence: nuevoVence || d.vence }
+        ? { ...d, saldo: saldoFinal, pago_minimo: nuevoPagoMinimo, ultimo_pago: pago.fecha, vence: nuevoVence || d.vence }
         : d
     )
     setDeudasInstant(deudasActualizadas)
-    // Limpiar caché para que el próximo refresh traiga datos frescos del servidor
     localStorage.removeItem('deudas_cache')
     localStorage.setItem('deudas_cache_v2', JSON.stringify(deudasActualizadas))
 
-    // ✅ Actualización optimista de pagos: agregar pago al historial al instante
     const pagoOptimista = {
       ...pago,
-      id: rpcResult?.pago_id || 'temp-' + Date.now(),
+      id: pagoId,
       created_at: new Date().toISOString(),
       monto_total: total,
-      a_principal: total,
-      intereses: 0,
-      cuenta_id: cuentaPago.id,
+      a_principal: principal,
+      intereses,
+      cuenta_id: cuentaPago?.id || null,
     }
     const pagosActualizados = [pagoOptimista, ...pagosInstant]
     setPagosInstant(pagosActualizados)
     localStorage.setItem('pagos_tarjeta_cache_v2', JSON.stringify(pagosActualizados))
 
-    // Refrescar datos (el useEffect[deudas] recibirá los datos actualizados del servidor)
     await refreshPagos()
     await refreshDeudas()
-    if (pago.cuenta_id) await refreshCuentas()
+    if (usaRPC) await refreshCuentas()
 
 // ✅ ACTUALIZAR PLAN ACTIVO CON NUEVOS SALDOS
 if (planDeudaActivo) {
@@ -1516,7 +1548,7 @@ if (planDeudaActivo) {
     if (esPagoCompleto) {
       toast.success(`🎉 ¡${deuda.cuenta} está SALDADA! Saldo: $0.00`)
     } else {
-      toast.success(`Pago registrado — ${deuda.cuenta}: $${saldoRpc.toFixed(2)}`)
+      toast.success(`Pago registrado — ${deuda.cuenta}: $${saldoFinal.toFixed(2)}`)
     }
 
     setShowModal(null)

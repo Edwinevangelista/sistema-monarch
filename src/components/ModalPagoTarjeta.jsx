@@ -24,12 +24,13 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
     monto: '',
     principal: '',
     interes: '',
-    metodo: 'Efectivo',
+    metodo: 'Débito (Cuenta Bancaria)',
     cuenta_id: '',
     notas: ''
   })
 
-  const METODOS_PAGO_COMPLETO = ['Efectivo', 'Tarjeta', 'Transferencia', 'Cheque', 'Débito']
+  const METODOS_PAGO_COMPLETO = ['Débito (Cuenta Bancaria)', 'Efectivo', 'Transferencia', 'Cheque']
+  const requiereCuenta = formData.metodo === 'Débito (Cuenta Bancaria)'
 
   // 🔒 Bloqueo de scroll
   useEffect(() => {
@@ -109,7 +110,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
       const deudaSeleccionada = deudas.find(d => d.cuenta === formData.tarjeta)
       if (!deudaSeleccionada) { toast.error('Debes seleccionar una tarjeta válida'); return }
       if (!formData.monto || Number(formData.monto) <= 0) { toast.error('Debes ingresar un monto válido'); return }
-      if (!formData.cuenta_id) {
+      if (requiereCuenta && !formData.cuenta_id) {
         toast.error('Selecciona la cuenta bancaria desde donde saldrá el pago', { duration: 5000 })
         return
       }
@@ -125,8 +126,8 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
         monto_total: Number(formData.monto),
         a_principal: Number(formData.principal),
         intereses: Number(formData.interes),
-        metodo: formData.metodo,
-        cuenta_id: formData.cuenta_id || null,
+        metodo: requiereCuenta ? 'Débito' : formData.metodo,
+        cuenta_id: requiereCuenta ? (formData.cuenta_id || null) : null,
         fecha: formData.fecha,
         notas: formData.notas,
         idempotency_key: idemKeyRef.current
@@ -317,7 +318,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
             </label>
             <select
               value={formData.metodo}
-              onChange={(e) => setFormData({ ...formData, metodo: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, metodo: e.target.value, cuenta_id: '' })}
               disabled={isLoading}
               className={inputClass}
             >
@@ -329,8 +330,9 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
             </select>
           </div>
 
-          {/* 4. CUENTAS */}
-          <div ref={cuentasSectionRef} className="bg-gray-800/50 rounded-xl p-4 border border-white/5">
+          {/* 4. CUENTAS — solo cuando el método es Débito */}
+          {requiereCuenta && (
+            <div ref={cuentasSectionRef} className="bg-gray-800/50 rounded-xl p-4 border border-white/5">
               <div className="flex items-center gap-2 mb-3 text-cyan-400">
                 <Wallet className="w-4 h-4" />
                 <span className="text-sm font-bold uppercase">Cuenta Origen</span>
@@ -345,8 +347,8 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                       onClick={() => setFormData({ ...formData, cuenta_id: cuenta.id })}
                       disabled={isLoading}
                       className={`w-full p-3 rounded-lg border text-left transition-all ${
-                        isSelected 
-                          ? 'border-cyan-500 bg-cyan-500/10' 
+                        isSelected
+                          ? 'border-cyan-500 bg-cyan-500/10'
                           : 'border-white/5 hover:border-white/20 bg-canvas-surface/5'
                       }`}
                     >
@@ -362,6 +364,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
                 })}
               </div>
             </div>
+          )}
 
           {/* NOTAS */}
           <div>
