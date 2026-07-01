@@ -3115,6 +3115,7 @@ const gastosPorCategoria = useMemo(() => {
                   <div key={deuda.id}>
                     <CardDeuda
                       deuda={deuda}
+                      onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
                       onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
                       onEliminar={async () => {
                         const ok = await showConfirm({
