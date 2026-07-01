@@ -47,11 +47,6 @@ export default function DashboardHero({
   const flujoPositivo = saldo >= 0
   const ahorroPct = Math.round((Number(tasaAhorro) || 0) * 100)
 
-  // Cuenta principal — Salem Five o la que tenga más fondos
-  const cuentaPrincipal = cuentas.length > 0
-    ? [...cuentas].sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0))[0]
-    : null
-
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-4 pt-2 pb-1">
 
