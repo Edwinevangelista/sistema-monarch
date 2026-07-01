@@ -92,11 +92,12 @@ function DetailDrawer({ item, type, onClose, onEditar, onEliminar, onMarcarPagad
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           className="fixed left-0 right-0 z-50 rounded-t-[28px] border-t border-canvas-border shadow-glass"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+            bottom: '60px',
             background: 'rgba(15,18,25,0.98)',
             backdropFilter: 'blur(20px)',
-            maxHeight: 'calc(88vh - 60px)',
-            overflowY: 'auto',
+            maxHeight: 'calc(100vh - 80px)',
+            overflowY: 'scroll',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {/* Handle */}
