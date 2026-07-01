@@ -32,25 +32,104 @@ const daysLeftInMonth = (referenceDate) => {
 const sum = (items, selector) =>
   (Array.isArray(items) ? items : []).reduce((total, item) => toMoney(total + toMoney(selector(item))), 0)
 
+// Determina si un pago mensual de deuda ya fue cubierto este mes
+// basándose en ultimo_pago. Si ultimo_pago está en el mes de referencia, está al día.
+function deudaPagadaEsteMes(deuda, today) {
+  if (!deuda.ultimo_pago) return false
+  const up = parseLocalDate(deuda.ultimo_pago)
+  return up && up.getFullYear() === today.getFullYear() && up.getMonth() === today.getMonth()
+}
+
+// Calcula cuántos meses de atraso tiene una deuda (para recurring_bill / installment)
+function mesesAtraso(venceStr, ultimoPagoStr, today) {
+  if (!venceStr) return 0
+  const vence = parseLocalDate(venceStr)
+  if (!vence) return 0
+  // Si el vencimiento fue este mes o futuro, no hay atraso
+  if (vence >= new Date(today.getFullYear(), today.getMonth(), 1)) return 0
+  // Si ya se pagó este mes, no hay atraso
+  if (ultimoPagoStr) {
+    const up = parseLocalDate(ultimoPagoStr)
+    if (up && up >= new Date(today.getFullYear(), today.getMonth(), 1)) return 0
+  }
+  // Calcular meses desde la fecha de vencimiento
+  const meses = (today.getFullYear() - vence.getFullYear()) * 12 + (today.getMonth() - vence.getMonth())
+  return Math.max(0, meses)
+}
+
 function getPendingCommitments({ gastosFijos = [], suscripciones = [], deudas = [], referenceDate }) {
   const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate())
+  const inicioMes = new Date(today.getFullYear(), today.getMonth(), 1)
 
+  // Gastos fijos: incluir los pendientes de este mes (ya vencidos O próximos)
+  // Si dia_venc ya pasó pero estado sigue Pendiente → overdue, igual cuenta
   const fijos = (Array.isArray(gastosFijos) ? gastosFijos : [])
     .filter((item) => item.estado !== 'Pagado')
-    .map((item) => ({ item, date: dueDateForMonth(today, item.dia_venc), amount: toMoney(item.monto), label: item.nombre || 'Gasto fijo' }))
-    .filter(({ date, amount }) => date && isSameMonth(date, today) && date >= today && amount > 0)
+    .map((item) => {
+      const date = dueDateForMonth(today, item.dia_venc)
+      const overdue = date && date < today
+      return {
+        item,
+        date: date || today,
+        amount: toMoney(item.monto),
+        label: item.nombre || 'Gasto fijo',
+        overdue,
+        priority: overdue ? 'high' : 'medium',
+      }
+    })
+    .filter(({ date, amount }) => date && isSameMonth(date, today) && amount > 0)
 
   const subs = (Array.isArray(suscripciones) ? suscripciones : [])
     .filter((item) => item.estado !== 'Cancelado')
-    .map((item) => ({ item, date: parseLocalDate(item.proximo_pago), amount: toMoney(item.costo), label: item.servicio || 'Suscripcion' }))
+    .map((item) => ({ item, date: parseLocalDate(item.proximo_pago), amount: toMoney(item.costo), label: item.servicio || 'Suscripcion', priority: 'low' }))
     .filter(({ date, amount }) => date && isSameMonth(date, today) && date >= today && amount > 0)
 
+  // Deudas: usar pago_minimo como obligación mensual, NO el saldo total
+  // Incluir si:
+  //   a) vence este mes y no se ha pagado este mes
+  //   b) vence pasado (meses anteriores) y no se ha pagado este mes → overdue
   const pagosDeuda = (Array.isArray(deudas) ? deudas : [])
-    .filter((item) => toMoney(item.saldo) > 0)
-    .map((item) => ({ item, date: parseLocalDate(item.vence), amount: toMoney(item.pago_minimo), label: item.cuenta || item.nombre || 'Deuda' }))
-    .filter(({ date, amount }) => date && isSameMonth(date, today) && date >= today && amount > 0)
+    .filter((item) => toMoney(item.saldo) > 0 && toMoney(item.pago_minimo) > 0)
+    .filter((item) => !deudaPagadaEsteMes(item, today))
+    .map((item) => {
+      const venceDate = parseLocalDate(item.vence)
+      const atraso = mesesAtraso(item.vence, item.ultimo_pago, today)
+      const overdue = atraso > 0
 
-  return [...fijos, ...subs, ...pagosDeuda].sort((a, b) => a.date - b.date)
+      // Fecha de referencia para ordenar: si vence en el futuro usar esa fecha,
+      // si ya pasó usar hoy (ya debería haberse pagado)
+      const displayDate = venceDate
+        ? (venceDate >= inicioMes ? venceDate : today)
+        : today
+
+      // Para installment_loan (Auto, Personal, Préstamo) el impacto es solo pago_minimo
+      // Para revolving (Tarjeta) igual — nunca usar saldo total como obligación mensual
+      return {
+        item,
+        date: displayDate,
+        amount: toMoney(item.pago_minimo),
+        label: item.cuenta || 'Deuda',
+        overdue,
+        atraso,
+        priority: overdue ? (item.tipo === 'Auto' ? 'critical' : 'high') : 'medium',
+      }
+    })
+    // Incluir deudas con vence este mes, o sin fecha de vence pero que no se han pagado este mes
+    .filter(({ item, overdue }) => {
+      const venceDate = parseLocalDate(item.vence)
+      if (overdue) return true // Vencida → siempre incluir
+      if (!venceDate) return true // Sin fecha → siempre pendiente
+      return isSameMonth(venceDate, today) || venceDate >= inicioMes
+    })
+
+  const all = [...fijos, ...subs, ...pagosDeuda]
+
+  // Ordenar: overdue primero, luego por fecha
+  return all.sort((a, b) => {
+    if (a.overdue && !b.overdue) return -1
+    if (!a.overdue && b.overdue) return 1
+    return a.date - b.date
+  })
 }
 
 function getTopCategory(gastosMes = []) {
@@ -65,6 +144,18 @@ function getTopCategory(gastosMes = []) {
 }
 
 function buildAction({ pendingCommitments, cashAfterCommitments, dailySafeSpend, savingsRate, dti, topCategory, totalIngresos, referenceDate }) {
+  // Primero: deudas/fijos vencidos (overdue) tienen mayor prioridad
+  const overdue = pendingCommitments.find((item) => item.overdue)
+  if (overdue) {
+    const mesesStr = overdue.atraso > 1 ? ` (${overdue.atraso} meses)` : ''
+    return {
+      tone: 'risk',
+      title: `${overdue.label} vencido${mesesStr}`,
+      detail: `Pago de $${overdue.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} pendiente. Regulariza cuanto antes para evitar cargos.`,
+      cta: 'Ver pagos',
+    }
+  }
+
   const urgent = pendingCommitments.find((item) => {
     const days = Math.ceil((item.date - referenceDate) / 86400000)
     return days <= 1
