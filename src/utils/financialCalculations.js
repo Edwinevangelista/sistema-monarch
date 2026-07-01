@@ -88,18 +88,11 @@ const calcularBalanceReal = (ingresos, gastos, gastosFijos, suscripciones, inici
     })
     .reduce((sum, g) => sum + safeNumber(g.monto), 0)
   
-  // Gastos fijos: cuentan como gasto real solo si ya están marcados "Pagado",
-  // o si son de autopago y su día de vencimiento ya llegó/pasó este mes.
-  // No se adelantan gastos fijos manuales que aún no se han pagado.
-  const esGastoFijoAutomatico = (gf) => gf.auto_pago === 'Si' || gf.auto_pago === true
-  const gastoFijoYaCorresponde = (gf, hastaFecha) => {
-    if (gf.estado === 'Pagado') return true
-    if (!esGastoFijoAutomatico(gf) || !gf.dia_venc) return false
-    const vencimiento = dueDateForMonth(hastaFecha.getFullYear(), hastaFecha.getMonth(), gf.dia_venc)
-    return vencimiento <= hastaFecha
-  }
+  // Gastos fijos: solo cuentan si están marcados explícitamente como "Pagado".
+  // Pendientes (aunque sean autopago y el día ya pasó) no restan del saldo.
+  const gastoFijoYaCorresponde = (gf) => gf.estado === 'Pagado'
   const gastosFijosReales = gastosFijos
-    .filter(gf => gastoFijoYaCorresponde(gf, fin))
+    .filter(gf => gastoFijoYaCorresponde(gf))
     .reduce((sum, gf) => sum + safeNumber(gf.monto), 0)
 
   // Suscripciones: cuentan como gasto real solo cuando su día de cobro de este
