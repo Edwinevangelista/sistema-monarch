@@ -179,25 +179,25 @@ function DetailDrawer({ item, type, onClose, onEditar, onEliminar, onMarcarPagad
               </motion.button>
             )}
 
-            {/* Editar */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => { onEditar?.(item); onClose() }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-canvas-elevated border border-canvas-border px-4 py-3.5 text-[14px] font-bold text-ink touch-manipulation"
-            >
-              <Edit2 className="h-4 w-4" />
-              Editar
-            </motion.button>
-
-            {/* Eliminar */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => { onEliminar?.(item); onClose() }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-negative/10 border border-accent-negative/20 px-4 py-3.5 text-[14px] font-bold text-accent-negative touch-manipulation"
-            >
-              <Trash2 className="h-4 w-4" />
-              Eliminar
-            </motion.button>
+            {/* Editar + Eliminar en fila */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { onEditar?.(item); onClose() }}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-canvas-elevated border border-canvas-border px-4 py-3.5 text-[14px] font-bold text-ink touch-manipulation"
+              >
+                <Edit2 className="h-4 w-4" />
+                Editar
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { onEliminar?.(item); onClose() }}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-accent-negative/10 border border-accent-negative/20 px-4 py-3.5 text-[14px] font-bold text-accent-negative touch-manipulation"
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+              </motion.button>
+            </div>
           </div>
 
           {/* Bottom padding inside sheet */}
