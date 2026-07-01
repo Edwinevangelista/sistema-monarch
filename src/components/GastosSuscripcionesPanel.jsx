@@ -91,7 +91,7 @@ function DetailDrawer({ item, type, onClose, onEditar, onEliminar, onMarcarPagad
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           className="fixed bottom-0 left-0 right-0 z-50 rounded-t-[28px] border-t border-canvas-border shadow-glass"
-          style={{ background: 'rgba(15,18,25,0.98)', backdropFilter: 'blur(20px)', maxHeight: '82vh', overflowY: 'auto' }}
+          style={{ background: 'rgba(15,18,25,0.98)', backdropFilter: 'blur(20px)', maxHeight: '88vh', overflowY: 'auto' }}
         >
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1">
@@ -194,7 +194,7 @@ function DetailDrawer({ item, type, onClose, onEditar, onEliminar, onMarcarPagad
           </div>
 
           {/* Safe area padding */}
-          <div style={{ height: 'env(safe-area-inset-bottom, 12px)' }} />
+          <div style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }} />
         </motion.div>
       </>
     </AnimatePresence>
