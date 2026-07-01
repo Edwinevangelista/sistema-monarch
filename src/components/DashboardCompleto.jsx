@@ -1320,7 +1320,8 @@ const handleRegistrarPagoTarjeta = async (pago) => {
     if (principal < 0 || intereses < 0 || total <= 0) {
       throw new Error('Montos inválidos')
     }
-    if (roundMoney(principal + intereses) !== total) {
+    // Tolerancia de $0.02 para evitar fallos por redondeo de decimales
+    if (Math.abs(roundMoney(principal + intereses) - total) > 0.02) {
       throw new Error('El total del pago debe cuadrar con principal + intereses')
     }
     if (!cuentaPago) {
@@ -1351,7 +1352,8 @@ const handleRegistrarPagoTarjeta = async (pago) => {
       esPagoCompleto
     })
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) throw new Error('Usuario no autenticado')
 
     const { data: rpcResult, error: rpcError } = await supabase.rpc('pagar_tarjeta', {
@@ -1522,7 +1524,7 @@ if (planDeudaActivo) {
 
   } catch (err) {
     console.error('❌ Error registrando pago:', err)
-    toast.info('Error registrando el pago: ' + (err.message || 'Error desconocido'))
+    toast.error('No se pudo registrar el pago: ' + (err.message || 'Error desconocido'), { duration: 5000 })
   }
 }
 

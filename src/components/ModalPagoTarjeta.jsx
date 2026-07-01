@@ -110,13 +110,13 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
       if (!deudaSeleccionada) { toast.error('Debes seleccionar una tarjeta válida'); return }
       if (!formData.monto || Number(formData.monto) <= 0) { toast.error('Debes ingresar un monto válido'); return }
       if (!formData.cuenta_id) {
-        toast.warning('Debes seleccionar la cuenta desde donde saldrá el pago')
+        toast.error('Selecciona la cuenta bancaria desde donde saldrá el pago', { duration: 5000 })
         return
       }
       if (formData.cuenta_id) {
         const cuenta = cuentas.find(c => c.id === formData.cuenta_id)
         if (cuenta && Number(cuenta.balance) < Number(formData.monto)) {
-          toast.error(`Fondos insuficientes. Saldo: $${Number(cuenta.balance).toFixed(2)} | Monto: $${Number(formData.monto).toFixed(2)}`)
+          toast.error(`Fondos insuficientes — Saldo disponible: $${Number(cuenta.balance).toFixed(2)}`, { duration: 5000 })
           return
         }
       }
@@ -134,7 +134,7 @@ const ModalPagoTarjeta = ({ onClose, onSave, deudas, deudaPreseleccionada = null
       onClose()
     } catch (e) {
       console.error('Error registrando pago:', e)
-      toast.error('Error al registrar el pago')
+      toast.error('Error al registrar el pago: ' + (e?.message || 'Intenta de nuevo'), { duration: 5000 })
     } finally {
       inFlightRef.current = false
       setIsLoading(false)
