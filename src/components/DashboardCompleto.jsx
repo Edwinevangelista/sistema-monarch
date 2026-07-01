@@ -2350,6 +2350,9 @@ const gastosPorCategoria = useMemo(() => {
         dailyBudget={dailyBudget}
         textoHora={textoHora}
         nombreUsuario={usuario.nombre || usuario.email?.split('@')[0]}
+        totalCuentas={cuentas.reduce((s, c) => s + Number(c.balance || 0), 0)}
+        netWorth={netWorth}
+        cuentas={cuentas}
       />
 
       <MoneyCommandCenter
