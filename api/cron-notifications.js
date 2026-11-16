@@ -18,10 +18,11 @@
 // - Re-chequeo: antes de cada envío se vuelve a leer el ítem; si ya se
 //   pagó o la fecha avanzó, no se envía.
 // - El payload lleva actions: [{ action: 'marcar-pagado' }] y data con
-//   tipoItem/itemId/monto; el service worker abre la app con
-//   ?accion=marcar-pagado y el dashboard ejecuta el pago a 1 toque.
-//   Límite conocido: el pago real con la app cerrada necesita un endpoint
-//   servidor (/api/marcar-pagado con token firmado) — eso es Fase 2.
+//   tipoItem/itemId/monto/nombre/token; el service worker llama a
+//   POST /api/marcar-pagado con el token y marca el pago con la app
+//   cerrada (Fase 2). Si falta el secreto del token, el aviso sale
+//   SIN token y SIN acción (el botón abre la app como en Fase 1) y
+//   queda un aviso claro en los logs.
 //
 // ENV vars needed in Vercel:
 //   VAPID_PUBLIC_KEY    → genera con: npx web-push generate-vapid-keys
@@ -30,9 +31,13 @@
 //   SUPABASE_URL        → your Supabase project URL (from Supabase dashboard)
 //   SUPABASE_SERVICE_KEY → service role key from Supabase dashboard
 //   CRON_SECRET         → a long random value set in Vercel only (never commit its value; rotate it, the old value was in git history)
+//   MARCAR_PAGADO_SECRET → valor aleatorio largo para firmar los tokens
+//     de "marcar pagado" (ver api/lib/marcarPagadoToken.js y SECURITY.md).
+//     Si no está, se usa CRON_SECRET como fallback (se registra en logs).
 
 const webpush = require('web-push');
 const { createClient } = require('@supabase/supabase-js');
+const { getMarcarPagadoSecret, createMarcarPagadoToken } = require('./lib/marcarPagadoToken');
 
 // ── Fechas en America/New_York (copia mínima de src/utils/fechasNY.js;
 //    api/*.js es CommonJS y no puede importar el módulo ESM) ──────────────
@@ -148,6 +153,15 @@ module.exports = async (req, res) => {
     process.env.SUPABASE_SERVICE_KEY
   );
 
+  // Secreto para firmar los tokens de "marcar pagado". Sin él, los
+  // avisos salen igual pero sin token y sin acción (no se rompen).
+  const secretoToken = getMarcarPagadoSecret();
+  if (!secretoToken) {
+    console.warn('cron: falta MARCAR_PAGADO_SECRET y CRON_SECRET; los avisos saldrán sin token ni acción de marcar pagado');
+  } else if (secretoToken.source !== 'MARCAR_PAGADO_SECRET') {
+    console.warn('cron: usando CRON_SECRET como fallback para los tokens; pon MARCAR_PAGADO_SECRET en Vercel');
+  }
+
   // Fechas en America/New_York (no UTC): el cron corre a las 13:00 UTC,
   // que son las 9:00 EDT / 8:00 EST en Nueva York.
   const hoyStr = hoyNY();
@@ -229,7 +243,7 @@ module.exports = async (req, res) => {
       venceFecha,
       title: `⚠️ Pago próximo: ${g.nombre}`,
       body: `Vence ${cuandoStr(dias)} — $${Number(g.monto).toLocaleString('es')}`,
-      data: { seccion: 'alertas', tipoItem: 'fijo', itemId: g.id, monto: Number(g.monto) },
+      data: { seccion: 'alertas', tipoItem: 'fijo', itemId: g.id, monto: Number(g.monto), nombre: g.nombre },
     });
   });
 
@@ -245,7 +259,7 @@ module.exports = async (req, res) => {
       venceFecha,
       title: `📱 Suscripción: ${s.servicio}`,
       body: `Se cobra ${cuandoStr(dias)} — $${Number(s.costo).toLocaleString('es')}`,
-      data: { seccion: 'suscripciones', tipoItem: 'suscripciones', itemId: s.id, monto: Number(s.costo) },
+      data: { seccion: 'suscripciones', tipoItem: 'suscripciones', itemId: s.id, monto: Number(s.costo), nombre: s.servicio },
     });
   });
 
@@ -262,7 +276,7 @@ module.exports = async (req, res) => {
       venceFecha,
       title: `💳 Pago de tarjeta: ${d.cuenta}`,
       body: `Mínimo $${Number(d.pago_minimo).toLocaleString('es')} vence ${cuandoStr(dias)}`,
-      data: { seccion: 'alertas', tipoItem: 'deuda', itemId: d.id, monto: Number(d.pago_minimo) },
+      data: { seccion: 'alertas', tipoItem: 'deuda', itemId: d.id, monto: Number(d.pago_minimo), nombre: d.cuenta },
     });
   });
 
@@ -288,11 +302,28 @@ module.exports = async (req, res) => {
       const reserva = await reserveNotification(supabase, userId, notif.tipo, notif.venceFecha);
       if (!reserva.reserved) continue;
 
+      // Token firmado para este pago concreto. Sin secreto no hay token
+      // ni acción: el aviso sale igual y el botón abre la app (Fase 1).
+      let token = null;
+      if (secretoToken) {
+        try {
+          token = createMarcarPagadoToken(secretoToken.secret, {
+            userId,
+            tipoItem: notif.tipoItem,
+            itemId: notif.itemId,
+            venceFecha: notif.venceFecha,
+            monto: notif.data.monto,
+          });
+        } catch (e) {
+          console.error(`No se pudo firmar el token para ${notif.tipo}:`, e?.message);
+        }
+      }
+
       const payload = JSON.stringify({
         title: notif.title,
         body: notif.body,
-        data: notif.data,
-        actions: [{ action: 'marcar-pagado', title: 'Marcar pagado' }],
+        data: token ? { ...notif.data, token } : notif.data,
+        actions: token ? [{ action: 'marcar-pagado', title: 'Marcar pagado' }] : [],
         icon: '/icons/FinGuide_AppIcon_192.png',
       });
 

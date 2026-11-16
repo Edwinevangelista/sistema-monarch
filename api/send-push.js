@@ -48,7 +48,7 @@ module.exports = async (req, res) => {
     process.env.SUPABASE_SERVICE_KEY
   );
 
-  const { user_id, title, body, icon, data } = req.body;
+  const { user_id, title, body, icon, data, actions } = req.body;
 
   if (!user_id || !title || !body) {
     return res.status(400).json({ error: 'user_id, title, and body are required' });
@@ -80,6 +80,9 @@ module.exports = async (req, res) => {
     body,
     icon: icon || '/icons/FinGuide_AppIcon_192.png',
     data: data || {},
+    // Fase 2: pasar las acciones tal cual (p. ej. "Marcar pagado"
+    // con su token en data.token). Sin esto el botón se perdía.
+    actions: Array.isArray(actions) ? actions : [],
   });
 
   // Send to all subscriptions for this user (handles multi-device)
