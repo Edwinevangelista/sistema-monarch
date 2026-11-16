@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TrendingUp, TrendingDown, Eye, EyeOff, Landmark, Building2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Eye, EyeOff, Landmark, Building2, Menu } from 'lucide-react'
 
 const fmt = (n) => {
   const abs = Math.abs(n)
@@ -47,6 +47,7 @@ export default function DashboardHero({
   totalCuentas = 0,
   netWorth = 0,
   cuentas = [],
+  onOpenDrawer,
 }) {
   const [hidden, setHidden] = useState(false)
   const flujoPositivo = saldo >= 0
@@ -58,11 +59,23 @@ export default function DashboardHero({
 
       {/* ── SALUDO ── */}
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-accent-positive">{textoHora}</p>
-          <h1 className="text-[22px] font-black leading-tight tracking-tight text-ink truncate max-w-[220px]">
-            {nombreUsuario}
-          </h1>
+        <div className="flex items-center gap-2">
+          {onOpenDrawer && (
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={onOpenDrawer}
+              aria-label="Abrir menú"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-canvas-border bg-canvas-surface text-ink-muted shadow-card transition-colors active:bg-canvas-elevated touch-manipulation"
+            >
+              <Menu className="h-4 w-4" />
+            </motion.button>
+          )}
+          <div>
+            <p className="text-xs font-semibold text-accent-positive">{textoHora}</p>
+            <h1 className="text-[22px] font-black leading-tight tracking-tight text-ink truncate max-w-[220px]">
+              {nombreUsuario}
+            </h1>
+          </div>
         </div>
         <motion.button
           whileTap={{ scale: 0.92 }}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Plus, CreditCard, Bell, X, ChevronRight, Target, Download, ShieldAlert } from 'lucide-react';
+import { Plus, CreditCard, Bell, X, ChevronRight, Target, Download, ShieldAlert, Wallet, BarChart2, Shield, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -57,6 +58,10 @@ import FinancialCoach from './FinancialCoach'
 import GuiaPrimerPaso from './GuiaPrimerPaso'
 import MoneyCommandCenter from './MoneyCommandCenter'
 import GastosSuscripcionesPanel from './GastosSuscripcionesPanel'
+import Drawer from './ui/Drawer'
+import SwipeableRow from './ui/SwipeableRow'
+import { useDragToClose } from './ui/useDragToClose'
+import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
 import { ITEM_TYPES } from '../constants/itemTypes'
 // Hook de tour (sólo el hook, el componente se carga lazy)
 import { useTourNuevoUsuario } from './TourNuevoUsuario'
@@ -139,6 +144,9 @@ export default function DashboardCompleto()  {
   })
 
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [showNotificaciones, setShowNotificaciones] = useState(false)
+  const [tabUsuarioInicial, setTabUsuarioInicial] = useState('perfil')
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
@@ -2379,6 +2387,7 @@ const gastosPorCategoria = useMemo(() => {
         totalCuentas={cuentas.reduce((s, c) => s + Number(c.balance || 0), 0)}
         netWorth={netWorth}
         cuentas={cuentas}
+        onOpenDrawer={() => setShowDrawer(true)}
       />
 
       <MoneyCommandCenter
@@ -2631,13 +2640,20 @@ const gastosPorCategoria = useMemo(() => {
         <SectionCollapse title={`Tarjetas y deudas (${deudasInstant.length})`} icon="💳">
           <div className="space-y-3">
             {deudasInstant.map(deuda => (
-              <CardDeuda
+              <SwipeableRow
                 key={deuda.id}
-                deuda={deuda}
-                onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
-                onEliminar={() => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA)}
-                onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
-              />
+                actions={[
+                  { label: 'Pagar', icon: <CreditCard className="h-5 w-5" />, colorClass: 'bg-emerald-600', onClick: () => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') } },
+                  { label: 'Borrar', icon: <Trash2 className="h-5 w-5" />, colorClass: 'bg-rose-600', onClick: () => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA) },
+                ]}
+              >
+                <CardDeuda
+                  deuda={deuda}
+                  onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
+                  onEliminar={() => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA)}
+                  onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
+                />
+              </SwipeableRow>
             ))}
           </div>
           {!planDeudaActivo && (
@@ -3015,15 +3031,16 @@ const gastosPorCategoria = useMemo(() => {
         />
       </ModalWrapper>
 
-      <ModalWrapper show={showModal === 'usuario'} onClose={() => setShowModal(null)}>
+      <ModalWrapper show={showModal === 'usuario'} onClose={() => { setShowModal(null); setTabUsuarioInicial('perfil') }}>
         <ModalUsuario 
           usuario={usuario} 
           preferencias={preferenciasUsuario} 
           onChangePreferencias={setPreferenciasUsuario} 
-          onClose={() => setShowModal(null)} 
+          onClose={() => { setShowModal(null); setTabUsuarioInicial('perfil') }} 
           onLogout={() => { localStorage.clear(); window.location.href = "/auth"; }}
           permission={permission}
           showLocalNotification={showLocalNotification}
+          tabInicial={tabUsuarioInicial}
         />
       </ModalWrapper>
 
@@ -3368,6 +3385,51 @@ const gastosPorCategoria = useMemo(() => {
         />
       )}
 
+      {/* ── DRAWER LATERAL (lo secundario: no duplica la barra inferior) ── */}
+      <Drawer open={showDrawer} onClose={() => setShowDrawer(false)} title="Menú">
+        <div className="space-y-1">
+          {[
+            { id: 'cuentas', label: 'Cuentas', desc: 'Tus cuentas bancarias', icon: <Wallet className="h-5 w-5 text-blue-400" />, onClick: () => { setShowDrawer(false); abrirModal('cuentas') } },
+            { id: 'reportes', label: 'Mis Reportes', desc: 'Exportar y ver reportes', icon: <BarChart2 className="h-5 w-5 text-emerald-400" />, onClick: () => { setShowDrawer(false); abrirExportacion() } },
+            { id: 'notificaciones', label: 'Notificaciones', desc: 'Avisos y anticipación', icon: <Bell className="h-5 w-5 text-amber-400" />, onClick: () => { setShowDrawer(false); setShowNotificaciones(true) } },
+            { id: 'privacidad', label: 'Privacidad', desc: 'Tus datos y tu cuenta', icon: <Shield className="h-5 w-5 text-green-400" />, onClick: () => { setShowDrawer(false); setTabUsuarioInicial('privacidad'); abrirModal('usuario') } },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={item.onClick}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-canvas-elevated active:bg-canvas-elevated touch-manipulation"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-canvas-border bg-canvas-elevated">
+                {item.icon}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-ink">{item.label}</span>
+                <span className="block truncate text-xs text-ink-faint">{item.desc}</span>
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setShowDrawer(false); setTabUsuarioInicial('privacidad'); abrirModal('usuario') }}
+            className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-accent-negative/20 bg-accent-negative/10 px-3 py-3 text-left transition-colors active:bg-accent-negative/15 touch-manipulation"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-negative/20 bg-canvas-elevated">
+              <Trash2 className="h-5 w-5 text-accent-negative" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-accent-negative">Borrar cuenta</span>
+              <span className="block truncate text-xs text-ink-faint">Eliminar tus datos para siempre</span>
+            </span>
+          </button>
+        </div>
+      </Drawer>
+
+      {/* ── CONFIGURACIÓN DE NOTIFICACIONES (desde el drawer) ── */}
+      <ModalWrapper show={showNotificaciones} onClose={() => setShowNotificaciones(false)}>
+        <ConfiguracionNotificaciones />
+      </ModalWrapper>
+
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
       {/* NOTA PARA MENU INFERIOR: Asegúrate de que `MenuInferior.jsx` tenga acceso a la prop `onOpenExport` */}
       <MenuInferior
@@ -3438,11 +3500,33 @@ const gastosPorCategoria = useMemo(() => {
 }
 
 // COMPONENTE AUXILIAR PARA MODALES
+// Hoja inferior en móvil (centrado en escritorio) con arrastrar para cerrar:
+// el gesto solo empieza desde el tirador, así el scroll del contenido no se
+// rompe. También cierra con Esc y tocando el fondo.
 function ModalWrapper({ show, onClose, children }) {
+  const { controls, startDrag, handleDragEnd } = useDragToClose({ onClose, enabled: show })
+
+  useEffect(() => {
+    if (!show) return
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [show, onClose])
+
   if (!show) return null
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-      <div
+    <div
+      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        drag="y"
+        dragListener={false}
+        dragControls={controls}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.7 }}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
         className="relative w-full md:max-w-lg md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/12 animate-in slide-in-from-bottom-10 duration-300"
         style={{
           maxHeight: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))',
@@ -3452,8 +3536,12 @@ function ModalWrapper({ show, onClose, children }) {
       >
         {/* Shimmer top line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
-        {/* Drag handle mobile */}
-        <div className="flex justify-center pt-3 pb-1 md:hidden">
+        {/* Tirador móvil — desde aquí se arrastra para cerrar */}
+        <div
+          className="flex justify-center pt-3 pb-1 md:hidden cursor-grab active:cursor-grabbing"
+          onPointerDown={startDrag}
+          style={{ touchAction: 'none' }}
+        >
           <div className="w-10 h-1 rounded-full bg-white/15" />
         </div>
         {/* Close button desktop */}
@@ -3466,7 +3554,7 @@ function ModalWrapper({ show, onClose, children }) {
         <div className="flex-1 overflow-y-auto p-0 md:p-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
           {children}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

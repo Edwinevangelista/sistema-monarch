@@ -5,6 +5,7 @@ import {
   ChevronRight, CheckCircle2, Clock, X, Calendar, Tag, CreditCard, Banknote,
 } from 'lucide-react'
 import PillBadge from './ui/PillBadge'
+import SwipeableRow from './ui/SwipeableRow'
 
 const money = (value) =>
   `$${Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -209,7 +210,9 @@ function DetailDrawer({ item, type, onClose, onEditar, onEliminar, onMarcarPagad
 }
 
 // ── Row ─────────────────────────────────────────────────────────────────────
-function Row({ item, type, onTap, index }) {
+// Fila deslizable: deslizar a la izquierda revela acciones (Pagado/Borrar).
+// El tap abre el detalle; el swipe solo revela botones, nunca ejecuta nada.
+function Row({ item, type, onTap, index, actions }) {
   const isSub  = type === 'suscripciones'
   const isFijo = type === 'fijos'
 
@@ -238,15 +241,17 @@ function Row({ item, type, onTap, index }) {
   const Icon = isSub ? Repeat : isFijo ? WalletCards : ReceiptText
 
   return (
-    <motion.button
-      type="button"
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, delay: index * 0.035 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onTap(item)}
-      className="w-full flex items-center gap-3 rounded-2xl border border-canvas-border bg-canvas-elevated/60 px-3 py-3 shadow-card text-left touch-manipulation"
-    >
+    <SwipeableRow actions={actions} onTap={() => onTap(item)}>
+      <motion.div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(item) } }}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18, delay: index * 0.035 }}
+        whileTap={{ scale: 0.98 }}
+        className="w-full flex items-center gap-3 rounded-2xl border border-canvas-border bg-canvas-elevated/60 px-3 py-3 shadow-card text-left touch-manipulation cursor-pointer"
+      >
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${iconBg}`}>
         <Icon className="h-4 w-4" />
       </span>
@@ -269,7 +274,8 @@ function Row({ item, type, onTap, index }) {
         <p className={`text-[13px] font-black ${amountColor}`}>{money(amount)}</p>
         <ChevronRight className="h-4 w-4 text-ink-faint" />
       </div>
-    </motion.button>
+      </motion.div>
+    </SwipeableRow>
   )
 }
 
@@ -312,6 +318,30 @@ export default function GastosSuscripcionesPanel({
     suscripciones: { onEditar: onEditarSuscripcion,  onEliminar: onEliminarSuscripcion },
     fijos:         { onEditar: onEditarFijo,         onEliminar: onEliminarFijo },
   }[tab]
+
+  // Acciones que revela el swipe en cada fila. Borrar usa el handler que ya
+  // existe (pide confirmación); nunca borra directo desde el gesto.
+  const accionesPara = (item) => {
+    const borrar = {
+      label: 'Borrar',
+      icon: <Trash2 className="h-5 w-5" />,
+      colorClass: 'bg-rose-600',
+      onClick: () => handlers.onEliminar?.(item),
+    }
+    if (tab === 'fijos') {
+      const pagado = item.estado === 'Pagado'
+      return [
+        {
+          label: pagado ? 'Pendiente' : 'Pagado',
+          icon: <CheckCircle2 className="h-5 w-5" />,
+          colorClass: pagado ? 'bg-amber-600' : 'bg-emerald-600',
+          onClick: () => onMarcarPagadoFijo?.(item, pagado ? 'Pendiente' : 'Pagado'),
+        },
+        borrar,
+      ]
+    }
+    return [borrar]
+  }
 
   return (
     <>
@@ -365,6 +395,7 @@ export default function GastosSuscripcionesPanel({
                     type={tab}
                     index={i}
                     onTap={setSelected}
+                    actions={accionesPara(item)}
                   />
                 ))
               )}
