@@ -4,7 +4,7 @@
 //   VAPID_PUBLIC_KEY   → genera con: npx web-push generate-vapid-keys
 //   VAPID_PRIVATE_KEY  → genera con: npx web-push generate-vapid-keys
 //   VAPID_MAILTO       → mailto:finguideapp@gmail.com
-//   SUPABASE_URL       → https://loluismsoljdsoksuiei.supabase.co
+//   SUPABASE_URL       → your Supabase project URL (from Supabase dashboard)
 //   SUPABASE_SERVICE_KEY → sk_... (service role key from Supabase dashboard)
 
 const webpush = require('web-push');

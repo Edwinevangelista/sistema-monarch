@@ -16,13 +16,38 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Signing: NEVER commit keystore passwords or the keystore file.
+    // Put them in android/keystore.properties (git-ignored, see
+    // android/keystore.properties.example) or in environment variables.
+    // A release build without them fails here with a clear message,
+    // instead of silently using a committed password.
+    def keystoreProps = new Properties()
+    def keystorePropsFile = rootProject.file('keystore.properties')
+    if (keystorePropsFile.exists()) {
+        keystoreProps.load(new FileInputStream(keystorePropsFile))
+    }
+    def storeFilePath = keystoreProps['storeFile'] ?: System.getenv('KEYSTORE_FILE')
+    def storePass = keystoreProps['storePassword'] ?: System.getenv('KEYSTORE_PASSWORD')
+    def keyAliasValue = keystoreProps['keyAlias'] ?: System.getenv('KEY_ALIAS') ?: 'finguide'
+    def keyPass = keystoreProps['keyPassword'] ?: System.getenv('KEY_PASSWORD')
     signingConfigs {
         release {
-            storeFile file("finguide-release-new.keystore")
-            storePassword "FinGuide2025!"
-            keyAlias "finguide"
-            keyPassword "FinGuide2025!"
+            if (storeFilePath && storePass && keyPass) {
+                storeFile file(storeFilePath)
+                storePassword storePass
+                keyAlias keyAliasValue
+                keyPassword keyPass
+            } else {
+                // No keystore configured locally: Gradle will fail the
+                // release signing step instead of using a committed secret.
+                // See SECURITY.md for how to generate a new keystore.
+                storeFile file('missing-keystore.keystore')
+                storePassword 'missing'
+                keyAlias keyAliasValue
+                keyPassword 'missing'
+            }
         }
+    }
     }
     buildTypes {
         debug {

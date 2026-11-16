@@ -7,9 +7,9 @@
 //   VAPID_PUBLIC_KEY    → genera con: npx web-push generate-vapid-keys
 //   VAPID_PRIVATE_KEY   → genera con: npx web-push generate-vapid-keys
 //   VAPID_MAILTO        → mailto:finguideapp@gmail.com
-//   SUPABASE_URL        → https://loluismsoljdsoksuiei.supabase.co
+//   SUPABASE_URL        → your Supabase project URL (from Supabase dashboard)
 //   SUPABASE_SERVICE_KEY → service role key from Supabase dashboard
-//   CRON_SECRET         → finguide-cron-2025
+//   CRON_SECRET         → a long random value set in Vercel only (never commit its value; rotate it, the old value was in git history)
 
 const webpush = require('web-push');
 const { createClient } = require('@supabase/supabase-js');

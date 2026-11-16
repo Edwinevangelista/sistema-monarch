@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabaseClient'
 // iOS key: Apps → [iOS app] → Public API key (starts with appl_)
 // Android key: Apps → [Android app] → Public API key (starts with goog_)
 const RC_API_KEY_IOS = process.env.REACT_APP_RC_API_KEY_IOS || 'appl_PENDING_ADD_IOS_APP_IN_REVENUECAT'
-const RC_API_KEY_ANDROID = process.env.REACT_APP_RC_API_KEY_ANDROID || 'goog_JSiJykOmyhxCumPvMisgwdPqNMH'
+const RC_API_KEY_ANDROID = process.env.REACT_APP_RC_API_KEY_ANDROID || ''
 const ENTITLEMENT_ID = 'FinGuide Pro'
 
 // Determine key by platform
@@ -33,11 +33,19 @@ export function useRevenueCat(userId) {
 
     async function configure() {
       try {
+        const apiKey = getRCApiKey()
+        if (!apiKey || apiKey.startsWith('appl_PENDING')) {
+          // No RevenueCat key configured for this platform (env var missing).
+          // Purchases stay disabled instead of using a hardcoded key.
+          console.error('RevenueCat key not configured for this platform.')
+          setError(new Error('RevenueCat key not configured'))
+          return
+        }
         // Only enable debug logs in development
         if (process.env.NODE_ENV !== 'production') {
           await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
         }
-        await Purchases.configure({ apiKey: getRCApiKey() })
+        await Purchases.configure({ apiKey })
         await Purchases.logIn({ appUserID: userId })
         setIsConfigured(true)
 
