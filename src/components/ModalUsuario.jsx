@@ -21,7 +21,8 @@ export default function ModalUsuario({
   onLogout,
   onChangePreferencias,
   permission,
-  showLocalNotification
+  showLocalNotification,
+  tabInicial = 'perfil',
 }) {
   // =========================
   // ESTADOS
@@ -29,7 +30,7 @@ export default function ModalUsuario({
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('perfil'); // perfil, seguridad, preferencias, privacidad, ayuda
+  const [activeTab, setActiveTab] = useState(tabInicial); // perfil, seguridad, preferencias, privacidad, ayuda
   
   // Estados para Push (LIMPIO)
   const [pushEnabled, setPushEnabled] = useState(false);

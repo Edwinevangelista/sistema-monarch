@@ -1,4 +1,10 @@
 // cron-alerts/index.ts
+// ⚠️ DEPRECATED — Fase 1: no programar ni invocar. El único sistema
+// servidor de avisos es api/cron-notifications.js (Vercel). Esta función
+// no tiene schedule ni auth, su consulta de suscripciones usa columnas
+// que no existen y el cuerpo de deuda muestra el saldo total en vez del
+// pago mínimo. Se borra en Fase 2, cuando Vercel lleve una semana de
+// avisos correctos con deudas incluidas.
 // Edge Function que se ejecuta como cron diario (ej: cada mañana a las 9am)
 // Envía notificaciones push reales a usuarios con app cerrada
 // Configurar en Supabase Dashboard > Edge Functions > cron-alerts

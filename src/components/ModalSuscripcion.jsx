@@ -33,6 +33,8 @@ const defaultData = {
   cuenta_id:    '',
   autopago:     false,
   estado:       'Activo',
+  // Fase 1: lead-time de aviso (días antes del cobro, 0 = solo ese día)
+  aviso_dias:   3,
 }
 
 export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial = null }) {
@@ -55,6 +57,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
         cuenta_id:    suscripcionInicial.cuenta_id || '',
         autopago:     !!suscripcionInicial.autopago,
         estado:       suscripcionInicial.estado || 'Activo',
+        aviso_dias:   suscripcionInicial.aviso_dias ?? 3,
         id:           suscripcionInicial.id,
       })
     } else {
@@ -80,6 +83,7 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
         cuenta_id:    formData.cuenta_id || null,
         autopago:     formData.autopago,
         estado:       formData.estado,
+        aviso_dias:   Math.max(0, Math.min(30, parseInt(formData.aviso_dias, 10) || 0)),
       }
       if (suscripcionInicial) dataAGuardar.id = suscripcionInicial.id
       await onSave(dataAGuardar)
@@ -238,6 +242,27 @@ export default function ModalSuscripcion({ onClose, onSave, suscripcionInicial =
             className={inputCls}
             style={{ fontSize: '16px' }}
           />
+        </div>
+
+        {/* Fase 1: lead-time de aviso por ítem (días antes del cobro) */}
+        <div>
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
+            🔔 Avísame con anticipación
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="30"
+              value={formData.aviso_dias}
+              onChange={e => set('aviso_dias', e.target.value)}
+              disabled={loading}
+              className={inputCls}
+              style={{ fontSize: '16px', width: '90px' }}
+            />
+            <span className="text-xs text-ink-muted">día(s) antes del cobro (0 = solo ese día)</span>
+          </div>
         </div>
 
         {/* CUENTA + AUTOPAGO */}

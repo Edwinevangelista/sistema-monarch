@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Plus, CreditCard, Bell, X, ChevronRight, Target, Download, ShieldAlert } from 'lucide-react';
+import { Plus, CreditCard, Bell, X, ChevronRight, Target, Download, ShieldAlert, Wallet, BarChart2, Shield, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion'
 
 // --- LIBRERÍA DE BD ---
 import { supabase } from '../lib/supabaseClient'
@@ -9,6 +10,8 @@ import { showConfirm } from '../utils/confirm'
 import { addMoney, roundMoney, subtractMoney } from '../utils/money'
 import { reconciliar } from '../utils/reconciliacion'
 import { crearResumenFinanciero } from '../utils/financialSnapshot'
+import { hoyNY } from '../utils/fechasNY'
+import { buildAlertas } from '../utils/buildAlertas'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -53,9 +56,12 @@ import QuickAddBar from './QuickAddBar'
 import DailySnapshot from './DailySnapshot'
 import FinancialCoach from './FinancialCoach'
 import GuiaPrimerPaso from './GuiaPrimerPaso'
-import PremiumGate from './PremiumGate'
 import MoneyCommandCenter from './MoneyCommandCenter'
 import GastosSuscripcionesPanel from './GastosSuscripcionesPanel'
+import Drawer from './ui/Drawer'
+import SwipeableRow from './ui/SwipeableRow'
+import { useDragToClose } from './ui/useDragToClose'
+import ConfiguracionNotificaciones from './ConfiguracionNotificaciones'
 import { ITEM_TYPES } from '../constants/itemTypes'
 // Hook de tour (sólo el hook, el componente se carga lazy)
 import { useTourNuevoUsuario } from './TourNuevoUsuario'
@@ -106,7 +112,7 @@ export default function DashboardCompleto()  {
   
   // --- ESTADOS PRINCIPALES ---
   const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
-  const { isPremium, limites, canAddMore, getLimit } = usePlan()
+  const { isPremium, limites } = usePlan()
 
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem('usuario_finguide');
@@ -138,6 +144,9 @@ export default function DashboardCompleto()  {
   })
 
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [showNotificaciones, setShowNotificaciones] = useState(false)
+  const [tabUsuarioInicial, setTabUsuarioInicial] = useState('perfil')
   const [showDetallesCategorias, setShowDetallesCategorias] = useState(false)
   const [showDebtPlanner, setShowDebtPlanner] = useState(false)
   const [showSavingsPlanner, setShowSavingsPlanner] = useState(false)
@@ -174,23 +183,17 @@ export default function DashboardCompleto()  {
     if (nombre) setShowModal(nombre)
   }, [cerrarTodo])
 
+  // Fase 1: todo gratis — sin candado Premium, se abre siempre.
   const abrirExportacion = useCallback(() => {
-    if (!limites.exportarDatos) {
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return
-    }
     cerrarTodo()
     setShowExportacion(true)
-  }, [cerrarTodo, limites.exportarDatos])
+  }, [cerrarTodo])
 
+  // Fase 1: todo gratis — sin candado Premium, se abre siempre.
   const abrirDebtPlanner = useCallback(() => {
-    if (!limites.estrategiaPagoDeuda) {
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return
-    }
     cerrarTodo()
     setShowDebtPlanner(true)
-  }, [cerrarTodo, limites.estrategiaPagoDeuda])
+  }, [cerrarTodo])
 
   const scrollToSection = useCallback((sectionId) => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -256,7 +259,9 @@ export default function DashboardCompleto()  {
     const interval = setInterval(() => setHoy(new Date()), 60000) // Actualiza cada 60 segundos
     return () => clearInterval(interval)
   }, [])
-  const hoyStr = hoy.toISOString().split('T')[0]
+  // Fecha de hoy en America/New_York (Fase 1: toISOString() es UTC y
+  // entre las 00:00 y las 05:00 de NY ya era el día siguiente).
+  const hoyStr = hoyNY(hoy)
 
   useInactivityTimeout(15)
   
@@ -303,6 +308,15 @@ useEffect(() => {
 useEffect(() => {
   const handleSWMessage = (event) => {
     if (event.data?.type === 'NAVIGATE_TO_SECTION') {
+      // Fase 1: acción "Marcar pagado" desde la notificación (app ya abierta).
+      // Se guarda y se avisa con un evento; otro efecto la ejecuta.
+      if (event.data?.accion === 'marcar-pagado' && event.data?.tipoItem && event.data?.itemId) {
+        try {
+          sessionStorage.setItem('finguide_accion_pendiente', JSON.stringify({ tipo: event.data.tipoItem, id: event.data.itemId, ts: Date.now() }))
+        } catch { /* ignorar */ }
+        window.dispatchEvent(new CustomEvent('finguide-accion-pendiente'))
+        return
+      }
       const { seccion } = event.data
       // Mapear sección a acción del dashboard
       const SECCIONES_MAPA = {
@@ -337,6 +351,18 @@ useEffect(() => {
     const accion = accionesParam[seccionParam]
     if (accion) setTimeout(accion, 800)
     // Limpiar URL
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  // Fase 1: acción "Marcar pagado" desde una notificación push
+  // (?accion=marcar-pagado&tipo=&id=). Se guarda en sessionStorage porque
+  // los datos aún no cargaron en el montaje; otro efecto la ejecuta
+  // cuando dataReady es true. Se ignora si tiene más de 10 minutos.
+  const accionParam = params.get('accion')
+  if (accionParam === 'marcar-pagado' && params.get('tipo') && params.get('id')) {
+    try {
+      sessionStorage.setItem('finguide_accion_pendiente', JSON.stringify({ tipo: params.get('tipo'), id: params.get('id'), ts: Date.now() }))
+    } catch { /* sessionStorage no disponible: se ignora la acción */ }
     window.history.replaceState({}, '', window.location.pathname)
   }
 
@@ -678,6 +704,40 @@ useEffect(() => {
     }
   }
 
+  // Fase 1: ejecuta la acción "Marcar pagado" que llegó desde una
+  // notificación push (guardada en sessionStorage). Para deuda abre el
+  // modal de pago con la tarjeta preseleccionada (2 toques: el monto
+  // importa); para fijo/suscripción es 1 toque real. No se guarda
+  // nada en silencio: si el ítem no existe, solo avisa.
+  const accionPendienteRef = useRef(false)
+  useEffect(() => {
+    const procesarAccionPendiente = () => {
+      if (accionPendienteRef.current) return
+      let pendiente = null
+      try { pendiente = JSON.parse(sessionStorage.getItem('finguide_accion_pendiente') || 'null') } catch { /* ignorar */ }
+      if (!pendiente?.tipo || !pendiente?.id) return
+      if (pendiente.ts && Date.now() - pendiente.ts > 10 * 60 * 1000) {
+        sessionStorage.removeItem('finguide_accion_pendiente')
+        return
+      }
+      accionPendienteRef.current = true
+      sessionStorage.removeItem('finguide_accion_pendiente')
+      const { tipo, id } = pendiente
+      let item = null
+      if (tipo === ITEM_TYPES.DEUDA) item = deudasInstant.find(d => String(d.id) === String(id))
+      else if (tipo === ITEM_TYPES.FIJO) item = gastosFijosInstant.find(g => String(g.id) === String(id))
+      else if (tipo === ITEM_TYPES.SUSCRIPCION) item = suscripcionesInstant.find(s => String(s.id) === String(id))
+      if (!item) {
+        toast.info('No se encontró el pago. Puede que ya esté pagado.')
+        return
+      }
+      setTimeout(() => handlePagarUniversal(item, tipo), 800)
+    }
+    window.addEventListener('finguide-accion-pendiente', procesarAccionPendiente)
+    if (dataReady) procesarAccionPendiente()
+    return () => window.removeEventListener('finguide-accion-pendiente', procesarAccionPendiente)
+  }, [dataReady, deudasInstant, gastosFijosInstant, suscripcionesInstant]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleEliminarUnificado = async (item, type) => {
     const typeLabel = type === 'deuda' ? 'debt record' : type === 'fijo' ? 'fixed expense' : type === 'suscripcion' ? 'subscription' : 'expense';
     const ok = await showConfirm({
@@ -952,6 +1012,11 @@ useEffect(() => {
           const { deuda_id: _ignored, ...payloadFallback } = payload
           resultado = await updateGastoFijo(id, payloadFallback)
         }
+        // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+        if (resultado?.success === false && 'aviso_dias' in payload && resultado.error?.message?.includes('aviso_dias')) {
+          const { aviso_dias: _ignored2, ...payloadFallback } = payload
+          resultado = await updateGastoFijo(id, payloadFallback)
+        }
         if (resultado && resultado.success === false) {
           throw new Error(resultado.error?.message || 'Error al actualizar el gasto fijo')
         }
@@ -961,6 +1026,11 @@ useEffect(() => {
         // Si falló por columna deuda_id inexistente en la tabla, reintentar sin ella
         if (resultado?.success === false && 'deuda_id' in data && resultado.error?.message?.includes('deuda_id')) {
           const { deuda_id: _ignored, ...dataFallback } = data
+          resultado = await addGastoFijo(dataFallback)
+        }
+        // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+        if (resultado?.success === false && 'aviso_dias' in data && resultado.error?.message?.includes('aviso_dias')) {
+          const { aviso_dias: _ignored2, ...dataFallback } = data
           resultado = await addGastoFijo(dataFallback)
         }
         if (resultado && resultado.success === false) {
@@ -1016,6 +1086,13 @@ useEffect(() => {
         resultado = await updateSuscripcion(data.id, data)
       } else {
         resultado = await addSuscripcion(data)
+      }
+      // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+      if (resultado?.success === false && 'aviso_dias' in data && resultado.error?.message?.includes('aviso_dias')) {
+        const { aviso_dias: _ignored, ...dataFallback } = data
+        resultado = data.id
+          ? await updateSuscripcion(data.id, dataFallback)
+          : await addSuscripcion(dataFallback)
       }
       if (resultado && resultado.success === false) {
         throw new Error(resultado.error?.message || 'Error al guardar la suscripción')
@@ -1249,12 +1326,6 @@ const handleDeshacerPago = useCallback(async (item, type) => {
 
   const handleGuardarDeuda = async (data) => {
     try {
-      if (!data.id && !canAddMore('tarjetas', deudasInstant.length)) {
-        toast.error(`Has alcanzado el límite del plan gratis (${getLimit('tarjetas')} tarjetas)`)
-        window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-        return
-      }
-
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('Error: No se pudo identificar al usuario.')
@@ -1262,12 +1333,21 @@ const handleDeshacerPago = useCallback(async (item, type) => {
       }
 
       const dataConUser = { ...data, user_id: user.id }
+      // Si la columna aviso_dias aún no existe en la BD (migración
+      // supabase_add_aviso_dias.sql sin correr), reintentar sin ella.
+      const sinAvisoDias = ({ aviso_dias: _a, ...resto }) => resto
 
       if (data.id) {
-        const { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id).eq('user_id', user.id)
+        let { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id).eq('user_id', user.id)
+        if (error?.message?.includes('aviso_dias')) {
+          ;({ error } = await supabase.from('deudas').update(sinAvisoDias(dataConUser)).eq('id', data.id).eq('user_id', user.id))
+        }
         if (error) throw error
       } else {
-        const { error } = await supabase.from('deudas').insert([dataConUser])
+        let { error } = await supabase.from('deudas').insert([dataConUser])
+        if (error?.message?.includes('aviso_dias')) {
+          ;({ error } = await supabase.from('deudas').insert([sinAvisoDias(dataConUser)]))
+        }
         if (error) throw error
       }
       
@@ -1282,12 +1362,8 @@ const handleDeshacerPago = useCallback(async (item, type) => {
     }
   }
 
+  // Fase 1: todo gratis — sin límite de cuentas.
   const handleAgregarCuenta = async (cuentaData) => {
-    if (!canAddMore('cuentas', cuentas.length)) {
-      toast.error(`Has alcanzado el límite del plan gratis (${getLimit('cuentas')} cuentas)`)
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return null
-    }
     return addCuenta(cuentaData)
   }
 
@@ -2006,90 +2082,14 @@ useEffect(() => {
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
-  const alertas = useMemo(() => {
-    const listaAlertas = []
-    
-    // 1. Gastos Fijos
-    gastosFijosInstant.forEach(gf => {
-      if (gf.estado === 'Pagado' || !gf.dia_venc) return
-      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-      const diff = Math.ceil((diaVenc - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `⚠️ ${gf.nombre} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `⚠️ ${gf.nombre} vence hoy.`
-          : `⚠️ ${gf.nombre} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje, 
-          mensajeCorto: `${gf.nombre}`, 
-          monto: gf.monto, 
-          tipoItem: ITEM_TYPES.FIJO, 
-          item: gf,
-          dias: diff
-        })
-      }
-    })
-    
-    // 2. Suscripciones
-    suscripcionesInstant.forEach(sub => {
-      if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
-      const proxPago = new Date(sub.proximo_pago)
-      const diff = Math.ceil((proxPago - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `🔄 ${sub.servicio} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `🔄 ${sub.servicio} se renueva hoy.`
-          : `🔄 ${sub.servicio} se renovará en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'info', 
-          mensaje, 
-          mensajeCorto: `${sub.servicio}`, 
-          monto: sub.costo, 
-          tipoItem: ITEM_TYPES.SUSCRIPCION, 
-          item: sub,
-          dias: diff
-        })
-      }
-    })
-    
-    // 3. Deudas
-// 3. Deudas (Excluir saldadas)
-deudasInstant.forEach(d => {
-  // ✅ NO generar alertas para tarjetas saldadas
-  if (!d.vence || Number(d.saldo || 0) <= 0) return
-  
-  const vence = new Date(d.vence)
-  const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
-  
-  if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `💳 Pago de ${d.cuenta} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `💳 Pago de ${d.cuenta} vence hoy.`
-          : `💳 Pago de ${d.cuenta} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje, 
-          mensajeCorto: `${d.cuenta}`, 
-          monto: d.pago_minimo, 
-          tipoItem: ITEM_TYPES.DEUDA, 
-          item: d,
-          dias: diff
-        })
-      }
-    })
-    
-    return listaAlertas.sort((a, b) => a.dias - b.dias)
-    
-  }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
+  // Fase 1: alertas construidas por buildAlertas (una sola fuente de verdad,
+  // fechas en America/New_York, deuda con pago_minimo, lead-time por ítem).
+  const alertas = useMemo(() => buildAlertas({
+    gastosFijos: gastosFijosInstant,
+    suscripciones: suscripcionesInstant,
+    deudas: deudasInstant,
+    hoy,
+  }), [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
 
   // ============================================
   // 🏦 ANÁLISIS DE COBERTURA DE CUENTAS BANCARIAS
@@ -2387,6 +2387,7 @@ const gastosPorCategoria = useMemo(() => {
         totalCuentas={cuentas.reduce((s, c) => s + Number(c.balance || 0), 0)}
         netWorth={netWorth}
         cuentas={cuentas}
+        onOpenDrawer={() => setShowDrawer(true)}
       />
 
       <MoneyCommandCenter
@@ -2520,7 +2521,7 @@ const gastosPorCategoria = useMemo(() => {
           </SectionCollapse>
 
           <SectionCollapse title="Proyección 30 días" icon="🔮">
-            <PremiumGate feature="proyeccionFlujoCaja">
+            {/* Fase 1: todo gratis — sin PremiumGate */}
               <CashFlowForecast
                 saldoActual={saldoReal}
                 totalIngresos={totalIngresos}
@@ -2529,7 +2530,6 @@ const gastosPorCategoria = useMemo(() => {
                 gastosFijos={gastosFijosInstant}
                 suscripciones={suscripcionesInstant}
               />
-            </PremiumGate>
           </SectionCollapse>
 
           <SectionCollapse title="Salud financiera" icon="💚" badge={`${kpis.financialHealth}/100`}>
@@ -2640,13 +2640,20 @@ const gastosPorCategoria = useMemo(() => {
         <SectionCollapse title={`Tarjetas y deudas (${deudasInstant.length})`} icon="💳">
           <div className="space-y-3">
             {deudasInstant.map(deuda => (
-              <CardDeuda
+              <SwipeableRow
                 key={deuda.id}
-                deuda={deuda}
-                onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
-                onEliminar={() => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA)}
-                onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
-              />
+                actions={[
+                  { label: 'Pagar', icon: <CreditCard className="h-5 w-5" />, colorClass: 'bg-emerald-600', onClick: () => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') } },
+                  { label: 'Borrar', icon: <Trash2 className="h-5 w-5" />, colorClass: 'bg-rose-600', onClick: () => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA) },
+                ]}
+              >
+                <CardDeuda
+                  deuda={deuda}
+                  onEditar={() => { setDeudaEditando(deuda); abrirModal('agregarDeuda') }}
+                  onEliminar={() => handleEliminarUnificado(deuda, ITEM_TYPES.DEUDA)}
+                  onPagar={() => { setDeudaEditando(deuda); abrirModal('pagoTarjeta') }}
+                />
+              </SwipeableRow>
             ))}
           </div>
           {!planDeudaActivo && (
@@ -2693,6 +2700,7 @@ const gastosPorCategoria = useMemo(() => {
               deudas={deudasInstant}
               ingresos={ingresosInstant}
               gastos={gastosInstant}
+              onMarcarPagado={(evento) => handlePagarUniversal(evento.item, evento.tipoItem)}
             />
           </SectionCollapse>
         </>
@@ -2999,6 +3007,10 @@ const gastosPorCategoria = useMemo(() => {
             setShowModal(null)
             handleOpenDetail(alerta.item, alerta.tipoItem)
           }}
+          onMarcarPagado={(alerta) => {
+            setShowModal(null)
+            handlePagarUniversal(alerta.item, alerta.tipoItem)
+          }}
         />
       )}
 
@@ -3019,15 +3031,16 @@ const gastosPorCategoria = useMemo(() => {
         />
       </ModalWrapper>
 
-      <ModalWrapper show={showModal === 'usuario'} onClose={() => setShowModal(null)}>
+      <ModalWrapper show={showModal === 'usuario'} onClose={() => { setShowModal(null); setTabUsuarioInicial('perfil') }}>
         <ModalUsuario 
           usuario={usuario} 
           preferencias={preferenciasUsuario} 
           onChangePreferencias={setPreferenciasUsuario} 
-          onClose={() => setShowModal(null)} 
+          onClose={() => { setShowModal(null); setTabUsuarioInicial('perfil') }} 
           onLogout={() => { localStorage.clear(); window.location.href = "/auth"; }}
           permission={permission}
           showLocalNotification={showLocalNotification}
+          tabInicial={tabUsuarioInicial}
         />
       </ModalWrapper>
 
@@ -3329,9 +3342,8 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       <ModalWrapper show={showDebtPlanner} onClose={() => setShowDebtPlanner(false)}>
-        <PremiumGate feature="estrategiaPagoDeuda">
+        {/* Fase 1: todo gratis — sin PremiumGate */}
           <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-        </PremiumGate>
       </ModalWrapper>
 
       {/* ✅ FIX: REMOVED WRAPPER FOR SAVINGS PLANNER TO PREVENT BOTTOM SHEET BEHAVIOR ON MOBILE */}
@@ -3348,7 +3360,8 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       {/* MIS REPORTES — usa createPortal internamente */}
-      {showExportacion && limites.exportarDatos && (
+      {/* Fase 1: todo gratis — sin candado exportarDatos */}
+      {showExportacion && (
         <VisualizacionDatos
           onClose={() => setShowExportacion(false)}
           ingresos={ingresosInstant}
@@ -3371,6 +3384,51 @@ const gastosPorCategoria = useMemo(() => {
           onClose={() => setShowProyeccion3d(false)}
         />
       )}
+
+      {/* ── DRAWER LATERAL (lo secundario: no duplica la barra inferior) ── */}
+      <Drawer open={showDrawer} onClose={() => setShowDrawer(false)} title="Menú">
+        <div className="space-y-1">
+          {[
+            { id: 'cuentas', label: 'Cuentas', desc: 'Tus cuentas bancarias', icon: <Wallet className="h-5 w-5 text-blue-400" />, onClick: () => { setShowDrawer(false); abrirModal('cuentas') } },
+            { id: 'reportes', label: 'Mis Reportes', desc: 'Exportar y ver reportes', icon: <BarChart2 className="h-5 w-5 text-emerald-400" />, onClick: () => { setShowDrawer(false); abrirExportacion() } },
+            { id: 'notificaciones', label: 'Notificaciones', desc: 'Avisos y anticipación', icon: <Bell className="h-5 w-5 text-amber-400" />, onClick: () => { setShowDrawer(false); setShowNotificaciones(true) } },
+            { id: 'privacidad', label: 'Privacidad', desc: 'Tus datos y tu cuenta', icon: <Shield className="h-5 w-5 text-green-400" />, onClick: () => { setShowDrawer(false); setTabUsuarioInicial('privacidad'); abrirModal('usuario') } },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={item.onClick}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-canvas-elevated active:bg-canvas-elevated touch-manipulation"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-canvas-border bg-canvas-elevated">
+                {item.icon}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-ink">{item.label}</span>
+                <span className="block truncate text-xs text-ink-faint">{item.desc}</span>
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setShowDrawer(false); setTabUsuarioInicial('privacidad'); abrirModal('usuario') }}
+            className="mt-2 flex w-full items-center gap-3 rounded-2xl border border-accent-negative/20 bg-accent-negative/10 px-3 py-3 text-left transition-colors active:bg-accent-negative/15 touch-manipulation"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-negative/20 bg-canvas-elevated">
+              <Trash2 className="h-5 w-5 text-accent-negative" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-accent-negative">Borrar cuenta</span>
+              <span className="block truncate text-xs text-ink-faint">Eliminar tus datos para siempre</span>
+            </span>
+          </button>
+        </div>
+      </Drawer>
+
+      {/* ── CONFIGURACIÓN DE NOTIFICACIONES (desde el drawer) ── */}
+      <ModalWrapper show={showNotificaciones} onClose={() => setShowNotificaciones(false)}>
+        <ConfiguracionNotificaciones />
+      </ModalWrapper>
 
       {/* --- MENÚ INFERIOR MÓVIL (AUTO-OCULTABLE) --- */}
       {/* NOTA PARA MENU INFERIOR: Asegúrate de que `MenuInferior.jsx` tenga acceso a la prop `onOpenExport` */}
@@ -3442,11 +3500,33 @@ const gastosPorCategoria = useMemo(() => {
 }
 
 // COMPONENTE AUXILIAR PARA MODALES
+// Hoja inferior en móvil (centrado en escritorio) con arrastrar para cerrar:
+// el gesto solo empieza desde el tirador, así el scroll del contenido no se
+// rompe. También cierra con Esc y tocando el fondo.
 function ModalWrapper({ show, onClose, children }) {
+  const { controls, startDrag, handleDragEnd } = useDragToClose({ onClose, enabled: show })
+
+  useEffect(() => {
+    if (!show) return
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [show, onClose])
+
   if (!show) return null
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in">
-      <div
+    <div
+      className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <motion.div
+        drag="y"
+        dragListener={false}
+        dragControls={controls}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.7 }}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd}
         className="relative w-full md:max-w-lg md:h-auto md:max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col border-t md:border border-white/12 animate-in slide-in-from-bottom-10 duration-300"
         style={{
           maxHeight: 'calc(100dvh - 3.5rem - env(safe-area-inset-top, 0px))',
@@ -3456,8 +3536,12 @@ function ModalWrapper({ show, onClose, children }) {
       >
         {/* Shimmer top line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
-        {/* Drag handle mobile */}
-        <div className="flex justify-center pt-3 pb-1 md:hidden">
+        {/* Tirador móvil — desde aquí se arrastra para cerrar */}
+        <div
+          className="flex justify-center pt-3 pb-1 md:hidden cursor-grab active:cursor-grabbing"
+          onPointerDown={startDrag}
+          style={{ touchAction: 'none' }}
+        >
           <div className="w-10 h-1 rounded-full bg-white/15" />
         </div>
         {/* Close button desktop */}
@@ -3470,7 +3554,7 @@ function ModalWrapper({ show, onClose, children }) {
         <div className="flex-1 overflow-y-auto p-0 md:p-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
           {children}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

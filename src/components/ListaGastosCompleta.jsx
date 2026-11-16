@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ITEM_TYPES } from '../constants/itemTypes';
 import { getEstadoTarjeta } from '../utils/tarjetasCalculos'
+import SwipeableRow from './ui/SwipeableRow'
 
 export default function ListaGastosCompleta({
   deudas = [],
@@ -114,9 +115,29 @@ export default function ListaGastosCompleta({
         return null;
     }
 
+    // Acciones del swipe: Pagar (si aplica) y Borrar. Borrar usa el handler
+    // que ya existe (pide confirmación); el swipe solo revela el botón.
+    const acciones = []
+    if (type !== ITEM_TYPES.VARIABLE && !isPaid && onPagar) {
+      acciones.push({
+        label: 'Pagar',
+        icon: <CheckCircle className="w-5 h-5" />,
+        colorClass: 'bg-emerald-600',
+        onClick: () => onPagar(item, type),
+      })
+    }
+    if (onEliminar) {
+      acciones.push({
+        label: 'Borrar',
+        icon: <Trash2 className="w-5 h-5" />,
+        colorClass: 'bg-rose-600',
+        onClick: () => onEliminar(item, type),
+      })
+    }
+
     return (
+      <SwipeableRow key={`${type}-${item.id}`} actions={acciones}>
       <div
-        key={`${type}-${item.id}`}
         className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-5 hover:border-white/20 transition-all duration-300 group relative overflow-hidden"
       >
         {/* Fondo decorativo */}
@@ -241,6 +262,7 @@ export default function ListaGastosCompleta({
           </button>
         </div>
       </div>
+      </SwipeableRow>
     );
   };
 

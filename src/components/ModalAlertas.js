@@ -5,7 +5,7 @@ import {
   Repeat
 } from 'lucide-react'
 
-export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
+export default function ModalAlertas({ alertas = [], onClose, onAlertClick, onMarcarPagado }) {
 
   // 🔒 Bloqueo de scroll
   useEffect(() => {
@@ -174,16 +174,23 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                 {/* Lista de alertas */}
                 {alertasOrganizadas.map((alerta, idx) => {
                   const style = getAlertStyle(alerta.dias)
-                  
+
+                  // Fase 1: la fila es un div (no un <button>) para poder
+                  // tener dentro el botón real de Marcar pagado.
                   return (
-                    <button
+                    <div
                       key={idx}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         if (onAlertClick) {
                           onAlertClick(alerta)
                         }
                       }}
-                      className={`w-full p-4 rounded-2xl border text-left
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && onAlertClick) onAlertClick(alerta)
+                      }}
+                      className={`w-full p-4 rounded-2xl border text-left cursor-pointer
                                   transition-all active:scale-[0.98] hover:brightness-110
                                   ${style.bg} ${style.border}`}
                     >
@@ -218,12 +225,22 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                           </p>
                         </div>
                         
-                        {/* Monto y flecha */}
+                        {/* Monto, flecha y Marcar pagado */}
                         <div className="flex flex-col items-end flex-shrink-0">
                           <span className={`text-lg font-bold ${style.text}`}>
                             ${Number(alerta.monto || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                           <ChevronRight className="w-4 h-4 text-gray-500 mt-1" />
+                          {/* Fase 1: Marcar pagado en 1 toque (deuda abre el
+                              modal de pago con la tarjeta preseleccionada). */}
+                          {onMarcarPagado && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onMarcarPagado(alerta) }}
+                              className="mt-2 text-[11px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+                            >
+                              ✓ Pagado
+                            </button>
+                          )}
                         </div>
                       </div>
                       
@@ -233,7 +250,7 @@ export default function ModalAlertas({ alertas = [], onClose, onAlertClick }) {
                           <div className="h-full bg-red-500 rounded-full animate-pulse w-full" />
                         </div>
                       )}
-                    </button>
+                    </div>
                   )
                 })}
 

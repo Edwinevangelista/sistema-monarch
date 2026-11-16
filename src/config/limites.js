@@ -1,11 +1,16 @@
+// FinTrack — Fase 1: todo gratis.
+// Todos los límites del plan free son iguales a premium: las funciones
+// (proyección, estrategia de deuda, exportar, historial, cuentas y
+// deudas ilimitadas) ya existen completas; el candado solo las tapaba.
+// El objeto `premium` se deja por compatibilidad con usePlan/getLimitesPlan.
 export const LIMITES = {
   free: {
-    maxCuentas: 2,
-    maxTarjetas: 2,
-    mesesHistorial: 1,
-    proyeccionFlujoCaja: false,
-    estrategiaPagoDeuda: false,
-    exportarDatos: false,
+    maxCuentas: Infinity,
+    maxTarjetas: Infinity,
+    mesesHistorial: Infinity,
+    proyeccionFlujoCaja: true,
+    estrategiaPagoDeuda: true,
+    exportarDatos: true,
   },
   premium: {
     maxCuentas: Infinity,

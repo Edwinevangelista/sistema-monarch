@@ -105,6 +105,17 @@ export default function ConfiguracionNotificaciones() {
       {/* Configuración */}
       {permission === 'granted' && (
         <>
+          {/* Fase 1: nota honesta — la anticipación se configura por pago
+              ("Avísame con anticipación" al crear/editar cada gasto fijo,
+              suscripción o tarjeta); "Saldo bajo" y "Resumen semanal"
+              todavía no hacen nada. */}
+          <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+            <p className="text-xs text-amber-200">
+              💡 La anticipación de cada aviso se configura en cada pago
+              ("Avísame con anticipación"). "Saldo bajo" y "Resumen semanal"
+              aún no están activos.
+            </p>
+          </div>
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between p-4 bg-gray-700/50 rounded-xl">
               <div>

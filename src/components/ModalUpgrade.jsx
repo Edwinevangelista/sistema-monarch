@@ -18,10 +18,12 @@ const PREMIUM_FEATURES = [
 ]
 
 export default function ModalUpgrade({ isOpen, onClose }) {
-  const { isTrial, trialUsed, trialDaysRemaining, startTrial } = usePlan()
+  // Fase 1: el trial estaba roto (startTrial siempre devolvía error), así
+  // que se quitó el botón. isTrial/trialDaysRemaining solo alimentan el
+  // banner, que nunca se muestra porque isTrial es siempre false.
+  const { isTrial, trialDaysRemaining } = usePlan()
   const [userId, setUserId] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
-  const [trialLoading, setTrialLoading] = useState(false)
 
   const { isNative, loadOfferings, purchasePackage, restorePurchases } = useRevenueCat(userId)
 
@@ -82,10 +84,15 @@ export default function ModalUpgrade({ isOpen, onClose }) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Debes iniciar sesión para mejorar tu plan.')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Debes iniciar sesión para mejorar tu plan.')
 
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           userEmail: user.email,
@@ -105,20 +112,6 @@ export default function ModalUpgrade({ isOpen, onClose }) {
   }
 
   const handleCheckout = isNative ? handleNativePurchase : handleStripeCheckout
-
-  const handleStartTrial = async () => {
-    setTrialLoading(true)
-    try {
-      const { error } = await startTrial()
-      if (error) throw new Error(error)
-      toast.success('🎉 ¡Tu prueba gratuita de 7 días ha comenzado!')
-      onClose()
-    } catch (err) {
-      toast.error(err.message || 'No se pudo iniciar la prueba. Intenta de nuevo.')
-    } finally {
-      setTrialLoading(false)
-    }
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -186,21 +179,8 @@ export default function ModalUpgrade({ isOpen, onClose }) {
             {checkoutLoading ? 'Procesando...' : 'Suscribirme — $6.99/mes'}
           </button>
 
-          {/* Trial CTA */}
-          {!trialUsed && !isTrial && (
-            <button
-              onClick={handleStartTrial}
-              disabled={trialLoading}
-              className="w-full bg-canvas-surface/5 hover:bg-canvas-surface/10 disabled:opacity-60 text-gray-300 hover:text-white font-semibold py-3 rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
-            >
-              {trialLoading ? (
-                <div className="w-4 h-4 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 text-amber-400" />
-              )}
-              {trialLoading ? 'Iniciando prueba...' : 'Probar 7 días gratis'}
-            </button>
-          )}
+          {/* Fase 1: botón de trial eliminado — startTrial siempre devolvía
+              "Trial no configurado" y el botón mentía al usuario. */}
 
           {/* Restore purchases (native only) */}
           {isNative && (

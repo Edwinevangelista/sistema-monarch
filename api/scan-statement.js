@@ -5,11 +5,16 @@ const anthropic = new Anthropic({
 });
 
 module.exports = async (req, res) => {
-  // CORS headers
+  // CORS: only the app's own origin, not '*'.
+  // Security (Fase 0): this endpoint spends Anthropic credits on every call,
+  // so it now requires the caller's Supabase session token and rejects
+  // oversized files. It was previously open to anyone on the internet.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sistema-monarch.vercel.app';
+  const origin = req.headers.origin || '';
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Origin', origin === siteUrl ? origin : siteUrl);
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -20,11 +25,35 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Require a Supabase session token.
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  if (!process.env.ANTHROPIC_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: 'Statement scan is not configured' });
+  }
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  } catch (e) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   try {
     const { file, fileType } = req.body;
 
     if (!file) {
       return res.status(400).json({ error: 'No file provided' });
+    }
+
+    // Reject oversized uploads (base64 string, ~10 MB of file data max).
+    if (typeof file !== 'string' || file.length > 15000000) {
+      return res.status(413).json({ error: 'File too large' });
     }
 
     let base64Data = file;
@@ -161,9 +190,8 @@ REGLAS IMPORTANTES:
 
   } catch (error) {
     console.error('Error processing statement:', error);
-    return res.status(500).json({ 
-      error: 'Error processing statement',
-      details: error.message 
+    return res.status(500).json({
+      error: 'Error processing statement'
     });
   }
 };

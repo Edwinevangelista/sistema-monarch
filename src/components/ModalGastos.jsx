@@ -68,6 +68,7 @@ export default function ModalGastos({
     nombre: '',
     dia_venc: '',
     estado: 'Pendiente',
+    aviso_dias: '3',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -89,13 +90,14 @@ export default function ModalGastos({
         nombre: gastoInicial.nombre || '',
         dia_venc: gastoInicial.dia_venc?.toString() || '',
         estado: gastoInicial.estado || 'Pendiente',
+        aviso_dias: gastoInicial.aviso_dias?.toString() ?? '3',
       })
     } else {
       setTipoGasto(tipoInicial)
       setFormData({
         fecha: new Date().toISOString().split('T')[0],
         categoria: '', descripcion: '', monto: '', metodo: 'Efectivo',
-        cuenta_id: '', deuda_id: '', nombre: '', dia_venc: '', estado: 'Pendiente',
+        cuenta_id: '', deuda_id: '', nombre: '', dia_venc: '', estado: 'Pendiente', aviso_dias: '3',
       })
     }
   }, [gastoInicial]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -149,6 +151,8 @@ export default function ModalGastos({
           monto: parseFloat(formData.monto),
           dia_venc: parseInt(formData.dia_venc),
           estado: formData.estado,
+          // Fase 1: lead-time de aviso (0-30 días, 0 = solo el día del vencimiento)
+          aviso_dias: Math.max(0, Math.min(30, parseInt(formData.aviso_dias, 10) || 0)),
           cuenta_id: formData.cuenta_id || null,
           deuda_id: formData.deuda_id || null,
         }
@@ -340,6 +344,7 @@ export default function ModalGastos({
 
         {/* FIJO — Día de vencimiento + Estado */}
         {tipoGasto === 'fijo' && (
+          <>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
@@ -386,6 +391,28 @@ export default function ModalGastos({
               </div>
             </div>
           </div>
+
+          {/* Fase 1: lead-time de aviso por ítem (días antes del vencimiento) */}
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
+              🔔 Avísame con anticipación
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="30"
+                value={formData.aviso_dias}
+                onChange={e => set('aviso_dias', e.target.value)}
+                disabled={loading}
+                className={inputCls}
+                style={{ fontSize: '16px', width: '90px' }}
+              />
+              <span className="text-xs text-ink-muted">día(s) antes del vencimiento (0 = solo ese día)</span>
+            </div>
+          </div>
+          </>
         )}
 
         {/* CUENTA / TARJETA */}
