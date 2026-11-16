@@ -1,3 +1,7 @@
+// send-push/index.ts
+// ⚠️ DEPRECATED — Fase 1: no invocar. El único sistema servidor de avisos
+// es api/cron-notifications.js (Vercel). Esta función no tiene auth y su
+// tag lleva Date.now(), así que la dedup es imposible. Se borra en Fase 2.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import webpush from "npm:web-push";
 

@@ -4,6 +4,7 @@
 // El servidor envía push via Edge Function → SW lo recibe → muestra notificación
 
 import { supabase } from './supabaseClient'
+import { buildAlertas } from '../utils/buildAlertas'
 
 // VAPID public key — la public key es segura para incluir en el código
 // La private key NUNCA va aquí — solo en Supabase Edge Secrets
@@ -281,52 +282,41 @@ async function _checkFinancialAlerts() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const hoy = new Date().toISOString().split('T')[0]
-    const en7Dias = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    // Fase 1: un solo constructor de alertas (buildAlertas) — la misma
+    // lógica que el dashboard, con pago_minimo para deudas (antes el
+    // cuerpo mostraba el saldo total) y fechas en America/New_York.
+    // Solo corre con la app abierta; el cron de Vercel es el sistema
+    // servidor de avisos. En primer plano solo se notifican las que
+    // vencen en ≤3 días; el resto se ve en la bandeja de alertas.
+    const [deudasRes, fijosRes, subsRes] = await Promise.all([
+      supabase.from('deudas')
+        .select('id, cuenta, saldo, pago_minimo, vence, aviso_dias')
+        .eq('user_id', user.id).eq('estado', 'Activa'),
+      supabase.from('gastos_fijos')
+        .select('id, nombre, monto, dia_venc, estado, aviso_dias')
+        .eq('user_id', user.id),
+      supabase.from('suscripciones')
+        .select('id, servicio, costo, proximo_pago, estado, aviso_dias')
+        .eq('user_id', user.id),
+    ])
 
-    // Alertas de tarjetas próximas a vencer
-    const { data: deudas } = await supabase
-      .from('deudas')
-      .select('cuenta, saldo, vence')
-      .eq('user_id', user.id)
-      .eq('estado', 'Activa')
-      .gte('vence', hoy)
-      .lte('vence', en7Dias)
+    const alertas = buildAlertas({
+      gastosFijos: fijosRes.data || [],
+      suscripciones: subsRes.data || [],
+      deudas: deudasRes.data || [],
+      hoy: new Date(),
+    })
 
-    if (deudas?.length > 0) {
-      for (const deuda of deudas.slice(0, 2)) {
-        const diasRestantes = Math.ceil(
-          (new Date(deuda.vence) - new Date()) / (1000 * 60 * 60 * 24)
-        )
-        if (diasRestantes <= 3) {
-          await showNotificationViaSW(
-            '💳 Fecha de Corte Próxima',
-            `${deuda.cuenta}: $${Number(deuda.saldo || 0).toFixed(2)} — vence en ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}`,
-            { tag: 'debt-' + (deuda.cuenta || '').replace(/\s/g, ''), requireInteraction: true }
-          )
-        }
-      }
-    }
-
-    // Alertas de gastos fijos con autopago próximos
-    const { data: gastosFijos } = await supabase
-      .from('gastos_fijos')
-      .select('nombre,monto,dia_venc')
-      .eq('user_id', user.id)
-      .eq('auto_pago', true)
-
-    if (gastosFijos?.length > 0) {
-      const diaHoy = new Date().getDate()
-      for (const gf of gastosFijos) {
-        const diasHastaVenc = (gf.dia_venc - diaHoy + 31) % 31
-        if (diasHastaVenc >= 0 && diasHastaVenc <= 2) {
-          await showNotificationViaSW(
-            '⚡ Cobro Automático Próximo',
-            `${gf.nombre}: $${Number(gf.monto || 0).toFixed(2)} se cobra ${diasHastaVenc === 0 ? 'hoy' : 'en ' + diasHastaVenc + ' día(s)'}`,
-            { tag: 'autopago-' + (gf.nombre || '').replace(/\s/g, ''), requireInteraction: false }
-          )
-        }
-      }
+    const proximas = alertas.filter(a => a.dias <= 3).slice(0, 2)
+    for (const alerta of proximas) {
+      const cuando = alerta.dias < 0
+        ? `vencido hace ${Math.abs(alerta.dias)} día${Math.abs(alerta.dias) !== 1 ? 's' : ''}`
+        : alerta.dias === 0 ? 'vence hoy' : `vence en ${alerta.dias} día${alerta.dias !== 1 ? 's' : ''}`
+      await showNotificationViaSW(
+        alerta.dias < 0 ? '⚠️ Pago vencido' : '⏰ Pago próximo',
+        `${alerta.mensajeCorto}: $${Number(alerta.monto || 0).toFixed(2)} — ${cuando}`,
+        { tag: alerta.id, requireInteraction: alerta.dias <= 0 }
+      )
     }
   } catch (err) {
     console.warn('Error en alertas financieras:', err)

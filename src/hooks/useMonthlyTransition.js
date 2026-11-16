@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { hoyNY } from '../utils/fechasNY'
 
 /**
  * 🔄 Hook para gestionar la transición mensual automática
@@ -192,8 +193,10 @@ export const useMonthlyTransition = () => {
    */
   const actualizarSuscripcionesVencidas = useCallback(async (userId) => {
     console.log('🔄 Actualizando suscripciones vencidas...')
-    
-    const hoy = new Date().toISOString().split('T')[0]
+
+    // Fase 1: fecha en America/New_York (toISOString es UTC y de madrugada
+    // en NY ya era el día siguiente).
+    const hoy = hoyNY()
     
     const { data: suscripciones, error: errorQuery } = await supabase
       .from('suscripciones')

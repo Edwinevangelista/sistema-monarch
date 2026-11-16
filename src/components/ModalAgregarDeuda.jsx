@@ -31,6 +31,8 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
     pago_real:      '',
     vence:          '',
     estado:         'Activa',
+    // Fase 1: lead-time de aviso (días antes del corte, 0 = solo ese día)
+    aviso_dias:     3,
   })
 
   const set = (k, v) => setFormData(p => ({ ...p, [k]: v }))
@@ -49,12 +51,13 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
         pago_real:      deudaInicial.pago_real ?? '',
         vence:          deudaInicial.vence || '',
         estado:         deudaInicial.estado || 'Activa',
+        aviso_dias:     deudaInicial.aviso_dias ?? 3,
       })
     } else {
       setFormData({
         id: null, cuenta: '', tipo: 'Tarjeta', saldo: '', apr: '',
         limite_credito: '', dias_gracia: '21', pago_minimo: '',
-        pago_real: '', vence: '', estado: 'Activa',
+        pago_real: '', vence: '', estado: 'Activa', aviso_dias: 3,
       })
     }
   }, [deudaInicial])
@@ -80,6 +83,7 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
         pago_real:      parseFloat(formData.pago_real) || 0,
         vence:          formData.vence || null,
         estado:         formData.estado,
+        aviso_dias:     Math.max(0, Math.min(30, parseInt(formData.aviso_dias, 10) || 0)),
       }
       if (esEdicion && deudaInicial) payload.id = deudaInicial.id
       else delete payload.id
@@ -271,6 +275,27 @@ export default function ModalAgregarDeuda({ onClose, onSave, deudaInicial = null
               className={inputCls}
               style={{ fontSize: '16px' }}
             />
+          </div>
+        </div>
+
+        {/* Fase 1: lead-time de aviso por ítem (días antes del corte) */}
+        <div>
+          <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-widest mb-2">
+            🔔 Avísame con anticipación
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="30"
+              value={formData.aviso_dias}
+              onChange={e => set('aviso_dias', e.target.value)}
+              disabled={loading}
+              className={inputCls}
+              style={{ fontSize: '16px', width: '90px' }}
+            />
+            <span className="text-xs text-ink-muted">día(s) antes del corte (0 = solo ese día)</span>
           </div>
         </div>
 

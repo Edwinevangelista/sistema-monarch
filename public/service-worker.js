@@ -101,6 +101,8 @@ self.addEventListener('push', (event) => {
     tag: payload.tag,
     requireInteraction: payload.requireInteraction || false,
     silent: false,
+    // Fase 1: acciones del payload (p. ej. "Marcar pagado" del cron)
+    actions: payload.actions || [],
     data: payload.data || { url: '/' }
   };
 
@@ -116,11 +118,41 @@ self.addEventListener('notificationclick', (event) => {
   console.log('SW v4: Notificación clickeada', event.notification.data);
   event.notification.close();
 
+  const data = event.notification.data || {};
+  const baseUrl = self.location.origin;
+
+  // Fase 1: acción "Marcar pagado" — abre la app con ?accion=marcar-pagado
+  // y el dashboard ejecuta el pago a 1 toque cuando los datos cargan.
+  // Límite conocido: el pago real con la app cerrada necesita un endpoint
+  // servidor (/api/marcar-pagado con token firmado) — eso es Fase 2.
+  if (event.action === 'marcar-pagado' && data.tipoItem && data.itemId) {
+    const urlToOpen = `${baseUrl}/?accion=marcar-pagado&tipo=${encodeURIComponent(data.tipoItem)}&id=${encodeURIComponent(data.itemId)}`;
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then((clientList) => {
+          for (const client of clientList) {
+            if (client.url.startsWith(baseUrl) && 'focus' in client) {
+              client.focus();
+              client.postMessage({
+                type: 'NAVIGATE_TO_SECTION',
+                seccion: 'alertas',
+                accion: 'marcar-pagado',
+                tipoItem: data.tipoItem,
+                itemId: data.itemId,
+              });
+              return;
+            }
+          }
+          return clients.openWindow(urlToOpen);
+        })
+    );
+    return;
+  }
+
   // Extraer sección de destino del payload
   // El servidor puede enviar: data.seccion = 'cuentas' | 'gastos' | 'deudas' | 'suscripciones' | 'alertas'
-  const seccion = event.notification.data?.seccion || null;
-  const baseUrl = self.location.origin;
-  const url = event.notification.data?.url || baseUrl;
+  const seccion = data.seccion || null;
+  const url = data.url || baseUrl;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })

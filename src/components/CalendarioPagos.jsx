@@ -2,8 +2,9 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, CreditCard, Repeat, Wallet } from 'lucide-react'
+import { formatoFechaLocal, parseFechaLocal } from '../utils/fechasNY'
 
-const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos }) => {
+const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos, onMarcarPagado }) => {
   const [mesActual, setMesActual] = useState(new Date())
   const [diaSeleccionado, setDiaSeleccionado] = useState(null)
 
@@ -30,7 +31,9 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
     if (!dia) return { ingresos: 0, gastos: 0, eventos: [], tieneIngreso: false, tieneGasto: false }
 
     const fecha = new Date(mesActual.getFullYear(), mesActual.getMonth(), dia)
-    const fechaStr = fecha.toISOString().split('T')[0]
+    // Fase 1: formato local sin pasar por UTC (toISOString es fecha UTC y
+    // entre las 00:00 y las 05:00 de NY ya era el día siguiente).
+    const fechaStr = formatoFechaLocal(fecha)
 
     let totalIngresos = 0
     let totalGastos = 0
@@ -58,7 +61,9 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
 
       // Ingresos recurrentes adicionales
       if (ing.frecuencia && ing.frecuencia !== 'Único') {
-        const fechaBase = new Date(ing.fecha)
+        // Fase 1: parseFechaLocal, no new Date('YYYY-MM-DD') (medianoche UTC
+        // = la noche anterior en NY y el día salía corrido).
+        const fechaBase = parseFechaLocal(ing.fecha)
         const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0)
         const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1)
 
@@ -143,6 +148,9 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
         tipo: 'gasto_fijo',
         nombre: gf.nombre,
         monto: gf.monto,
+        // Fase 1: item + tipoItem para el botón Marcar pagado
+        item: gf,
+        tipoItem: 'fijo',
         icono: <CreditCard className="w-4 h-4" />,
         esPagado,
         esProyeccion: !esMesActual,
@@ -162,6 +170,8 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
           totalGastos += Number(sub.costo || 0)
           eventos.push({
             id: sub.id, tipo: 'suscripcion', nombre: sub.servicio, monto: sub.costo,
+            // Fase 1: item + tipoItem para el botón Marcar pagado
+            item: sub, tipoItem: 'suscripciones',
             icono: <Repeat className="w-4 h-4" />,
             color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
           })
@@ -177,6 +187,8 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
           totalGastos += Number(d.pago_minimo || 0)
           eventos.push({
             id: d.id, tipo: 'deuda', nombre: d.cuenta, monto: d.pago_minimo,
+            // Fase 1: item + tipoItem para el botón Marcar pagado
+            item: d, tipoItem: 'deuda',
             icono: <CreditCard className="w-4 h-4" />,
             color: 'bg-red-500/20 text-red-400 border-red-500/30',
           })
@@ -454,6 +466,18 @@ const CalendarioPagos = ({ gastosFijos, suscripciones, deudas, ingresos, gastos 
                         <p className="text-[11px] text-current opacity-60 capitalize">{evento.tipo.replace('_', ' ')}</p>
                       </div>
                       <p className="text-sm font-black text-white shrink-0">${Number(evento.monto).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                      {/* Fase 1: Marcar pagado en 1 toque. Para deuda abre el
+                          modal de pago con la tarjeta preseleccionada
+                          (2 toques: el monto importa); para fijo y
+                          suscripción es 1 toque real. */}
+                      {(evento.tipo === 'gasto_fijo' || evento.tipo === 'suscripcion' || evento.tipo === 'deuda') && !evento.esPagado && onMarcarPagado && (
+                        <button
+                          onClick={() => { onMarcarPagado(evento); setDiaSeleccionado(null) }}
+                          className="shrink-0 text-[11px] font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl transition-all active:scale-95"
+                        >
+                          ✓ Pagado
+                        </button>
+                      )}
                     </div>
                   ))
                 )}

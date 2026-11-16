@@ -9,6 +9,8 @@ import { showConfirm } from '../utils/confirm'
 import { addMoney, roundMoney, subtractMoney } from '../utils/money'
 import { reconciliar } from '../utils/reconciliacion'
 import { crearResumenFinanciero } from '../utils/financialSnapshot'
+import { hoyNY } from '../utils/fechasNY'
+import { buildAlertas } from '../utils/buildAlertas'
 
 // --- HOOKS ---
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout'
@@ -53,7 +55,6 @@ import QuickAddBar from './QuickAddBar'
 import DailySnapshot from './DailySnapshot'
 import FinancialCoach from './FinancialCoach'
 import GuiaPrimerPaso from './GuiaPrimerPaso'
-import PremiumGate from './PremiumGate'
 import MoneyCommandCenter from './MoneyCommandCenter'
 import GastosSuscripcionesPanel from './GastosSuscripcionesPanel'
 import { ITEM_TYPES } from '../constants/itemTypes'
@@ -106,7 +107,7 @@ export default function DashboardCompleto()  {
   
   // --- ESTADOS PRINCIPALES ---
   const { cuentas, addCuenta, updateCuenta, deleteCuenta, refresh: refreshCuentas } = useCuentasBancarias()
-  const { isPremium, limites, canAddMore, getLimit } = usePlan()
+  const { isPremium, limites } = usePlan()
 
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem('usuario_finguide');
@@ -174,23 +175,17 @@ export default function DashboardCompleto()  {
     if (nombre) setShowModal(nombre)
   }, [cerrarTodo])
 
+  // Fase 1: todo gratis — sin candado Premium, se abre siempre.
   const abrirExportacion = useCallback(() => {
-    if (!limites.exportarDatos) {
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return
-    }
     cerrarTodo()
     setShowExportacion(true)
-  }, [cerrarTodo, limites.exportarDatos])
+  }, [cerrarTodo])
 
+  // Fase 1: todo gratis — sin candado Premium, se abre siempre.
   const abrirDebtPlanner = useCallback(() => {
-    if (!limites.estrategiaPagoDeuda) {
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return
-    }
     cerrarTodo()
     setShowDebtPlanner(true)
-  }, [cerrarTodo, limites.estrategiaPagoDeuda])
+  }, [cerrarTodo])
 
   const scrollToSection = useCallback((sectionId) => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -256,7 +251,9 @@ export default function DashboardCompleto()  {
     const interval = setInterval(() => setHoy(new Date()), 60000) // Actualiza cada 60 segundos
     return () => clearInterval(interval)
   }, [])
-  const hoyStr = hoy.toISOString().split('T')[0]
+  // Fecha de hoy en America/New_York (Fase 1: toISOString() es UTC y
+  // entre las 00:00 y las 05:00 de NY ya era el día siguiente).
+  const hoyStr = hoyNY(hoy)
 
   useInactivityTimeout(15)
   
@@ -303,6 +300,15 @@ useEffect(() => {
 useEffect(() => {
   const handleSWMessage = (event) => {
     if (event.data?.type === 'NAVIGATE_TO_SECTION') {
+      // Fase 1: acción "Marcar pagado" desde la notificación (app ya abierta).
+      // Se guarda y se avisa con un evento; otro efecto la ejecuta.
+      if (event.data?.accion === 'marcar-pagado' && event.data?.tipoItem && event.data?.itemId) {
+        try {
+          sessionStorage.setItem('finguide_accion_pendiente', JSON.stringify({ tipo: event.data.tipoItem, id: event.data.itemId, ts: Date.now() }))
+        } catch { /* ignorar */ }
+        window.dispatchEvent(new CustomEvent('finguide-accion-pendiente'))
+        return
+      }
       const { seccion } = event.data
       // Mapear sección a acción del dashboard
       const SECCIONES_MAPA = {
@@ -337,6 +343,18 @@ useEffect(() => {
     const accion = accionesParam[seccionParam]
     if (accion) setTimeout(accion, 800)
     // Limpiar URL
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  // Fase 1: acción "Marcar pagado" desde una notificación push
+  // (?accion=marcar-pagado&tipo=&id=). Se guarda en sessionStorage porque
+  // los datos aún no cargaron en el montaje; otro efecto la ejecuta
+  // cuando dataReady es true. Se ignora si tiene más de 10 minutos.
+  const accionParam = params.get('accion')
+  if (accionParam === 'marcar-pagado' && params.get('tipo') && params.get('id')) {
+    try {
+      sessionStorage.setItem('finguide_accion_pendiente', JSON.stringify({ tipo: params.get('tipo'), id: params.get('id'), ts: Date.now() }))
+    } catch { /* sessionStorage no disponible: se ignora la acción */ }
     window.history.replaceState({}, '', window.location.pathname)
   }
 
@@ -678,6 +696,40 @@ useEffect(() => {
     }
   }
 
+  // Fase 1: ejecuta la acción "Marcar pagado" que llegó desde una
+  // notificación push (guardada en sessionStorage). Para deuda abre el
+  // modal de pago con la tarjeta preseleccionada (2 toques: el monto
+  // importa); para fijo/suscripción es 1 toque real. No se guarda
+  // nada en silencio: si el ítem no existe, solo avisa.
+  const accionPendienteRef = useRef(false)
+  useEffect(() => {
+    const procesarAccionPendiente = () => {
+      if (accionPendienteRef.current) return
+      let pendiente = null
+      try { pendiente = JSON.parse(sessionStorage.getItem('finguide_accion_pendiente') || 'null') } catch { /* ignorar */ }
+      if (!pendiente?.tipo || !pendiente?.id) return
+      if (pendiente.ts && Date.now() - pendiente.ts > 10 * 60 * 1000) {
+        sessionStorage.removeItem('finguide_accion_pendiente')
+        return
+      }
+      accionPendienteRef.current = true
+      sessionStorage.removeItem('finguide_accion_pendiente')
+      const { tipo, id } = pendiente
+      let item = null
+      if (tipo === ITEM_TYPES.DEUDA) item = deudasInstant.find(d => String(d.id) === String(id))
+      else if (tipo === ITEM_TYPES.FIJO) item = gastosFijosInstant.find(g => String(g.id) === String(id))
+      else if (tipo === ITEM_TYPES.SUSCRIPCION) item = suscripcionesInstant.find(s => String(s.id) === String(id))
+      if (!item) {
+        toast.info('No se encontró el pago. Puede que ya esté pagado.')
+        return
+      }
+      setTimeout(() => handlePagarUniversal(item, tipo), 800)
+    }
+    window.addEventListener('finguide-accion-pendiente', procesarAccionPendiente)
+    if (dataReady) procesarAccionPendiente()
+    return () => window.removeEventListener('finguide-accion-pendiente', procesarAccionPendiente)
+  }, [dataReady, deudasInstant, gastosFijosInstant, suscripcionesInstant]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleEliminarUnificado = async (item, type) => {
     const typeLabel = type === 'deuda' ? 'debt record' : type === 'fijo' ? 'fixed expense' : type === 'suscripcion' ? 'subscription' : 'expense';
     const ok = await showConfirm({
@@ -952,6 +1004,11 @@ useEffect(() => {
           const { deuda_id: _ignored, ...payloadFallback } = payload
           resultado = await updateGastoFijo(id, payloadFallback)
         }
+        // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+        if (resultado?.success === false && 'aviso_dias' in payload && resultado.error?.message?.includes('aviso_dias')) {
+          const { aviso_dias: _ignored2, ...payloadFallback } = payload
+          resultado = await updateGastoFijo(id, payloadFallback)
+        }
         if (resultado && resultado.success === false) {
           throw new Error(resultado.error?.message || 'Error al actualizar el gasto fijo')
         }
@@ -961,6 +1018,11 @@ useEffect(() => {
         // Si falló por columna deuda_id inexistente en la tabla, reintentar sin ella
         if (resultado?.success === false && 'deuda_id' in data && resultado.error?.message?.includes('deuda_id')) {
           const { deuda_id: _ignored, ...dataFallback } = data
+          resultado = await addGastoFijo(dataFallback)
+        }
+        // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+        if (resultado?.success === false && 'aviso_dias' in data && resultado.error?.message?.includes('aviso_dias')) {
+          const { aviso_dias: _ignored2, ...dataFallback } = data
           resultado = await addGastoFijo(dataFallback)
         }
         if (resultado && resultado.success === false) {
@@ -1016,6 +1078,13 @@ useEffect(() => {
         resultado = await updateSuscripcion(data.id, data)
       } else {
         resultado = await addSuscripcion(data)
+      }
+      // Si la columna aviso_dias aún no existe (migración sin correr), reintentar sin ella
+      if (resultado?.success === false && 'aviso_dias' in data && resultado.error?.message?.includes('aviso_dias')) {
+        const { aviso_dias: _ignored, ...dataFallback } = data
+        resultado = data.id
+          ? await updateSuscripcion(data.id, dataFallback)
+          : await addSuscripcion(dataFallback)
       }
       if (resultado && resultado.success === false) {
         throw new Error(resultado.error?.message || 'Error al guardar la suscripción')
@@ -1249,12 +1318,6 @@ const handleDeshacerPago = useCallback(async (item, type) => {
 
   const handleGuardarDeuda = async (data) => {
     try {
-      if (!data.id && !canAddMore('tarjetas', deudasInstant.length)) {
-        toast.error(`Has alcanzado el límite del plan gratis (${getLimit('tarjetas')} tarjetas)`)
-        window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-        return
-      }
-
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('Error: No se pudo identificar al usuario.')
@@ -1262,12 +1325,21 @@ const handleDeshacerPago = useCallback(async (item, type) => {
       }
 
       const dataConUser = { ...data, user_id: user.id }
+      // Si la columna aviso_dias aún no existe en la BD (migración
+      // supabase_add_aviso_dias.sql sin correr), reintentar sin ella.
+      const sinAvisoDias = ({ aviso_dias: _a, ...resto }) => resto
 
       if (data.id) {
-        const { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id).eq('user_id', user.id)
+        let { error } = await supabase.from('deudas').update(dataConUser).eq('id', data.id).eq('user_id', user.id)
+        if (error?.message?.includes('aviso_dias')) {
+          ;({ error } = await supabase.from('deudas').update(sinAvisoDias(dataConUser)).eq('id', data.id).eq('user_id', user.id))
+        }
         if (error) throw error
       } else {
-        const { error } = await supabase.from('deudas').insert([dataConUser])
+        let { error } = await supabase.from('deudas').insert([dataConUser])
+        if (error?.message?.includes('aviso_dias')) {
+          ;({ error } = await supabase.from('deudas').insert([sinAvisoDias(dataConUser)]))
+        }
         if (error) throw error
       }
       
@@ -1282,12 +1354,8 @@ const handleDeshacerPago = useCallback(async (item, type) => {
     }
   }
 
+  // Fase 1: todo gratis — sin límite de cuentas.
   const handleAgregarCuenta = async (cuentaData) => {
-    if (!canAddMore('cuentas', cuentas.length)) {
-      toast.error(`Has alcanzado el límite del plan gratis (${getLimit('cuentas')} cuentas)`)
-      window.dispatchEvent(new CustomEvent('open-upgrade-modal'))
-      return null
-    }
     return addCuenta(cuentaData)
   }
 
@@ -2006,90 +2074,14 @@ useEffect(() => {
     localStorage.setItem("preferenciasUsuario", JSON.stringify(preferenciasUsuario));
   }, [preferenciasUsuario]);
 
-  const alertas = useMemo(() => {
-    const listaAlertas = []
-    
-    // 1. Gastos Fijos
-    gastosFijosInstant.forEach(gf => {
-      if (gf.estado === 'Pagado' || !gf.dia_venc) return
-      const diaVenc = new Date(hoy.getFullYear(), hoy.getMonth(), gf.dia_venc)
-      const diff = Math.ceil((diaVenc - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `⚠️ ${gf.nombre} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `⚠️ ${gf.nombre} vence hoy.`
-          : `⚠️ ${gf.nombre} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje, 
-          mensajeCorto: `${gf.nombre}`, 
-          monto: gf.monto, 
-          tipoItem: ITEM_TYPES.FIJO, 
-          item: gf,
-          dias: diff
-        })
-      }
-    })
-    
-    // 2. Suscripciones
-    suscripcionesInstant.forEach(sub => {
-      if (sub.estado === 'Cancelado' || !sub.proximo_pago) return
-      const proxPago = new Date(sub.proximo_pago)
-      const diff = Math.ceil((proxPago - hoy) / (1000 * 60 * 60 * 24))
-      
-      if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `🔄 ${sub.servicio} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `🔄 ${sub.servicio} se renueva hoy.`
-          : `🔄 ${sub.servicio} se renovará en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'info', 
-          mensaje, 
-          mensajeCorto: `${sub.servicio}`, 
-          monto: sub.costo, 
-          tipoItem: ITEM_TYPES.SUSCRIPCION, 
-          item: sub,
-          dias: diff
-        })
-      }
-    })
-    
-    // 3. Deudas
-// 3. Deudas (Excluir saldadas)
-deudasInstant.forEach(d => {
-  // ✅ NO generar alertas para tarjetas saldadas
-  if (!d.vence || Number(d.saldo || 0) <= 0) return
-  
-  const vence = new Date(d.vence)
-  const diff = Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24))
-  
-  if (diff <= 5) {
-        const mensaje = diff < 0 
-          ? `💳 Pago de ${d.cuenta} venció hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}.`
-          : diff === 0 
-          ? `💳 Pago de ${d.cuenta} vence hoy.`
-          : `💳 Pago de ${d.cuenta} vence en ${diff} día${diff !== 1 ? 's' : ''}.`
-        
-        listaAlertas.push({ 
-          tipo: diff <= 0 ? 'critical' : 'warning', 
-          mensaje, 
-          mensajeCorto: `${d.cuenta}`, 
-          monto: d.pago_minimo, 
-          tipoItem: ITEM_TYPES.DEUDA, 
-          item: d,
-          dias: diff
-        })
-      }
-    })
-    
-    return listaAlertas.sort((a, b) => a.dias - b.dias)
-    
-  }, [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
+  // Fase 1: alertas construidas por buildAlertas (una sola fuente de verdad,
+  // fechas en America/New_York, deuda con pago_minimo, lead-time por ítem).
+  const alertas = useMemo(() => buildAlertas({
+    gastosFijos: gastosFijosInstant,
+    suscripciones: suscripcionesInstant,
+    deudas: deudasInstant,
+    hoy,
+  }), [gastosFijosInstant, suscripcionesInstant, deudasInstant, hoy])
 
   // ============================================
   // 🏦 ANÁLISIS DE COBERTURA DE CUENTAS BANCARIAS
@@ -2520,7 +2512,7 @@ const gastosPorCategoria = useMemo(() => {
           </SectionCollapse>
 
           <SectionCollapse title="Proyección 30 días" icon="🔮">
-            <PremiumGate feature="proyeccionFlujoCaja">
+            {/* Fase 1: todo gratis — sin PremiumGate */}
               <CashFlowForecast
                 saldoActual={saldoReal}
                 totalIngresos={totalIngresos}
@@ -2529,7 +2521,6 @@ const gastosPorCategoria = useMemo(() => {
                 gastosFijos={gastosFijosInstant}
                 suscripciones={suscripcionesInstant}
               />
-            </PremiumGate>
           </SectionCollapse>
 
           <SectionCollapse title="Salud financiera" icon="💚" badge={`${kpis.financialHealth}/100`}>
@@ -2693,6 +2684,7 @@ const gastosPorCategoria = useMemo(() => {
               deudas={deudasInstant}
               ingresos={ingresosInstant}
               gastos={gastosInstant}
+              onMarcarPagado={(evento) => handlePagarUniversal(evento.item, evento.tipoItem)}
             />
           </SectionCollapse>
         </>
@@ -2998,6 +2990,10 @@ const gastosPorCategoria = useMemo(() => {
           onAlertClick={(alerta) => {
             setShowModal(null)
             handleOpenDetail(alerta.item, alerta.tipoItem)
+          }}
+          onMarcarPagado={(alerta) => {
+            setShowModal(null)
+            handlePagarUniversal(alerta.item, alerta.tipoItem)
           }}
         />
       )}
@@ -3329,9 +3325,8 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       <ModalWrapper show={showDebtPlanner} onClose={() => setShowDebtPlanner(false)}>
-        <PremiumGate feature="estrategiaPagoDeuda">
+        {/* Fase 1: todo gratis — sin PremiumGate */}
           <DebtPlannerModal deudas={deudasInstant} kpis={kpis} onClose={() => setShowDebtPlanner(false)} onPlanGuardado={() => { refreshPlanes(); setPlanUpdateCounter(prev => prev + 1); }} />
-        </PremiumGate>
       </ModalWrapper>
 
       {/* ✅ FIX: REMOVED WRAPPER FOR SAVINGS PLANNER TO PREVENT BOTTOM SHEET BEHAVIOR ON MOBILE */}
@@ -3348,7 +3343,8 @@ const gastosPorCategoria = useMemo(() => {
       </ModalWrapper>
 
       {/* MIS REPORTES — usa createPortal internamente */}
-      {showExportacion && limites.exportarDatos && (
+      {/* Fase 1: todo gratis — sin candado exportarDatos */}
+      {showExportacion && (
         <VisualizacionDatos
           onClose={() => setShowExportacion(false)}
           ingresos={ingresosInstant}
